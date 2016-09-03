@@ -1,0 +1,95 @@
+{
+	"ImportPath": "github.com/anycable/anycable-go",
+	"GoVersion": "go1.6",
+	"GodepVersion": "v74",
+	"Deps": [
+		{
+			"ImportPath": "github.com/garyburd/redigo/internal",
+			"Comment": "v1.0.0-1-gb8dc900",
+			"Rev": "b8dc90050f24c1a73a52f107f3f575be67b21b7c"
+		},
+		{
+			"ImportPath": "github.com/garyburd/redigo/redis",
+			"Comment": "v1.0.0-1-gb8dc900",
+			"Rev": "b8dc90050f24c1a73a52f107f3f575be67b21b7c"
+		},
+		{
+			"ImportPath": "github.com/golang/protobuf/proto",
+			"Rev": "0c1f6d65b5a189c2250d10e71a5506f06f9fa0a0"
+		},
+		{
+			"ImportPath": "github.com/gorilla/websocket",
+			"Comment": "v1.0.0-12-ga687089",
+			"Rev": "a68708917c6a4f06314ab4e52493cc61359c9d42"
+		},
+		{
+			"ImportPath": "github.com/op/go-logging",
+			"Comment": "v1-7-g970db52",
+			"Rev": "970db520ece77730c7e4724c61121037378659d9"
+		},
+		{
+			"ImportPath": "github.com/soveran/redisurl",
+			"Rev": "ac42ec99510b5f21d11560d316adcc5bc41f0915"
+		},
+		{
+			"ImportPath": "golang.org/x/net/context",
+			"Rev": "bc3663df0ac92f928d419e31e0d2af22e683a5a2"
+		},
+		{
+			"ImportPath": "golang.org/x/net/http2",
+			"Rev": "bc3663df0ac92f928d419e31e0d2af22e683a5a2"
+		},
+		{
+			"ImportPath": "golang.org/x/net/http2/hpack",
+			"Rev": "bc3663df0ac92f928d419e31e0d2af22e683a5a2"
+		},
+		{
+			"ImportPath": "golang.org/x/net/internal/timeseries",
+			"Rev": "bc3663df0ac92f928d419e31e0d2af22e683a5a2"
+		},
+		{
+			"ImportPath": "golang.org/x/net/lex/httplex",
+			"Rev": "bc3663df0ac92f928d419e31e0d2af22e683a5a2"
+		},
+		{
+			"ImportPath": "golang.org/x/net/trace",
+			"Rev": "bc3663df0ac92f928d419e31e0d2af22e683a5a2"
+		},
+		{
+			"ImportPath": "google.golang.org/grpc",
+			"Rev": "0eb7c5dcd059d77bde1eb5bc7d953940170d0d18"
+		},
+		{
+			"ImportPath": "google.golang.org/grpc/codes",
+			"Rev": "0eb7c5dcd059d77bde1eb5bc7d953940170d0d18"
+		},
+		{
+			"ImportPath": "google.golang.org/grpc/credentials",
+			"Rev": "0eb7c5dcd059d77bde1eb5bc7d953940170d0d18"
+		},
+		{
+			"ImportPath": "google.golang.org/grpc/grpclog",
+			"Rev": "0eb7c5dcd059d77bde1eb5bc7d953940170d0d18"
+		},
+		{
+			"ImportPath": "google.golang.org/grpc/internal",
+			"Rev": "0eb7c5dcd059d77bde1eb5bc7d953940170d0d18"
+		},
+		{
+			"ImportPath": "google.golang.org/grpc/metadata",
+			"Rev": "0eb7c5dcd059d77bde1eb5bc7d953940170d0d18"
+		},
+		{
+			"ImportPath": "google.golang.org/grpc/naming",
+			"Rev": "0eb7c5dcd059d77bde1eb5bc7d953940170d0d18"
+		},
+		{
+			"ImportPath": "google.golang.org/grpc/peer",
+			"Rev": "0eb7c5dcd059d77bde1eb5bc7d953940170d0d18"
+		},
+		{
+			"ImportPath": "google.golang.org/grpc/transport",
+			"Rev": "0eb7c5dcd059d77bde1eb5bc7d953940170d0d18"
+		}
+	]
+}

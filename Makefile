@@ -10,12 +10,22 @@ default: prepare build
 
 # Only run the build (no dependency grabbing)
 build:
-  go install -ldflags "-X main.version=$(VERSION)" ./...
+	go install -ldflags "-X main.version=$(VERSION)" ./...
+
+# Run server
+run:
+	go run ./*.go
+
+build-protos:
+	protoc --proto_path=./etc --go_out=plugins=grpc:./protos ./etc/rpc.proto
 
 # Get dependencies and use gdm to checkout changesets
 prepare:
-  go get github.com/sparrc/gdm
-  gdm restore
+	go get github.com/tools/godep
+	godep restore
 
 vet:
-  go vet ./...
+	go vet ./...
+
+fmt:
+	go fmt ./...
