@@ -8,6 +8,8 @@ With AnyCable you can use channels, client-side JS, broadcasting - (almost) all 
 
 You can even use ActionCable in development and not be afraid of compatibility issues.
 
+[Example Application](https://github.com/anycable/anycable_demo)
+
 ## Requirements
 
 - Ruby ~> 2.3;
@@ -16,11 +18,12 @@ You can even use ActionCable in development and not be afraid of compatibility i
 
 ## How It Works?
 
-TBD
+<img src="https://trello-attachments.s3.amazonaws.com/5781e0ed48e4679e302833d3/820x987/5b6a305417b04e20e75f49c5816e027c/Anycable_vs_ActionCable_copy.jpg" width="400" />
 
 ## Compatible WebSocket servers
 
-TBD
+- [Anycable Go](https://github.com/anycable/anycable-go)
+- coming soon ...
 
 
 ## Installation
@@ -47,7 +50,7 @@ Add `config/anycable.yml`if you want to override defaults (see below):
 
 ```yml
 production:
-  # gRPC server host and port
+  # gRPC server host
   rpc_host: "localhost:50051"
   # Redis URL (for broadcasting) 
   redis_url: "redis://localhost:6379/2"
@@ -63,7 +66,7 @@ Anycable uses [anyway_config](https://github.com/palkan/anyway_config), thus it 
 Run Anycable server:
 
 ```ruby
-bundle exec anycable
+./bin/anycable
 ```
 
 ## ActionCable Compatibility
