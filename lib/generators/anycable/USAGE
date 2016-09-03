@@ -1,0 +1,7 @@
+Description:
+  Generates Anycable executable
+  
+Examples:
+  rails generate anycable
+
+    This will generate Anycable executable

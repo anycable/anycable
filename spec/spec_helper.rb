@@ -11,6 +11,9 @@ if ENV['COVER']
 end
 
 require File.expand_path("../dummy/config/environment", __FILE__)
+require "anycable/server"
+
+Rails.application.eager_load!
 
 Dir["#{File.dirname(__FILE__)}/support/**/*.rb"].each { |f| require f }
 

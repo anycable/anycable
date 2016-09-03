@@ -1,0 +1,3 @@
+test:
+  rpc_host: "localhost:50123"
+  redis_url: "redis://localhost:6379/2"

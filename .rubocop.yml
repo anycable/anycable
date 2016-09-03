@@ -9,6 +9,7 @@ AllCops:
     - 'spec/dummy/**/*'
     - 'tmp/**/*'
     - 'bench/**/*'
+    - 'lib/anycable/rpc/**/*'
   DisplayCopNames: true
   StyleGuideCopsOnly: false
   TargetRubyVersion: 2.3
