@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package anycable;
+
+service RPC {
+  rpc Connect (ConnectionRequest) returns (ConnectionResponse) {}
+  rpc Subscribe (CommandMessage) returns (CommandResponse) {}
+  rpc Unsubscribe (CommandMessage) returns (CommandResponse) {}
+  rpc Perform (CommandMessage) returns (CommandResponse) {}
+  rpc Disconnect (DisconnectRequest) returns (DisconnectResponse) {}
+}
+
+enum Status {
+  ERROR = 0;
+  SUCCESS = 1;
+}
+
+message ConnectionRequest {
+  string path = 1;
+  map<string,string> headers = 2;
+}
+
+message ConnectionResponse {
+  Status status = 1;
+  string identifiers = 2;
+  repeated string transmissions = 3;
+}
+
+message CommandMessage {
+  string command = 1;
+  string identifier = 2;
+  string connection_identifiers = 3;
+  string data = 4;
+}
+
+message CommandResponse {
+  Status status = 1;
+  bool disconnect = 2;
+  bool stop_streams = 3;
+  bool stream_from = 4;
+  string stream_id = 5;
+  repeated string transmissions = 6;
+}
+
+message DisconnectRequest {
+  string identifiers = 1;
+  repeated string subscriptions = 2;
+}
+
+message DisconnectResponse {
+  Status status = 1;
+}
