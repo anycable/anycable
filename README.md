@@ -10,6 +10,9 @@ You can even use ActionCable in development and not be afraid of compatibility i
 
 [Example Application](https://github.com/anycable/anycable_demo)
 
+<a href="https://evilmartians.com/">
+<img src="https://evilmartians.com/badges/sponsored-by-evil-martians.svg" alt="Sponsored by Evil Martians" width="236" height="54"></a>
+
 ## Requirements
 
 - Ruby ~> 2.3;
