@@ -116,8 +116,8 @@ func HandleReply(conn *Conn, msg *Message, reply *pb.CommandResponse) {
 		hub.unsubscribe <- conn
 	}
 
-	if reply.StreamFrom {
-		hub.subscribe <- &SubscriptionInfo{conn: conn, stream: reply.StreamId, identifier: msg.Identifier}
+	for _, s := range reply.Streams {
+		hub.subscribe <- &SubscriptionInfo{conn: conn, stream: s, identifier: msg.Identifier}
 	}
 
 	Transmit(conn, reply.Transmissions)
