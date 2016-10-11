@@ -37,9 +37,8 @@ message CommandResponse {
   Status status = 1;
   bool disconnect = 2;
   bool stop_streams = 3;
-  bool stream_from = 4;
-  string stream_id = 5;
-  repeated string transmissions = 6;
+  repeated string streams = 4;
+  repeated string transmissions = 5;
 }
 
 message DisconnectRequest {
