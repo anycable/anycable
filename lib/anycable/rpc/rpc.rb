@@ -23,9 +23,8 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :status, :enum, 1, "anycable.Status"
     optional :disconnect, :bool, 2
     optional :stop_streams, :bool, 3
-    optional :stream_from, :bool, 4
-    optional :stream_id, :string, 5
-    repeated :transmissions, :string, 6
+    repeated :streams, :string, 4
+    repeated :transmissions, :string, 5
   end
   add_message "anycable.DisconnectRequest" do
     optional :identifiers, :string, 1

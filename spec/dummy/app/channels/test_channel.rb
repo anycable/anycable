@@ -7,6 +7,11 @@ class TestChannel < ApplicationCable::Channel
     end
   end
 
+  def follow
+    stream_from "user_#{current_user.name}"
+    stream_from "all"
+  end
+
   def add(data)
     transmit result: (data['a'].to_i + data['b'].to_i)            
   end

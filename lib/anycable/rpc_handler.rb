@@ -61,8 +61,7 @@ module Anycable
             status: Anycable::Status::SUCCESS,
             disconnect: connection.closed?,
             stop_streams: channel.stop_streams?,
-            stream_from: channel.streams.present?,
-            stream_id: channel.streams.first || '',
+            streams: channel.streams,
             transmissions: connection.transmissions
           )
         end
@@ -78,8 +77,7 @@ module Anycable
       Anycable::CommandResponse.new(
         status: Anycable::Status::SUCCESS,
         disconnect: false,
-        stop_streams: true,
-        stream_from: false
+        stop_streams: true
       )
     end
 
@@ -97,8 +95,7 @@ module Anycable
           status: Anycable::Status::SUCCESS,
           disconnect: connection.closed?,
           stop_streams: channel.stop_streams?,
-          stream_from: channel.streams.present?,
-          stream_id: channel.streams.first || '',
+          streams: channel.streams,
           transmissions: connection.transmissions
         )
       else
