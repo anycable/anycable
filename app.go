@@ -94,7 +94,8 @@ func (app *App) Disconnected(conn *Conn) {
 
 	hub.unregister <- conn
 
-	rpc.Disconnect(conn.identifiers, SubscriptionsList(conn.subscriptions))
+	// Fixme: mass disconnect make it fcuked up!
+	// rpc.Disconnect(conn.identifiers, SubscriptionsList(conn.subscriptions))
 }
 
 func (app *App) BroadcastAll(message []byte) {
