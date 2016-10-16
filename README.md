@@ -1,4 +1,4 @@
-[![Gem Version](https://badge.fury.io/rb/anycable.svg)](https://rubygems.org/gems/anycable) [![Build Status](https://travis-ci.org/anycable/anycable.svg?branch=master)](https://travis-ci.org/anycable/anycable) [![Circle CI](https://circleci.com/gh/anycable/anycable/tree/master.svg?style=svg)](https://circleci.com/gh/anycable/anycable/tree/master)
+[![GitPitch](https://gitpitch.com/assets/badge.svg)](https://gitpitch.com/anycable/anycable/master?grs=github) [![Gem Version](https://badge.fury.io/rb/anycable.svg)](https://rubygems.org/gems/anycable) [![Build Status](https://travis-ci.org/anycable/anycable.svg?branch=master)](https://travis-ci.org/anycable/anycable) [![Circle CI](https://circleci.com/gh/anycable/anycable/tree/master.svg?style=svg)](https://circleci.com/gh/anycable/anycable/tree/master)
 
 # Anycable
 
@@ -26,7 +26,7 @@ You can even use ActionCable in development and not be afraid of compatibility i
 ## Compatible WebSocket servers
 
 - [Anycable Go](https://github.com/anycable/anycable-go)
-- coming soon ...
+- [ErlyCable](https://github.com/anycable/erlycable)
 
 
 ## Installation
