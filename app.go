@@ -41,6 +41,7 @@ func (app *App) Connected(conn *Conn, transmissions []string) {
 	if hub.Size() == 0 {
 		go app.Pinger.run()
 	}
+
 	hub.register <- conn
 
 	Transmit(conn, transmissions)
@@ -57,6 +58,8 @@ func (app *App) Subscribe(conn *Conn, msg *Message) {
 	if res.Status == 1 {
 		conn.subscriptions[msg.Identifier] = true
 	}
+
+	log.Debugf("Subscribe %s", res)
 
 	HandleReply(conn, msg, res)
 }
@@ -83,6 +86,8 @@ func (app *App) Perform(conn *Conn, msg *Message) {
 	}
 
 	res := rpc.Perform(conn.identifiers, msg.Identifier, msg.Data)
+
+	log.Debugf("Perform %s", res)
 
 	HandleReply(conn, msg, res)
 }

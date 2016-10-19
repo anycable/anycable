@@ -38,13 +38,10 @@ type Hub struct {
 	unsubscribe chan *SubscriptionInfo
 
 	// Maps streams to connections
-	streams map[string]map[*Conn]bool
+	streams map[string]map[*Conn]string
 
 	// Maps connections to identifiers to streams
 	connection_streams map[*Conn]map[string][]string
-
-	// Maps streams to channels
-	stream_channel map[string]string
 }
 
 var hub = Hub{
@@ -55,9 +52,8 @@ var hub = Hub{
 	subscribe:          make(chan *SubscriptionInfo),
 	unsubscribe:        make(chan *SubscriptionInfo),
 	connections:        make(map[*Conn]bool),
-	streams:            make(map[string]map[*Conn]bool),
+	streams:            make(map[string]map[*Conn]string),
 	connection_streams: make(map[*Conn]map[string][]string),
-	stream_channel:     make(map[string]string),
 }
 
 func (h *Hub) run() {
@@ -96,15 +92,17 @@ func (h *Hub) run() {
 				return
 			}
 
-			identifier := h.stream_channel[stream_message.Stream]
+			buf := make(map[string][]byte)
 
-			var msg map[string]interface{}
+			for conn, id := range h.streams[stream_message.Stream] {
+			  var bdata []byte
 
-			json.Unmarshal([]byte(stream_message.Data), &msg)
-
-			bdata := (&Reply{Identifier: identifier, Message: msg}).toJSON()
-
-			for conn := range h.streams[stream_message.Stream] {
+			  if msg, ok := buf[id]; ok {
+			  	bdata = msg
+			  } else {
+			  	bdata = BuildMessage(stream_message.Data, id)
+			  	buf[id] = bdata
+			  }
 				select {
 				case conn.send <- bdata:
 				default:
@@ -117,12 +115,10 @@ func (h *Hub) run() {
 			log.Debugf("Subscribe to stream %s for %s", subinfo.stream, subinfo.conn.identifiers)
 
 			if _, ok := h.streams[subinfo.stream]; !ok {
-				h.streams[subinfo.stream] = make(map[*Conn]bool)
+				h.streams[subinfo.stream] = make(map[*Conn]string)
 			}
 
-			h.stream_channel[subinfo.stream] = subinfo.identifier
-
-			h.streams[subinfo.stream][subinfo.conn] = true
+			h.streams[subinfo.stream][subinfo.conn] = subinfo.identifier
 
 			if _, ok := h.connection_streams[subinfo.conn]; !ok {
 				h.connection_streams[subinfo.conn] = make(map[string][]string)
@@ -164,7 +160,14 @@ func (h *Hub) UnsubscribeConnectionFromChannel(conn *Conn, channel string) {
 
 		if len(h.streams[stream]) == 0 {
 			delete(h.streams, stream)
-			delete(h.stream_channel, stream)
 		}
 	}
+}
+
+func BuildMessage(data string, identifier string) []byte {
+	var msg map[string]interface{}
+
+	json.Unmarshal([]byte(data), &msg)
+
+	return (&Reply{Identifier: identifier, Message: msg}).toJSON()
 }

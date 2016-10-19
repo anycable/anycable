@@ -34,9 +34,9 @@ Feature                  | Status
 -------------------------|--------
 Connection Identifiers   | +
 Connection Request (cookies, params) | +
-Disconnect Handling | _coming soon_
+Disconnect Handling | _temporary disabled_
 Subscribe to channels | +
-Parameterized subscriptions | _coming soon_
+Parameterized subscriptions | +
 Unsubscribe from channels | +
 Performing Channel Actions | +
 Streaming | +

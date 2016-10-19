@@ -76,6 +76,7 @@ func (c *Conn) readPump() {
 		if err := json.Unmarshal(message, &msg); err != nil {
 			log.Debugf("Unknown message: %s", message)
 		} else {
+			log.Debugf("Client message: %s", msg)
 			switch msg.Command {
 			case "subscribe":
 				app.Subscribe(c, msg)
@@ -130,6 +131,8 @@ func serveWs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := rpc.VerifyConnection(r)
+
+	log.Debugf("Auth %s", response)
 
 	if response.Status != 1 {
 		log.Warningf("Auth Failed")
