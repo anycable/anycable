@@ -114,7 +114,7 @@ func HandleReply(conn *Conn, msg *Message, reply *pb.CommandResponse) {
 	}
 
 	if reply.StopStreams {
-		hub.unsubscribe <- conn
+		hub.unsubscribe <- &SubscriptionInfo{conn: conn, identifier: msg.Identifier}
 	}
 
 	for _, s := range reply.Streams {

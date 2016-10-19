@@ -35,13 +35,13 @@ type Hub struct {
 	subscribe chan *SubscriptionInfo
 
 	// Unsubscribe requests from streams.
-	unsubscribe chan *Conn
+	unsubscribe chan *SubscriptionInfo
 
 	// Maps streams to connections
 	streams map[string]map[*Conn]bool
 
-	// Maps connections to streams
-	connection_streams map[*Conn][]string
+	// Maps connections to identifiers to streams
+	connection_streams map[*Conn]map[string][]string
 
 	// Maps streams to channels
 	stream_channel map[string]string
@@ -53,10 +53,10 @@ var hub = Hub{
 	register:           make(chan *Conn),
 	unregister:         make(chan *Conn),
 	subscribe:          make(chan *SubscriptionInfo),
-	unsubscribe:        make(chan *Conn),
+	unsubscribe:        make(chan *SubscriptionInfo),
 	connections:        make(map[*Conn]bool),
 	streams:            make(map[string]map[*Conn]bool),
-	connection_streams: make(map[*Conn][]string),
+	connection_streams: make(map[*Conn]map[string][]string),
 	stream_channel:     make(map[string]string),
 }
 
@@ -124,12 +124,16 @@ func (h *Hub) run() {
 
 			h.streams[subinfo.stream][subinfo.conn] = true
 
-			h.connection_streams[subinfo.conn] = append(
-				h.connection_streams[subinfo.conn],
+			if _, ok := h.connection_streams[subinfo.conn]; !ok {
+				h.connection_streams[subinfo.conn] = make(map[string][]string)
+			}
+
+			h.connection_streams[subinfo.conn][subinfo.identifier] = append(
+				h.connection_streams[subinfo.conn][subinfo.identifier],
 				subinfo.stream)
 
-		case conn := <-h.unsubscribe:
-			h.UnsubscribeConnection(conn)
+		case subinfo := <-h.unsubscribe:
+			h.UnsubscribeConnectionFromChannel(subinfo.conn, subinfo.identifier)
 		}
 	}
 }
@@ -139,9 +143,23 @@ func (h *Hub) Size() int {
 }
 
 func (h *Hub) UnsubscribeConnection(conn *Conn) {
-	log.Debugf("Unsubscribe from all streams %s", conn.identifiers)
+	log.Debugf("Unsubscribe from all streams: %s", conn.identifiers)
 
-	for _, stream := range h.connection_streams[conn] {
+	for channel, _ := range h.connection_streams[conn] {
+		h.UnsubscribeConnectionFromChannel(conn, channel)
+	}
+
+	delete(h.connection_streams, conn)
+}
+
+func (h *Hub) UnsubscribeConnectionFromChannel(conn *Conn, channel string) {
+	log.Debugf("Unsubscribe from channel %s: %s", channel, conn.identifiers)
+
+	if _, ok := h.connection_streams[conn]; !ok {
+		return
+	}
+
+	for _, stream := range h.connection_streams[conn][channel] {
 		delete(h.streams[stream], conn)
 
 		if len(h.streams[stream]) == 0 {
@@ -149,6 +167,4 @@ func (h *Hub) UnsubscribeConnection(conn *Conn) {
 			delete(h.stream_channel, stream)
 		}
 	}
-
-	delete(h.connection_streams, conn)
 }
