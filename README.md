@@ -10,6 +10,9 @@ You can even use ActionCable in development and not be afraid of compatibility i
 
 [Example Application](https://github.com/anycable/anycable_demo)
 
+**NOTE**: MacOS users, please, beware of [Sierra-related bug](
+https://github.com/grpc/grpc/issues/8403).
+
 <a href="https://evilmartians.com/">
 <img src="https://evilmartians.com/badges/sponsored-by-evil-martians.svg" alt="Sponsored by Evil Martians" width="236" height="54"></a>
 
