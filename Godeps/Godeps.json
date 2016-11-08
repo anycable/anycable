@@ -23,6 +23,10 @@
 			"Rev": "a68708917c6a4f06314ab4e52493cc61359c9d42"
 		},
 		{
+			"ImportPath": "github.com/namsral/flag",
+			"Rev": "91bb473a91a4a5e1ea554fb8ddce84f832be9aca"
+		},
+		{
 			"ImportPath": "github.com/op/go-logging",
 			"Comment": "v1-7-g970db52",
 			"Rev": "970db520ece77730c7e4724c61121037378659d9"

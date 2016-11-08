@@ -25,9 +25,11 @@
 Thumbs.db
 
 .bundle/
+.docker/
 log/*.log
 *.gz
 pkg/
 
 tmp/
 coverage/
+

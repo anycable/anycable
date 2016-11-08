@@ -12,6 +12,10 @@ default: prepare build
 build:
 	go install -ldflags "-X main.version=$(VERSION)" ./...
 
+dockerize:
+	CGO_ENABLED=0 GOOS=linux go build -ldflags "-X main.version=$(VERSION)" -a -installsuffix cgo -o .docker/main .
+	docker build -t anycable/anycable-go .
+
 # Run server
 run:
 	go run ./*.go

@@ -16,7 +16,8 @@ func (s *Subscriber) run() {
 	c, err := redisurl.ConnectToURL(s.host)
 
 	if err != nil {
-		panic(err)
+		log.Criticalf("failed to subscibe to Redis: %v", err)
+		return
 	}
 
 	psc := redis.PubSubConn{Conn: c}

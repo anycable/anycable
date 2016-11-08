@@ -2,11 +2,11 @@ package main
 
 import (
 	"encoding/json"
-	"flag"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/namsral/flag"
 	"github.com/gorilla/websocket"
 	"github.com/op/go-logging"
 )
