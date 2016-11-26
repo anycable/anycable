@@ -27,6 +27,13 @@ https://github.com/grpc/grpc/issues/8403).
 
 <img src="https://trello-attachments.s3.amazonaws.com/5781e0ed48e4679e302833d3/820x987/5b6a305417b04e20e75f49c5816e027c/Anycable_vs_ActionCable_copy.jpg" width="400" />
 
+## Links
+
+- [GitPitch Slides](https://gitpitch.com/anycable/anycable/master?grs=github)
+
+- RailsClub Moscow 2016 [slides](https://speakerdeck.com/palkan/railsclub-moscow-2016-anycable) and [video](https://www.youtube.com/watch?v=-k7GQKuBevY&list=PLiWUIs1hSNeOXZhotgDX7Y7qBsr24cu7o&index=4) (RU)
+
+
 ## Compatible WebSocket servers
 
 - [Anycable Go](https://github.com/anycable/anycable-go)
