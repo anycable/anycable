@@ -85,6 +85,7 @@ Run Anycable server:
 
 ## ActionCable Compatibility
 
+This is the compatibility list for the AnyCable gem, not for AnyCable servers (which may not support some of the features yet).
 
 Feature                  | Status 
 -------------------------|--------
@@ -92,7 +93,7 @@ Connection Identifiers   | +
 Connection Request (cookies, params) | +
 Disconnect Handling | coming soon
 Subscribe to channels | +
-Parameterized subscriptions | coming soon
+Parameterized subscriptions | +
 Unsubscribe from channels | +
 [Subscription Instance Variables](http://edgeapi.rubyonrails.org/classes/ActionCable/Channel/Streams.html) | -
 Performing Channel Actions | +
