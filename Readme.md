@@ -17,16 +17,13 @@ Run server:
 anycable-go -rpc=0.0.0.0:50051 -redis=redis://localhost:6379/5 -redischannel=anycable -addr=0.0.0.0:8080 -debug
 ```
 
+You can also provide configuration parameters through the corresponding environment variables (i.e. `RPC`, `REDIS`, etc).
+
 ## Build
 
 ```shell
 make
 ```
-
-## Testing
-
-Sorry, no tests :(
-
 
 ## ActionCable Compatibility
 

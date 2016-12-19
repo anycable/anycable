@@ -6,8 +6,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/namsral/flag"
 	"github.com/gorilla/websocket"
+	"github.com/namsral/flag"
 	"github.com/op/go-logging"
 )
 

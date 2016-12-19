@@ -32,4 +32,4 @@ pkg/
 
 tmp/
 coverage/
-
+dist/

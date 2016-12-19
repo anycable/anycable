@@ -95,14 +95,14 @@ func (h *Hub) run() {
 			buf := make(map[string][]byte)
 
 			for conn, id := range h.streams[stream_message.Stream] {
-			  var bdata []byte
+				var bdata []byte
 
-			  if msg, ok := buf[id]; ok {
-			  	bdata = msg
-			  } else {
-			  	bdata = BuildMessage(stream_message.Data, id)
-			  	buf[id] = bdata
-			  }
+				if msg, ok := buf[id]; ok {
+					bdata = msg
+				} else {
+					bdata = BuildMessage(stream_message.Data, id)
+					buf[id] = bdata
+				}
 				select {
 				case conn.send <- bdata:
 				default:
