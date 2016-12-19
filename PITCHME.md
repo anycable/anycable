@@ -37,7 +37,7 @@
 
 ## Memory
 
-![memory](assets/memory_chart.png)
+![memory](assets/Memory3.png)
 
 #VSLIDE
 
@@ -49,7 +49,7 @@
 
 ## Broadcast Round Trip Time
 
-![rtt](assets/rtt_chart.png)
+![rtt](assets/RTT3.png)
 
 #HSLIDE
 
@@ -67,7 +67,7 @@
 
 ## How AnyCable Works
 
-![diagram](assets/diagram.png)
+![diagram](assets/Scheme2.png)
 
 #VSLIDE
 
@@ -109,7 +109,7 @@
 
 ## Memory
 
-![memory](assets/memory_chart2.png)
+![memory](assets/Memory5.png)
 
 #VSLIDE
 
@@ -121,7 +121,7 @@
 
 ## Broadcast Round Trip Time
 
-![rtt](assets/rtt_chart2.png)
+![rtt](assets/RTT5.png)
 
 
 #HSLIDE

@@ -77,10 +77,22 @@ Anycable uses [anyway_config](https://github.com/palkan/anyway_config), thus it 
 
 ## Usage
 
-Run Anycable server:
+Run Anycable RPC server:
 
 ```ruby
 ./bin/anycable
+```
+
+and also run AnyCable-compatible WebSocket server, e.g. [anycable-go](https://github.com/anycable/anycable-go):
+
+```sh
+anycable-go -addr='localhost:3334'
+```
+
+Don't forget to set cable url in your `config/environments/production.rb`:
+
+```ruby
+config.action_cable.url = "ws://localhost:3334/cable"
 ```
 
 ## ActionCable Compatibility
