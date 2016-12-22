@@ -43,6 +43,8 @@ describe "subscriptions", :rpc_command do
   end
 
   describe "#unsubscribe" do
+    let(:log) { ApplicationCable::Connection.events_log }
+
     let(:command) { 'unsubscribe' }
 
     subject { service.unsubscribe(request) }
@@ -50,6 +52,15 @@ describe "subscriptions", :rpc_command do
     it "responds with stop_all_streams" do
       expect(subject.status).to eq :SUCCESS
       expect(subject.stop_streams).to eq true
+    end
+
+    it "invokes #unsubscribed for channel" do
+      expect { subject }
+        .to change { log.select { |entry| entry[:source] == channel_id_json }.size }
+        .by(1)
+
+      channel_logs = log.select { |entry| entry[:source] == channel_id_json }
+      expect(channel_logs.last[:data]).to eq(user: 'john', type: 'unsubscribed')
     end
   end
 end
