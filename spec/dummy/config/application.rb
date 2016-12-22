@@ -1,14 +1,6 @@
-require_relative 'boot'
-
-# Pick the frameworks you want:
-# require "active_record/railtie"
-require "action_controller/railtie"
-require "action_view/railtie"
-# require "action_mailer/railtie"
-require "active_job/railtie"
+require_relative "boot"
 require "action_cable/engine"
-require "rails/test_unit/railtie"
-require "sprockets/railtie"
+require "global_id"
 
 Bundler.require(*Rails.groups)
 require "anycable"
@@ -23,6 +15,8 @@ module Dummy
     # Middleware like session, flash, cookies can be added back manually.
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
+    config.logger = Logger.new('/dev/null')
+    config.eager_load = false
   end
 end
 
