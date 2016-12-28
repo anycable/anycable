@@ -34,14 +34,16 @@ Feature                  | Status
 -------------------------|--------
 Connection Identifiers   | +
 Connection Request (cookies, params) | +
-Disconnect Handling | _temporary disabled_
+Disconnect Handling | +
 Subscribe to channels | +
 Parameterized subscriptions | +
 Unsubscribe from channels | +
 Performing Channel Actions | +
 Streaming | +
-Usage of the same stream name for different channels | -
+Usage of the same stream name for different channels | +
 Broadcasting | +
+[Custom stream callbacks](http://edgeapi.rubyonrails.org/classes/ActionCable/Channel/Streams.html) | -
+[Subscription Instance Variables](http://edgeapi.rubyonrails.org/classes/ActionCable/Channel/Streams.html) | -
 
 ## Contributing
 
