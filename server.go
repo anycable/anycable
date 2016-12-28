@@ -47,6 +47,8 @@ var redischannel = flag.String("redis_channel", "anycable", "redis channel")
 
 var addr = flag.String("addr", "localhost:8080", "http service address")
 
+var wspath = flag.String("wspath", "/cable", "WS endpoint path")
+
 var disconnectRate = flag.Int("disconnect_rate", 100, "the number of Disconnect calls per second")
 
 var upgrader = websocket.Upgrader{
@@ -164,7 +166,8 @@ func main() {
 
 	go hub.run()
 
-	app.Pinger = &Pinger{interval: pingPeriod, cmd: make(chan string)}
+	app.Pinger = NewPinger(pingPeriod)
+	go app.Pinger.run()
 
 	rpc.Init(*rpchost)
 	defer rpc.Close()
@@ -175,7 +178,7 @@ func main() {
 	app.Disconnector = &DisconnectNotifier{rate: *disconnectRate, disconnect: make(chan *Conn)}
 	go app.Disconnector.run()
 
-	log.Infof("Running websocket server on %s", *addr)
-	http.HandleFunc("/cable", serveWs)
+	log.Infof("Running websocket server on %s at %s", *addr, *wspath)
+	http.HandleFunc(*wspath, serveWs)
 	http.ListenAndServe(*addr, nil)
 }

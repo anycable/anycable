@@ -89,7 +89,7 @@ func (h *Hub) run() {
 
 			if _, ok := h.streams[stream_message.Stream]; !ok {
 				log.Debugf("No connections for stream %s", stream_message.Stream)
-				return
+				break
 			}
 
 			buf := make(map[string][]byte)

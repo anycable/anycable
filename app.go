@@ -7,8 +7,8 @@ import (
 )
 
 type App struct {
-	Pinger     *Pinger
-	Subscriber *Subscriber
+	Pinger       *Pinger
+	Subscriber   *Subscriber
 	Disconnector *DisconnectNotifier
 }
 
@@ -39,9 +39,7 @@ func (r *Reply) toJSON() []byte {
 var app = &App{}
 
 func (app *App) Connected(conn *Conn, transmissions []string) {
-	if hub.Size() == 0 {
-		go app.Pinger.run()
-	}
+	app.Pinger.Increment()
 
 	hub.register <- conn
 
@@ -94,9 +92,7 @@ func (app *App) Perform(conn *Conn, msg *Message) {
 }
 
 func (app *App) Disconnected(conn *Conn) {
-	if hub.Size() == 1 {
-		app.Pinger.pause()
-	}
+	app.Pinger.Decrement()
 
 	hub.unregister <- conn
 

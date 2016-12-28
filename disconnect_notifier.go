@@ -1,39 +1,39 @@
 package main
 
 import (
-  "time"
+	"time"
 )
 
 type DisconnectNotifier struct {
-  // Limit the number of RPC calls per second
-  rate int
-  // Call RPC Disconnect for connections
-  disconnect chan *Conn
+	// Limit the number of RPC calls per second
+	rate int
+	// Call RPC Disconnect for connections
+	disconnect chan *Conn
 }
 
 func (d *DisconnectNotifier) run() {
-  rate := time.Millisecond * time.Duration(1000 / d.rate)
-  log.Debugf("Disconnect rate %v", rate)
-  throttle := time.Tick(rate)
+	rate := time.Millisecond * time.Duration(1000/d.rate)
+	log.Debugf("Disconnect rate %v", rate)
+	throttle := time.Tick(rate)
 
-  for {
-    select {
-    case conn := <-d.disconnect:
-      <-throttle
-      log.Debugf("Commit disconnect %v", conn.identifiers)
-      rpc.Disconnect(conn.identifiers, SubscriptionsList(conn.subscriptions))
-    }
-  }
+	for {
+		select {
+		case conn := <-d.disconnect:
+			<-throttle
+			log.Debugf("Commit disconnect %v", conn.identifiers)
+			rpc.Disconnect(conn.identifiers, SubscriptionsList(conn.subscriptions))
+		}
+	}
 }
 
 func (d *DisconnectNotifier) Notify(conn *Conn) {
-  d.disconnect <- conn
+	d.disconnect <- conn
 }
 
 func SubscriptionsList(subs map[string]bool) []string {
-  keys := []string{}
-  for k := range subs {
-    keys = append(keys, k)
-  }
-  return keys
+	keys := []string{}
+	for k := range subs {
+		keys = append(keys, k)
+	}
+	return keys
 }
