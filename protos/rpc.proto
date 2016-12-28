@@ -44,6 +44,8 @@ message CommandResponse {
 message DisconnectRequest {
   string identifiers = 1;
   repeated string subscriptions = 2;
+  string path = 3;
+  map<string,string> headers = 4;
 }
 
 message DisconnectResponse {

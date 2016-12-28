@@ -1,19 +1,42 @@
 # frozen_string_literal: true
 require "action_cable"
+require "anycable/refinements/subscriptions"
 
 module ActionCable
   module Connection
     class Base # :nodoc:
+      using Anycable::Refinements::Subscriptions
+
       attr_reader :transmissions
 
-      def initialize(env: {}, identifiers_json: '{}')
+      class << self
+        def identified_by(*identifiers)
+          super
+          Array(identifiers).each do |identifier|
+            define_method(identifier) do
+              instance_variable_get(:"@#{identifier}") || fetch_identifier(identifier)
+            end
+          end
+        end
+      end
+
+      def initialize(env: {}, identifiers_json: '{}', subscriptions: [])
         @ids = ActiveSupport::JSON.decode(identifiers_json)
+
         @cached_ids = {}
         @env = env
         @coder = ActiveSupport::JSON
         @closed = false
         @transmissions = []
         @subscriptions = ActionCable::Connection::Subscriptions.new(self)
+
+        # Initialize channels if any
+        subscriptions.each { |id| @subscriptions.fetch(id) }
+      end
+
+      # Create a channel instance from identifier for the connection
+      def channel_for(identifier)
+        subscriptions.fetch(identifier)
       end
 
       def handle_open
@@ -24,7 +47,7 @@ module ActionCable
       end
 
       def handle_close
-        # subscriptions.unsubscribe_from_all
+        subscriptions.unsubscribe_from_all
         disconnect if respond_to?(:disconnect)
       end
 

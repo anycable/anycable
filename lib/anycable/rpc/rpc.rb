@@ -29,6 +29,8 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
   add_message "anycable.DisconnectRequest" do
     optional :identifiers, :string, 1
     repeated :subscriptions, :string, 2
+    optional :path, :string, 3
+    map :headers, :string, :string, 4
   end
   add_message "anycable.DisconnectResponse" do
     optional :status, :enum, 1, "anycable.Status"
