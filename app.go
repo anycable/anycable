@@ -7,8 +7,9 @@ import (
 )
 
 type App struct {
-	Pinger     *Pinger
-	Subscriber *Subscriber
+	Pinger       *Pinger
+	Subscriber   *Subscriber
+	Disconnector *DisconnectNotifier
 }
 
 const (
@@ -38,9 +39,7 @@ func (r *Reply) toJSON() []byte {
 var app = &App{}
 
 func (app *App) Connected(conn *Conn, transmissions []string) {
-	if hub.Size() == 0 {
-		go app.Pinger.run()
-	}
+	app.Pinger.Increment()
 
 	hub.register <- conn
 
@@ -93,14 +92,11 @@ func (app *App) Perform(conn *Conn, msg *Message) {
 }
 
 func (app *App) Disconnected(conn *Conn) {
-	if hub.Size() == 1 {
-		app.Pinger.pause()
-	}
+	app.Pinger.Decrement()
 
 	hub.unregister <- conn
 
-	// Fixme: mass disconnect make it fcuked up!
-	// rpc.Disconnect(conn.identifiers, SubscriptionsList(conn.subscriptions))
+	app.Disconnector.Notify(conn)
 }
 
 func (app *App) BroadcastAll(message []byte) {
@@ -127,12 +123,4 @@ func HandleReply(conn *Conn, msg *Message, reply *pb.CommandResponse) {
 	}
 
 	Transmit(conn, reply.Transmissions)
-}
-
-func SubscriptionsList(subs map[string]bool) []string {
-	keys := []string{}
-	for k := range subs {
-		keys = append(keys, k)
-	}
-	return keys
 }
