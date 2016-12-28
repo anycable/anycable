@@ -45,7 +45,9 @@ var redishost = flag.String("redis", "redis://localhost:6379/5", "redis address"
 
 var redischannel = flag.String("redis_channel", "anycable", "redis channel")
 
-var addr = flag.String("addr", "0.0.0.0:8080", "http service address")
+var addr = flag.String("addr", "localhost:8080", "http service address")
+
+var disconnectRate = flag.Int("disconnect_rate", 100, "the number of Disconnect calls per second")
 
 var upgrader = websocket.Upgrader{
 	CheckOrigin:     func(r *http.Request) bool { return true },
@@ -169,6 +171,9 @@ func main() {
 
 	app.Subscriber = &Subscriber{host: *redishost, channel: *redischannel}
 	go app.Subscriber.run()
+
+	app.Disconnector = &DisconnectNotifier{rate: *disconnectRate, disconnect: make(chan *Conn)}
+	go app.Disconnector.run()
 
 	log.Infof("Running websocket server on %s", *addr)
 	http.HandleFunc("/cable", serveWs)
