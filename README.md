@@ -103,7 +103,7 @@ Feature                  | Status
 -------------------------|--------
 Connection Identifiers   | +
 Connection Request (cookies, params) | +
-Disconnect Handling | coming soon
+Disconnect Handling | +
 Subscribe to channels | +
 Parameterized subscriptions | +
 Unsubscribe from channels | +
