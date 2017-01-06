@@ -11,7 +11,7 @@ describe "client messages", :rpc_command do
     let(:command) { 'message' }
     let(:data) { { action: 'add', a: 1, b: 2 } }
 
-    subject { service.perform(request) }
+    subject { service.command(request) }
 
     it "responds with result" do
       expect(subject.status).to eq :SUCCESS

@@ -4,9 +4,7 @@ package anycable;
 
 service RPC {
   rpc Connect (ConnectionRequest) returns (ConnectionResponse) {}
-  rpc Subscribe (CommandMessage) returns (CommandResponse) {}
-  rpc Unsubscribe (CommandMessage) returns (CommandResponse) {}
-  rpc Perform (CommandMessage) returns (CommandResponse) {}
+  rpc Command (CommandMessage) returns (CommandResponse) {}
   rpc Disconnect (DisconnectRequest) returns (DisconnectResponse) {}
 }
 

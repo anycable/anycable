@@ -53,56 +53,10 @@ module Anycable
       end
     end
 
-    def subscribe(message, _unused_call)
-      logger.debug("RPC Subscribe: #{message}")
+    def command(message, _unused_call)
+      logger.debug("RPC Command: #{message}")
 
-      run_command(message) do |connection, channel|
-        channel.do_subscribe
-        if channel.subscription_rejected?
-          Anycable::CommandResponse.new(
-            status: Anycable::Status::ERROR,
-            disconnect: connection.closed?,
-            transmissions: connection.transmissions
-          )
-        else
-          Anycable::CommandResponse.new(
-            status: Anycable::Status::SUCCESS,
-            disconnect: connection.closed?,
-            stop_streams: channel.stop_streams?,
-            streams: channel.streams,
-            transmissions: connection.transmissions
-          )
-        end
-      end
-    end
-
-    def unsubscribe(message, _unused_call)
-      logger.debug("RPC Unsubscribe: #{message}")
-
-      run_command(message) do |connection, channel|
-        connection.subscriptions.remove_subscription(channel)
-
-        Anycable::CommandResponse.new(
-          status: Anycable::Status::SUCCESS,
-          disconnect: false,
-          stop_streams: true
-        )
-      end
-    end
-
-    def perform(message, _unused_call)
-      logger.debug("RPC Perform: #{message}")
-
-      run_command(message) do |connection, channel|
-        channel.perform_action(ActiveSupport::JSON.decode(message.data))
-        Anycable::CommandResponse.new(
-          status: Anycable::Status::SUCCESS,
-          disconnect: connection.closed?,
-          stop_streams: channel.stop_streams?,
-          streams: channel.streams,
-          transmissions: connection.transmissions
-        )
-      end
+      run_command(message)
     end
 
     private
@@ -115,12 +69,52 @@ module Anycable
       channel = connection.channel_for(message.identifier)
 
       if channel.present?
-        yield connection, channel
+        send("handle_#{message.command}", message, connection, channel)
       else
         Anycable::CommandResponse.new(
           status: Anycable::Status::ERROR
         )
       end
+    end
+
+    def handle_subscribe(_msg, connection, channel)
+      channel.do_subscribe
+      if channel.subscription_rejected?
+        Anycable::CommandResponse.new(
+          status: Anycable::Status::ERROR,
+          disconnect: connection.closed?,
+          transmissions: connection.transmissions
+        )
+      else
+        Anycable::CommandResponse.new(
+          status: Anycable::Status::SUCCESS,
+          disconnect: connection.closed?,
+          stop_streams: channel.stop_streams?,
+          streams: channel.streams,
+          transmissions: connection.transmissions
+        )
+      end
+    end
+
+    def handle_unsubscribe(_mgs, connection, channel)
+      connection.subscriptions.remove_subscription(channel)
+
+      Anycable::CommandResponse.new(
+        status: Anycable::Status::SUCCESS,
+        disconnect: false,
+        stop_streams: true
+      )
+    end
+
+    def handle_message(msg, connection, channel)
+      channel.perform_action(ActiveSupport::JSON.decode(msg.data))
+      Anycable::CommandResponse.new(
+        status: Anycable::Status::SUCCESS,
+        disconnect: connection.closed?,
+        stop_streams: channel.stop_streams?,
+        streams: channel.streams,
+        transmissions: connection.transmissions
+      )
     end
 
     # Build env from path

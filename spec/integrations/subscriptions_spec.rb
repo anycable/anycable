@@ -11,7 +11,7 @@ describe "subscriptions", :rpc_command do
     let(:command) { 'subscribe' }
     let(:user) { User.new(name: 'john', secret: '123') }
 
-    subject { service.subscribe(request) }
+    subject { service.command(request) }
 
     context "reject subscription" do
       let(:user) { User.new(name: 'john', secret: '000') }
@@ -47,7 +47,7 @@ describe "subscriptions", :rpc_command do
 
     let(:command) { 'unsubscribe' }
 
-    subject { service.unsubscribe(request) }
+    subject { service.command(request) }
 
     it "responds with stop_all_streams" do
       expect(subject.status).to eq :SUCCESS

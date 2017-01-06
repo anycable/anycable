@@ -1,5 +1,11 @@
 # Change log
 
+## master
+
+- Refactor RPC API. ([@palkan][])
+
+Replace `Subscribe`, `Unsubscribe` and `Perform` methods with `Command` method.
+
 ## 0.3.0 (2016-12-28)
 
 - Handle `Disconnect` requests. ([@palkan][])

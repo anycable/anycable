@@ -17,9 +17,7 @@ module Anycable
       self.service_name = 'anycable.RPC'
 
       rpc :Connect, ConnectionRequest, ConnectionResponse
-      rpc :Subscribe, CommandMessage, CommandResponse
-      rpc :Unsubscribe, CommandMessage, CommandResponse
-      rpc :Perform, CommandMessage, CommandResponse
+      rpc :Command, CommandMessage, CommandResponse
       rpc :Disconnect, DisconnectRequest, DisconnectResponse
     end
 
