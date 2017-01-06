@@ -1,5 +1,11 @@
 # Change log
 
+## master
+
+- Fix ping message format. ([@woodcrust][])
+
+Do not add `identifier` field.
+
 ## 0.2.0 (2016-12-28)
 
 - Add `DisconnectNotifier`. ([@palkan][])
@@ -16,3 +22,4 @@ No more race conditions.
 - Small fixes. ([@palkan][])
 
 [@palkan]: https://github.com/palkan
+[@woodcrust]: https://github.com/woodcrust
