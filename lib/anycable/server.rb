@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 require 'grpc'
-require 'anycable'
 require 'anycable/rpc_handler'
 
 # Set GRPC logger

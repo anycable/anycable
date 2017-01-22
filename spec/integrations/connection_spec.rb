@@ -29,8 +29,9 @@ describe "client connection" do
       expect(subject.status).to eq :SUCCESS
       identifiers = JSON.parse(subject.identifiers)
       expect(identifiers).to include(
-        'current_user',
-        'url' => 'http://example.io/cable?token=123'
+        'current_user' => 'john',
+        'path' => '/cable',
+        'token' => '123'
       )
       expect(subject.transmissions.first).to eq JSON.dump('type' => 'welcome')
     end

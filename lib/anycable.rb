@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 require "anycable/version"
 require "anycable/config"
-require "anycable/actioncable/server"
+require "anycable/server"
+require "anycable/pubsub"
+require "logger"
 
 # Anycable allows to use any websocket service (written in any language) as a replacement
 # for ActionCable server.
@@ -11,19 +13,30 @@ require "anycable/actioncable/server"
 #
 # Broadcasting messages to WS is done through Redis Pub/Sub.
 module Anycable
-  def self.logger=(logger)
-    @logger = logger
-  end
+  class << self
+    def logger=(logger)
+      @logger = logger
+    end
 
-  def self.logger
-    @logger ||= Anycable.config.debug ? Logger.new(STDOUT) : Logger.new('/dev/null')
-  end
+    def logger
+      @logger ||= Anycable.config.debug ? Logger.new(STDOUT) : Logger.new('/dev/null')
+    end
 
-  def self.config
-    @config ||= Config.new
-  end
+    def config
+      @config ||= Config.new
+    end
 
-  def self.configure
-    yield(config) if block_given?
+    def configure
+      yield(config) if block_given?
+    end
+
+    def pubsub
+      @pubsub ||= PubSub.new
+    end
+
+    # Broadcast message to the channel
+    def broadcast(channel, payload)
+      pubsub.broadcast(channel, payload)
+    end
   end
 end

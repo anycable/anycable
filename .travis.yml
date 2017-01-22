@@ -1,11 +1,6 @@
 language: ruby
 cache: bundler
 
-rvm: 2.3.3
-
 matrix:
   include:
-    - gemfile: gemfiles/rails5.gemfile
-    - gemfile: gemfiles/railsmaster.gemfile
-  allow_failures:
-    - gemfile: gemfiles/railsmaster.gemfile
+    - rvm: 2.3.3

@@ -2,10 +2,23 @@
 require "spec_helper"
 require "bg_helper"
 
+class TestPerformChannel < Anycable::TestFactory::Channel
+  def follow(*)
+    stream_from "user_#{connection.identifiers['current_user']}"
+    stream_from "all"
+  end
+
+  def add(data)
+    transmit result: (data['a'] + data['b'])
+  end
+end
+
+Anycable::TestFactory.register_channel 'test_perform', TestPerformChannel
+
 describe "client messages", :rpc_command do
   include_context "rpc stub"
 
-  let(:channel) { 'TestChannel' }
+  let(:channel) { 'test_perform' }
 
   describe "#perform" do
     let(:command) { 'message' }

@@ -3,25 +3,20 @@
 
 # Anycable
 
-AnyCable allows you to use any WebSocket server (written in any language) as a replacement for built-in Ruby ActionCable server.
+AnyCable allows you to use any WebSocket server (written in any language) as a replacement for your Ruby server (such as Faye, ActionCable, etc).
 
-With AnyCable you can use channels, client-side JS, broadcasting - (almost) all that you can do with ActionCable.
+AnyCable uses ActionCable protocol, so you can use ActionCable [JavaScript client](https://www.npmjs.com/package/actioncable) without any monkey-patching.
 
-You can even use ActionCable in development and not be afraid of compatibility issues.
-
-[Example Application](https://github.com/anycable/anycable_demo)
-
-**NOTE**: MacOS users, please, beware of [Sierra-related bug](
-https://github.com/grpc/grpc/issues/8403).
+**NOTE**: Since version 0.4.0 this repository contains only core functionality and connot be used separately as is.
+Rails plug-n-play integration has been extracted to [anycable-rails](https://github.com/anycable/anycable-rails) gem.
 
 <a href="https://evilmartians.com/">
 <img src="https://evilmartians.com/badges/sponsored-by-evil-martians.svg" alt="Sponsored by Evil Martians" width="236" height="54"></a>
 
 ## Requirements
 
-- Ruby ~> 2.3;
-- Rails ~> 5.0;
-- Redis
+- Ruby ~> 2.3, < 2.4 (follow [this issue](https://github.com/grpc/grpc/issues/9296) for Ruby 2.4 support);
+- Redis (for brodcasting, [discuss other options](https://github.com/anycable/anycable/issues/2) with us!)
 
 ## How It Works?
 
@@ -39,61 +34,9 @@ https://github.com/grpc/grpc/issues/8403).
 - [Anycable Go](https://github.com/anycable/anycable-go)
 - [ErlyCable](https://github.com/anycable/erlycable)
 
-
-## Installation
-
-Add Anycable to your application's Gemfile:
-
-```ruby
-gem 'anycable', group: :production
-```
-
-And then run:
-
-```shell
-rails generate anycable
-```
-
-to create executable.
-
-You can use _built-in_ ActionCable for test and development.
-
 ## Configuration
 
-Add `config/anycable.yml`if you want to override defaults (see below):
-
-```yml
-production:
-  # gRPC server host
-  rpc_host: "localhost:50051"
-  # Redis URL (for broadcasting) 
-  redis_url: "redis://localhost:6379/2"
-  # Redis channel name
-  redis_channel: "anycable"
-
-```
-
 Anycable uses [anyway_config](https://github.com/palkan/anyway_config), thus it is also possible to set configuration variables through `secrets.yml` or environment vars.
-
-## Usage
-
-Run Anycable RPC server:
-
-```ruby
-./bin/anycable
-```
-
-and also run AnyCable-compatible WebSocket server, e.g. [anycable-go](https://github.com/anycable/anycable-go):
-
-```sh
-anycable-go -addr='localhost:3334'
-```
-
-Don't forget to set cable url in your `config/environments/production.rb`:
-
-```ruby
-config.action_cable.url = "ws://localhost:3334/cable"
-```
 
 ## ActionCable Compatibility
 
@@ -112,7 +55,6 @@ Performing Channel Actions | +
 Streaming | +
 [Custom stream callbacks](http://edgeapi.rubyonrails.org/classes/ActionCable/Channel/Streams.html) | -
 Broadcasting | +
-
 
 ## Contributing
 

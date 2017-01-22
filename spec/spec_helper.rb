@@ -1,6 +1,4 @@
 # frozen_string_literal: true
-ENV["RAILS_ENV"] = "test"
-
 require "pry-byebug"
 
 if ENV['COVER']
@@ -10,12 +8,14 @@ if ENV['COVER']
   SimpleCov.start
 end
 
-require File.expand_path("../dummy/config/environment", __FILE__)
-require "anycable/server"
-
-Rails.application.eager_load!
+ENV['ANYCABLE_CONF'] = File.join(File.dirname(__FILE__), "support/anycable.yml")
+require "anycable"
+require "json"
+require "rack"
 
 Dir["#{File.dirname(__FILE__)}/support/**/*.rb"].each { |f| require f }
+
+Anycable.config.connection_factory = Anycable::TestFactory
 
 RSpec.configure do |config|
   config.mock_with :rspec do |mocks|
@@ -28,6 +28,4 @@ RSpec.configure do |config|
 
   config.order = :random
   Kernel.srand config.seed
-
-  config.after(:each) { ApplicationCable::Connection.events_log.clear }
 end

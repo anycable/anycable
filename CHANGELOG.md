@@ -1,10 +1,14 @@
 # Change log
 
-## master
+## 0.4.0
 
 - Refactor RPC API. ([@palkan][])
 
 Replace `Subscribe`, `Unsubscribe` and `Perform` methods with `Command` method.
+
+- Extract Rails functionality to separate gem. ([@palkan][])
+
+All Rails specifics now live here https://github.com/anycable/anycable-rails.
 
 ## 0.3.0 (2016-12-28)
 
