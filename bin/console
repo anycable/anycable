@@ -1,8 +1,7 @@
 #!/usr/bin/env ruby
 
 require "bundler/setup"
-require "rails"
-require "anycable/server"
+require "anycable"
 
 require "pry"
 Pry.start

@@ -1,8 +1,10 @@
 # Change log
 
-## master
+## 0.4.0
 
 - Refactor RPC API. ([@palkan][])
+
+- Extract Rails functionality to separate gem. ([@palkan][])
 
 Replace `Subscribe`, `Unsubscribe` and `Perform` methods with `Command` method.
 

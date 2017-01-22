@@ -1,8 +1,0 @@
-#!/usr/bin/env ruby
-# frozen_string_literal: true
-require ::File.expand_path('../../config/environment', __FILE__)
-require 'anycable/server'
-
-Rails.application.eager_load!
-
-Anycable::Server.start

@@ -17,14 +17,14 @@ Gem::Specification.new do |spec|
   spec.files         = `git ls-files -z`.split("\x0").reject { |f| f.match(%r{^(test|spec|features)/}) }
   spec.require_paths = ["lib"]
 
-  spec.add_dependency "rails", "~> 5"
-  spec.add_dependency "anyway_config", "~>0.4.0"
+  spec.add_dependency "anyway_config", "~>0.5.0"
   spec.add_dependency "grpc", "~> 1.0"
   spec.add_dependency "redis", "~> 3.0"
 
   spec.add_development_dependency "bundler", "~> 1"
   spec.add_development_dependency "rake", "~> 10.0"
-  spec.add_development_dependency "rspec-rails", ">= 3.4"
+  spec.add_development_dependency "rack", "~> 2.0"
+  spec.add_development_dependency "rspec", ">= 3.5"
   spec.add_development_dependency "simplecov", ">= 0.3.8"
   spec.add_development_dependency "pry-byebug"
 end

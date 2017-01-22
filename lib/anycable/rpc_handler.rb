@@ -1,11 +1,8 @@
 # frozen_string_literal: true
-require 'anycable/actioncable/connection'
-require 'anycable/actioncable/channel'
 require 'anycable/rpc/rpc'
 require 'anycable/rpc/rpc_services'
 
 # rubocop:disable Metrics/ClassLength
-# rubocop:disable Metrics/AbcSize
 # rubocop:disable Metrics/MethodLength
 module Anycable
   # RPC service handler
@@ -14,12 +11,7 @@ module Anycable
     def connect(request, _unused_call)
       logger.debug("RPC Connect: #{request}")
 
-      connection = ApplicationCable::Connection.new(
-        env:
-          path_env(request.path).merge(
-            'HTTP_COOKIE' => request.headers['Cookie']
-          )
-      )
+      connection = factory.create(env: rack_env(request))
 
       connection.handle_open
 
@@ -28,7 +20,7 @@ module Anycable
       else
         Anycable::ConnectionResponse.new(
           status: Anycable::Status::SUCCESS,
-          identifiers: connection.identifiers_hash.to_json,
+          identifiers: connection.identifiers_json,
           transmissions: connection.transmissions
         )
       end
@@ -37,12 +29,9 @@ module Anycable
     def disconnect(request, _unused_call)
       logger.debug("RPC Disonnect: #{request}")
 
-      connection = ApplicationCable::Connection.new(
-        env:
-          path_env(request.path).merge(
-            'HTTP_COOKIE' => request.headers['Cookie']
-          ),
-        identifiers_json: request.identifiers,
+      connection = factory.create(
+        env: rack_env(request),
+        identifiers: request.identifiers,
         subscriptions: request.subscriptions
       )
 
@@ -62,13 +51,13 @@ module Anycable
     private
 
     def run_command(message)
-      connection = ApplicationCable::Connection.new(
-        identifiers_json: message.connection_identifiers
+      connection = factory.create(
+        identifiers: message.connection_identifiers
       )
 
       channel = connection.channel_for(message.identifier)
 
-      if channel.present?
+      if !channel.nil?
         send("handle_#{message.command}", message, connection, channel)
       else
         Anycable::CommandResponse.new(
@@ -78,7 +67,7 @@ module Anycable
     end
 
     def handle_subscribe(_msg, connection, channel)
-      channel.do_subscribe
+      channel.handle_subscribe
       if channel.subscription_rejected?
         Anycable::CommandResponse.new(
           status: Anycable::Status::ERROR,
@@ -97,17 +86,18 @@ module Anycable
     end
 
     def handle_unsubscribe(_mgs, connection, channel)
-      connection.subscriptions.remove_subscription(channel)
+      channel.handle_unsubscribe
 
       Anycable::CommandResponse.new(
         status: Anycable::Status::SUCCESS,
-        disconnect: false,
-        stop_streams: true
+        disconnect: connection.closed?,
+        stop_streams: true,
+        transmissions: connection.transmissions
       )
     end
 
     def handle_message(msg, connection, channel)
-      channel.perform_action(ActiveSupport::JSON.decode(msg.data))
+      channel.handle_action(msg.data)
       Anycable::CommandResponse.new(
         status: Anycable::Status::SUCCESS,
         disconnect: connection.closed?,
@@ -118,14 +108,15 @@ module Anycable
     end
 
     # Build env from path
-    def path_env(path)
-      uri = URI.parse(path)
+    def rack_env(request)
+      uri = URI.parse(request.path)
       {
         'QUERY_STRING' => uri.query,
         'SCRIPT_NAME' => '',
         'PATH_INFO' => uri.path,
         'SERVER_PORT' => uri.port.to_s,
         'HTTP_HOST' => uri.host,
+        'HTTP_COOKIE' => request.headers['Cookie'],
         # Hack to avoid Missing rack.input error
         'rack.request.form_input' => '',
         'rack.input' => '',
@@ -135,6 +126,10 @@ module Anycable
 
     def logger
       Anycable.logger
+    end
+
+    def factory
+      Anycable.config.connection_factory
     end
   end
 end
