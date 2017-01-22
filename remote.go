@@ -79,7 +79,7 @@ func (rpc *Remote) Subscribe(connId string, channelId string) *pb.CommandRespons
 	client := pb.NewRPCClient(conn.Conn)
 
 	op := func() (interface{}, error) {
-		return client.Subscribe(context.Background(), &pb.CommandMessage{Command: "subscribe", Identifier: channelId, ConnectionIdentifiers: connId})
+		return client.Command(context.Background(), &pb.CommandMessage{Command: "subscribe", Identifier: channelId, ConnectionIdentifiers: connId})
 	}
 
 	response, err := retry(op)
@@ -93,7 +93,7 @@ func (rpc *Remote) Unsubscribe(connId string, channelId string) *pb.CommandRespo
 	client := pb.NewRPCClient(conn.Conn)
 
 	op := func() (interface{}, error) {
-		return client.Unsubscribe(context.Background(), &pb.CommandMessage{Command: "unsubscribe", Identifier: channelId, ConnectionIdentifiers: connId})
+		return client.Command(context.Background(), &pb.CommandMessage{Command: "unsubscribe", Identifier: channelId, ConnectionIdentifiers: connId})
 	}
 
 	response, err := retry(op)
@@ -107,7 +107,7 @@ func (rpc *Remote) Perform(connId string, channelId string, data string) *pb.Com
 	client := pb.NewRPCClient(conn.Conn)
 
 	op := func() (interface{}, error) {
-		return client.Perform(context.Background(), &pb.CommandMessage{Command: "message", Identifier: channelId, ConnectionIdentifiers: connId, Data: data})
+		return client.Command(context.Background(), &pb.CommandMessage{Command: "message", Identifier: channelId, ConnectionIdentifiers: connId, Data: data})
 	}
 
 	response, err := retry(op)

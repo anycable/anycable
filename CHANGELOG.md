@@ -2,6 +2,12 @@
 
 ## master
 
+## 0.3.0 (2017-01-22)
+
+- Refactor RPC methods. ([@palkan][])
+
+Use one `Command` call instead of separate calls (`Subscribe`, `Unsubscribe`, `Perform`).
+
 - Fix ping message format. ([@woodcrust][])
 
 Do not add `identifier` field.
