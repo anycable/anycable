@@ -46,6 +46,10 @@ Metrics/LineLength:
   Exclude:
     - 'spec/**/*.rb'
 
+Metrics/BlockLength:
+  Exclude:
+    - 'spec/**/*.rb'
+
 Rails/Date:
   Enabled: false
 

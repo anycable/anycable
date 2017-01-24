@@ -1,12 +1,13 @@
+# frozen_string_literal: true
 module Anycable
   module TestFactory
     class Connection
-      attr_reader :transmissions, :request, :identifiers, :subscriptions
+      attr_reader :request, :socket, :identifiers, :subscriptions
 
-      def initialize(env: nil, identifiers: nil, subscriptions: nil)
-        @transmissions = []
+      def initialize(socket, identifiers: nil, subscriptions: nil)
+        @socket = socket
         @identifiers = identifiers ? JSON.parse(identifiers) : {}
-        @request = Rack::Request.new(env)
+        @request = Rack::Request.new(socket.env)
         @subscriptions = subscriptions
       end
 
@@ -18,7 +19,7 @@ module Anycable
         if @identifiers['current_user']
           transmit(type: 'welcome')
         else
-          @closed = true
+          close
         end
       end
 
@@ -31,8 +32,27 @@ module Anycable
         )
       end
 
+      def handle_channel_command(identifier, command, data)
+        channel = channel_for(identifier)
+        case command
+        when "subscribe"
+          channel.handle_subscribe
+          !channel.subscription_rejected?
+        when "unsubscribe"
+          channel.handle_unsubscribe
+          true
+        when "message"
+          channel.handle_action(data)
+          true
+        else
+          false
+        end
+      rescue Exception # rubocop:disable Lint/RescueException
+        false
+      end
+
       def transmit(data)
-        @transmissions << data.to_json
+        socket.transmit data.to_json
       end
 
       def channel_for(identifier)
@@ -44,8 +64,8 @@ module Anycable
         @identifiers.to_json
       end
 
-      def closed?
-        @closed == true
+      def close
+        socket.close
       end
     end
 
@@ -72,19 +92,11 @@ module Anycable
       end
 
       def stream_from(broadcasting)
-        streams << broadcasting
+        connection.socket.stream broadcasting
       end
 
       def stop_all_streams
-        @stop_streams = true
-      end
-
-      def streams
-        @streams ||= []
-      end
-
-      def stop_streams?
-        @stop_streams == true
+        connection.socket.stop_all_streams
       end
 
       def transmit(msg)
@@ -93,8 +105,8 @@ module Anycable
     end
 
     class << self
-      def create(**options)
-        Connection.new(options)
+      def create(socket, **options)
+        Connection.new(socket, **options)
       end
 
       def register_channel(identifier, channel)

@@ -1,6 +1,20 @@
 # Change log
 
-## 0.4.0
+## 0.4.1 (2017-01-24)
+
+- Introduce _fake_ socket instance to handle transmissions and streams. ([@palkan][])
+
+- Make commands handling more abstract. ([@palkan][])
+
+We now do not explicitly call channels action but use the only one entrypoing for all commands:
+
+```ruby
+connection.handle_channel_command(identifier, command, data)
+```
+
+This method should return `true` if command was successful and `false` otherwise.
+
+## 0.4.0 (2017-01-22)
 
 - Refactor RPC API. ([@palkan][])
 

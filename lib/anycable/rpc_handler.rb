@@ -1,8 +1,9 @@
 # frozen_string_literal: true
+require 'anycable/socket'
 require 'anycable/rpc/rpc'
 require 'anycable/rpc/rpc_services'
 
-# rubocop:disable Metrics/ClassLength
+# rubocop:disable Metrics/AbcSize
 # rubocop:disable Metrics/MethodLength
 module Anycable
   # RPC service handler
@@ -11,17 +12,19 @@ module Anycable
     def connect(request, _unused_call)
       logger.debug("RPC Connect: #{request}")
 
-      connection = factory.create(env: rack_env(request))
+      socket = build_socket(env: rack_env(request))
+
+      connection = factory.create(socket)
 
       connection.handle_open
 
-      if connection.closed?
+      if socket.closed?
         Anycable::ConnectionResponse.new(status: Anycable::Status::ERROR)
       else
         Anycable::ConnectionResponse.new(
           status: Anycable::Status::SUCCESS,
           identifiers: connection.identifiers_json,
-          transmissions: connection.transmissions
+          transmissions: socket.transmissions
         )
       end
     end
@@ -29,8 +32,10 @@ module Anycable
     def disconnect(request, _unused_call)
       logger.debug("RPC Disonnect: #{request}")
 
+      socket = build_socket(env: rack_env(request))
+
       connection = factory.create(
-        env: rack_env(request),
+        socket,
         identifiers: request.identifiers,
         subscriptions: request.subscriptions
       )
@@ -45,67 +50,29 @@ module Anycable
     def command(message, _unused_call)
       logger.debug("RPC Command: #{message}")
 
-      run_command(message)
-    end
+      socket = build_socket
 
-    private
-
-    def run_command(message)
       connection = factory.create(
+        socket,
         identifiers: message.connection_identifiers
       )
 
-      channel = connection.channel_for(message.identifier)
-
-      if !channel.nil?
-        send("handle_#{message.command}", message, connection, channel)
-      else
-        Anycable::CommandResponse.new(
-          status: Anycable::Status::ERROR
-        )
-      end
-    end
-
-    def handle_subscribe(_msg, connection, channel)
-      channel.handle_subscribe
-      if channel.subscription_rejected?
-        Anycable::CommandResponse.new(
-          status: Anycable::Status::ERROR,
-          disconnect: connection.closed?,
-          transmissions: connection.transmissions
-        )
-      else
-        Anycable::CommandResponse.new(
-          status: Anycable::Status::SUCCESS,
-          disconnect: connection.closed?,
-          stop_streams: channel.stop_streams?,
-          streams: channel.streams,
-          transmissions: connection.transmissions
-        )
-      end
-    end
-
-    def handle_unsubscribe(_mgs, connection, channel)
-      channel.handle_unsubscribe
+      result = connection.handle_channel_command(
+        message.identifier,
+        message.command,
+        message.data
+      )
 
       Anycable::CommandResponse.new(
-        status: Anycable::Status::SUCCESS,
-        disconnect: connection.closed?,
-        stop_streams: true,
-        transmissions: connection.transmissions
+        status: result ? Anycable::Status::SUCCESS : Anycable::Status::ERROR,
+        disconnect: socket.closed?,
+        stop_streams: socket.stop_streams?,
+        streams: socket.streams,
+        transmissions: socket.transmissions
       )
     end
 
-    def handle_message(msg, connection, channel)
-      channel.handle_action(msg.data)
-      Anycable::CommandResponse.new(
-        status: Anycable::Status::SUCCESS,
-        disconnect: connection.closed?,
-        stop_streams: channel.stop_streams?,
-        streams: channel.streams,
-        transmissions: connection.transmissions
-      )
-    end
+    private
 
     # Build env from path
     def rack_env(request)
@@ -122,6 +89,10 @@ module Anycable
         'rack.input' => '',
         'rack.request.form_hash' => {}
       }
+    end
+
+    def build_socket(**options)
+      Anycable::Socket.new(**options)
     end
 
     def logger
