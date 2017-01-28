@@ -1,5 +1,11 @@
 # Change log
 
+## 0.4.2 (2017-01-28)
+
+- Change socket streaming API. ([@palkan][])
+
+Add `Socket#subscribe`, `unsubscribe` and `unsubscribe_from_all` methods.
+
 ## 0.4.1 (2017-01-24)
 
 - Introduce _fake_ socket instance to handle transmissions and streams. ([@palkan][])

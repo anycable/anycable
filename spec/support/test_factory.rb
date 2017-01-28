@@ -92,11 +92,11 @@ module Anycable
       end
 
       def stream_from(broadcasting)
-        connection.socket.stream broadcasting
+        connection.socket.subscribe identifier, broadcasting
       end
 
       def stop_all_streams
-        connection.socket.stop_all_streams
+        connection.socket.unsubscribe_from_all(identifier)
       end
 
       def transmit(msg)

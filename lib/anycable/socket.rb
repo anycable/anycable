@@ -13,8 +13,16 @@ module Anycable
       transmissions << websocket_message
     end
 
-    def stream(broadcasting)
+    def subscribe(_channel, broadcasting)
       streams << broadcasting
+    end
+
+    def unsubscribe(_channel, _broadcasting)
+      raise NotImplementedError
+    end
+
+    def unsubscribe_from_all(_channel)
+      @stop_all_streams = true
     end
 
     def streams
@@ -30,10 +38,6 @@ module Anycable
 
     def closed?
       @closed == true
-    end
-
-    def stop_all_streams
-      @stop_all_streams = true
     end
 
     def stop_streams?
