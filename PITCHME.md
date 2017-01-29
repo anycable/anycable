@@ -128,7 +128,7 @@
 
 ## Let's Make ActionCable Not Suck!
 
-[anycable.evilmartians.io](http://anycable.evilmartians.io/)
+[anycable.evilmartians.io](http://anycable.io/)
 
 Vladimir Dementyev [@palkan_tula](http://twitter.com/palkan_tula)
 
