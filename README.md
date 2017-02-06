@@ -15,7 +15,7 @@ Rails plug-n-play integration has been extracted to [anycable-rails](https://git
 
 ## Requirements
 
-- Ruby ~> 2.3, < 2.4 (follow [this issue](https://github.com/grpc/grpc/issues/9296) for Ruby 2.4 support);
+- Ruby ~> 2.3
 - Redis (for brodcasting, [discuss other options](https://github.com/anycable/anycable/issues/2) with us!)
 
 ## How It Works?
