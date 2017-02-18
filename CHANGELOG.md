@@ -1,5 +1,9 @@
 # Change log
 
+## 0.4.3 (2017-02-18)
+
+- Update `grpc` version dependency to support Ruby 2.4. ([@palkan][])
+
 ## 0.4.2 (2017-01-28)
 
 - Change socket streaming API. ([@palkan][])
