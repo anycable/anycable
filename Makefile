@@ -1,4 +1,8 @@
-VERSION := $(shell sh -c 'git describe --always --tags')
+ifdef VERSION
+else
+	VERSION := $(shell sh -c 'git describe --always --tags')
+endif
+
 ifdef GOBIN
 PATH := $(GOBIN):$(PATH)
 else
