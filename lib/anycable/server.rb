@@ -22,6 +22,10 @@ module Anycable
         Anycable.logger.info "RPC server is listening on #{Anycable.config.rpc_host}"
         grpc_server.run_till_terminated
       end
+
+      def stop
+        @grpc_server.stop
+      end
     end
   end
 end
