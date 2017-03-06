@@ -88,4 +88,14 @@ describe "subscriptions", :rpc_command do
       expect(channel_logs.last[:data]).to eq(user: 'john', type: 'unsubscribed')
     end
   end
+
+  context "error handling" do
+    let(:command) { 'fake' }
+
+    subject { service.command(request) }
+
+    it "responds with error" do
+      expect(subject.status).to eq :ERROR
+    end
+  end
 end

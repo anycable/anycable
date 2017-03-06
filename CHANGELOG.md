@@ -1,5 +1,9 @@
 # Change log
 
+## 0.4.4 (2017-03-06)
+
+- Handle `StandardError` gracefully in RPC calls. ([@palkan][])
+
 ## 0.4.3 (2017-02-18)
 
 - Update `grpc` version dependency to support Ruby 2.4. ([@palkan][])

@@ -3,11 +3,15 @@ require 'anycable/socket'
 require 'anycable/rpc/rpc'
 require 'anycable/rpc/rpc_services'
 
+require 'anycable/handler/exceptions_handling'
+
 # rubocop:disable Metrics/AbcSize
 # rubocop:disable Metrics/MethodLength
 module Anycable
   # RPC service handler
   class RPCHandler < Anycable::RPC::Service
+    prepend Handler::ExceptionsHandling
+
     # Handle connection request from WebSocket server
     def connect(request, _unused_call)
       logger.debug("RPC Connect: #{request}")
@@ -43,7 +47,7 @@ module Anycable
       if connection.handle_close
         Anycable::DisconnectResponse.new(status: Anycable::Status::SUCCESS)
       else
-        Anycable::ConnectionResponse.new(status: Anycable::Status::ERROR)
+        Anycable::DisconnectResponse.new(status: Anycable::Status::ERROR)
       end
     end
 
