@@ -2,7 +2,6 @@
 # Source: rpc.proto for package 'anycable'
 
 require 'grpc'
-require_relative 'rpc'
 
 module Anycable
   module RPC

@@ -1,5 +1,9 @@
 # Change log
 
+## 0.4.5 (2017-03-17)
+
+- Fixed #11. ([@palkan][])
+
 ## 0.4.4 (2017-03-06)
 
 - Handle `StandardError` gracefully in RPC calls. ([@palkan][])
