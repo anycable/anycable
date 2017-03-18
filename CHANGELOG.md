@@ -1,6 +1,11 @@
 # Change log
 
-## master
+## 0.4.0 (2017-03-18)
+
+- Follow AnyCable versioning conventions. ([@palkan]())
+
+Add `-version` flag to show current version.
+Print current version on startup.
 
 ## 0.3.0 (2017-01-22)
 

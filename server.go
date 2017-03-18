@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"time"
+	"fmt"
 
 	"github.com/gorilla/websocket"
 	"github.com/namsral/flag"
@@ -36,6 +37,8 @@ type Conn struct {
 	// Buffered channel of outbound messages.
 	send chan []byte
 }
+
+var version string
 
 var log = logging.MustGetLogger("main")
 
@@ -152,7 +155,13 @@ func serveWs(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	logflag := flag.Bool("log", false, "enable verbose logging")
+	showVersion := flag.Bool("version", false, "show version")
 	flag.Parse()
+
+	if *showVersion {
+		fmt.Println(version)
+		return
+	}
 
 	backend := logging.AddModuleLevel(logging.NewLogBackend(os.Stderr, "", 0))
 
@@ -178,7 +187,7 @@ func main() {
 	app.Disconnector = &DisconnectNotifier{rate: *disconnectRate, disconnect: make(chan *Conn)}
 	go app.Disconnector.run()
 
-	log.Infof("Running websocket server on %s at %s", *addr, *wspath)
+	log.Infof("Running AnyCable websocket server v%s on %s at %s", version, *addr, *wspath)
 	http.HandleFunc(*wspath, serveWs)
 	http.ListenAndServe(*addr, nil)
 }
