@@ -45,10 +45,8 @@ module Anycable
           channel.handle_action(data)
           true
         else
-          false
+          raise "Unknown command"
         end
-      rescue Exception # rubocop:disable Lint/RescueException
-        false
       end
 
       def transmit(data)
