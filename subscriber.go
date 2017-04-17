@@ -16,7 +16,7 @@ func (s *Subscriber) run() {
 	c, err := redisurl.ConnectToURL(s.host)
 
 	if err != nil {
-		log.Criticalf("failed to subscibe to Redis: %v", err)
+		log.Criticalf("failed to subscribe to Redis: %v", err)
 		return
 	}
 

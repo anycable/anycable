@@ -1,8 +1,8 @@
 package main
 
 import (
-	"time"
 	"encoding/json"
+	"time"
 )
 
 type Pinger struct {
@@ -13,8 +13,8 @@ type Pinger struct {
 }
 
 type PingReply struct {
-	Type       string      `json:"type"`
-	Message    interface{} `json:"message"`
+	Type    string      `json:"type"`
+	Message interface{} `json:"message"`
 }
 
 func (p *PingReply) toJSON() []byte {
@@ -30,6 +30,7 @@ func NewPinger(interval time.Duration) *Pinger {
 }
 
 func (p *Pinger) run() {
+	log.Debugf("Ping interval %v", p.interval)
 	p.ticker = time.NewTicker(p.interval)
 	defer p.ticker.Stop()
 

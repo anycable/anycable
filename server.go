@@ -2,10 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"time"
-	"fmt"
 
 	"github.com/gorilla/websocket"
 	"github.com/namsral/flag"
