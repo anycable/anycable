@@ -20,7 +20,7 @@ Rails plug-n-play integration has been extracted to [anycable-rails](https://git
 
 ## How It Works?
 
-![](https://cdn.evilmartians.com/front/posts/anycable-actioncable-on-steroids/Scheme2-f432434.png)
+![](https://s3.amazonaws.com/anycable/Scheme.png)
 
 Read our [Wiki](https://github.com/anycable/anycable/wiki) for more.
 
