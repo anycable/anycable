@@ -1,5 +1,9 @@
 # Change log
 
+## 0.4.6 (2017-05-20)
+
+- Add `Anycable::Server#stop` method. ([@sadovnik][])
+
 ## 0.4.5 (2017-03-17)
 
 - Fixed #11. ([@palkan][])
@@ -49,3 +53,4 @@ All Rails specifics now live here https://github.com/anycable/anycable-rails.
 Implement `Disconnect` handler, which invokes `Connection#disconnect` (along with `Channel#unsubscribed` for each subscription).
 
 [@palkan]: https://github.com/palkan
+[@sadovnik]: https://github.com/sadovnik
