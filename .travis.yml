@@ -1,6 +1,9 @@
 language: ruby
 cache: bundler
 
+dist: trusty
+sudo: false
+
 matrix:
   include:
     - rvm: 2.3.3
