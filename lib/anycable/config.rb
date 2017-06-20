@@ -1,5 +1,5 @@
 # frozen_string_literal: true
-require "anyway"
+require "anyway_config"
 
 module Anycable
   # Anycable configuration
