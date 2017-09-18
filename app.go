@@ -23,7 +23,7 @@ type Message struct {
 }
 
 type Reply struct {
-	Type       string      `json:"type"`
+	Type       string      `json:"type,omitempty"`
 	Identifier string      `json:"identifier"`
 	Message    interface{} `json:"message"`
 }
