@@ -41,11 +41,22 @@ Read our [Wiki](https://github.com/anycable/anycable/wiki) for more.
 
 Anycable uses [anyway_config](https://github.com/palkan/anyway_config), thus it is also possible to set configuration variables through `secrets.yml` or environment vars.
 
+### Example with redis sentinel
+
+```yaml
+  rpc_host: "localhost:50123"
+  redis_url: "redis://redis-1-1:6379/2"
+  redis_sentinels:
+    - { host: 'redis-1-1', port: 26379 }
+    - { host: 'redis-1-2', port: 26379 }
+    - { host: 'redis-1-3', port: 26379 }
+```
+
 ## ActionCable Compatibility
 
 This is the compatibility list for the AnyCable gem, not for AnyCable servers (which may not support some of the features yet).
 
-Feature                  | Status 
+Feature                  | Status
 -------------------------|--------
 Connection Identifiers   | +
 Connection Request (cookies, params) | +

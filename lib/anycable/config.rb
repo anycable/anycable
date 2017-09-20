@@ -9,6 +9,7 @@ module Anycable
 
     attr_config rpc_host: "localhost:50051",
                 redis_url: "redis://localhost:6379/5",
+                redis_sentinels: [],
                 redis_channel: "__anycable__",
                 log_file: nil,
                 log_level: :info,
