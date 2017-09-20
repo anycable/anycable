@@ -2,6 +2,8 @@
 
 ## 0.5.0 (master)
 
+- [#2](https://github.com/anycable/anycable/issues/2) Add support for [Redis Sentinel](https://redis.io/topics/sentinel). ([@accessd](https://github.com/accessd))
+
 - [#28](https://github.com/anycable/anycable/issues/28) Support arbitrary headers. ([@palkan][])
 
 Previously we hardcoded only "Cookie" header. Now we add all passed headers by WebSocket server to request env. 
