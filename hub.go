@@ -42,6 +42,9 @@ type Hub struct {
 
 	// Maps connections to identifiers to streams
 	connection_streams map[*Conn]map[string][]string
+
+	// Control channel to shutdown hub
+	shutdown chan bool
 }
 
 var hub = Hub{
@@ -54,6 +57,7 @@ var hub = Hub{
 	connections:        make(map[*Conn]bool),
 	streams:            make(map[string]map[*Conn]string),
 	connection_streams: make(map[*Conn]map[string][]string),
+	shutdown:           make(chan bool),
 }
 
 func (h *Hub) run() {
@@ -69,8 +73,7 @@ func (h *Hub) run() {
 			h.UnsubscribeConnection(conn)
 
 			if _, ok := h.connections[conn]; ok {
-				delete(h.connections, conn)
-				close(conn.send)
+				h.CloseConnection(conn)
 			}
 
 		case message := <-h.broadcast:
@@ -79,8 +82,7 @@ func (h *Hub) run() {
 				select {
 				case conn.send <- message:
 				default:
-					close(conn.send)
-					delete(hub.connections, conn)
+					hub.CloseConnection(conn)
 				}
 			}
 
@@ -106,8 +108,7 @@ func (h *Hub) run() {
 				select {
 				case conn.send <- bdata:
 				default:
-					close(conn.send)
-					delete(hub.connections, conn)
+					h.CloseConnection(conn)
 				}
 			}
 
@@ -130,8 +131,16 @@ func (h *Hub) run() {
 
 		case subinfo := <-h.unsubscribe:
 			h.UnsubscribeConnectionFromChannel(subinfo.conn, subinfo.identifier)
+
+		case <-h.shutdown:
+			// TODO: notify about disconnection
+			return
 		}
 	}
+}
+
+func (h *Hub) Shutdown() {
+	h.shutdown <- true
 }
 
 func (h *Hub) Size() int {
@@ -162,6 +171,16 @@ func (h *Hub) UnsubscribeConnectionFromChannel(conn *Conn, channel string) {
 			delete(h.streams, stream)
 		}
 	}
+}
+
+func (h *Hub) CloseConnection(conn *Conn) {
+	if conn.send != nil {
+		close(conn.send)
+	}
+
+	// Make it nil to avoid panic on writing into it
+	conn.send = nil
+	delete(h.connections, conn)
 }
 
 func BuildMessage(data string, identifier string) []byte {
