@@ -1,5 +1,11 @@
 # Change log
 
+## 0.4.2 (2017-09-27)
+
+- Fixed bug with race conditions in hub. ([@palkan][])
+
+Fixed [#10](https://github.com/anycable/anycable-go/issues/10).
+
 ## 0.4.0 (2017-03-18)
 
 - Follow AnyCable versioning conventions. ([@palkan]())
