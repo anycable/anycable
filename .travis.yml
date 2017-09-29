@@ -1,0 +1,10 @@
+sudo: false
+language: go
+go:
+  - 1.9
+services:
+  - redis-server
+before_install:
+  - rvm use 2.4.2 --install --binary --fuzzy
+  - gem install anycablebility
+script: make test-ci

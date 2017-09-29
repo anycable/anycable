@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/anycable/anycable-go.svg?branch=master)](https://travis-ci.org/anycable/anycable-go 
+
 # AnyCable-Go WebSocket Server
 
 WebSocket server for [Anycable](https://github.com/anycable/anycable).

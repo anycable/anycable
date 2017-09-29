@@ -52,6 +52,15 @@ run:
 build-protos:
 	protoc --proto_path=./etc --go_out=plugins=grpc:./protos ./etc/rpc.proto
 
+test:
+	go test .
+
+test-cable:
+	go build -ldflags "-X main.version=$(VERSION)" -o tmp/anycable-go-test .
+	anycablebility -c "tmp/anycable-go-test" --target-url="ws://localhost:8080/cable"
+
+test-ci: prepare test test-cable
+
 # Get dependencies and use gdm to checkout changesets
 prepare:
 	go get github.com/tools/godep
