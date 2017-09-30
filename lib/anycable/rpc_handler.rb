@@ -19,7 +19,7 @@ module Anycable
 
       socket = build_socket(env: rack_env(request))
 
-      connection = factory.create(socket)
+      connection = factory.call(socket)
 
       connection.handle_open
 
@@ -39,7 +39,7 @@ module Anycable
 
       socket = build_socket(env: rack_env(request))
 
-      connection = factory.create(
+      connection = factory.call(
         socket,
         identifiers: request.identifiers,
         subscriptions: request.subscriptions
@@ -57,7 +57,7 @@ module Anycable
 
       socket = build_socket
 
-      connection = factory.create(
+      connection = factory.call(
         socket,
         identifiers: message.connection_identifiers
       )
@@ -105,7 +105,7 @@ module Anycable
     end
 
     def factory
-      Anycable.config.connection_factory
+      Anycable.connection_factory
     end
   end
 end
