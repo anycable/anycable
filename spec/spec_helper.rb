@@ -31,6 +31,9 @@ end
 
 Anycable.error_handlers << TestExHandler
 
+# Make sure that tmp is here (for CI)
+FileUtils.mkdir_p("tmp")
+
 RSpec.configure do |config|
   config.mock_with :rspec do |mocks|
     mocks.verify_partial_doubles = true
@@ -45,5 +48,8 @@ RSpec.configure do |config|
   config.order = :random
   Kernel.srand config.seed
 
-  config.after(:each) { Anycable.logger.reset }
+  config.after(:each) do
+    Anyway.env.clear
+    Anycable.logger.reset if Anycable.logger.respond_to?(:reset)
+  end
 end

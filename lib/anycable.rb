@@ -23,8 +23,10 @@ module Anycable
     end
 
     def logger
-      @logger ||= Logger.new(STDOUT).tap do |logger|
-        logger.level = Anycable.config.log
+      return @logger if instance_variable_defined?(:@logger)
+      log_output = Anycable.config.log_file || STDOUT
+      @logger = Logger.new(log_output).tap do |logger|
+        logger.level = Anycable.config.log_level
       end
     end
 

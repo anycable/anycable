@@ -10,8 +10,8 @@ module Anycable
     attr_config rpc_host: "localhost:50051",
                 redis_url: "redis://localhost:6379/5",
                 redis_channel: "__anycable__",
-                error_handlers: [],
-                log: :info,
+                log_file: nil,
+                log_level: :info,
                 log_grpc: false,
                 debug: false # Shortcut to enable GRPC logging and debug level
 
@@ -19,7 +19,7 @@ module Anycable
       super
       # Set log params if debug is true
       return unless debug
-      self.log = :debug
+      self.log_level = :debug
       self.log_grpc = true
     end
   end
