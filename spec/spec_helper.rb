@@ -19,6 +19,18 @@ Dir["#{File.dirname(__FILE__)}/support/**/*.rb"].each { |f| require f }
 Anycable.config.connection_factory = Anycable::TestFactory
 Anycable.logger = TestLogger.new
 
+module TestExHandler
+  class << self
+    attr_reader :last_error
+
+    def call(ex)
+      @last_error = ex
+    end
+  end
+end
+
+Anycable.config.error_handlers << TestExHandler
+
 RSpec.configure do |config|
   config.mock_with :rspec do |mocks|
     mocks.verify_partial_doubles = true
