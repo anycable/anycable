@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 require 'anycable/socket'
 require 'anycable/rpc/rpc'
 require 'anycable/rpc/rpc_services'

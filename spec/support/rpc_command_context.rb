@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 shared_context "rpc command", rpc_command: true do
   let(:user) { 'john' }
   let(:url) { '' }

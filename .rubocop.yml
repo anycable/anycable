@@ -9,12 +9,19 @@ AllCops:
     - 'spec/dummy/**/*'
     - 'tmp/**/*'
     - 'bench/**/*'
+    - 'vendor/**/*'
     - 'lib/anycable/rpc/**/*'
+    - 'Gemfile'
+    - 'Rakefile'
+    - '*.gemspec'
   DisplayCopNames: true
   StyleGuideCopsOnly: false
-  TargetRubyVersion: 2.3
+  TargetRubyVersion: 2.4
 
 Style/AccessorMethodName:
+  Enabled: false
+
+Style/PercentLiteralDelimiters:
   Enabled: false
 
 Style/TrivialAccessors:

@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 module Anycable
   # Socket mock to be used with application connection
   class Socket

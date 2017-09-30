@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 require "anycable/version"
 require "anycable/config"
 require "anycable/server"

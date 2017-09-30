@@ -1,8 +1,9 @@
 # frozen_string_literal: true
+
 require 'spec_helper'
 
 describe Anycable::Config do
-  let(:config) { Anycable.config }
+  subject(:config) { Anycable.config }
 
   it "loads config vars from anycable.yml", :aggregate_failures do
     expect(config.rpc_host).to eq "localhost:50123"
