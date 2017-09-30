@@ -104,7 +104,7 @@ module Anycable
     end
 
     class << self
-      def create(socket, **options)
+      def call(socket, **options)
         Connection.new(socket, **options)
       end
 

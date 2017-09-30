@@ -16,7 +16,7 @@ require "rack"
 
 Dir["#{File.dirname(__FILE__)}/support/**/*.rb"].each { |f| require f }
 
-Anycable.config.connection_factory = Anycable::TestFactory
+Anycable.connection_factory = Anycable::TestFactory
 Anycable.logger = TestLogger.new
 
 module TestExHandler
@@ -29,7 +29,7 @@ module TestExHandler
   end
 end
 
-Anycable.config.error_handlers << TestExHandler
+Anycable.error_handlers << TestExHandler
 
 RSpec.configure do |config|
   config.mock_with :rspec do |mocks|
