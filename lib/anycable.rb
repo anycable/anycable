@@ -20,7 +20,9 @@ module Anycable
     end
 
     def logger
-      @logger ||= Anycable.config.debug ? Logger.new(STDOUT) : Logger.new('/dev/null')
+      @logger ||= Logger.new(STDOUT).tap do |logger|
+        logger.level = Anycable.config.log
+      end
     end
 
     def config

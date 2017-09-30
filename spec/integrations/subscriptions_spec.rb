@@ -98,5 +98,9 @@ describe "subscriptions", :rpc_command do
     it "responds with error" do
       expect(subject.status).to eq :ERROR
     end
+
+    it "writes error to log" do
+      expect { subject }.to change { Anycable.logger[:error].size }.by(1)
+    end
   end
 end
