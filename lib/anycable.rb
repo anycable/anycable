@@ -2,8 +2,6 @@
 
 require "anycable/version"
 require "anycable/config"
-require "anycable/server"
-require "anycable/pubsub"
 require "logger"
 
 # Anycable allows to use any websocket service (written in any language) as a replacement
@@ -43,3 +41,6 @@ module Anycable
     end
   end
 end
+
+require "anycable/server"
+require "anycable/pubsub"

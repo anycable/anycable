@@ -102,5 +102,10 @@ describe "subscriptions", :rpc_command do
     it "writes error to log" do
       expect { subject }.to change { Anycable.logger[:error].size }.by(1)
     end
+
+    it "notifies exception handler" do
+      subject
+      expect(TestExHandler.last_error.message).to eq "Unknown command"
+    end
   end
 end
