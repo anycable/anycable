@@ -17,11 +17,14 @@ require "rack"
 Dir["#{File.dirname(__FILE__)}/support/**/*.rb"].each { |f| require f }
 
 Anycable.config.connection_factory = Anycable::TestFactory
+Anycable.logger = TestLogger.new
 
 RSpec.configure do |config|
   config.mock_with :rspec do |mocks|
     mocks.verify_partial_doubles = true
   end
+
+  config.include WithEnv
 
   config.example_status_persistence_file_path = "tmp/rspec_examples.txt"
   config.filter_run :focus
@@ -29,4 +32,6 @@ RSpec.configure do |config|
 
   config.order = :random
   Kernel.srand config.seed
+
+  config.after(:each) { Anycable.logger.reset }
 end

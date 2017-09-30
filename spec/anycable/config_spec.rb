@@ -9,6 +9,20 @@ describe Anycable::Config do
     expect(config.rpc_host).to eq "localhost:50123"
     expect(config.redis_url).to eq "redis://localhost:6379/2"
     # default value
-    expect(config.redis_channel).to eq "anycable"
+    expect(config.redis_channel).to eq "__anycable__"
+    expect(config.log).to eq :info
+    expect(config.log_grpc).to eq false
+  end
+
+  context "when DEBUG is set" do
+    before { Anyway.env.clear }
+    around { |ex| with_env('ANYCABLE_DEBUG' => '1', &ex) }
+
+    subject(:config) { described_class.new }
+
+    it "sets log to debug and log_grpc to true" do
+      expect(config.log).to eq :debug
+      expect(config.log_grpc).to eq true
+    end
   end
 end
