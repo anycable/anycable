@@ -26,7 +26,7 @@ module Anycable
       end
 
       def handle_exception(ex)
-        Anycable.config.error_handlers.each do |handler|
+        Anycable.error_handlers.each do |handler|
           begin
             handler.call(ex)
           rescue StandardError => ex
@@ -38,6 +38,6 @@ module Anycable
       end
     end
 
-    Anycable.config.error_handlers << proc { |e| Anycable.logger.error(e.message) }
+    Anycable.error_handlers << proc { |e| Anycable.logger.error(e.message) }
   end
 end

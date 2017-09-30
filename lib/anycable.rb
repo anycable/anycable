@@ -13,6 +13,11 @@ require "logger"
 # Broadcasting messages to WS is done through Redis Pub/Sub.
 module Anycable
   class << self
+    # Provide connection factory which
+    # is a callable object with build
+    # a Connection object
+    attr_accessor :connection_factory
+
     def logger=(logger)
       @logger = logger
     end
@@ -29,6 +34,11 @@ module Anycable
 
     def configure
       yield(config) if block_given?
+    end
+
+    def error_handlers
+      return @error_handlers if instance_variable_defined?(:@error_handlers)
+      @error_handlers = []
     end
 
     def pubsub
