@@ -42,7 +42,7 @@ describe "subscriptions", :rpc_command do
       let(:user) { 'jack' }
 
       it "responds with error and subscription rejection", :aggregate_failures do
-        expect(subject.status).to eq :ERROR
+        expect(subject.status).to eq :FAILURE
         expect(subject.streams).to eq []
         expect(subject.stop_streams).to eq false
         expect(subject.transmissions.first).to include('reject_subscription')
@@ -90,7 +90,7 @@ describe "subscriptions", :rpc_command do
     end
   end
 
-  context "error handling" do
+  context "exception handling" do
     let(:command) { 'fake' }
 
     subject { service.command(request) }
