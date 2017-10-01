@@ -37,4 +37,27 @@ describe "client connection" do
       expect(subject.transmissions.first).to eq JSON.dump('type' => 'welcome')
     end
   end
+
+  context "with arbitrary headers" do
+    let(:request) do
+      Anycable::ConnectionRequest.new(
+        headers: {
+          'cookie' => 'username=john;',
+          'x-api-token' => 'abc123',
+          'X-Forwarded-For' => '1.2.3.4'
+        },
+        path: 'http://example.io/cable'
+      )
+    end
+
+    it "responds with success, correct identifiers and 'welcome' message", :aggregate_failures do
+      expect(subject.status).to eq :SUCCESS
+      identifiers = JSON.parse(subject.identifiers)
+      expect(identifiers).to include(
+        'token' => 'abc123',
+        'remote_ip' => '1.2.3.4'
+      )
+      expect(subject.transmissions.first).to eq JSON.dump('type' => 'welcome')
+    end
+  end
 end
