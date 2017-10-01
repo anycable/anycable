@@ -5,8 +5,6 @@ require 'grpc'
 
 module Anycable
   module RPC
-
-    # TODO: add proto service documentation here
     class Service
 
       include GRPC::GenericService

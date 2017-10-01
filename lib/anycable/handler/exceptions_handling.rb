@@ -8,21 +8,21 @@ module Anycable
         super
       rescue StandardError => ex
         handle_exception(ex)
-        Anycable::ConnectionResponse.new(status: Anycable::Status::ERROR)
+        Anycable::ConnectionResponse.new(status: Anycable::Status::ERROR, error_msg: ex.message)
       end
 
       def disconnect(*)
         super
       rescue StandardError => ex
         handle_exception(ex)
-        Anycable::DisconnectResponse.new(status: Anycable::Status::ERROR)
+        Anycable::DisconnectResponse.new(status: Anycable::Status::ERROR, error_msg: ex.message)
       end
 
       def command(*)
         super
       rescue StandardError => ex
         handle_exception(ex)
-        Anycable::CommandResponse.new(status: Anycable::Status::ERROR)
+        Anycable::CommandResponse.new(status: Anycable::Status::ERROR, error_msg: ex.message)
       end
 
       def handle_exception(ex)

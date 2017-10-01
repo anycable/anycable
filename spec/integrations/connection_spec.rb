@@ -11,8 +11,8 @@ describe "client connection" do
   context "no cookies" do
     let(:request) { Anycable::ConnectionRequest.new }
 
-    it "responds with error if no cookies" do
-      expect(subject.status).to eq :ERROR
+    it "responds with exception if no cookies" do
+      expect(subject.status).to eq :FAILURE
     end
   end
 

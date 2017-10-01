@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 require 'anycable/socket'
-require 'anycable/rpc/rpc'
-require 'anycable/rpc/rpc_services'
+require 'anycable/rpc/rpc_pb'
+require 'anycable/rpc/rpc_services_pb'
 
 require 'anycable/handler/exceptions_handling'
 
@@ -24,7 +24,7 @@ module Anycable
       connection.handle_open
 
       if socket.closed?
-        Anycable::ConnectionResponse.new(status: Anycable::Status::ERROR)
+        Anycable::ConnectionResponse.new(status: Anycable::Status::FAILURE)
       else
         Anycable::ConnectionResponse.new(
           status: Anycable::Status::SUCCESS,
@@ -48,7 +48,7 @@ module Anycable
       if connection.handle_close
         Anycable::DisconnectResponse.new(status: Anycable::Status::SUCCESS)
       else
-        Anycable::DisconnectResponse.new(status: Anycable::Status::ERROR)
+        Anycable::DisconnectResponse.new(status: Anycable::Status::FAILURE)
       end
     end
 
@@ -69,7 +69,7 @@ module Anycable
       )
 
       Anycable::CommandResponse.new(
-        status: result ? Anycable::Status::SUCCESS : Anycable::Status::ERROR,
+        status: result ? Anycable::Status::SUCCESS : Anycable::Status::FAILURE,
         disconnect: socket.closed?,
         stop_streams: socket.stop_streams?,
         streams: socket.streams,

@@ -59,6 +59,21 @@ Streaming | +
 [Custom stream callbacks](http://edgeapi.rubyonrails.org/classes/ActionCable/Channel/Streams.html) | -
 Broadcasting | +
 
+## Build
+
+- Install required GRPC gems:
+
+```
+gem install grpc
+gem install grpc-tools
+```
+
+- Re-generate GRPC files (if necessary):
+
+```
+make
+```
+
 ## Contributing
 
 Bug reports and pull requests are welcome on GitHub at https://github.com/anycable/anycable.

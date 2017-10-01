@@ -42,5 +42,14 @@ describe "client messages", :rpc_command do
         expect(subject.stop_streams).to eq false
       end
     end
+
+    context "when exception" do
+      let(:data) { { action: 'add', a: 1, b: 'smth' } }
+
+      it "responds with ERROR", :aggregate_failures do
+        expect(subject.status).to eq :ERROR
+        expect(subject.error_msg).to match(/can't be coerced/)
+      end
+    end
   end
 end
