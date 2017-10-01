@@ -12,10 +12,12 @@ module Anycable
         @subscriptions = subscriptions
       end
 
+      # rubocop:disable Metrics/AbcSize
       def handle_open
         @identifiers['current_user'] = request.cookies["username"]
         @identifiers['path'] = request.path
-        @identifiers['token'] = request.params['token']
+        @identifiers['token'] = request.params['token'] || request.get_header('HTTP_X_API_TOKEN')
+        @identifiers['remote_ip'] = request.ip
 
         if @identifiers['current_user']
           transmit(type: 'welcome')
