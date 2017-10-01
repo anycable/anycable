@@ -28,7 +28,7 @@ module Anycable
 
       # Enable GRPC logging
       def log_grpc!
-        GRPC.define_singletion_method(:logger) { Anycable.logger }
+        GRPC.define_singleton_method(:logger) { Anycable.logger }
       end
 
       private
