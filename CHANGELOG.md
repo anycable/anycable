@@ -2,6 +2,16 @@
 
 ## 0.5.0 (master)
 
+- [#27](https://github.com/anycable/anycable/issues/27) Add `error_msg` to RPC responses. ([@palkan][])
+
+Now RPC responses has 3 statuses:
+
+  - `SUCCESS` – successful request, operation succeed
+  - `FAILURE` – successful request, operation failed (e.g. authentication failed)
+  - `ERROR` – request failed (exception raised).
+
+We provide `error_msg` only when request status is `ERROR`.
+
 - [#25](https://github.com/anycable/anycable/issues/25) Improve logging and exceptions handling. ([@palkan][])
 
 Default logger logs to STDOUT with `info` level by default but can be configured to log to file with 
