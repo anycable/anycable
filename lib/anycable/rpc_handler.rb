@@ -88,16 +88,23 @@ module Anycable
         'PATH_INFO' => uri.path,
         'SERVER_PORT' => uri.port.to_s,
         'HTTP_HOST' => uri.host,
-        'HTTP_COOKIE' => request.headers['Cookie'],
         # Hack to avoid Missing rack.input error
         'rack.request.form_input' => '',
         'rack.input' => '',
         'rack.request.form_hash' => {}
-      }
+      }.merge(build_headers(request.headers))
     end
 
     def build_socket(**options)
       Anycable::Socket.new(**options)
+    end
+
+    def build_headers(headers)
+      headers.each_with_object({}) do |(k, v), obj|
+        k = k.upcase
+        k.tr!('-', '_')
+        obj["HTTP_#{k}"] = v
+      end
     end
 
     def logger
