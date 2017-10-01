@@ -1,5 +1,20 @@
 # Change log
 
+## 0.5.0 (master)
+
+- [#25](https://github.com/anycable/anycable/issues/25) Improve logging and exceptions handling. ([@palkan][])
+
+Default logger logs to STDOUT with `info` level by default but can be configured to log to file with 
+any severity.
+
+GRPC logging is turned off by default (can be turned on through `log_grpc` configuration parameter).
+
+`ANYCABLE_DEBUG=1` acts as a shortcut to set `debug` level and turn on GRPC logging.
+
+Now it's possible to add custom exception handlers (e.g. to notify external exception tracking services).
+
+More on [Wiki](https://github.com/anycable/anycable/wiki/Logging-&-Exceptions-Handling).
+
 ## 0.4.6 (2017-05-20)
 
 - Add `Anycable::Server#stop` method. ([@sadovnik][])
