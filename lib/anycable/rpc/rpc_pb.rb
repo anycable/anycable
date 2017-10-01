@@ -12,6 +12,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :status, :enum, 1, "anycable.Status"
     optional :identifiers, :string, 2
     repeated :transmissions, :string, 3
+    optional :error_msg, :string, 4
   end
   add_message "anycable.CommandMessage" do
     optional :command, :string, 1
@@ -25,6 +26,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     optional :stop_streams, :bool, 3
     repeated :streams, :string, 4
     repeated :transmissions, :string, 5
+    optional :error_msg, :string, 6
   end
   add_message "anycable.DisconnectRequest" do
     optional :identifiers, :string, 1
@@ -34,10 +36,12 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
   end
   add_message "anycable.DisconnectResponse" do
     optional :status, :enum, 1, "anycable.Status"
+    optional :error_msg, :string, 2
   end
   add_enum "anycable.Status" do
     value :ERROR, 0
     value :SUCCESS, 1
+    value :FAILURE, 2
   end
 end
 

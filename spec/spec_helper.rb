@@ -19,6 +19,8 @@ Dir["#{File.dirname(__FILE__)}/support/**/*.rb"].each { |f| require f }
 Anycable.connection_factory = Anycable::TestFactory
 Anycable.logger = TestLogger.new
 
+Anycable::Server.log_grpc! if ENV['LOG']
+
 module TestExHandler
   class << self
     attr_reader :last_error

@@ -1,4 +1,5 @@
 all: build
 
 build:
-	protoc --ruby_out=./lib/anycable/rpc --grpc_out=./lib/anycable/rpc --proto_path=./protos --plugin=protoc-gen-grpc=`which grpc_tools_ruby_protoc_plugin.rb` ./protos/rpc.proto
+	grpc_tools_ruby_protoc -I ./protos --ruby_out=./lib/anycable/rpc --grpc_out=./lib/anycable/rpc ./protos/rpc.proto
+	sed -i '' '/'rpc_pb'/d' ./lib/anycable/rpc/rpc_services_pb.rb

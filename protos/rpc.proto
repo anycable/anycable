@@ -11,6 +11,7 @@ service RPC {
 enum Status {
   ERROR = 0;
   SUCCESS = 1;
+  FAILURE = 2;
 }
 
 message ConnectionRequest {
@@ -22,6 +23,7 @@ message ConnectionResponse {
   Status status = 1;
   string identifiers = 2;
   repeated string transmissions = 3;
+  string error_msg = 4;
 }
 
 message CommandMessage {
@@ -37,6 +39,7 @@ message CommandResponse {
   bool stop_streams = 3;
   repeated string streams = 4;
   repeated string transmissions = 5;
+  string error_msg = 6;
 }
 
 message DisconnectRequest {
@@ -48,4 +51,5 @@ message DisconnectRequest {
 
 message DisconnectResponse {
   Status status = 1;
+  string error_msg = 2;
 }
