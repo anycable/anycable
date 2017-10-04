@@ -38,28 +38,25 @@ type Conn struct {
 	send chan []byte
 }
 
-var version string
+var (
+	version = "0.4.2"
 
-var log = logging.MustGetLogger("main")
+	log = logging.MustGetLogger("main")
 
-var rpchost = flag.String("rpc", "0.0.0.0:50051", "rpc service address")
+	rpchost        = flag.String("rpc", "0.0.0.0:50051", "rpc service address")
+	redishost      = flag.String("redis", "redis://localhost:6379/5", "redis address")
+	redischannel   = flag.String("redis_channel", "anycable", "redis channel")
+	addr           = flag.String("addr", "localhost:8080", "http service address")
+	wspath         = flag.String("wspath", "/cable", "WS endpoint path")
+	disconnectRate = flag.Int("disconnect_rate", 100, "the number of Disconnect calls per second")
 
-var redishost = flag.String("redis", "redis://localhost:6379/5", "redis address")
-
-var redischannel = flag.String("redis_channel", "anycable", "redis channel")
-
-var addr = flag.String("addr", "localhost:8080", "http service address")
-
-var wspath = flag.String("wspath", "/cable", "WS endpoint path")
-
-var disconnectRate = flag.Int("disconnect_rate", 100, "the number of Disconnect calls per second")
-
-var upgrader = websocket.Upgrader{
-	CheckOrigin:     func(r *http.Request) bool { return true },
-	Subprotocols:    []string{"actioncable-v1-json"},
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-}
+	upgrader = websocket.Upgrader{
+		CheckOrigin:     func(r *http.Request) bool { return true },
+		Subprotocols:    []string{"actioncable-v1-json"},
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+	}
+)
 
 // readPump pumps messages from the websocket connection to the hub.
 func (c *Conn) readPump() {
