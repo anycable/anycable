@@ -54,7 +54,7 @@ func (app *App) Subscribe(conn *Conn, msg *Message) {
 
 	res := rpc.Subscribe(conn.identifiers, msg.Identifier)
 
-	if res.Status == 1 {
+	if res.Status.String() == "SUCCESS" {
 		conn.subscriptions[msg.Identifier] = true
 	}
 
@@ -71,7 +71,7 @@ func (app *App) Unsubscribe(conn *Conn, msg *Message) {
 
 	res := rpc.Unsubscribe(conn.identifiers, msg.Identifier)
 
-	if res.Status == 1 {
+	if res.Status.String() == "SUCCESS" {
 		delete(conn.subscriptions, msg.Identifier)
 	}
 
@@ -110,8 +110,12 @@ func Transmit(conn *Conn, transmissions []string) {
 }
 
 func HandleReply(conn *Conn, msg *Message, reply *pb.CommandResponse) {
+	if reply.Status.String() == "ERROR" {
+		log.Errorf("Application error: %s", reply.ErrorMsg)
+	}
+
 	if reply.Disconnect {
-		defer conn.ws.Close()
+		defer CloseWS(conn.ws, "Command Failed")
 	}
 
 	if reply.StopStreams {

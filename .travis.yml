@@ -10,5 +10,5 @@ services:
   - redis-server
 before_install:
   - rvm use 2.4.2 --install --binary --fuzzy
-  - gem install anycablebility
+  - gem install anyt
 script: make test-ci

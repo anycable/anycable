@@ -39,13 +39,13 @@ type Conn struct {
 }
 
 var (
-	version = "0.4.2"
+	version = "0.5.0"
 
 	log = logging.MustGetLogger("main")
 
 	rpchost        = flag.String("rpc", "0.0.0.0:50051", "rpc service address")
 	redishost      = flag.String("redis", "redis://localhost:6379/5", "redis address")
-	redischannel   = flag.String("redis_channel", "anycable", "redis channel")
+	redischannel   = flag.String("redis_channel", "__anycable__", "redis channel")
 	addr           = flag.String("addr", "localhost:8080", "http service address")
 	wspath         = flag.String("wspath", "/cable", "WS endpoint path")
 	disconnectRate = flag.Int("disconnect_rate", 100, "the number of Disconnect calls per second")
@@ -63,7 +63,7 @@ func (c *Conn) readPump() {
 	defer func() {
 		log.Debugf("Disconnect on read error")
 		app.Disconnected(c)
-		c.ws.Close()
+		CloseWS(c.ws, "Read Failed")
 	}()
 	for {
 		_, message, err := c.ws.ReadMessage()
@@ -102,7 +102,7 @@ func (c *Conn) write(mt int, payload []byte) error {
 }
 
 func (c *Conn) writePump() {
-	defer c.ws.Close()
+	defer CloseWS(c.ws, "Write Failed")
 	for {
 		select {
 		case message, ok := <-c.send:
@@ -138,9 +138,17 @@ func serveWs(w http.ResponseWriter, r *http.Request) {
 
 	log.Debugf("Auth %s", response)
 
-	if response.Status != 1 {
-		log.Warningf("Auth Failed")
-		ws.Close()
+	status := response.Status.String()
+
+	if status == "ERROR" {
+		log.Errorf("Application error: %s", response.ErrorMsg)
+		CloseWS(ws, "Application Error")
+		return
+	}
+
+	if status == "FAILURE" {
+		log.Warningf("Unauthenticated")
+		CloseWS(ws, "Unauthenticated")
 		return
 	}
 
@@ -148,6 +156,13 @@ func serveWs(w http.ResponseWriter, r *http.Request) {
 	app.Connected(conn, response.Transmissions)
 	go conn.writePump()
 	conn.readPump()
+}
+
+func CloseWS(ws *websocket.Conn, reason string) {
+	deadline := time.Now().Add(time.Second)
+	msg := websocket.FormatCloseMessage(3000, reason)
+	ws.WriteControl(websocket.CloseMessage, msg, deadline)
+	ws.Close()
 }
 
 func main() {

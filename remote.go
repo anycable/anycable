@@ -171,6 +171,6 @@ func ParseCommandResponse(response interface{}, err error) *pb.CommandResponse {
 
 func GetHeaders(r *http.Request) map[string]string {
 	res := make(map[string]string)
-	res["Cookie"] = r.Header.Get("Cookie")
+	res["Cookie"] = r.Header.Get("cookie")
 	return res
 }

@@ -2,7 +2,7 @@
 
 # AnyCable-Go WebSocket Server
 
-WebSocket server for [Anycable](https://github.com/anycable/anycable).
+WebSocket server for [AnyCable](https://github.com/anycable/anycable).
 
 ## Installation
 

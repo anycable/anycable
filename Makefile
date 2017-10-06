@@ -56,8 +56,8 @@ test:
 	go test .
 
 test-cable:
-	go build -ldflags "-X main.version=$(VERSION)" -o tmp/anycable-go-test .
-	anycablebility -c "tmp/anycable-go-test" --target-url="ws://localhost:8080/cable"
+	go build -o tmp/anycable-go-test .
+	anyt -c "tmp/anycable-go-test" --target-url="ws://localhost:8080/cable"
 
 test-ci: prepare test test-cable
 
