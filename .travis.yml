@@ -4,6 +4,9 @@ cache: bundler
 dist: trusty
 sudo: false
 
+notifications:
+  email: false
+
 matrix:
   include:
     - rvm: 2.3.3
