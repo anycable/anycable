@@ -1,5 +1,9 @@
 sudo: false
 language: go
+
+notifications:
+  email: false
+
 go:
   - 1.9
 services:
