@@ -20,8 +20,8 @@ func (d *DisconnectNotifier) run() {
 		select {
 		case conn := <-d.disconnect:
 			<-throttle
-			log.Debugf("Commit disconnect %v", conn.identifiers)
-			rpc.Disconnect(conn.identifiers, SubscriptionsList(conn.subscriptions))
+			log.Debugf("Commit disconnect %s %s %v", conn.identifiers, conn.path, conn.headers)
+			rpc.Disconnect(conn.identifiers, SubscriptionsList(conn.subscriptions), conn.path, conn.headers)
 		}
 	}
 }

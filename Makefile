@@ -12,9 +12,9 @@ endif
 # Standard build
 default: prepare build
 
-# Only run the build (no dependency grabbing)
+# Install current version
 build:
-	go install -ldflags "-X main.version=$(VERSION)" ./...
+	go install ./...
 
 build-all:
 	rm -rf ./dist

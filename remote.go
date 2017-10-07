@@ -1,7 +1,6 @@
 package main
 
 import (
-	"net/http"
 	"time"
 
 	"github.com/anycable/anycable-go/pool"
@@ -50,13 +49,13 @@ func (rpc *Remote) Close() {
 	rpc.pool.Close()
 }
 
-func (rpc *Remote) VerifyConnection(r *http.Request) *pb.ConnectionResponse {
+func (rpc *Remote) VerifyConnection(path string, headers map[string]string) *pb.ConnectionResponse {
 	conn := rpc.GetConn()
 	defer conn.Close()
 	client := pb.NewRPCClient(conn.Conn)
 
 	op := func() (interface{}, error) {
-		return client.Connect(context.Background(), &pb.ConnectionRequest{Path: r.URL.String(), Headers: GetHeaders(r)})
+		return client.Connect(context.Background(), &pb.ConnectionRequest{Path: path, Headers: headers})
 	}
 
 	response, err := retry(op)
@@ -115,13 +114,13 @@ func (rpc *Remote) Perform(connId string, channelId string, data string) *pb.Com
 	return ParseCommandResponse(response, err)
 }
 
-func (rpc *Remote) Disconnect(connId string, subscriptions []string) *pb.DisconnectResponse {
+func (rpc *Remote) Disconnect(connId string, subscriptions []string, path string, headers map[string]string) *pb.DisconnectResponse {
 	conn := rpc.GetConn()
 	defer conn.Close()
 	client := pb.NewRPCClient(conn.Conn)
 
 	op := func() (interface{}, error) {
-		return client.Disconnect(context.Background(), &pb.DisconnectRequest{Identifiers: connId, Subscriptions: subscriptions})
+		return client.Disconnect(context.Background(), &pb.DisconnectRequest{Identifiers: connId, Subscriptions: subscriptions, Path: path, Headers: headers})
 	}
 
 	response, err := retry(op)
@@ -167,10 +166,4 @@ func ParseCommandResponse(response interface{}, err error) *pb.CommandResponse {
 	} else {
 		return nil
 	}
-}
-
-func GetHeaders(r *http.Request) map[string]string {
-	res := make(map[string]string)
-	res["Cookie"] = r.Header.Get("cookie")
-	return res
 }

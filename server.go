@@ -28,6 +28,12 @@ type Conn struct {
 	// The websocket connection.
 	ws *websocket.Conn
 
+	// Request path
+	path string
+
+	// Selected request headers
+	headers map[string]string
+
 	// Connection identifiers as received from RPC server
 	identifiers string
 
@@ -134,7 +140,10 @@ func serveWs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response := rpc.VerifyConnection(r)
+	path := r.URL.String()
+	headers := GetHeaders(r)
+
+	response := rpc.VerifyConnection(path, headers)
 
 	log.Debugf("Auth %s", response)
 
@@ -152,7 +161,7 @@ func serveWs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	conn := &Conn{send: make(chan []byte, 256), ws: ws, identifiers: response.Identifiers, subscriptions: make(map[string]bool)}
+	conn := &Conn{send: make(chan []byte, 256), ws: ws, path: path, headers: headers, identifiers: response.Identifiers, subscriptions: make(map[string]bool)}
 	app.Connected(conn, response.Transmissions)
 	go conn.writePump()
 	conn.readPump()
@@ -163,6 +172,12 @@ func CloseWS(ws *websocket.Conn, reason string) {
 	msg := websocket.FormatCloseMessage(3000, reason)
 	ws.WriteControl(websocket.CloseMessage, msg, deadline)
 	ws.Close()
+}
+
+func GetHeaders(r *http.Request) map[string]string {
+	res := make(map[string]string)
+	res["Cookie"] = r.Header.Get("cookie")
+	return res
 }
 
 func main() {
