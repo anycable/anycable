@@ -1,5 +1,19 @@
 # Change log
 
+## 0.5.0 (2017-10-20)
+
+- Support passing arbitrary headers to RPC. ([@palkan][])
+
+Added new CLI option to pass a list of headers:
+
+```sh
+anycable-go -headers=cookie,x-api-token,origin
+```
+
+By default equals "cookie".
+
+- Send control frame before closing connections. ([@palkan][])
+
 ## 0.4.2 (2017-09-27)
 
 - Fixed bug with race conditions in hub. ([@palkan][])
@@ -8,7 +22,7 @@ Fixed [#10](https://github.com/anycable/anycable-go/issues/10).
 
 ## 0.4.0 (2017-03-18)
 
-- Follow AnyCable versioning conventions. ([@palkan]())
+- Follow AnyCable versioning conventions. ([@palkan][])
 
 Add `-version` flag to show current version.
 Print current version on startup.

@@ -1,7 +1,7 @@
 {
 	"ImportPath": "github.com/anycable/anycable-go",
-	"GoVersion": "go1.6",
-	"GodepVersion": "v74",
+	"GoVersion": "go1.9",
+	"GodepVersion": "v79",
 	"Deps": [
 		{
 			"ImportPath": "github.com/garyburd/redigo/internal",

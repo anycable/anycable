@@ -2,6 +2,8 @@ package main
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestUnsubscribeRaceConditions(t *testing.T) {
@@ -25,9 +27,7 @@ func TestUnsubscribeRaceConditions(t *testing.T) {
 
 	<-conn.send
 
-	if hub.Size() != 1 {
-		t.Errorf("Connections size must be equal 1, got %d", hub.Size())
-	}
+	assert.Equal(t, 1, hub.Size(), "Connections size must be equal 1")
 
 	done := make(chan bool)
 	defer close(done)
@@ -46,7 +46,5 @@ func TestUnsubscribeRaceConditions(t *testing.T) {
 	<-done
 	<-done
 
-	if hub.Size() != 0 {
-		t.Errorf("Connections size must be equal 0, got %d", hub.Size())
-	}
+	assert.Equal(t, 0, hub.Size(), "Connections size must be equal 0")
 }

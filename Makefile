@@ -57,7 +57,7 @@ test:
 
 test-cable:
 	go build -o tmp/anycable-go-test .
-	anyt -c "tmp/anycable-go-test" --target-url="ws://localhost:8080/cable"
+	anyt -c "tmp/anycable-go-test -headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable"
 
 test-ci: prepare test test-cable
 

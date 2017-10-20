@@ -34,7 +34,7 @@ func (s *Subscriber) run() {
 				hub.stream_broadcast <- msg
 			}
 		case redis.Subscription:
-			log.Debugf("%s: %s %d\n", v.Channel, v.Kind, v.Count)
+			log.Debugf("Subscribed to Redis channel: %s\n", v.Channel)
 		case error:
 			break
 		}

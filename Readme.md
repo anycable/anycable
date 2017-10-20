@@ -25,7 +25,7 @@ go get -u -f github.com/anycable/anycable-go
 Run server:
 
 ```shell
-anycable-go -rpc=0.0.0.0:50051 -redis=redis://localhost:6379/5 -redis_channel=anycable -addr=0.0.0.0:8080 -log
+anycable-go -rpc=0.0.0.0:50051 -headers=cookie,x-api-token -redis=redis://localhost:6379/5 -redis_channel=anycable -addr=0.0.0.0:8080 -log
 ```
 
 You can also provide configuration parameters through the corresponding environment variables (i.e. `RPC`, `REDIS`, etc).

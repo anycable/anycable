@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -44,7 +45,14 @@ type Conn struct {
 	send chan []byte
 }
 
+type Config struct {
+	// List of headers to proxy to RPC
+	headers []string
+}
+
 var (
+	config = &Config{}
+
 	version = "0.5.0"
 
 	log = logging.MustGetLogger("main")
@@ -55,6 +63,7 @@ var (
 	addr           = flag.String("addr", "localhost:8080", "http service address")
 	wspath         = flag.String("wspath", "/cable", "WS endpoint path")
 	disconnectRate = flag.Int("disconnect_rate", 100, "the number of Disconnect calls per second")
+	headers_list   = flag.String("headers", "cookie", "list of headers to proxy to RPC")
 
 	upgrader = websocket.Upgrader{
 		CheckOrigin:     func(r *http.Request) bool { return true },
@@ -141,7 +150,7 @@ func serveWs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	path := r.URL.String()
-	headers := GetHeaders(r)
+	headers := GetHeaders(r, config.headers)
 
 	response := rpc.VerifyConnection(path, headers)
 
@@ -174,9 +183,23 @@ func CloseWS(ws *websocket.Conn, reason string) {
 	ws.Close()
 }
 
-func GetHeaders(r *http.Request) map[string]string {
+func GetHeaders(r *http.Request, list []string) map[string]string {
 	res := make(map[string]string)
-	res["Cookie"] = r.Header.Get("cookie")
+
+	for _, header := range list {
+		res[header] = r.Header.Get(header)
+	}
+	return res
+}
+
+func ParseHeadersArg(str string) []string {
+	parts := strings.Split(str, ",")
+
+	res := make([]string, len(parts))
+
+	for i, v := range parts {
+		res[i] = strings.ToLower(v)
+	}
 	return res
 }
 
@@ -184,6 +207,8 @@ func main() {
 	logflag := flag.Bool("log", false, "enable verbose logging")
 	showVersion := flag.Bool("version", false, "show version")
 	flag.Parse()
+
+	config.headers = ParseHeadersArg(*headers_list)
 
 	if *showVersion {
 		fmt.Println(version)
