@@ -27,7 +27,9 @@ Read our [Wiki](https://github.com/anycable/anycable/wiki) for more.
 
 ## Links
 
-- [GitPitch Slides](https://gitpitch.com/anycable/anycable/master?grs=github)
+- [AnyCable: Action Cable on steroids!](https://evilmartians.com/chronicles/anycable-actioncable-on-steroids)
+
+- [Connecting LiteCable to Hanami](http://gabrielmalakias.com.br/ruby/hanami/iot/2017/05/26/websockets-connecting-litecable-to-hanami.html)
 
 - RailsClub Moscow 2016 [slides](https://speakerdeck.com/palkan/railsclub-moscow-2016-anycable) and [video](https://www.youtube.com/watch?v=-k7GQKuBevY&list=PLiWUIs1hSNeOXZhotgDX7Y7qBsr24cu7o&index=4) (RU)
 
