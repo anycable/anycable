@@ -1,3 +1,28 @@
+## Version v0.5.0
+
+### FreeBSD
+
+- [anycable-go-v0.5.0-freebsd-386](https://s3.amazonaws.com/anycable/builds/v0.5.0/anycable-go-v0.5.0-freebsd-386)
+- [anycable-go-v0.5.0-freebsd-amd64](https://s3.amazonaws.com/anycable/builds/v0.5.0/anycable-go-v0.5.0-freebsd-amd64)
+- [anycable-go-v0.5.0-freebsd-arm](https://s3.amazonaws.com/anycable/builds/v0.5.0/anycable-go-v0.5.0-freebsd-arm)
+
+### Linux
+
+- [anycable-go-v0.5.0-linux-386](https://s3.amazonaws.com/anycable/builds/v0.5.0/anycable-go-v0.5.0-linux-386)
+- [anycable-go-v0.5.0-linux-amd64](https://s3.amazonaws.com/anycable/builds/v0.5.0/anycable-go-v0.5.0-linux-amd64)
+- [anycable-go-v0.5.0-linux-arm](https://s3.amazonaws.com/anycable/builds/v0.5.0/anycable-go-v0.5.0-linux-arm)
+- [anycable-go-v0.5.0-linux-arm64](https://s3.amazonaws.com/anycable/builds/v0.5.0/anycable-go-v0.5.0-linux-arm64)
+
+### MacOS
+
+- [anycable-go-v0.5.0-macos-386](https://s3.amazonaws.com/anycable/builds/v0.5.0/anycable-go-v0.5.0-macos-386)
+- [anycable-go-v0.5.0-macos-amd64](https://s3.amazonaws.com/anycable/builds/v0.5.0/anycable-go-v0.5.0-macos-amd64)
+
+### Windows
+
+- [anycable-go-v0.5.0-win-386](https://s3.amazonaws.com/anycable/builds/v0.5.0/anycable-go-v0.5.0-win-386)
+- [anycable-go-v0.5.0-win-amd64](https://s3.amazonaws.com/anycable/builds/v0.5.0/anycable-go-v0.5.0-win-amd64)
+
 ## Version 0.4.2
 
 ### FreeBSD
