@@ -11,6 +11,7 @@ AllCops:
     - 'bench/**/*'
     - 'vendor/**/*'
     - 'lib/anycable/rpc/**/*'
+    - 'gemfiles/**/*'
     - 'Gemfile'
     - 'Rakefile'
     - '*.gemspec'
@@ -18,7 +19,7 @@ AllCops:
   StyleGuideCopsOnly: false
   TargetRubyVersion: 2.4
 
-Style/AccessorMethodName:
+Naming/AccessorMethodName:
   Enabled: false
 
 Style/PercentLiteralDelimiters:
@@ -34,7 +35,7 @@ Style/Documentation:
 Style/StringLiterals: 
   Enabled: false
 
-Style/SpaceInsideStringInterpolation:
+Layout/SpaceInsideStringInterpolation:
   EnforcedStyle: no_space
 
 Style/BlockDelimiters:
