@@ -42,7 +42,7 @@ docker-release: dockerize
 	docker push "anycable/anycable-go:$(VERSION)"
 
 dockerize:
-	CGO_ENABLED=0 GOOS=linux go build -ldflags "-X main.version=$(VERSION)" -a -installsuffix cgo -o .docker/main .
+	CGO_ENABLED=0 GOOS=linux go build -ldflags "-X main.version=$(VERSION)" -a -installsuffix cgo -o .docker/anycable-go .
 	docker build -t "anycable/anycable-go:$(VERSION)" .
 
 # Run server
