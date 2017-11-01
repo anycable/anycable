@@ -1,5 +1,11 @@
 # Change log
 
+## master
+
+- Handle RPC errors gracefully. ([@palkan][])
+
+Avoid panic when RPC server is unavailable. All RPC call now return `(response, error)`.
+
 ## 0.5.0 (2017-10-20)
 
 - Support passing arbitrary headers to RPC. ([@palkan][])
