@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"time"
 
 	"github.com/anycable/anycable-go/pool"
@@ -49,7 +50,7 @@ func (rpc *Remote) Close() {
 	rpc.pool.Close()
 }
 
-func (rpc *Remote) VerifyConnection(path string, headers map[string]string) *pb.ConnectionResponse {
+func (rpc *Remote) VerifyConnection(path string, headers map[string]string) (*pb.ConnectionResponse, error) {
 	conn := rpc.GetConn()
 	defer conn.Close()
 	client := pb.NewRPCClient(conn.Conn)
@@ -61,18 +62,17 @@ func (rpc *Remote) VerifyConnection(path string, headers map[string]string) *pb.
 	response, err := retry(op)
 
 	if err != nil {
-		log.Errorf("RPC Error: %v", err)
-		return nil
+		return nil, err
 	}
 
 	if r, ok := response.(*pb.ConnectionResponse); ok {
-		return r
+		return r, nil
 	} else {
-		return nil
+		return nil, errors.New("Failed to deserialize connection response")
 	}
 }
 
-func (rpc *Remote) Subscribe(connId string, channelId string) *pb.CommandResponse {
+func (rpc *Remote) Subscribe(connId string, channelId string) (*pb.CommandResponse, error) {
 	conn := rpc.GetConn()
 	defer conn.Close()
 	client := pb.NewRPCClient(conn.Conn)
@@ -86,7 +86,7 @@ func (rpc *Remote) Subscribe(connId string, channelId string) *pb.CommandRespons
 	return ParseCommandResponse(response, err)
 }
 
-func (rpc *Remote) Unsubscribe(connId string, channelId string) *pb.CommandResponse {
+func (rpc *Remote) Unsubscribe(connId string, channelId string) (*pb.CommandResponse, error) {
 	conn := rpc.GetConn()
 	defer conn.Close()
 	client := pb.NewRPCClient(conn.Conn)
@@ -100,7 +100,7 @@ func (rpc *Remote) Unsubscribe(connId string, channelId string) *pb.CommandRespo
 	return ParseCommandResponse(response, err)
 }
 
-func (rpc *Remote) Perform(connId string, channelId string, data string) *pb.CommandResponse {
+func (rpc *Remote) Perform(connId string, channelId string, data string) (*pb.CommandResponse, error) {
 	conn := rpc.GetConn()
 	defer conn.Close()
 	client := pb.NewRPCClient(conn.Conn)
@@ -114,7 +114,7 @@ func (rpc *Remote) Perform(connId string, channelId string, data string) *pb.Com
 	return ParseCommandResponse(response, err)
 }
 
-func (rpc *Remote) Disconnect(connId string, subscriptions []string, path string, headers map[string]string) *pb.DisconnectResponse {
+func (rpc *Remote) Disconnect(connId string, subscriptions []string, path string, headers map[string]string) (*pb.DisconnectResponse, error) {
 	conn := rpc.GetConn()
 	defer conn.Close()
 	client := pb.NewRPCClient(conn.Conn)
@@ -126,14 +126,13 @@ func (rpc *Remote) Disconnect(connId string, subscriptions []string, path string
 	response, err := retry(op)
 
 	if err != nil {
-		log.Errorf("RPC Error: %v", err)
-		return nil
+		return nil, err
 	}
 
 	if r, ok := response.(*pb.DisconnectResponse); ok {
-		return r
+		return r, nil
 	} else {
-		return nil
+		return nil, errors.New("Failed to deserialize disconnect response")
 	}
 }
 
@@ -155,15 +154,14 @@ func retry(callback func() (interface{}, error)) (res interface{}, err error) {
 	}
 }
 
-func ParseCommandResponse(response interface{}, err error) *pb.CommandResponse {
+func ParseCommandResponse(response interface{}, err error) (*pb.CommandResponse, error) {
 	if err != nil {
-		log.Errorf("RPC Error: %v", err)
-		return nil
+		return nil, err
 	}
 
 	if r, ok := response.(*pb.CommandResponse); ok {
-		return r
+		return r, nil
 	} else {
-		return nil
+		return nil, errors.New("Failed to deserialize command response")
 	}
 }

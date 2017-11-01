@@ -21,7 +21,10 @@ func (d *DisconnectNotifier) run() {
 		case conn := <-d.disconnect:
 			<-throttle
 			log.Debugf("Commit disconnect %s %s %v", conn.identifiers, conn.path, conn.headers)
-			rpc.Disconnect(conn.identifiers, SubscriptionsList(conn.subscriptions), conn.path, conn.headers)
+			_, err := rpc.Disconnect(conn.identifiers, SubscriptionsList(conn.subscriptions), conn.path, conn.headers)
+			if err != nil {
+				log.Errorf("RPC Disconnect Error: %v", err)
+			}
 		}
 	}
 }

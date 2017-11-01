@@ -52,7 +52,13 @@ func (app *App) Subscribe(conn *Conn, msg *Message) {
 		return
 	}
 
-	res := rpc.Subscribe(conn.identifiers, msg.Identifier)
+	res, err := rpc.Subscribe(conn.identifiers, msg.Identifier)
+
+	if err != nil {
+		log.Errorf("RPC Subscribe Error: %v", err)
+		// TODO: need a way to tell client to retry later
+		return
+	}
 
 	if res.Status.String() == "SUCCESS" {
 		conn.subscriptions[msg.Identifier] = true
@@ -69,7 +75,13 @@ func (app *App) Unsubscribe(conn *Conn, msg *Message) {
 		return
 	}
 
-	res := rpc.Unsubscribe(conn.identifiers, msg.Identifier)
+	res, err := rpc.Unsubscribe(conn.identifiers, msg.Identifier)
+
+	if err != nil {
+		log.Errorf("RPC Unsubscribe Error: %v", err)
+		// TODO: need a way to tell client to retry later
+		return
+	}
 
 	if res.Status.String() == "SUCCESS" {
 		delete(conn.subscriptions, msg.Identifier)
@@ -84,7 +96,13 @@ func (app *App) Perform(conn *Conn, msg *Message) {
 		return
 	}
 
-	res := rpc.Perform(conn.identifiers, msg.Identifier, msg.Data)
+	res, err := rpc.Perform(conn.identifiers, msg.Identifier, msg.Data)
+
+	if err != nil {
+		log.Errorf("RPC Perform Error: %v", err)
+		// TODO: need a way to tell client to retry later
+		return
+	}
 
 	log.Debugf("Perform %s", res)
 

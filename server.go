@@ -152,7 +152,13 @@ func serveWs(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.String()
 	headers := GetHeaders(r, config.headers)
 
-	response := rpc.VerifyConnection(path, headers)
+	response, err := rpc.VerifyConnection(path, headers)
+
+	if err != nil {
+		log.Errorf("RPC Connect Error: %v", err)
+		CloseWS(ws, "RPC Error")
+		return
+	}
 
 	log.Debugf("Auth %s", response)
 
@@ -239,7 +245,11 @@ func main() {
 	app.Disconnector = &DisconnectNotifier{rate: *disconnectRate, disconnect: make(chan *Conn)}
 	go app.Disconnector.run()
 
-	log.Infof("Running AnyCable websocket server v%s on %s at %s", version, *addr, *wspath)
 	http.HandleFunc(*wspath, serveWs)
-	http.ListenAndServe(*addr, nil)
+
+	log.Infof("Running AnyCable websocket server v%s on %s at %s", version, *addr, *wspath)
+	err := http.ListenAndServe(*addr, nil)
+	if err != nil {
+		log.Fatal("HTTP Server Error: ", err)
+	}
 }
