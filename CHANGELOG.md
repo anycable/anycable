@@ -1,6 +1,16 @@
 # Change log
 
-## master
+## 0.5.1 (2017-11-08)
+
+- Add TLS support. ([@palkan][])
+
+To secure your `anycable-go` server provide the paths to SSL certificate and private key:
+
+```shell
+anycable-go -addr=0.0.0.0:443 -ssl_cert=path/to/ssl.cert -ssl_key=path/to/ssl.key
+
+=> Running AnyCable websocket server (secured) v0.5.1 on 0.0.0.0:443 at /cable
+```
 
 - Handle RPC errors gracefully. ([@palkan][])
 

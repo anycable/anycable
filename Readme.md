@@ -26,9 +26,21 @@ Run server:
 
 ```shell
 anycable-go -rpc=0.0.0.0:50051 -headers=cookie,x-api-token -redis=redis://localhost:6379/5 -redis_channel=anycable -addr=0.0.0.0:8080 -log
+
+=> Running AnyCable websocket server v0.5.0 on 0.0.0.0:8080 at /cable
 ```
 
 You can also provide configuration parameters through the corresponding environment variables (i.e. `RPC`, `REDIS`, etc).
+
+### TLS
+
+To secure your `anycable-go` server provide the paths to SSL certificate and private key:
+
+```shell
+anycable-go -addr=0.0.0.0:443 -ssl_cert=path/to/ssl.cert -ssl_key=path/to/ssl.key
+
+=> Running AnyCable websocket server (secured) v0.5.1 on 0.0.0.0:443 at /cable
+```
 
 ## Build
 

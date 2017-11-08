@@ -64,6 +64,8 @@ var (
 	wspath         = flag.String("wspath", "/cable", "WS endpoint path")
 	disconnectRate = flag.Int("disconnect_rate", 100, "the number of Disconnect calls per second")
 	headers_list   = flag.String("headers", "cookie", "list of headers to proxy to RPC")
+	sslCert 			 = flag.String("ssl_cert", "", "SSL certificate path")
+	sslKey 				 = flag.String("ssl_key", "", "SSL private key path")
 
 	upgrader = websocket.Upgrader{
 		CheckOrigin:     func(r *http.Request) bool { return true },
@@ -247,9 +249,19 @@ func main() {
 
 	http.HandleFunc(*wspath, serveWs)
 
-	log.Infof("Running AnyCable websocket server v%s on %s at %s", version, *addr, *wspath)
-	err := http.ListenAndServe(*addr, nil)
-	if err != nil {
-		log.Fatal("HTTP Server Error: ", err)
+	if (*sslCert != "") && (*sslKey != "") {
+		log.Infof("Running AnyCable websocket server (secured) v%s on %s at %s", version, *addr, *wspath)
+
+		err := http.ListenAndServeTLS(*addr, *sslCert, *sslKey, nil)
+		if err != nil {
+			log.Fatal("HTTPS Server Error: ", err)
+		}
+	} else {
+		log.Infof("Running AnyCable websocket server v%s on %s at %s", version, *addr, *wspath)
+
+		err := http.ListenAndServe(*addr, nil)
+		if err != nil {
+			log.Fatal("HTTP Server Error: ", err)
+		}
 	}
 }
