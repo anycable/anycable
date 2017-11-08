@@ -12,7 +12,7 @@ PLATFORM_NAMES = {
 
 contents = []
 
-version = `git describe --always --tags`.chomp
+version = ENV['VERSION'] || `git describe --always --tags`.chomp
 
 contents << "\#\# Version #{version}\n"
 
