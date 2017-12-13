@@ -45,6 +45,9 @@ Style/BlockDelimiters:
 Lint/AmbiguousRegexpLiteral:
   Enabled: false
 
+Lint/MissingCopEnableDirective:
+  Enabled: false
+
 Metrics/MethodLength:
   Exclude:
     - 'spec/**/*.rb'
