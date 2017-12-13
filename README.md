@@ -71,6 +71,7 @@ Performing Channel Actions | +
 Streaming | +
 [Custom stream callbacks](http://edgeapi.rubyonrails.org/classes/ActionCable/Channel/Streams.html) | -
 Broadcasting | +
+Custom pubsub adapter | Only redis
 
 ## Build
 
