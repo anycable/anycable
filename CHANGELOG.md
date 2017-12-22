@@ -1,5 +1,11 @@
 # Change log
 
+## 0.5.2 (2017-12-22)
+
+- Fix bug with non-JSON messages. ([@palkan][])
+
+Fixes [#23](https://github.com/anycable/anycable-go/issues/23).
+
 ## 0.5.1 (2017-11-08)
 
 - Add TLS support. ([@palkan][])

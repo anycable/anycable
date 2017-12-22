@@ -48,3 +48,13 @@ func TestUnsubscribeRaceConditions(t *testing.T) {
 
 	assert.Equal(t, 0, hub.Size(), "Connections size must be equal 0")
 }
+
+func TestBuildMessageJSON(t *testing.T) {
+	expected := []byte("{\"identifier\":\"chat\",\"message\":{\"text\":\"hello!\"}}")
+	assert.Equal(t, expected, BuildMessage("{\"text\":\"hello!\"}", "chat"))
+}
+
+func TestBuildMessageString(t *testing.T) {
+	expected := []byte("{\"identifier\":\"chat\",\"message\":\"plain string\"}")
+	assert.Equal(t, expected, BuildMessage("plain string", "chat"))
+}

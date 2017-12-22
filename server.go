@@ -53,7 +53,7 @@ type Config struct {
 var (
 	config = &Config{}
 
-	version = "0.5.1"
+	version = "0.5.2"
 
 	log = logging.MustGetLogger("main")
 
@@ -64,8 +64,8 @@ var (
 	wspath         = flag.String("wspath", "/cable", "WS endpoint path")
 	disconnectRate = flag.Int("disconnect_rate", 100, "the number of Disconnect calls per second")
 	headers_list   = flag.String("headers", "cookie", "list of headers to proxy to RPC")
-	sslCert 			 = flag.String("ssl_cert", "", "SSL certificate path")
-	sslKey 				 = flag.String("ssl_key", "", "SSL private key path")
+	sslCert        = flag.String("ssl_cert", "", "SSL certificate path")
+	sslKey         = flag.String("ssl_key", "", "SSL private key path")
 
 	upgrader = websocket.Upgrader{
 		CheckOrigin:     func(r *http.Request) bool { return true },

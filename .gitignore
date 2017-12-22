@@ -33,3 +33,5 @@ pkg/
 tmp/
 coverage/
 dist/
+
+debug*
