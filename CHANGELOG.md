@@ -1,6 +1,6 @@
 # Change log
 
-## 0.5.2 (2017-12-22)
+## 0.5.3 (2017-12-22)
 
 - Fix bug with non-JSON messages. ([@palkan][])
 

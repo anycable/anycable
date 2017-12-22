@@ -56,5 +56,5 @@ func TestBuildMessageJSON(t *testing.T) {
 
 func TestBuildMessageString(t *testing.T) {
 	expected := []byte("{\"identifier\":\"chat\",\"message\":\"plain string\"}")
-	assert.Equal(t, expected, BuildMessage("plain string", "chat"))
+	assert.Equal(t, expected, BuildMessage("\"plain string\"", "chat"))
 }

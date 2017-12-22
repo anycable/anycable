@@ -184,14 +184,9 @@ func (h *Hub) CloseConnection(conn *Conn) {
 }
 
 func BuildMessage(data string, identifier string) []byte {
-	var msg map[string]interface{}
+	var msg interface{}
 
 	json.Unmarshal([]byte(data), &msg)
-
-	// Handle non-JSON payloads as plain strings
-	if msg == nil {
-		return (&Reply{Identifier: identifier, Message: data}).toJSON()
-	}
 
 	return (&Reply{Identifier: identifier, Message: msg}).toJSON()
 }
