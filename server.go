@@ -53,7 +53,7 @@ type Config struct {
 var (
 	config = &Config{}
 
-	version = "0.5.2"
+	version = "0.5.3"
 
 	log = logging.MustGetLogger("main")
 
