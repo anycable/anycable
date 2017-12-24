@@ -13,8 +13,11 @@ endif
 default: prepare build
 
 # Install current version
-build:
+install:
 	go install ./...
+
+build:
+	go build -ldflags "-s -w -X main.version=$(VERSION)" -o dist/anycable-go cmd/anycable-go/main.go
 
 build-all:
 	rm -rf ./dist
