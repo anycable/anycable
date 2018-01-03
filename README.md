@@ -19,6 +19,21 @@ Rails plug-n-play integration has been extracted to [anycable-rails](https://git
 - Ruby ~> 2.3
 - Redis (for brodcasting, [discuss other options](https://github.com/anycable/anycable/issues/2) with us!)
 
+**NOTE**: There is no Ruby 2.5.0 compatible `grpc` gem version on RubyGems yet.
+Follow [this issue](https://github.com/grpc/grpc/issues/13903).
+
+Or you can try to [build it from source](https://github.com/grpc/grpc/blob/master/INSTALL.md#build-from-source).
+
+For MacOS there is also [the same problem](https://github.com/google/protobuf/issues/4098) with `google-protobuf` that can be solved
+the following way:
+
+```ruby
+# Gemfile
+git 'https://github.com/google/protobuf' do
+  gem 'google-protobuf'
+end
+```
+
 ## How It Works?
 
 ![](https://s3.amazonaws.com/anycable/Scheme.png)
