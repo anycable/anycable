@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
 
@@ -19,17 +18,17 @@ func init() {
 }
 
 func main() {
-	versionPtr := flag.Bool("v", false, "Show version")
-	// Disable usage for this flag to show only cli flag
-	flag.Usage = func() {}
-	flag.Parse()
-
-	if *versionPtr {
+	if cli.ShowVersion() {
 		fmt.Println(version)
 		os.Exit(0)
 	}
 
-	config := cli.LoadConfig()
+	if cli.ShowHelp() {
+		cli.PrintHelp()
+		os.Exit(0)
+	}
 
-	fmt.Println(config.Port)
+	config := cli.GetConfig()
+
+	fmt.Println(config)
 }
