@@ -1,11 +1,11 @@
 package redisurl
 
 import (
-	"fmt"
-	"github.com/garyburd/redigo/redis"
-	"net/url"
 	"os"
+	"fmt"
+	"net/url"
 	"strings"
+	"github.com/garyburd/redigo/redis"
 )
 
 func Connect() (redis.Conn, error) {

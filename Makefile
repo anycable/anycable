@@ -67,8 +67,8 @@ test-ci: prepare test test-cable
 
 # Get dependencies and use gdm to checkout changesets
 prepare:
-	go get github.com/tools/godep
-	godep restore
+	go get -u github.com/golang/dep/cmd/dep
+	dep ensure
 
 gen-ssl:
 	mkdir -p tmp/ssl
