@@ -27,3 +27,11 @@
 [[constraint]]
   branch = "master"
   name = "github.com/soveran/redisurl"
+
+[[constraint]]
+  name = "github.com/apex/log"
+  version = "1.0.0"
+
+[[constraint]]
+  name = "github.com/mattn/go-isatty"
+  version = "0.0.3"

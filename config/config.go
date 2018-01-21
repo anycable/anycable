@@ -22,6 +22,8 @@ type Config struct {
 	Headers        []string
 	SSL            SSLOptions
 	DisconnectRate int
+	LogLevel       string
+	LogFormat      string
 }
 
 // New returns a new empty config

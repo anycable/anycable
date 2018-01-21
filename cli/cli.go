@@ -16,6 +16,7 @@ var (
 	headers     string
 	showVersion bool
 	showHelp    bool
+	debugMode   bool
 	fs          *flag.FlagSet
 )
 
@@ -52,11 +53,13 @@ func init() {
 	fs.IntVar(&defaults.DisconnectRate, "disconnect_rate", 100, "")
 	fs.StringVar(&defaults.SSL.CertPath, "ssl_cert", "", "")
 	fs.StringVar(&defaults.SSL.KeyPath, "ssl_key", "", "")
-
+	fs.StringVar(&defaults.LogLevel, "log_level", "info", "")
+	fs.StringVar(&defaults.LogFormat, "log_format", "text", "")
 	// CLI vars
 	fs.BoolVar(&showVersion, "v", false, "")
-	fs.StringVar(&headers, "headers", "cookie", "")
 	fs.BoolVar(&showHelp, "h", false, "")
+	fs.StringVar(&headers, "headers", "cookie", "")
+	fs.BoolVar(&debugMode, "debug", false, "")
 }
 
 // GetConfig returns CLI configuration
@@ -77,28 +80,56 @@ func ShowHelp() bool {
 	return showHelp
 }
 
+// DebugMode returns true if -debug flag is provided
+func DebugMode() bool {
+	ensureParsed()
+	return debugMode
+}
+
+const usage = `AnyCable-Go, The WebSocket server for anycable.io
+
+Usage:
+	Usage: anycable-go [options]
+
+The flags are:
+
+  --host              Server host, default: localhost, env: ANYCABLE_HOST
+  --port              Server port, default: 8080, env: ANYCABLE_PORT, PORT
+  --path              WebSocket endpoint path, default: /cable, env: ANYCABLE_PATH
+
+  --ssl_cert          SSL certificate path, env: ANYCABLE_SSL_CERT
+  --ssl_key           SSL private key path, env: ANYCABLE_SSL_KEY
+
+  --redis_url         Redis url, default: redis://localhost:6379/5, env: ANYCABLE_REDIS_URL, REDIS_URL
+  --redis_channel     Redis channel for broadcasts, default: __anycable__, env: ANYCABLE_REDIS_CHANNEL
+
+  --rpc_host          RPC service address, default: 0.0.0.0:50051, env: ANYCABLE_RPC_HOST
+  --headers           List of headers to proxy to RPC, default: cookie, env: ANYCABLE_HEADERS
+  --disconnect_rate   Max number of Disconnect calls per second, default: 100, env: ANYCABLE_DISCONNECT_RATE
+
+  --log_level         Set logging level (debug/info/warn/error/fatal), default: info, env: ANYCABLE_LOG_LEVEL
+  --log_format        Set logging format (text, json), default: text, env: ANYCABLE_LOG_FORMAT
+  --debug             Enable debug mode (more verbose logging), default: false, env: ANYCABLE_DEBUG
+
+  -h                  This help screen
+  -v                  Show version
+
+`
+
 // PrintHelp prints CLI usage instructions to STDOUT
 func PrintHelp() {
-	fmt.Printf("Usage: anycable-go [options]\n\n")
-	fmt.Printf("Note: you can use environment variables\n\n")
-	fmt.Println("-host\t\tServer host, default: localhost, env: ANYCABLE_HOST")
-	fmt.Println("-port\t\tServer port, default: 8080, env: ANYCABLE_PORT, PORT")
-	fmt.Println("-rpc_host\t\tRPC service address, default: 0.0.0.0:50051, env: ANYCABLE_RPC_HOST")
-	fmt.Println("-redis_url\t\tRedis url, default: redis://localhost:6379/5, env: ANYCABLE_REDIS_URL, REDIS_URL")
-	fmt.Println("-redis_channel\t\tRedis channel for broadcasts, default: __anycable__, env: ANYCABLE_REDIS_CHANNEL")
-	fmt.Println("-path\t\t\tWebSocket endpoint path, default: /cable, env: ANYCABLE_PATH")
-	fmt.Println("-headers\t\tList of headers to proxy to RPC, default: cookie, env: ANYCABLE_HEADERS")
-	fmt.Println("-disconnect_rate\tMax number of Disconnect calls per second, default: 100, env: ANYCABLE_DISCONNECT_RATE")
-	fmt.Println("-ssl_cert\t\tSSL certificate path, env: ANYCABLE_SSL_CERT")
-	fmt.Println("-ssl_key\t\tSSL private key path, env: ANYCABLE_SSL_KEY")
-	fmt.Println("-h\t\t\tThis help screen")
-	fmt.Println("-v\t\t\tShow version")
+	fmt.Printf(usage)
 }
 
 func ensureParsed() {
 	if !fs.Parsed() {
 		fs.Parse(os.Args[1:])
 		defaults.Headers = parseHeaders(headers)
+
+		if debugMode {
+			defaults.LogLevel = "debug"
+			defaults.LogFormat = "text"
+		}
 	}
 }
 

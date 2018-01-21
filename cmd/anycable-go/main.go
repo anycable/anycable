@@ -5,6 +5,8 @@ import (
 	"os"
 
 	"github.com/anycable/anycable-go/cli"
+	"github.com/anycable/anycable-go/utils"
+	log "github.com/apex/log"
 )
 
 var (
@@ -31,4 +33,26 @@ func main() {
 	config := cli.GetConfig()
 
 	fmt.Println(config)
+
+	// init logging
+	err := utils.InitLogger(config.LogFormat, config.LogLevel)
+
+	if err != nil {
+		fmt.Printf("!!! Failed to initialize logger !!!\n%v", err)
+		os.Exit(1)
+	}
+
+	if cli.DebugMode() {
+		log.Debug("🔧 🔧 🔧 Debug mode is on 🔧 🔧 🔧")
+	}
+
+	log.Infof("Starting AnyCable %s", version)
+
+	// init application (RPC + pubsub listener + hub + metrics)
+
+	// init signals handlers
+
+	// init server
+
+	// run server
 }
