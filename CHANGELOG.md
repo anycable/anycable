@@ -1,5 +1,11 @@
 # Change log
 
+## 0.5.4 (2018-02-08)
+
+- Automatically reconnect to Redis when connection is lost. ([@palkan][])
+
+Fixes [#25](https://github.com/anycable/anycable-go/issues/25).
+
 ## 0.5.3 (2017-12-22)
 
 - Fix bug with non-JSON messages. ([@palkan][])

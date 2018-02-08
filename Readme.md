@@ -6,7 +6,7 @@ WebSocket server for [AnyCable](https://github.com/anycable/anycable).
 
 ## Installation
 
-The easiest way to install AnyCable-Go is to [download](https://github.com/anycable/anycable-go/blob/master/DOWNLOADS.md) a pre-compiled binary.
+The easiest way to install AnyCable-Go is to [download](https://github.com/anycable/anycable-go/releases) a pre-compiled binary.
 
 Or with [Homebrew](https://brew.sh/)
 
