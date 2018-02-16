@@ -14,6 +14,7 @@ module Anycable
         @grpc_server ||= build_server
 
         Anycable.logger.info "RPC server is listening on #{Anycable.config.rpc_host}"
+        Anycable.logger.info "Broadcasting Redis channel: #{Anycable.config.redis_channel}"
         grpc_server.run_till_terminated
       end
 
