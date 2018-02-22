@@ -31,7 +31,7 @@ build-all:
 	env CGO_ENABLED=0 GOOS=freebsd GOARCH=amd64 go build -ldflags "-X main.version=$(VERSION)" -a -installsuffix cgo -o "dist/anycable-go-$(VERSION)-freebsd-amd64" .
 
 s3-deploy:
-	aws s3 sync --acl=public-read ./dist "s3://anycable/builds/$(VERSION)"
+	aws s3 cp --acl=public-read ./dist/anycable-go-$(VERSION)-linux-386 "s3://anycable/builds/$(VERSION)/anycable-go-$(VERSION)-linux-386"
 
 downloads-md:
 	ruby etc/generate_downloads.rb
