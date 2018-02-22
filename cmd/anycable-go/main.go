@@ -8,6 +8,7 @@ import (
 
 	"github.com/anycable/anycable-go/cli"
 	"github.com/anycable/anycable-go/node"
+	"github.com/anycable/anycable-go/pubsub"
 	"github.com/anycable/anycable-go/server"
 	"github.com/anycable/anycable-go/utils"
 	log "github.com/apex/log"
@@ -53,6 +54,14 @@ func main() {
 	log.Infof("Starting AnyCable %s", version)
 
 	node := &node.Node{Config: &config}
+
+	subscriber := pubsub.NewRedisSubscriber(node, config.RedisURL, config.RedisChannel)
+
+	go func() {
+		if err := subscriber.Start(); err != nil {
+			os.Exit(1)
+		}
+	}()
 
 	// init application (RPC + pubsub listener + hub + metrics)
 

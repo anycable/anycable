@@ -26,6 +26,12 @@ type Reply struct {
 	Message    interface{} `json:"message"`
 }
 
+// PubSubMessage represents data passing through pubsub channel
+type PubSubMessage struct {
+	Stream string `json:"stream"`
+	Data   string `json:"data"`
+}
+
 // Node represents the whole applicaton
 type Node struct {
 	Config *config.Config
@@ -50,6 +56,17 @@ func (n *Node) HandleCommand(s *Session, raw []byte) {
 		default:
 			s.Log.Warnf("Unknown command: %s", msg.Command)
 		}
+	}
+}
+
+// HandlePubsub parses incoming pubsub message and broadcast it
+func (n *Node) HandlePubsub(raw []byte) {
+	msg := &PubSubMessage{}
+	if err := json.Unmarshal(raw, &msg); err != nil {
+		log.Warnf("Failed to parse pubsub message '%s' with error: %v", raw, err)
+	} else {
+		log.Debugf("Incoming pubsub message: %v", msg)
+		// n.Broadcast(msg.Stream, msg.Data)
 	}
 }
 
