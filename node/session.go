@@ -1,6 +1,7 @@
 package node
 
 import (
+	"encoding/json"
 	"net/http"
 	"sync"
 	"time"
@@ -14,11 +15,9 @@ const (
 	// DefaultCloseStatus is what it states)
 	DefaultCloseStatus = 3000
 
-	// WriteWait is a time allowed to write a message to the peer.
-	WriteWait = 10 * time.Second
-
-	// MaxMessageSize is a max message size allowed from peer.
-	MaxMessageSize = 512
+	writeWait      = 10 * time.Second
+	maxMessageSize = 512
+	pingInterval   = 3 * time.Second
 )
 
 // Session represents active client
@@ -34,7 +33,21 @@ type Session struct {
 	closed        bool
 	connected     bool
 	mu            sync.Mutex
+	pingTimer     *time.Timer
 	Log           *log.Entry
+}
+
+type pingMessage struct {
+	Type    string      `json:"type"`
+	Message interface{} `json:"message"`
+}
+
+func (p *pingMessage) toJSON() []byte {
+	jsonStr, err := json.Marshal(&p)
+	if err != nil {
+		panic("Failed to build ping JSON 😲")
+	}
+	return jsonStr
 }
 
 // NewSession build a new Session struct from ws connetion and http request
@@ -72,6 +85,8 @@ func NewSession(node *Node, ws *websocket.Conn, request *http.Request) (*Session
 
 	go session.SendMessages()
 
+	session.addPing()
+
 	return session, nil
 }
 
@@ -85,21 +100,27 @@ func (s *Session) SendMessages() {
 				return
 			}
 
-			s.ws.SetWriteDeadline(time.Now().Add(WriteWait))
-
-			w, err := s.ws.NextWriter(websocket.TextMessage)
+			err := s.write(message, time.Now().Add(writeWait))
 
 			if err != nil {
 				return
 			}
-
-			w.Write(message)
-
-			if err := w.Close(); err != nil {
-				return
-			}
 		}
 	}
+}
+
+func (s *Session) write(message []byte, deadline time.Time) error {
+	s.ws.SetWriteDeadline(deadline)
+
+	w, err := s.ws.NextWriter(websocket.TextMessage)
+
+	if err != nil {
+		return err
+	}
+
+	w.Write(message)
+
+	return w.Close()
 }
 
 // ReadMessages reads messages from ws connection and send them to node
@@ -143,6 +164,10 @@ func (s *Session) Close(reason string) {
 	s.closed = true
 	s.mu.Unlock()
 
+	if s.pingTimer != nil {
+		s.pingTimer.Stop()
+	}
+
 	// TODO: make deadline and status code configurable
 	deadline := time.Now().Add(time.Second)
 	msg := websocket.FormatCloseMessage(DefaultCloseStatus, reason)
@@ -153,4 +178,28 @@ func (s *Session) Close(reason string) {
 // UID returns session uid
 func (s *Session) UID() string {
 	return s.uid
+}
+
+func (s *Session) sendPing() {
+	deadline := time.Now().Add(pingInterval / 2)
+	err := s.write(newPingMessage(), deadline)
+
+	if err == nil {
+		s.addPing()
+	}
+}
+
+func (s *Session) addPing() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.closed {
+		return
+	}
+
+	s.pingTimer = time.AfterFunc(pingInterval, s.sendPing)
+}
+
+func newPingMessage() []byte {
+	return (&pingMessage{Type: "ping", Message: time.Now().Unix()}).toJSON()
 }
