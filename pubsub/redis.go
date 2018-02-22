@@ -22,11 +22,18 @@ type RedisSubscriber struct {
 	url              string
 	channel          string
 	reconnectAttempt int
+	log              *log.Entry
 }
 
 // NewRedisSubscriber returns new RedisSubscriber struct
 func NewRedisSubscriber(node *node.Node, url string, channel string) RedisSubscriber {
-	return RedisSubscriber{node: node, url: url, channel: channel, reconnectAttempt: 0}
+	return RedisSubscriber{
+		node:             node,
+		url:              url,
+		channel:          channel,
+		reconnectAttempt: 0,
+		log:              log.WithFields(log.Fields{"context": "pubsub"}),
+	}
 }
 
 // Start connects to Redis and subscribes to the pubsub channel
@@ -40,7 +47,7 @@ func (s *RedisSubscriber) Start() error {
 
 	for {
 		if err := s.listen(); err != nil {
-			log.Warnf("Redis connection failed: %v", err)
+			s.log.Warnf("Redis connection failed: %v", err)
 		}
 
 		s.reconnectAttempt++
@@ -51,10 +58,10 @@ func (s *RedisSubscriber) Start() error {
 
 		delay := nextRetry(s.reconnectAttempt)
 
-		log.Infof("Next Redis reconnect attempt in %s", delay)
+		s.log.Infof("Next Redis reconnect attempt in %s", delay)
 		time.Sleep(delay)
 
-		log.Infof("Reconnecting to Redis...")
+		s.log.Infof("Reconnecting to Redis...")
 	}
 }
 
@@ -69,7 +76,7 @@ func (s *RedisSubscriber) listen() error {
 
 	psc := redis.PubSubConn{Conn: c}
 	if err := psc.Subscribe(s.channel); err != nil {
-		log.Errorf("Failed to subscribe to Redis channel: %v", err)
+		s.log.Errorf("Failed to subscribe to Redis channel: %v", err)
 		return err
 	}
 
@@ -81,12 +88,12 @@ func (s *RedisSubscriber) listen() error {
 		for {
 			switch v := psc.Receive().(type) {
 			case redis.Message:
-				log.Debugf("Incoming pubsub message from Redis: %s", v.Data)
+				s.log.Debugf("Incoming pubsub message from Redis: %s", v.Data)
 				s.node.HandlePubsub(v.Data)
 			case redis.Subscription:
-				log.Infof("Subscribed to Redis channel: %s\n", v.Channel)
+				s.log.Infof("Subscribed to Redis channel: %s\n", v.Channel)
 			case error:
-				log.Errorf("Redis subscription error: %v", v)
+				s.log.Errorf("Redis subscription error: %v", v)
 				done <- v
 				break
 			}

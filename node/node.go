@@ -19,13 +19,6 @@ type Message struct {
 	Data       string `json:"data"`
 }
 
-// Reply represents outgoing client message
-type Reply struct {
-	Type       string      `json:"type,omitempty"`
-	Identifier string      `json:"identifier"`
-	Message    interface{} `json:"message"`
-}
-
 // PubSubMessage represents data passing through pubsub channel
 type PubSubMessage struct {
 	Stream string `json:"stream"`
@@ -34,7 +27,20 @@ type PubSubMessage struct {
 
 // Node represents the whole applicaton
 type Node struct {
+	hub    *Hub
 	Config *config.Config
+}
+
+// NewNode builds new node struct
+func NewNode(config *config.Config) *Node {
+	hub := NewHub()
+
+	go hub.Run()
+
+	return &Node{
+		Config: config,
+		hub:    hub,
+	}
 }
 
 // HandleCommand parses incoming message from client and

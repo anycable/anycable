@@ -53,7 +53,7 @@ func main() {
 
 	log.Infof("Starting AnyCable %s", version)
 
-	node := &node.Node{Config: &config}
+	node := node.NewNode(&config)
 
 	subscriber := pubsub.NewRedisSubscriber(node, config.RedisURL, config.RedisChannel)
 

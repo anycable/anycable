@@ -1,4 +1,4 @@
-package main
+package node
 
 import (
 	"testing"
@@ -7,25 +7,20 @@ import (
 )
 
 func TestUnsubscribeRaceConditions(t *testing.T) {
-	hub := &Hub{
-		broadcast:   make(chan []byte),
-		register:    make(chan *Conn),
-		unregister:  make(chan *Conn),
-		connections: make(map[*Conn]bool),
-		shutdown:    make(chan bool),
-	}
+	hub := NewHub()
 
-	go hub.run()
+	go hub.Run()
 	defer hub.Shutdown()
 
-	conn := &Conn{send: make(chan []byte)}
+	session := &Session{send: make(chan []byte, 256), UID: "123"}
 
 	go func() {
-		hub.register <- conn
-		hub.broadcast <- []byte("hello!")
+		hub.register <- session
+		hub.subscribe <- &subscriptionInfo{session: "123", stream: "test", identifier: "test_channel"}
+		hub.broadcast <- &StreamMessage{Stream: "test", Data: "hello"}
 	}()
 
-	<-conn.send
+	<-session.send
 
 	assert.Equal(t, 1, hub.Size(), "Connections size must be equal 1")
 
@@ -33,13 +28,13 @@ func TestUnsubscribeRaceConditions(t *testing.T) {
 	defer close(done)
 
 	go func() {
-		hub.unregister <- conn
-		hub.broadcast <- []byte("ping")
+		hub.unregister <- session
+		hub.broadcast <- &StreamMessage{Stream: "test", Data: "ping"}
 		done <- true
 	}()
 
 	go func() {
-		hub.broadcast <- []byte("good-bye!")
+		hub.broadcast <- &StreamMessage{Stream: "test", Data: "bye-bye"}
 		done <- true
 	}()
 
@@ -51,10 +46,10 @@ func TestUnsubscribeRaceConditions(t *testing.T) {
 
 func TestBuildMessageJSON(t *testing.T) {
 	expected := []byte("{\"identifier\":\"chat\",\"message\":{\"text\":\"hello!\"}}")
-	assert.Equal(t, expected, BuildMessage("{\"text\":\"hello!\"}", "chat"))
+	assert.Equal(t, expected, buildMessage("{\"text\":\"hello!\"}", "chat"))
 }
 
 func TestBuildMessageString(t *testing.T) {
 	expected := []byte("{\"identifier\":\"chat\",\"message\":\"plain string\"}")
-	assert.Equal(t, expected, BuildMessage("\"plain string\"", "chat"))
+	assert.Equal(t, expected, buildMessage("\"plain string\"", "chat"))
 }

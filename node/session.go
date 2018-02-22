@@ -26,15 +26,16 @@ type Session struct {
 	ws            *websocket.Conn
 	path          string
 	headers       map[string]string
-	uid           string
-	identifiers   string
 	subscriptions map[string]bool
 	send          chan []byte
 	closed        bool
 	connected     bool
 	mu            sync.Mutex
 	pingTimer     *time.Timer
-	Log           *log.Entry
+
+	UID         string
+	Identifiers string
+	Log         *log.Entry
 }
 
 type pingMessage struct {
@@ -66,21 +67,21 @@ func NewSession(node *Node, ws *websocket.Conn, request *http.Request) (*Session
 		connected:     false,
 	}
 
-	identifiers, err := node.Authenticate(path, headers)
+	Identifiers, err := node.Authenticate(path, headers)
 
 	if err != nil {
 		defer session.Close("Auth Error")
 		return nil, err
 	}
 
-	session.uid = "random-uid"
+	session.UID = "random-uid"
 
 	ctx := log.WithFields(log.Fields{
-		"sid": session.UID(),
+		"sid": session.UID,
 	})
 
 	session.Log = ctx
-	session.identifiers = identifiers
+	session.Identifiers = Identifiers
 	session.connected = true
 
 	go session.SendMessages()
@@ -121,6 +122,23 @@ func (s *Session) write(message []byte, deadline time.Time) error {
 	w.Write(message)
 
 	return w.Close()
+}
+
+// Send data to client connection
+func (s *Session) Send(msg []byte) {
+	select {
+	case s.send <- msg:
+	default:
+		s.mu.Lock()
+
+		if s.send != nil {
+			close(s.send)
+			defer s.Disconnect("Write failed")
+		}
+
+		defer s.mu.Unlock()
+		s.send = nil
+	}
 }
 
 // ReadMessages reads messages from ws connection and send them to node
@@ -173,11 +191,6 @@ func (s *Session) Close(reason string) {
 	msg := websocket.FormatCloseMessage(DefaultCloseStatus, reason)
 	s.ws.WriteControl(websocket.CloseMessage, msg, deadline)
 	s.ws.Close()
-}
-
-// UID returns session uid
-func (s *Session) UID() string {
-	return s.uid
 }
 
 func (s *Session) sendPing() {
