@@ -2,9 +2,13 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/anycable/anycable-go/cli"
+	"github.com/anycable/anycable-go/node"
+	"github.com/anycable/anycable-go/server"
 	"github.com/anycable/anycable-go/utils"
 	log "github.com/apex/log"
 )
@@ -48,11 +52,23 @@ func main() {
 
 	log.Infof("Starting AnyCable %s", version)
 
+	node := &node.Node{Config: &config}
+
 	// init application (RPC + pubsub listener + hub + metrics)
 
 	// init signals handlers
 
 	// init server
+	server, err := server.NewServer(node, config.Host, strconv.Itoa(config.Port), &config.SSL)
 
-	// run server
+	if err != nil {
+		fmt.Printf("!!! Failed to initialize HTTP server !!!\n%v", err)
+		os.Exit(1)
+	}
+
+	server.Mux.Handle(config.Path, http.HandlerFunc(server.WebsocketHandler))
+
+	log.Infof("Handle WebSocket connections at %s", config.Path)
+
+	server.Start()
 }

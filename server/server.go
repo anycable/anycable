@@ -1,24 +1,35 @@
 package server
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
 	"net"
 	"net/http"
+	"sync"
+	"time"
+
+	"github.com/anycable/anycable-go/node"
+	"github.com/apex/log"
 
 	"github.com/anycable/anycable-go/config"
 )
 
 // HTTPServer is wrapper over http.Server
 type HTTPServer struct {
-	server  *http.Server
-	secured bool
-	mux     *http.ServeMux
+	node     *node.Node
+	server   *http.Server
+	addr     string
+	secured  bool
+	shutdown bool
+	mu       sync.Mutex
+
+	Mux *http.ServeMux
 }
 
 // NewServer builds HTTPServer from config params
-func NewServer(host string, port string, ssl *config.SSLOptions) (*HTTPServer, error) {
+func NewServer(node *node.Node, host string, port string, ssl *config.SSLOptions) (*HTTPServer, error) {
 	mux := http.NewServeMux()
 	addr := net.JoinHostPort(host, port)
 
@@ -36,14 +47,40 @@ func NewServer(host string, port string, ssl *config.SSLOptions) (*HTTPServer, e
 		server.TLSConfig = &tls.Config{Certificates: []tls.Certificate{cer}}
 	}
 
-	return &HTTPServer{server: server, mux: mux, secured: secured}, nil
+	return &HTTPServer{
+		node:     node,
+		server:   server,
+		addr:     addr,
+		Mux:      mux,
+		secured:  secured,
+		shutdown: false,
+	}, nil
 }
 
 // Start server
 func (s *HTTPServer) Start() error {
 	if s.secured {
+		log.Infof("Starting HTTPS server at %v", s.addr)
 		return s.server.ListenAndServeTLS("", "")
 	}
 
+	log.Infof("Starting HTTP server at %v", s.addr)
 	return s.server.ListenAndServe()
+}
+
+// Stop shuts down server gracefully.
+// `wait`` specifies the amount of time to wait before
+// closing active connections
+func (s *HTTPServer) Stop(wait time.Duration) error {
+	s.mu.Lock()
+	if s.shutdown {
+		return nil
+	}
+	s.shutdown = true
+	s.mu.Unlock()
+
+	ctx, cancel := context.WithTimeout(context.Background(), wait)
+	defer cancel()
+
+	return s.server.Shutdown(ctx)
 }
