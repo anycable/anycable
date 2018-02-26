@@ -56,12 +56,19 @@ build-protos:
 	protoc --proto_path=./etc --go_out=plugins=grpc:./protos ./etc/rpc.proto
 
 test:
-	go test .
+	go test github.com/anycable/anycable-go/cli \
+		github.com/anycable/anycable-go/config \
+		github.com/anycable/anycable-go/node \
+		github.com/anycable/anycable-go/pool \
+		github.com/anycable/anycable-go/pubsub \
+		github.com/anycable/anycable-go/rpc \
+		github.com/anycable/anycable-go/server \
+		github.com/anycable/anycable-go/utils
 
 test-cable:
-	go build -o tmp/anycable-go-test .
-	anyt -c "tmp/anycable-go-test -headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable"
-	anyt -c "tmp/anycable-go-test -headers=cookie,x-api-token -ssl_key=etc/ssl/server.key -ssl_cert=etc/ssl/server.crt -addr=localhost:8443" --target-url="wss://localhost:8443/cable"
+	go build -o tmp/anycable-go-test cmd/anycable-go/main.go
+	anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable"
+	anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token --ssl_key=etc/ssl/server.key --ssl_cert=etc/ssl/server.crt --port=8443" --target-url="wss://localhost:8443/cable"
 
 test-ci: prepare test test-cable
 
