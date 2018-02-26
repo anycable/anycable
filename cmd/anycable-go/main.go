@@ -9,6 +9,7 @@ import (
 	"github.com/anycable/anycable-go/cli"
 	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/pubsub"
+	"github.com/anycable/anycable-go/rpc"
 	"github.com/anycable/anycable-go/server"
 	"github.com/anycable/anycable-go/utils"
 	log "github.com/apex/log"
@@ -37,7 +38,7 @@ func main() {
 
 	config := cli.GetConfig()
 
-	fmt.Println(config)
+	ctx := log.WithFields(log.Fields{"context": "main"}),
 
 	// init logging
 	err := utils.InitLogger(config.LogFormat, config.LogLevel)
@@ -48,12 +49,14 @@ func main() {
 	}
 
 	if cli.DebugMode() {
-		log.Debug("🔧 🔧 🔧 Debug mode is on 🔧 🔧 🔧")
+		ctx.Debug("🔧 🔧 🔧 Debug mode is on 🔧 🔧 🔧")
 	}
 
-	log.Infof("Starting AnyCable %s", version)
+	ctx.Infof("Starting AnyCable %s", version)
 
-	node := node.NewNode(&config)
+	controller := rpc.NewController(&config)
+
+	node := node.NewNode(&config, controller)
 
 	subscriber := pubsub.NewRedisSubscriber(node, config.RedisURL, config.RedisChannel)
 
@@ -63,7 +66,7 @@ func main() {
 		}
 	}()
 
-	// init application (RPC + metrics)
+	// init metrics
 
 	// init signals handlers
 
@@ -77,7 +80,7 @@ func main() {
 
 	server.Mux.Handle(config.Path, http.HandlerFunc(server.WebsocketHandler))
 
-	log.Infof("Handle WebSocket connections at %s", config.Path)
+	ctx.Infof("Handle WebSocket connections at %s", config.Path)
 
 	server.Start()
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/anycable/anycable-go/utils"
 	"github.com/apex/log"
 	"github.com/gorilla/websocket"
+	nanoid "github.com/matoous/go-nanoid"
 )
 
 const (
@@ -74,7 +75,12 @@ func NewSession(node *Node, ws *websocket.Conn, request *http.Request) (*Session
 		return nil, err
 	}
 
-	session.UID = "random-uid"
+	session.UID, err = nanoid.Nanoid()
+
+	if err != nil {
+		defer session.Close("Nanoid Error")
+		return nil, err
+	}
 
 	ctx := log.WithFields(log.Fields{
 		"sid": session.UID,
