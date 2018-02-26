@@ -13,12 +13,6 @@ type SubscriptionInfo struct {
 	identifier string
 }
 
-// StreamMessage represents a message to be sent to stream
-type StreamMessage struct {
-	Stream string `json:"stream"`
-	Data   string `json:"data"`
-}
-
 // Reply represents outgoing client message
 type Reply struct {
 	Type       string      `json:"type,omitempty"`

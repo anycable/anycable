@@ -38,8 +38,8 @@ type Message struct {
 	Data       string `json:"data"`
 }
 
-// PubSubMessage represents data passing through pubsub channel
-type PubSubMessage struct {
+// StreamMessage represents a message to be sent to stream
+type StreamMessage struct {
 	Stream string `json:"stream"`
 	Data   string `json:"data"`
 }
@@ -88,12 +88,12 @@ func (n *Node) HandleCommand(s *Session, raw []byte) {
 
 // HandlePubsub parses incoming pubsub message and broadcast it
 func (n *Node) HandlePubsub(raw []byte) {
-	msg := &PubSubMessage{}
+	msg := &StreamMessage{}
 	if err := json.Unmarshal(raw, &msg); err != nil {
 		log.Warnf("Failed to parse pubsub message '%s' with error: %v", raw, err)
 	} else {
 		log.Debugf("Incoming pubsub message: %v", msg)
-		// n.Broadcast(msg.Stream, msg.Data)
+		n.Broadcast(msg)
 	}
 }
 
@@ -112,15 +112,21 @@ func (n *Node) Shutdown() {
 	}
 }
 
-// Authenticate calls controller to perform authentication and return connection identifiers
-func (n *Node) Authenticate(s *Session, path string, headers *map[string]string) (string, error) {
+// Authenticate calls controller to perform authentication.
+// If authentication is successful, session is registered with a hub.
+func (n *Node) Authenticate(s *Session, path string, headers *map[string]string) error {
 	id, transmissions, err := n.controller.Authenticate(path, headers)
 
 	if err == nil {
+		s.Identifiers = id
+		s.connected = true
+
 		transmit(s, transmissions)
+
+		n.hub.register <- s
 	}
 
-	return id, err
+	return err
 }
 
 // Subscribe subscribes session to a channel
@@ -196,6 +202,11 @@ func (n *Node) Perform(s *Session, msg *Message) {
 	s.Log.Debugf("Perform result: %v", res)
 
 	n.handleCommandReply(s, msg, res)
+}
+
+// Broadcast message to stream
+func (n *Node) Broadcast(msg *StreamMessage) {
+	n.hub.broadcast <- msg
 }
 
 func transmit(s *Session, transmissions []string) {

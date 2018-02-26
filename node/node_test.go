@@ -10,17 +10,18 @@ func TestAuthenticateSuccess(t *testing.T) {
 	node := NewMockNode()
 	session := NewMockSession("1")
 
-	id, err := node.Authenticate(session, "/cable", &map[string]string{"id": "test_id"})
+	err := node.Authenticate(session, "/cable", &map[string]string{"id": "test_id"})
 
 	assert.Nil(t, err, "Error must be nil")
-	assert.Equal(t, "test_id", id, "Must return identifier")
+	assert.Equal(t, session.connected, true, "Session must be marked as connected")
+	assert.Equalf(t, session.Identifiers, "test_id", "Identifiers must be equal to %s", "test_id")
 }
 
 func TestAuthenticateFailure(t *testing.T) {
 	node := NewMockNode()
 	session := NewMockSession("1")
 
-	_, err := node.Authenticate(session, "/failure", &map[string]string{"id": "test_id"})
+	err := node.Authenticate(session, "/failure", &map[string]string{"id": "test_id"})
 
 	assert.NotNil(t, err, "Error must not be nil")
 }

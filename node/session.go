@@ -83,15 +83,12 @@ func NewSession(node *Node, ws *websocket.Conn, request *http.Request) (*Session
 
 	session.Log = ctx
 
-	identifiers, err := node.Authenticate(session, path, &headers)
+	err = node.Authenticate(session, path, &headers)
 
 	if err != nil {
 		defer session.Close("Auth Error")
 		return nil, err
 	}
-
-	session.Identifiers = identifiers
-	session.connected = true
 
 	go session.SendMessages()
 
