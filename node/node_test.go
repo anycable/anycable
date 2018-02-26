@@ -8,8 +8,9 @@ import (
 
 func TestAuthenticateSuccess(t *testing.T) {
 	node := NewMockNode()
+	session := NewMockSession("1")
 
-	id, err := node.Authenticate("/cable", &map[string]string{"id": "test_id"})
+	id, err := node.Authenticate(session, "/cable", &map[string]string{"id": "test_id"})
 
 	assert.Nil(t, err, "Error must be nil")
 	assert.Equal(t, "test_id", id, "Must return identifier")
@@ -17,8 +18,9 @@ func TestAuthenticateSuccess(t *testing.T) {
 
 func TestAuthenticateFailure(t *testing.T) {
 	node := NewMockNode()
+	session := NewMockSession("1")
 
-	_, err := node.Authenticate("/failure", &map[string]string{"id": "test_id"})
+	_, err := node.Authenticate(session, "/failure", &map[string]string{"id": "test_id"})
 
 	assert.NotNil(t, err, "Error must not be nil")
 }

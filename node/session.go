@@ -68,25 +68,28 @@ func NewSession(node *Node, ws *websocket.Conn, request *http.Request) (*Session
 		connected:     false,
 	}
 
-	identifiers, err := node.Authenticate(path, &headers)
-
-	if err != nil {
-		defer session.Close("Auth Error")
-		return nil, err
-	}
-
-	session.UID, err = nanoid.Nanoid()
+	uid, err := nanoid.Nanoid()
 
 	if err != nil {
 		defer session.Close("Nanoid Error")
 		return nil, err
 	}
 
+	session.UID = uid
+
 	ctx := log.WithFields(log.Fields{
 		"sid": session.UID,
 	})
 
 	session.Log = ctx
+
+	identifiers, err := node.Authenticate(session, path, &headers)
+
+	if err != nil {
+		defer session.Close("Auth Error")
+		return nil, err
+	}
+
 	session.Identifiers = identifiers
 	session.connected = true
 

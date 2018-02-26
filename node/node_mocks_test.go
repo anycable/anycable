@@ -47,12 +47,12 @@ func (c *MockController) Shutdown() error {
 // Authenticate emulates authentication process:
 // - if path is equal to "failure" then authentication failed
 // - otherwise returns value of headers['id'] as identifier
-func (c *MockController) Authenticate(path string, headers *map[string]string) (string, error) {
+func (c *MockController) Authenticate(path string, headers *map[string]string) (string, []string, error) {
 	if path == "/failure" {
-		return "", errors.New("Auth Failed")
+		return "", nil, errors.New("Auth Failed")
 	}
 
-	return (*headers)["id"], nil
+	return (*headers)["id"], nil, nil
 }
 
 // Subscribe emulates subscription process:

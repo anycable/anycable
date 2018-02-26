@@ -9,45 +9,56 @@ import (
 )
 
 var (
-	ErrClosed = errors.New("pool is closed")
+	errClosed = errors.New("pool is closed")
 )
 
+// Pool represents connection pool
 type Pool interface {
-	Get() (PoolConn, error)
+	Get() (Conn, error)
 	Close()
-	Len() int
+	Available() int
+	Busy() int
 }
 
 type channelPool struct {
-	mu      sync.Mutex
-	conns   chan *grpc.ClientConn
-	factory Factory
+	mu          sync.Mutex
+	conns       chan *grpc.ClientConn
+	activeCount int
+	factory     Factory
 }
 
+// Factory is a connection pool factory fun interface
 type Factory func() (*grpc.ClientConn, error)
 
-type PoolConn struct {
+// Conn is a single connection to pool wrapper
+type Conn struct {
 	Conn *grpc.ClientConn
 	c    *channelPool
 }
 
-func (p PoolConn) Close() error {
+// Close connection
+func (p Conn) Close() error {
 	return p.c.put(p.Conn)
 }
 
-func (c *channelPool) wrapConn(conn *grpc.ClientConn) PoolConn {
-	p := PoolConn{Conn: conn, c: c}
+func (c *channelPool) wrapConn(conn *grpc.ClientConn) Conn {
+	c.mu.Lock()
+	p := Conn{Conn: conn, c: c}
+	c.activeCount++
+	c.mu.Unlock()
 	return p
 }
 
+// NewChannelPool builds new pool with provided configuratin
 func NewChannelPool(initialCap, maxCap int, factory Factory) (Pool, error) {
 	if initialCap < 0 || maxCap <= 0 || initialCap > maxCap {
 		return nil, errors.New("invalid capacity settings")
 	}
 
 	c := &channelPool{
-		conns:   make(chan *grpc.ClientConn, maxCap),
-		factory: factory,
+		conns:       make(chan *grpc.ClientConn, maxCap),
+		factory:     factory,
+		activeCount: 0,
 	}
 
 	for i := 0; i < initialCap; i++ {
@@ -69,10 +80,10 @@ func (c *channelPool) getConns() chan *grpc.ClientConn {
 	return conns
 }
 
-func (c *channelPool) Get() (PoolConn, error) {
+func (c *channelPool) Get() (Conn, error) {
 	conns := c.getConns()
 	if conns == nil {
-		return PoolConn{}, ErrClosed
+		return Conn{}, errClosed
 	}
 
 	// wrap our connections with out custom grpc.ClientConn implementation (wrapConn
@@ -80,14 +91,14 @@ func (c *channelPool) Get() (PoolConn, error) {
 	select {
 	case conn := <-conns:
 		if conn == nil {
-			return PoolConn{}, ErrClosed
+			return Conn{}, errClosed
 		}
 
 		return c.wrapConn(conn), nil
 	default:
 		conn, err := c.factory()
 		if err != nil {
-			return PoolConn{}, err
+			return Conn{}, err
 		}
 
 		return c.wrapConn(conn), nil
@@ -101,6 +112,8 @@ func (c *channelPool) put(conn *grpc.ClientConn) error {
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
+	c.activeCount--
 
 	if c.conns == nil {
 		// pool is closed, close passed connection
@@ -118,6 +131,7 @@ func (c *channelPool) put(conn *grpc.ClientConn) error {
 	}
 }
 
+// Close all connections and pool's channel
 func (c *channelPool) Close() {
 	c.mu.Lock()
 	conns := c.conns
@@ -135,4 +149,6 @@ func (c *channelPool) Close() {
 	}
 }
 
-func (c *channelPool) Len() int { return len(c.getConns()) }
+func (c *channelPool) Busy() int { return c.activeCount }
+
+func (c *channelPool) Available() int { return len(c.getConns()) }
