@@ -25,24 +25,29 @@ const (
 
 // Controller implements node.Controller interface for gRPC
 type Controller struct {
+	host string
 	pool grpcpool.Pool
 	log  *log.Entry
 }
 
 // NewController builds new Controller from config
 func NewController(config *config.Config) *Controller {
-	return &Controller{log: log.WithField("context", "rpc")}
+	return &Controller{log: log.WithField("context", "rpc"), host: config.RPCHost}
 }
 
 // Start initializes RPC connection pool
-func (c *Controller) Start(config *config.Config) error {
-	host := config.RPCHost
+func (c *Controller) Start() error {
+	host := c.host
 
 	factory := func() (*grpc.ClientConn, error) {
 		return grpc.Dial(host, grpc.WithInsecure())
 	}
 
 	pool, err := grpcpool.NewChannelPool(initialCapacity, maxCapacity, factory)
+
+	if err == nil {
+		c.log.Infof("RPC pool initialized: %s", host)
+	}
 
 	c.pool = pool
 	return err
@@ -51,6 +56,12 @@ func (c *Controller) Start(config *config.Config) error {
 // Shutdown closes connections
 func (c *Controller) Shutdown() error {
 	c.pool.Close()
+
+	busy := c.pool.Busy()
+
+	if busy > 0 {
+		c.log.Infof("Waiting for active RPC calls to finish: %d", busy)
+	}
 
 	// Wait for active connections
 	_, err := retry(func() (interface{}, error) {
@@ -201,16 +212,18 @@ func parseCommandResponse(response interface{}, err error) (*node.CommandResult,
 	}
 
 	if r, ok := response.(*pb.CommandResponse); ok {
-		if r.Status.String() == "SUCCESS" {
-			return &node.CommandResult{
-				Disconnect:     r.Disconnect,
-				StopAllStreams: r.StopStreams,
-				Streams:        r.Streams,
-				Transmissions:  r.Transmissions,
-			}, nil
+		res := &node.CommandResult{
+			Disconnect:     r.Disconnect,
+			StopAllStreams: r.StopStreams,
+			Streams:        r.Streams,
+			Transmissions:  r.Transmissions,
 		}
 
-		return nil, fmt.Errorf("Application error: %s", r.ErrorMsg)
+		if r.Status.String() == "SUCCESS" {
+			return res, nil
+		}
+
+		return res, fmt.Errorf("Application error: %s", r.ErrorMsg)
 	}
 
 	return nil, errors.New("Failed to deserialize command response")

@@ -19,7 +19,9 @@ func NewMockController() MockController {
 // NewMockNode build new node with mock controller
 func NewMockNode() Node {
 	controller := NewMockController()
-	return Node{controller: &controller, hub: NewHub()}
+	node := Node{controller: &controller, hub: NewHub()}
+	node.disconnector = NewDisconnectQueue(&node, 1)
+	return node
 }
 
 // NewMockSession returns a new session with a specified uid and identifiers equal to uid
@@ -98,4 +100,8 @@ func (c *MockController) Perform(sid string, id string, channel string, data str
 	res := NewMockResult(sid)
 	res.Transmissions = []string{data}
 	return res, nil
+}
+
+func (c *MockController) Disconnect(sid string, id string, subscriptions []string, path string, headers *map[string]string) error {
+	return nil
 }

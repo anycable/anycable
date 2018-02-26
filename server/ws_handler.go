@@ -10,6 +10,8 @@ import (
 
 // WebsocketHandler called when new client connection comes to websocket endpoint.
 func (s *HTTPServer) WebsocketHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := log.WithField("context", "ws")
+
 	// TODO: make buffer sizes and compression configurable
 	upgrader := websocket.Upgrader{
 		// TODO: make origin check configurable
@@ -21,7 +23,7 @@ func (s *HTTPServer) WebsocketHandler(w http.ResponseWriter, r *http.Request) {
 
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Debugf("Websocket connection upgrade error: %#v", err.Error())
+		ctx.Debugf("Websocket connection upgrade error: %#v", err.Error())
 		return
 	}
 
@@ -30,7 +32,7 @@ func (s *HTTPServer) WebsocketHandler(w http.ResponseWriter, r *http.Request) {
 		session, err := node.NewSession(s.node, ws, r)
 
 		if err != nil {
-			log.Debugf("Websocket session initialization failed: %v", err)
+			ctx.Debugf("Websocket session initialization failed: %v", err)
 			return
 		}
 

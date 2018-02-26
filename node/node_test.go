@@ -140,3 +140,49 @@ func TestPerformSuccess(t *testing.T) {
 
 	assert.Equalf(t, []byte("action"), msg, "Sent message is invalid: %s", msg)
 }
+
+func TestDisconnect(t *testing.T) {
+	node := NewMockNode()
+	session := NewMockSession("14")
+
+	node.Disconnect(session)
+
+	// Expected to unregister session
+	select {
+	case s := <-node.hub.unregister:
+		assert.Equal(t, session, s, "Expected to disconnect session")
+	default:
+		assert.Fail(t, "Expected hub to receive unregister message but none was sent")
+	}
+
+	assert.Equal(t, node.disconnector.Size(), 1, "Expected disconnect to have 1 task in a queue")
+
+	task := <-node.disconnector.disconnect
+	assert.Equal(t, session, task, "Expected to disconnect session")
+}
+
+func TestHandlePubsubCommand(t *testing.T) {
+	node := NewMockNode()
+
+	go node.hub.Run()
+	defer node.hub.Shutdown()
+
+	session := NewMockSession("14")
+	session2 := NewMockSession("15")
+
+	node.hub.addSession(session)
+	node.hub.subscribeSession("14", "test", "test_channel")
+
+	node.hub.addSession(session2)
+	node.hub.subscribeSession("15", "test", "test_channel")
+
+	node.HandlePubsub([]byte("{\"stream\":\"test\",\"data\":\"\\\"abc123\\\"\"}"))
+
+	expected := "{\"identifier\":\"test_channel\",\"message\":\"abc123\"}"
+
+	msg := <-session.send
+	assert.Equalf(t, expected, string(msg), "Expected to receive %s but got %s", expected, string(msg))
+
+	msg2 := <-session2.send
+	assert.Equalf(t, expected, string(msg2), "Expected to receive %s but got %s", expected, string(msg2))
+}

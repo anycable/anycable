@@ -98,7 +98,7 @@ func (h *Hub) Run() {
 			h.unsubscribeSessionFromChannel(subinfo.session, subinfo.identifier)
 
 		case message := <-h.broadcast:
-			h.broadcastToStream(message.Stream, message.Stream)
+			h.broadcastToStream(message.Stream, message.Data)
 
 		case <-h.shutdown:
 			// TODO: graceful disconnect

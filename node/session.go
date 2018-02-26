@@ -171,7 +171,7 @@ func (s *Session) ReadMessages() {
 func (s *Session) Disconnect(reason string) {
 	s.mu.Lock()
 	if !s.connected {
-		// s.node.Disconnect(s)
+		s.node.Disconnect(s)
 	}
 	s.connected = false
 	s.mu.Unlock()

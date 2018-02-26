@@ -29,6 +29,7 @@ type Controller interface {
 	Subscribe(sid string, id string, channel string) (*CommandResult, error)
 	Unsubscribe(sid string, id string, channel string) (*CommandResult, error)
 	Perform(sid string, id string, channel string, data string) (*CommandResult, error)
+	Disconnect(sid string, id string, subscriptions []string, path string, headers *map[string]string) error
 }
 
 // Message represents incoming client message
@@ -46,22 +47,28 @@ type StreamMessage struct {
 
 // Node represents the whole applicaton
 type Node struct {
-	hub        *Hub
-	controller Controller
-	Config     *config.Config
+	hub          *Hub
+	controller   Controller
+	disconnector *DisconnectQueue
+	Config       *config.Config
 }
 
 // NewNode builds new node struct
 func NewNode(config *config.Config, controller Controller) *Node {
-	hub := NewHub()
-
-	go hub.Run()
-
-	return &Node{
+	node := &Node{
 		Config:     config,
-		hub:        hub,
 		controller: controller,
 	}
+
+	node.hub = NewHub()
+
+	go node.hub.Run()
+
+	node.disconnector = NewDisconnectQueue(node, config.DisconnectRate)
+
+	go node.disconnector.Run()
+
+	return node
 }
 
 // HandleCommand parses incoming message from client and
@@ -101,6 +108,14 @@ func (n *Node) HandlePubsub(raw []byte) {
 func (n *Node) Shutdown() {
 	if n.hub != nil {
 		n.hub.Shutdown()
+	}
+
+	if n.disconnector != nil {
+		err := n.disconnector.Shutdown()
+
+		if err != nil {
+			log.Warnf("%v", err)
+		}
 	}
 
 	if n.controller != nil {
@@ -143,14 +158,14 @@ func (n *Node) Subscribe(s *Session, msg *Message) {
 
 	if err != nil {
 		s.Log.Errorf("Subscribe error: %v", err)
-		return
+	} else {
+		s.subscriptions[msg.Identifier] = true
+		s.Log.Debugf("Subscribed to channel: %s", msg.Identifier)
 	}
 
-	s.subscriptions[msg.Identifier] = true
-
-	s.Log.Debugf("Subscribed to channel: %s", msg.Identifier)
-
-	n.handleCommandReply(s, msg, res)
+	if res != nil {
+		n.handleCommandReply(s, msg, res)
+	}
 }
 
 // Unsubscribe unsubscribes session from a channel
@@ -167,17 +182,18 @@ func (n *Node) Unsubscribe(s *Session, msg *Message) {
 
 	if err != nil {
 		s.Log.Errorf("Unsubscribe error: %v", err)
-		return
+	} else {
+		// Make sure to remove all streams subscriptions
+		res.StopAllStreams = true
+
+		delete(s.subscriptions, msg.Identifier)
+
+		s.Log.Debugf("Unsubscribed from channel: %s", msg.Identifier)
 	}
 
-	// Make sure to remove all streams subscriptions
-	res.StopAllStreams = true
-
-	delete(s.subscriptions, msg.Identifier)
-
-	s.Log.Debugf("Unsubscribed from channel: %s", msg.Identifier)
-
-	n.handleCommandReply(s, msg, res)
+	if res != nil {
+		n.handleCommandReply(s, msg, res)
+	}
 }
 
 // Perform executes client command
@@ -196,17 +212,43 @@ func (n *Node) Perform(s *Session, msg *Message) {
 
 	if err != nil {
 		s.Log.Errorf("Perform error: %v", err)
-		return
+	} else {
+		s.Log.Debugf("Perform result: %v", res)
 	}
 
-	s.Log.Debugf("Perform result: %v", res)
-
-	n.handleCommandReply(s, msg, res)
+	if res != nil {
+		n.handleCommandReply(s, msg, res)
+	}
 }
 
 // Broadcast message to stream
 func (n *Node) Broadcast(msg *StreamMessage) {
 	n.hub.broadcast <- msg
+}
+
+// Disconnect adds session to disconnector queue and unregister session from hub
+func (n *Node) Disconnect(s *Session) {
+	n.hub.unregister <- s
+	n.disconnector.Enqueue(s)
+}
+
+// DisconnectNow execute disconnect on controller
+func (n *Node) DisconnectNow(s *Session) error {
+	s.Log.Debugf("Disconnect %s %s %v %v", s.Identifiers, s.path, s.headers, s.subscriptions)
+
+	err := n.controller.Disconnect(
+		s.UID,
+		s.Identifiers,
+		subscriptionsList(s.subscriptions),
+		s.path,
+		&s.headers,
+	)
+
+	if err != nil {
+		log.Errorf("Disconnect error: %v", err)
+	}
+
+	return err
 }
 
 func transmit(s *Session, transmissions []string) {
@@ -229,4 +271,12 @@ func (n *Node) handleCommandReply(s *Session, msg *Message, reply *CommandResult
 	}
 
 	transmit(s, reply.Transmissions)
+}
+
+func subscriptionsList(m map[string]bool) []string {
+	keys := []string{}
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
 }

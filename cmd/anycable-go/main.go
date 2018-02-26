@@ -44,7 +44,7 @@ func main() {
 	err := utils.InitLogger(config.LogFormat, config.LogLevel)
 
 	if err != nil {
-		fmt.Printf("!!! Failed to initialize logger !!!\n%v", err)
+		log.Errorf("!!! Failed to initialize logger !!!\n%v", err)
 		os.Exit(1)
 	}
 
@@ -62,6 +62,14 @@ func main() {
 
 	go func() {
 		if err := subscriber.Start(); err != nil {
+			log.Errorf("!!! Subscriber failed !!!\n%v", err)
+			os.Exit(1)
+		}
+	}()
+
+	go func() {
+		if err := controller.Start(); err != nil {
+			log.Errorf("!!! RPC failed !!!\n%v", err)
 			os.Exit(1)
 		}
 	}()

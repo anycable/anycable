@@ -24,6 +24,7 @@ type HTTPServer struct {
 	secured  bool
 	shutdown bool
 	mu       sync.Mutex
+	log      *log.Entry
 
 	Mux *http.ServeMux
 }
@@ -54,17 +55,18 @@ func NewServer(node *node.Node, host string, port string, ssl *config.SSLOptions
 		Mux:      mux,
 		secured:  secured,
 		shutdown: false,
+		log:      log.WithField("context", "http"),
 	}, nil
 }
 
 // Start server
 func (s *HTTPServer) Start() error {
 	if s.secured {
-		log.Infof("Starting HTTPS server at %v", s.addr)
+		s.log.Infof("Starting HTTPS server at %v", s.addr)
 		return s.server.ListenAndServeTLS("", "")
 	}
 
-	log.Infof("Starting HTTP server at %v", s.addr)
+	s.log.Infof("Starting HTTP server at %v", s.addr)
 	return s.server.ListenAndServe()
 }
 
