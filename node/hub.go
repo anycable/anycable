@@ -6,7 +6,8 @@ import (
 	"github.com/apex/log"
 )
 
-type subscriptionInfo struct {
+// SubscriptionInfo contains information about session-channel(-stream) subscription
+type SubscriptionInfo struct {
 	session    string
 	stream     string
 	identifier string
@@ -57,10 +58,10 @@ type Hub struct {
 	unregister chan *Session
 
 	// Subscribe requests to streams
-	subscribe chan *subscriptionInfo
+	subscribe chan *SubscriptionInfo
 
 	// Unsubscribe requests from streams
-	unsubscribe chan *subscriptionInfo
+	unsubscribe chan *SubscriptionInfo
 
 	// Control channel to shutdown hub
 	shutdown chan bool
@@ -72,11 +73,11 @@ type Hub struct {
 // NewHub builds new hub instance
 func NewHub() *Hub {
 	return &Hub{
-		broadcast:       make(chan *StreamMessage),
-		register:        make(chan *Session),
-		unregister:      make(chan *Session),
-		subscribe:       make(chan *subscriptionInfo),
-		unsubscribe:     make(chan *subscriptionInfo),
+		broadcast:       make(chan *StreamMessage, 256),
+		register:        make(chan *Session, 128),
+		unregister:      make(chan *Session, 128),
+		subscribe:       make(chan *SubscriptionInfo, 128),
+		unsubscribe:     make(chan *SubscriptionInfo, 128),
 		sessions:        make(map[string]*Session),
 		identifiers:     make(map[string]map[string]bool),
 		streams:         make(map[string]map[string]string),

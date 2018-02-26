@@ -12,36 +12,37 @@ func TestUnsubscribeRaceConditions(t *testing.T) {
 	go hub.Run()
 	defer hub.Shutdown()
 
-	session := &Session{send: make(chan []byte, 256), UID: "123"}
+	session := NewMockSession("123")
+	session2 := NewMockSession("321")
 
-	go func() {
-		hub.register <- session
-		hub.subscribe <- &subscriptionInfo{session: "123", stream: "test", identifier: "test_channel"}
-		hub.broadcast <- &StreamMessage{Stream: "test", Data: "hello"}
-	}()
+	hub.addSession(session)
+	hub.subscribeSession("123", "test", "test_channel")
+
+	hub.addSession(session2)
+	hub.subscribeSession("321", "test", "test_channel")
+
+	hub.broadcast <- &StreamMessage{Stream: "test", Data: "hello"}
 
 	<-session.send
+	<-session2.send
 
-	assert.Equal(t, 1, hub.Size(), "Connections size must be equal 1")
-
-	done := make(chan bool)
-	defer close(done)
+	assert.Equal(t, 2, hub.Size(), "Connections size must be equal 2")
 
 	go func() {
+		hub.broadcast <- &StreamMessage{Stream: "test", Data: "pong"}
 		hub.unregister <- session
 		hub.broadcast <- &StreamMessage{Stream: "test", Data: "ping"}
-		done <- true
 	}()
 
 	go func() {
 		hub.broadcast <- &StreamMessage{Stream: "test", Data: "bye-bye"}
-		done <- true
 	}()
 
-	<-done
-	<-done
+	<-session2.send
+	<-session2.send
+	<-session2.send
 
-	assert.Equal(t, 0, hub.Size(), "Connections size must be equal 0")
+	assert.Equal(t, 1, hub.Size(), "Connections size must be equal 1")
 }
 
 func TestBuildMessageJSON(t *testing.T) {

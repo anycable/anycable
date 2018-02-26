@@ -63,7 +63,7 @@ func main() {
 		}
 	}()
 
-	// init application (RPC + pubsub listener + hub + metrics)
+	// init application (RPC + metrics)
 
 	// init signals handlers
 

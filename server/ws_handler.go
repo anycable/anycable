@@ -30,6 +30,7 @@ func (s *HTTPServer) WebsocketHandler(w http.ResponseWriter, r *http.Request) {
 		session, err := node.NewSession(s.node, ws, r)
 
 		if err != nil {
+			log.Debugf("Websocket session initialization failed: %v", err)
 			return
 		}
 
