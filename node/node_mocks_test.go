@@ -35,7 +35,7 @@ func NewMockSession(uid string) *Session {
 
 // NewMockResult builds a new result with sid as transmission
 func NewMockResult(sid string) *CommandResult {
-	return &CommandResult{Transmissions: []string{sid}, Disconnect: false, StopStreams: false}
+	return &CommandResult{Transmissions: []string{sid}, Disconnect: false, StopAllStreams: false}
 }
 
 // Shutdown changes Started to false
@@ -79,14 +79,13 @@ func (c *MockController) Subscribe(sid string, id string, channel string) (*Comm
 	return res, nil
 }
 
-// Unsubscribe returns result with StopStreams set to true
+// Unsubscribe returns command result
 func (c *MockController) Unsubscribe(sid string, id string, channel string) (*CommandResult, error) {
 	if channel == "failure" {
 		return nil, errors.New("Unsubscription Failure")
 	}
 
 	res := NewMockResult(sid)
-	res.StopStreams = true
 	return res, nil
 }
 

@@ -16,10 +16,10 @@ const (
 // which contains informations about streams to subscribe,
 // messages to sent
 type CommandResult struct {
-	Streams       []string
-	StopStreams   bool
-	Transmissions []string
-	Disconnect    bool
+	Streams        []string
+	StopAllStreams bool
+	Transmissions  []string
+	Disconnect     bool
 }
 
 // Controller is an interface describing business-logic handler (e.g. RPC)
@@ -154,6 +154,9 @@ func (n *Node) Unsubscribe(s *Session, msg *Message) {
 		return
 	}
 
+	// Make sure to remove all streams subscriptions
+	res.StopAllStreams = true
+
 	delete(s.subscriptions, msg.Identifier)
 
 	s.Log.Debugf("Unsubscribed from channel: %s", msg.Identifier)
@@ -196,7 +199,7 @@ func (n *Node) handleCommandReply(s *Session, msg *Message, reply *CommandResult
 		defer s.Disconnect("Command Failed")
 	}
 
-	if reply.StopStreams {
+	if reply.StopAllStreams {
 		n.hub.unsubscribe <- &SubscriptionInfo{session: s.UID, identifier: msg.Identifier}
 	}
 

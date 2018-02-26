@@ -38,7 +38,7 @@ func main() {
 
 	config := cli.GetConfig()
 
-	ctx := log.WithFields(log.Fields{"context": "main"}),
+	ctx := log.WithFields(log.Fields{"context": "main"})
 
 	// init logging
 	err := utils.InitLogger(config.LogFormat, config.LogLevel)
