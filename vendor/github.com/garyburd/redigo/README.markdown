@@ -21,6 +21,7 @@ Documentation
 
 - [API Reference](http://godoc.org/github.com/garyburd/redigo/redis)
 - [FAQ](https://github.com/garyburd/redigo/wiki/FAQ)
+- [Examples](https://godoc.org/github.com/garyburd/redigo/redis#pkg-examples)
 
 Installation
 ------------
@@ -42,7 +43,7 @@ Related Projects
 Contributing
 ------------
 
-Send email to Gary Burd (address in GitHub profile) before doing any work on Redigo.
+See [CONTRIBUTING.md](https://github.com/garyburd/redigo/blob/master/.github/CONTRIBUTING.md).
 
 License
 -------

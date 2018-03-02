@@ -20,10 +20,15 @@ package grpc
 
 import (
 	"encoding/json"
+	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"google.golang.org/grpc/grpclog"
 )
+
+const maxInt = int(^uint(0) >> 1)
 
 // MethodConfig defines the configuration recommended by the service providers for a
 // particular method.
@@ -68,12 +73,48 @@ type ServiceConfig struct {
 	Methods map[string]MethodConfig
 }
 
-func parseTimeout(t *string) (*time.Duration, error) {
-	if t == nil {
+func parseDuration(s *string) (*time.Duration, error) {
+	if s == nil {
 		return nil, nil
 	}
-	d, err := time.ParseDuration(*t)
-	return &d, err
+	if !strings.HasSuffix(*s, "s") {
+		return nil, fmt.Errorf("malformed duration %q", *s)
+	}
+	ss := strings.SplitN((*s)[:len(*s)-1], ".", 3)
+	if len(ss) > 2 {
+		return nil, fmt.Errorf("malformed duration %q", *s)
+	}
+	// hasDigits is set if either the whole or fractional part of the number is
+	// present, since both are optional but one is required.
+	hasDigits := false
+	var d time.Duration
+	if len(ss[0]) > 0 {
+		i, err := strconv.ParseInt(ss[0], 10, 32)
+		if err != nil {
+			return nil, fmt.Errorf("malformed duration %q: %v", *s, err)
+		}
+		d = time.Duration(i) * time.Second
+		hasDigits = true
+	}
+	if len(ss) == 2 && len(ss[1]) > 0 {
+		if len(ss[1]) > 9 {
+			return nil, fmt.Errorf("malformed duration %q", *s)
+		}
+		f, err := strconv.ParseInt(ss[1], 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("malformed duration %q: %v", *s, err)
+		}
+		for i := 9; i > len(ss[1]); i-- {
+			f *= 10
+		}
+		d += time.Duration(f)
+		hasDigits = true
+	}
+	if !hasDigits {
+		return nil, fmt.Errorf("malformed duration %q", *s)
+	}
+
+	return &d, nil
 }
 
 type jsonName struct {
@@ -97,8 +138,8 @@ type jsonMC struct {
 	Name                    *[]jsonName
 	WaitForReady            *bool
 	Timeout                 *string
-	MaxRequestMessageBytes  *int
-	MaxResponseMessageBytes *int
+	MaxRequestMessageBytes  *int64
+	MaxResponseMessageBytes *int64
 }
 
 // TODO(lyuxuan): delete this struct after cleaning up old service config implementation.
@@ -126,7 +167,7 @@ func parseServiceConfig(js string) (ServiceConfig, error) {
 		if m.Name == nil {
 			continue
 		}
-		d, err := parseTimeout(m.Timeout)
+		d, err := parseDuration(m.Timeout)
 		if err != nil {
 			grpclog.Warningf("grpc: parseServiceConfig error unmarshaling %s due to %v", js, err)
 			return ServiceConfig{}, err
@@ -135,8 +176,20 @@ func parseServiceConfig(js string) (ServiceConfig, error) {
 		mc := MethodConfig{
 			WaitForReady: m.WaitForReady,
 			Timeout:      d,
-			MaxReqSize:   m.MaxRequestMessageBytes,
-			MaxRespSize:  m.MaxResponseMessageBytes,
+		}
+		if m.MaxRequestMessageBytes != nil {
+			if *m.MaxRequestMessageBytes > int64(maxInt) {
+				mc.MaxReqSize = newInt(maxInt)
+			} else {
+				mc.MaxReqSize = newInt(int(*m.MaxRequestMessageBytes))
+			}
+		}
+		if m.MaxResponseMessageBytes != nil {
+			if *m.MaxResponseMessageBytes > int64(maxInt) {
+				mc.MaxRespSize = newInt(maxInt)
+			} else {
+				mc.MaxRespSize = newInt(int(*m.MaxResponseMessageBytes))
+			}
 		}
 		for _, n := range *m.Name {
 			if path, valid := n.generatePath(); valid {
@@ -168,18 +221,6 @@ func getMaxSize(mcMax, doptMax *int, defaultVal int) *int {
 	return doptMax
 }
 
-func newBool(b bool) *bool {
-	return &b
-}
-
 func newInt(b int) *int {
-	return &b
-}
-
-func newDuration(b time.Duration) *time.Duration {
-	return &b
-}
-
-func newString(b string) *string {
 	return &b
 }
