@@ -117,6 +117,9 @@ func (s *Session) SendMessages() {
 }
 
 func (s *Session) write(message []byte, deadline time.Time) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	s.ws.SetWriteDeadline(deadline)
 
 	w, err := s.ws.NextWriter(websocket.TextMessage)
