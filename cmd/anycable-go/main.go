@@ -62,23 +62,22 @@ func main() {
 
 	go func() {
 		if err := subscriber.Start(); err != nil {
-			log.Errorf("!!! Subscriber failed !!!\n%v", err)
+			ctx.Errorf("!!! Subscriber failed !!!\n%v", err)
 			os.Exit(1)
 		}
 	}()
 
 	go func() {
 		if err := controller.Start(); err != nil {
-			log.Errorf("!!! RPC failed !!!\n%v", err)
+			ctx.Errorf("!!! RPC failed !!!\n%v", err)
 			os.Exit(1)
 		}
 	}()
 
-	// init metrics
+	// TODO: init metrics
 
-	// init signals handlers
+	// TODO: init signals handlers
 
-	// init server
 	server, err := server.NewServer(node, config.Host, strconv.Itoa(config.Port), &config.SSL)
 
 	if err != nil {

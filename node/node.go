@@ -245,7 +245,7 @@ func (n *Node) DisconnectNow(s *Session) error {
 	)
 
 	if err != nil {
-		log.Errorf("Disconnect error: %v", err)
+		s.Log.Errorf("Disconnect error: %v", err)
 	}
 
 	return err

@@ -50,7 +50,7 @@ dockerize:
 
 # Run server
 run:
-	go run ./*.go
+	go run ./cmd/anycable-go/main.go
 
 build-protos:
 	protoc --proto_path=./etc --go_out=plugins=grpc:./protos ./etc/rpc.proto

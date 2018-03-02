@@ -100,6 +100,9 @@ func (c *Controller) Authenticate(path string, headers *map[string]string) (stri
 	}
 
 	if r, ok := response.(*pb.ConnectionResponse); ok {
+
+		c.log.Debugf("Authenticate response: %v", r)
+
 		if r.Status.String() == "SUCCESS" {
 			return r.Identifiers, r.Transmissions, nil
 		}
@@ -128,7 +131,7 @@ func (c *Controller) Subscribe(sid string, id string, channel string) (*node.Com
 
 	response, err := retry(op)
 
-	return parseCommandResponse(response, err)
+	return c.parseCommandResponse(response, err)
 }
 
 // Unsubscribe performs Command RPC call with "unsubscribe" command
@@ -149,7 +152,7 @@ func (c *Controller) Unsubscribe(sid string, id string, channel string) (*node.C
 
 	response, err := retry(op)
 
-	return parseCommandResponse(response, err)
+	return c.parseCommandResponse(response, err)
 }
 
 // Perform performs Command RPC call with "perform" command
@@ -170,7 +173,7 @@ func (c *Controller) Perform(sid string, id string, channel string, data string)
 
 	response, err := retry(op)
 
-	return parseCommandResponse(response, err)
+	return c.parseCommandResponse(response, err)
 }
 
 // Disconnect performs disconnect RPC call
@@ -196,6 +199,8 @@ func (c *Controller) Disconnect(sid string, id string, subscriptions []string, p
 	}
 
 	if r, ok := response.(*pb.DisconnectResponse); ok {
+		c.log.Debugf("Disconnect response: %v", r)
+
 		if r.Status.String() == "SUCCESS" {
 			return nil
 		}
@@ -206,12 +211,14 @@ func (c *Controller) Disconnect(sid string, id string, subscriptions []string, p
 	return errors.New("Failed to deserialize disconnect response")
 }
 
-func parseCommandResponse(response interface{}, err error) (*node.CommandResult, error) {
+func (c *Controller) parseCommandResponse(response interface{}, err error) (*node.CommandResult, error) {
 	if err != nil {
 		return nil, err
 	}
 
 	if r, ok := response.(*pb.CommandResponse); ok {
+		c.log.Debugf("Command response: %v", r)
+
 		res := &node.CommandResult{
 			Disconnect:     r.Disconnect,
 			StopAllStreams: r.StopStreams,
