@@ -5,25 +5,32 @@
   remote_user: ubuntu
   gather_facts: False
   vars:
-    rails_webc: 8
+    web_concurrency: 8
   tasks:
     - name: Kill servers
       shell: pid=$(lsof -i:{{item}} -t); kill -TERM $pid || kill -KILL $pid
       tags:
         - action_cable
         - anycable
+        - plezi
       with_items:
         - "3334"
       ignore_errors: true
     - name: Run Action Cable
       become_user: deplo
       tags: action_cable
-      shell: WEB_CONCURRENCY={{ rails_webc }} bundle exec rails s -p 3334 -e production
+      shell: WEB_CONCURRENCY={{ web_concurrency }} bundle exec rails s -p 3334 -e production
       args:
         chdir: /webapps/anycable_bench/ruby/action-cable-server
     - name: Run Anycable Go
       become_user: deplo
       tags: anycable
-      shell: bundle exec anycable
+      shell: ANYCABLE_GO_BIN="anycable-go-0.6.0" ANYCABLE_PORT="3334" bundle exec bin/anycable
       args:
-        chdir: /webapps/anycable_bench/ruby/action-cable-server/bin
+        chdir: /webapps/anycable_bench/ruby/action-cable-server
+    - name: Run Iodine/Plezi
+      become_user: deplo
+      tags: plezi
+      shell: iodine -p 3334
+      args:
+        chdir: /webapps/anycable_bench/ruby/plezi-iodine

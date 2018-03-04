@@ -10,7 +10,7 @@
 
 - Update `hosts` file and playbooks with required information (IPs, etc)
 
-- Prepare the _client_ instance: `ansible-playbook --extra-vars="prepare=True" benchmark.yml`
+- Prepare the _client_ instance: `ansible-playbook --tags prepare benchmark.yml`
 
 ### Running benchmarks
 
