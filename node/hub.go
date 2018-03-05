@@ -60,6 +60,9 @@ type Hub struct {
 	// Control channel to shutdown hub
 	shutdown chan bool
 
+	// Channel to wait for gracefully disconnect of all sessions
+	done chan bool
+
 	// Log context
 	log *log.Entry
 }
@@ -77,6 +80,7 @@ func NewHub() *Hub {
 		streams:         make(map[string]map[string]string),
 		sessionsStreams: make(map[string]map[string][]string),
 		shutdown:        make(chan bool),
+		done:            make(chan bool),
 		log:             log.WithFields(log.Fields{"context": "hub"}),
 	}
 }
@@ -101,7 +105,7 @@ func (h *Hub) Run() {
 			h.broadcastToStream(message.Stream, message.Data)
 
 		case <-h.shutdown:
-			// TODO: graceful disconnect
+			h.done <- true
 			return
 		}
 	}
@@ -110,6 +114,9 @@ func (h *Hub) Run() {
 // Shutdown sends shutdown command to hub
 func (h *Hub) Shutdown() {
 	h.shutdown <- true
+
+	// Wait for stop listening channels
+	<-h.done
 }
 
 // Size returns a number of active sessions

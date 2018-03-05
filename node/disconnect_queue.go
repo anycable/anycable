@@ -24,6 +24,7 @@ type DisconnectQueue struct {
 	// Logger with context
 	log        *log.Entry
 	shutdownCh chan bool
+	shutdown   bool
 	mu         sync.Mutex
 }
 
@@ -40,6 +41,7 @@ func NewDisconnectQueue(node *Node, rate int) *DisconnectQueue {
 		disconnect: make(chan *Session, 128),
 		rate:       rateDuration,
 		log:        ctx,
+		shutdown:   false,
 		shutdownCh: make(chan bool),
 	}
 }
@@ -66,14 +68,21 @@ func (d *DisconnectQueue) Run() {
 }
 
 // Shutdown stops throttling and makes requests one by one
-// for
 func (d *DisconnectQueue) Shutdown() error {
+	d.mu.Lock()
+	if d.shutdown {
+		return nil
+	}
+
+	d.shutdown = true
 	d.shutdownCh <- true
+	d.mu.Unlock()
 
 	left := len(d.disconnect)
 	defer close(d.disconnect)
 
 	if left == 0 {
+		d.log.Infof("Invoking remaining disconnects: %d", left)
 		return nil
 	}
 
@@ -89,6 +98,10 @@ func (d *DisconnectQueue) Shutdown() error {
 			if err != nil {
 				return err
 			}
+
+			if left == 0 {
+				return nil
+			}
 		case <-time.After(waitTime):
 			return fmt.Errorf("Had no time to invoke Disconnect calls: %d", len(d.disconnect))
 		}
@@ -98,11 +111,12 @@ func (d *DisconnectQueue) Shutdown() error {
 // Enqueue adds session to the disconnect queue
 func (d *DisconnectQueue) Enqueue(s *Session) {
 	d.mu.Lock()
+	defer d.mu.Unlock()
+
 	// Check that we're not closed
-	if d.shutdownCh == nil {
+	if d.shutdown {
 		return
 	}
-	d.mu.Unlock()
 
 	d.disconnect <- s
 }

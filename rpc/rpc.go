@@ -55,6 +55,10 @@ func (c *Controller) Start() error {
 
 // Shutdown closes connections
 func (c *Controller) Shutdown() error {
+	if c.pool == nil {
+		return nil
+	}
+
 	c.pool.Close()
 
 	busy := c.pool.Busy()
@@ -71,6 +75,7 @@ func (c *Controller) Shutdown() error {
 			return false, fmt.Errorf("There are %d active RPC connections left", busy)
 		}
 
+		c.log.Info("All active RPC calls finished")
 		return true, nil
 	})
 

@@ -2,6 +2,14 @@
 
 ## master (0.6.0)
 
+- Add signal handling and graceful shutdown.
+
+When receiving `SIGINT` or `SIGTERM` we:
+- Stop the server (to not accept new connections)
+- Close all registered sessions (authenticated clients)
+- Wait for pending Disconnect requests to complete
+- Wait for active RPC calls to finish.
+
 - **[Breaking Change]** New configuration and CLI options.
 
 Environment variables now should be prefixed with `ANYCABLE_`.

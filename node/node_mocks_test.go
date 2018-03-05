@@ -28,6 +28,7 @@ func NewMockNode() Node {
 func NewMockSession(uid string) *Session {
 	return &Session{
 		send:          make(chan []byte, 256),
+		closed:        true,
 		UID:           uid,
 		Identifiers:   uid,
 		Log:           log.WithField("sid", uid),

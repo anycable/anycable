@@ -78,7 +78,8 @@ func NewSession(node *Node, ws *websocket.Conn, request *http.Request) (*Session
 	session.UID = uid
 
 	ctx := log.WithFields(log.Fields{
-		"sid": session.UID,
+		"sid":     session.UID,
+		"context": "node",
 	})
 
 	session.Log = ctx

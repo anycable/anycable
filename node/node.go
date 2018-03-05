@@ -47,10 +47,12 @@ type StreamMessage struct {
 
 // Node represents the whole applicaton
 type Node struct {
+	Config *config.Config
+
 	hub          *Hub
 	controller   Controller
 	disconnector *DisconnectQueue
-	Config       *config.Config
+	log          *log.Entry
 }
 
 // NewNode builds new node struct
@@ -58,6 +60,7 @@ func NewNode(config *config.Config, controller Controller) *Node {
 	node := &Node{
 		Config:     config,
 		controller: controller,
+		log:        log.WithFields(log.Fields{"context": "node"}),
 	}
 
 	node.hub = NewHub()
@@ -97,9 +100,9 @@ func (n *Node) HandleCommand(s *Session, raw []byte) {
 func (n *Node) HandlePubsub(raw []byte) {
 	msg := &StreamMessage{}
 	if err := json.Unmarshal(raw, &msg); err != nil {
-		log.Warnf("Failed to parse pubsub message '%s' with error: %v", raw, err)
+		n.log.Warnf("Failed to parse pubsub message '%s' with error: %v", raw, err)
 	} else {
-		log.Debugf("Incoming pubsub message: %v", msg)
+		n.log.Debugf("Incoming pubsub message: %v", msg)
 		n.Broadcast(msg)
 	}
 }
@@ -108,13 +111,18 @@ func (n *Node) HandlePubsub(raw []byte) {
 func (n *Node) Shutdown() {
 	if n.hub != nil {
 		n.hub.Shutdown()
+
+		// Close all registered sessions
+		for _, session := range n.hub.sessions {
+			session.Disconnect("Shutdown")
+		}
 	}
 
 	if n.disconnector != nil {
 		err := n.disconnector.Shutdown()
 
 		if err != nil {
-			log.Warnf("%v", err)
+			n.log.Warnf("%v", err)
 		}
 	}
 
@@ -122,7 +130,7 @@ func (n *Node) Shutdown() {
 		err := n.controller.Shutdown()
 
 		if err != nil {
-			log.Warnf("%v", err)
+			n.log.Warnf("%v", err)
 		}
 	}
 }

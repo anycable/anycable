@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"syscall"
 
 	"github.com/anycable/anycable-go/cli"
 	"github.com/anycable/anycable-go/node"
@@ -12,7 +13,9 @@ import (
 	"github.com/anycable/anycable-go/rpc"
 	"github.com/anycable/anycable-go/server"
 	"github.com/anycable/anycable-go/utils"
+
 	log "github.com/apex/log"
+	"github.com/syossan27/tebata"
 )
 
 var (
@@ -76,8 +79,6 @@ func main() {
 
 	// TODO: init metrics
 
-	// TODO: init signals handlers
-
 	server, err := server.NewServer(node, config.Host, strconv.Itoa(config.Port), &config.SSL)
 
 	if err != nil {
@@ -85,9 +86,24 @@ func main() {
 		os.Exit(1)
 	}
 
+	t := tebata.New(syscall.SIGINT, syscall.SIGTERM)
+
+	done := make(chan bool)
+
+	t.Reserve(server.Stop)
+	t.Reserve(node.Shutdown)
+
 	server.Mux.Handle(config.Path, http.HandlerFunc(server.WebsocketHandler))
 
 	ctx.Infof("Handle WebSocket connections at %s", config.Path)
 
-	server.Start()
+	t.Reserve(os.Exit, 0)
+
+	if err = server.Start(); err != nil {
+		if !server.Stopped() {
+			ctx.Errorf("Server stopped: %v", err)
+		}
+	}
+
+	<-done
 }

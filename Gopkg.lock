@@ -84,6 +84,12 @@
   revision = "2aa2c176b9dab406a6970f6a55f513e8a8c8b18f"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/syossan27/tebata"
+  packages = ["."]
+  revision = "49bbbdf5eb8fb57a46fd63b6e7cb9b3d1b3f876a"
+
+[[projects]]
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -161,6 +167,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "39b11677672b7f67274606d20d7327677202ee06285a16b04643c295e0b0a493"
+  inputs-digest = "843e8e9ca061bfc473cfc6163be8a582d559caed79e1f632e2c9bced182f0a7f"
   solver-name = "gps-cdcl"
   solver-version = 1

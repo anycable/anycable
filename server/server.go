@@ -1,14 +1,12 @@
 package server
 
 import (
-	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
 	"net"
 	"net/http"
 	"sync"
-	"time"
 
 	"github.com/anycable/anycable-go/node"
 	"github.com/apex/log"
@@ -71,9 +69,7 @@ func (s *HTTPServer) Start() error {
 }
 
 // Stop shuts down server gracefully.
-// `wait`` specifies the amount of time to wait before
-// closing active connections
-func (s *HTTPServer) Stop(wait time.Duration) error {
+func (s *HTTPServer) Stop() error {
 	s.mu.Lock()
 	if s.shutdown {
 		return nil
@@ -81,8 +77,13 @@ func (s *HTTPServer) Stop(wait time.Duration) error {
 	s.shutdown = true
 	s.mu.Unlock()
 
-	ctx, cancel := context.WithTimeout(context.Background(), wait)
-	defer cancel()
+	return s.server.Shutdown(nil)
+}
 
-	return s.server.Shutdown(ctx)
+// Stopped return true iff server has been stopped by user
+func (s *HTTPServer) Stopped() bool {
+	s.mu.Lock()
+	val := s.shutdown
+	s.mu.Unlock()
+	return val
 }
