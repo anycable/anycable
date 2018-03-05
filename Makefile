@@ -20,7 +20,7 @@ build:
 	go build -ldflags "-s -w -X main.version=$(VERSION)" -o dist/anycable-go cmd/anycable-go/main.go
 
 build-linux:
-	env CGO_ENABLED=0 GOOS=linux GOARCH=386 go build -ldflags "-X main.version=$(VERSION)" -a -installsuffix cgo -o "dist/anycable-go-$(VERSION)-linux-386" 
+	env CGO_ENABLED=0 GOOS=linux GOARCH=386 go build -ldflags "-X main.version=$(VERSION)" -a -installsuffix cgo -o "dist/anycable-go-$(VERSION)-linux-386" cmd/anycable-go/main.go
 
 build-all:
 	rm -rf ./dist
