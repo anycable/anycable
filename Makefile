@@ -42,7 +42,7 @@ s3-deploy:
 downloads-md:
 	ruby etc/generate_downloads.rb
 
-release: build-all s3-deploy downloads-md
+release: build-all s3-deploy dockerize
 
 docker-release: dockerize
 	docker push "anycable/anycable-go:$(VERSION)"

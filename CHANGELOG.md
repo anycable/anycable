@@ -12,6 +12,12 @@ Currently, only _logging_ mode is available (disabled by default): run with `--m
 
 NOTE: _Counter_ values contain _delta_ counts (for the last period).
 
+Example metrics log entry:
+
+```
+INFO 2018-03-05T16:20:07.367Z auth_failures_count=0 broadcast_msg_count=228 client_msg_count=2228 clients_num=10000 context=metrics disconnect_queue_size=0 goroutines_num=21273 streams_num=1 uniq_clients_num=10000 unknown_broadcast_msg_count=0 unknown_client_msg_count=0
+```
+
 - Add signal handling and graceful shutdown.
 
 When receiving `SIGINT` or `SIGTERM` we:
