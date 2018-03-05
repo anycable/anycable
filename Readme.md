@@ -4,6 +4,8 @@
 
 WebSocket server for [AnyCable](https://github.com/anycable/anycable).
 
+**NOTE:** this is a readme for the upcoming 0.6.0 version. [Go to 0.5.x version](https://github.com/anycable/anycable-go/tree/0-5-stable).
+
 ## Installation
 
 The easiest way to install AnyCable-Go is to [download](https://github.com/anycable/anycable-go/releases) a pre-compiled binary.
@@ -20,26 +22,44 @@ Of course, you can install it from source too:
 go get -u -f github.com/anycable/anycable-go
 ```
 
+### Heroku
+
+See [heroku-anycable-go](https://github.com/anycable/heroku-anycable-go) buildpack.
+
 ## Usage
 
 Run server:
 
 ```shell
-anycable-go -rpc=0.0.0.0:50051 -headers=cookie,x-api-token -redis=redis://localhost:6379/5 -redis_channel=anycable -addr=0.0.0.0:8080 -log
+anycable-go --rpc_host=0.0.0.0:50051 --headers=cookie,x-api-token --redis_url=redis://localhost:6379/5 --redis_channel=anycable --host=0.0.0.0 --port=8080
 
-=> Running AnyCable websocket server v0.5.0 on 0.0.0.0:8080 at /cable
+=> INFO 2018-03-05T08:44:57.684Z context=main Starting AnyCable 0.6.0
 ```
 
-You can also provide configuration parameters through the corresponding environment variables (i.e. `RPC`, `REDIS`, etc).
+You can also provide configuration parameters through the corresponding environment variables (i.e. `ANYCABLE_RPC_HOST`, `ANYCABLE_REDIS_URL`, etc).
+
+For more information about available options run `anycable-go -h`.
+
+### Throubleshooting
+
+First, try to run `anycable-go --debug` to enable verbose logging.
+
+The most common problem is using different Redis channels within RPC instance and `anycable-go`. Find the following line in the logs:
+
+```
+INFO 2018-03-05T08:44:57.695Z context=pubsub Subscribed to Redis channel: __anycable__
+```
+
+and make sure, that RPC server publishes messages to the specified channel.
 
 ### TLS
 
 To secure your `anycable-go` server provide the paths to SSL certificate and private key:
 
 ```shell
-anycable-go -addr=0.0.0.0:443 -ssl_cert=path/to/ssl.cert -ssl_key=path/to/ssl.key
+anycable-go --port=443 -ssl_cert=path/to/ssl.cert -ssl_key=path/to/ssl.key
 
-=> Running AnyCable websocket server (secured) v0.5.1 on 0.0.0.0:443 at /cable
+=> INFO 2018-03-05T08:44:57.684Z context=http Starting HTTPS server at 0.0.0.0:443
 ```
 
 ## Build
@@ -66,6 +86,7 @@ Performing Channel Actions | +
 Streaming | +
 Usage of the same stream name for different channels | +
 Broadcasting | +
+Remote disconnect | - (WIP)
 [Custom stream callbacks](http://edgeapi.rubyonrails.org/classes/ActionCable/Channel/Streams.html) | -
 [Subscription Instance Variables](http://edgeapi.rubyonrails.org/classes/ActionCable/Channel/Streams.html) | -
 

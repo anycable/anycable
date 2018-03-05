@@ -1,5 +1,37 @@
 # Change log
 
+## master (0.6.0)
+
+- **[Breaking Change]** New configuration and CLI options.
+
+Environment variables now should be prefixed with `ANYCABLE_`.
+
+`REDIS_URL` and `PORT` env variables are recognized by default.
+
+Setting server address is split into two params: `--port` and `--host` (instead of `--addr`).
+
+Run `anycable-go -h` to learn more.
+
+- New logging format.
+
+Now we use _structured_ logging with the help if [apex/log](https://github.com/apex/log). For example:
+
+```
+INFO 2018-03-05T08:44:57.684Z context=main Starting AnyCable unknown
+INFO 2018-03-05T08:44:57.684Z context=main Handle WebSocket connections at /cable
+INFO 2018-03-05T08:44:57.684Z context=http Starting HTTP server at 0.0.0.0:8080
+INFO 2018-03-05T08:44:57.685Z context=rpc RPC pool initialized: 0.0.0.0:50051
+INFO 2018-03-05T08:44:57.695Z context=pubsub Subscribed to Redis channel: __anycable__
+```
+
+Also, `json` format is supported out-of-the-box (`--log_format=json` or `ANYCABLE_LOG_FORMAT=json`).
+
+- Add unique identifiers to connections.
+
+Helps to identify connections in logs. Will be included into RPC calls in the future releases.
+
+- [Closes[#24](https://github.com/anycable/anycable-go/issues/24)] No more ping logs even in debug mode.
+
 ## 0.5.4 (2018-02-08)
 
 - Automatically reconnect to Redis when connection is lost. ([@palkan][])
