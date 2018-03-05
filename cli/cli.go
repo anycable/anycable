@@ -55,6 +55,7 @@ func init() {
 	fs.StringVar(&defaults.SSL.KeyPath, "ssl_key", "", "")
 	fs.StringVar(&defaults.LogLevel, "log_level", "info", "")
 	fs.StringVar(&defaults.LogFormat, "log_format", "text", "")
+	fs.BoolVar(&defaults.MetricsLog, "metrics_log", false, "")
 	// CLI vars
 	fs.BoolVar(&showVersion, "v", false, "")
 	fs.BoolVar(&showHelp, "h", false, "")
@@ -110,6 +111,8 @@ The flags are:
   --log_level         Set logging level (debug/info/warn/error/fatal), default: info, env: ANYCABLE_LOG_LEVEL
   --log_format        Set logging format (text, json), default: text, env: ANYCABLE_LOG_FORMAT
   --debug             Enable debug mode (more verbose logging), default: false, env: ANYCABLE_DEBUG
+
+  --metrics_log       Enable metrics logging (with info level)
 
   -h                  This help screen
   -v                  Show version

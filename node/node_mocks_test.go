@@ -3,6 +3,8 @@ package node
 import (
 	"errors"
 
+	"github.com/anycable/anycable-go/metrics"
+
 	"github.com/apex/log"
 )
 
@@ -19,7 +21,13 @@ func NewMockController() MockController {
 // NewMockNode build new node with mock controller
 func NewMockNode() Node {
 	controller := NewMockController()
-	node := Node{controller: &controller, hub: NewHub()}
+	node := Node{
+		controller: &controller,
+		hub:        NewHub(),
+		Metrics:    metrics.NewMetrics(nil),
+		log:        log.WithField("context", "test"),
+	}
+	node.registerMetrics()
 	node.disconnector = NewDisconnectQueue(&node, 1)
 	return node
 }

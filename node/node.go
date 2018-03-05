@@ -2,14 +2,20 @@ package node
 
 import (
 	"encoding/json"
+	"runtime"
+	"time"
 
 	"github.com/anycable/anycable-go/config"
+	"github.com/anycable/anycable-go/metrics"
 	"github.com/apex/log"
 )
 
 const (
 	// PING stores the "ping" message identifier
 	PING = "ping"
+
+	// How often update node stats
+	statsCollectInterval = 2 * time.Second
 )
 
 // CommandResult is a result of performing controller action,
@@ -47,11 +53,13 @@ type StreamMessage struct {
 
 // Node represents the whole applicaton
 type Node struct {
-	Config *config.Config
+	Config  *config.Config
+	Metrics *metrics.Metrics
 
 	hub          *Hub
 	controller   Controller
 	disconnector *DisconnectQueue
+	shutdownCh   chan struct{}
 	log          *log.Entry
 }
 
@@ -59,7 +67,9 @@ type Node struct {
 func NewNode(config *config.Config, controller Controller) *Node {
 	node := &Node{
 		Config:     config,
+		Metrics:    metrics.NewMetrics(config),
 		controller: controller,
+		shutdownCh: make(chan struct{}),
 		log:        log.WithFields(log.Fields{"context": "node"}),
 	}
 
@@ -71,6 +81,11 @@ func NewNode(config *config.Config, controller Controller) *Node {
 
 	go node.disconnector.Run()
 
+	node.registerMetrics()
+
+	go node.Metrics.Run()
+	go node.collectStats()
+
 	return node
 }
 
@@ -79,7 +94,10 @@ func NewNode(config *config.Config, controller Controller) *Node {
 func (n *Node) HandleCommand(s *Session, raw []byte) {
 	msg := &Message{}
 
+	n.Metrics.Counter("client_msg_count").Inc()
+
 	if err := json.Unmarshal(raw, &msg); err != nil {
+		n.Metrics.Counter("unknown_client_msg_count").Inc()
 		s.Log.Warnf("Failed to parse incoming message '%s' with error: %v", raw, err)
 	} else {
 		s.Log.Debugf("Incoming message: %s", msg)
@@ -91,6 +109,7 @@ func (n *Node) HandleCommand(s *Session, raw []byte) {
 		case "message":
 			n.Perform(s, msg)
 		default:
+			n.Metrics.Counter("unknown_client_msg_count").Inc()
 			s.Log.Warnf("Unknown command: %s", msg.Command)
 		}
 	}
@@ -99,7 +118,11 @@ func (n *Node) HandleCommand(s *Session, raw []byte) {
 // HandlePubsub parses incoming pubsub message and broadcast it
 func (n *Node) HandlePubsub(raw []byte) {
 	msg := &StreamMessage{}
+
+	n.Metrics.Counter("broadcast_msg_count").Inc()
+
 	if err := json.Unmarshal(raw, &msg); err != nil {
+		n.Metrics.Counter("unknown_broadcast_msg_count").Inc()
 		n.log.Warnf("Failed to parse pubsub message '%s' with error: %v", raw, err)
 	} else {
 		n.log.Debugf("Incoming pubsub message: %v", msg)
@@ -109,12 +132,23 @@ func (n *Node) HandlePubsub(raw []byte) {
 
 // Shutdown stops all services (hub, controller)
 func (n *Node) Shutdown() {
+	n.log.Infof("Shutting down...")
+
+	close(n.shutdownCh)
+
+	n.Metrics.Shutdown()
+
 	if n.hub != nil {
 		n.hub.Shutdown()
 
-		// Close all registered sessions
-		for _, session := range n.hub.sessions {
-			session.Disconnect("Shutdown")
+		active := len(n.hub.sessions)
+
+		if active > 0 {
+			n.log.Infof("Closing active connections: %d", active)
+			// Close all registered sessions
+			for _, session := range n.hub.sessions {
+				session.Disconnect("Shutdown")
+			}
 		}
 	}
 
@@ -147,6 +181,8 @@ func (n *Node) Authenticate(s *Session, path string, headers *map[string]string)
 		transmit(s, transmissions)
 
 		n.hub.register <- s
+	} else {
+		n.Metrics.Counter("auth_failures_count").Inc()
 	}
 
 	return err
@@ -279,6 +315,41 @@ func (n *Node) handleCommandReply(s *Session, msg *Message, reply *CommandResult
 	}
 
 	transmit(s, reply.Transmissions)
+}
+
+func (n *Node) collectStats() {
+	for {
+		select {
+		case <-n.shutdownCh:
+			return
+		case <-time.After(statsCollectInterval):
+			n.collectStatsOnce()
+		}
+	}
+}
+
+func (n *Node) collectStatsOnce() {
+	n.Metrics.Gauge("goroutines_num").Set(runtime.NumGoroutine())
+
+	n.Metrics.Gauge("clients_num").Set(n.hub.Size())
+	n.Metrics.Gauge("uniq_clients_num").Set(n.hub.UniqSize())
+	n.Metrics.Gauge("streams_num").Set(n.hub.StreamsSize())
+	n.Metrics.Gauge("disconnect_queue_size").Set(n.disconnector.Size())
+}
+
+func (n *Node) registerMetrics() {
+	n.Metrics.RegisterGauge("goroutines_num")
+
+	n.Metrics.RegisterGauge("clients_num")
+	n.Metrics.RegisterGauge("uniq_clients_num")
+	n.Metrics.RegisterGauge("streams_num")
+	n.Metrics.RegisterGauge("disconnect_queue_size")
+
+	n.Metrics.RegisterCounter("auth_failures_count")
+	n.Metrics.RegisterCounter("client_msg_count")
+	n.Metrics.RegisterCounter("unknown_client_msg_count")
+	n.Metrics.RegisterCounter("broadcast_msg_count")
+	n.Metrics.RegisterCounter("unknown_broadcast_msg_count")
 }
 
 func subscriptionsList(m map[string]bool) []string {

@@ -24,6 +24,7 @@ type Config struct {
 	DisconnectRate int
 	LogLevel       string
 	LogFormat      string
+	MetricsLog     bool
 }
 
 // New returns a new empty config

@@ -37,6 +37,7 @@ func (s *HTTPServer) WebsocketHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		session.Log.Debug("websocket session established")
+		defer session.Disconnect("Normal")
 
 		defer func() {
 			session.Log.Debug("websocket session completed")

@@ -124,6 +124,16 @@ func (h *Hub) Size() int {
 	return len(h.sessions)
 }
 
+// UniqSize returns a number of uniq identifiers
+func (h *Hub) UniqSize() int {
+	return len(h.identifiers)
+}
+
+// StreamsSize returns a number of uniq streams
+func (h *Hub) StreamsSize() int {
+	return len(h.streams)
+}
+
 func (h *Hub) addSession(session *Session) {
 	h.sessions[session.UID] = session
 

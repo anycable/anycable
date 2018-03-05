@@ -82,7 +82,6 @@ func (d *DisconnectQueue) Shutdown() error {
 	defer close(d.disconnect)
 
 	if left == 0 {
-		d.log.Infof("Invoking remaining disconnects: %d", left)
 		return nil
 	}
 

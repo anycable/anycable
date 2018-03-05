@@ -2,6 +2,16 @@
 
 ## master (0.6.0)
 
+- Add basic metrics.
+
+Added `metrics` package with some basic metrics (_counters_ and _gauges_).
+
+Metrics collected (_cached_) every 15s (will be configurable in the future).
+
+Currently, only _logging_ mode is available (disabled by default): run with `--metrics_log` command to flush stats every 15s to log (with `info` level).
+
+NOTE: _Counter_ values contain _delta_ counts (for the last period).
+
 - Add signal handling and graceful shutdown.
 
 When receiving `SIGINT` or `SIGTERM` we:

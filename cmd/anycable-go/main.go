@@ -41,8 +41,6 @@ func main() {
 
 	config := cli.GetConfig()
 
-	ctx := log.WithFields(log.Fields{"context": "main"})
-
 	// init logging
 	err := utils.InitLogger(config.LogFormat, config.LogLevel)
 
@@ -50,6 +48,8 @@ func main() {
 		log.Errorf("!!! Failed to initialize logger !!!\n%v", err)
 		os.Exit(1)
 	}
+
+	ctx := log.WithFields(log.Fields{"context": "main"})
 
 	if cli.DebugMode() {
 		ctx.Debug("🔧 🔧 🔧 Debug mode is on 🔧 🔧 🔧")
