@@ -22,6 +22,10 @@ Of course, you can install it from source too:
 go get -u -f github.com/anycable/anycable-go
 ```
 
+## Upgrade
+
+For instructions on how to upgrade to a newer version see [upgrade notes](https://github.com/anycable/anycable-go/blob/master/UPGRADE.md).
+
 ### Heroku
 
 See [heroku-anycable-go](https://github.com/anycable/heroku-anycable-go) buildpack.
