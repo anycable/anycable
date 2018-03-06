@@ -17,7 +17,7 @@ const (
 	DefaultCloseStatus = 3000
 
 	writeWait      = 10 * time.Second
-	maxMessageSize = 512
+	maxMessageSize = 65536 // 64KB
 	pingInterval   = 3 * time.Second
 )
 
@@ -152,7 +152,7 @@ func (s *Session) Send(msg []byte) {
 
 // ReadMessages reads messages from ws connection and send them to node
 func (s *Session) ReadMessages() {
-	// s.ws.SetReadLimit(MaxMessageSize)
+	s.ws.SetReadLimit(maxMessageSize)
 
 	defer s.Disconnect("")
 

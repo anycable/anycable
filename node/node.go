@@ -15,7 +15,7 @@ const (
 	PING = "ping"
 
 	// How often update node stats
-	statsCollectInterval = 2 * time.Second
+	statsCollectInterval = 5 * time.Second
 )
 
 // CommandResult is a result of performing controller action,
