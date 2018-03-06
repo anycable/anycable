@@ -19,7 +19,7 @@ brew install anycable/anycable/anycable-go
 Of course, you can install it from source too:
 
 ```shell
-go get -u -f github.com/anycable/anycable-go
+go get -u -f github.com/anycable/anycable-go/cmd/anycable-go
 ```
 
 ## Upgrade
