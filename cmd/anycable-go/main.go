@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"github.com/anycable/anycable-go/cli"
+	"github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/pubsub"
 	"github.com/anycable/anycable-go/rpc"
@@ -57,9 +58,11 @@ func main() {
 
 	ctx.Infof("Starting AnyCable %s", version)
 
-	controller := rpc.NewController(&config)
+	metrics := metrics.NewMetrics(&config)
 
-	node := node.NewNode(&config, controller)
+	controller := rpc.NewController(&config, metrics)
+
+	node := node.NewNode(&config, controller, metrics)
 
 	subscriber := pubsub.NewRedisSubscriber(node, config.RedisURL, config.RedisChannel)
 
@@ -77,8 +80,6 @@ func main() {
 		}
 	}()
 
-	// TODO: init metrics
-
 	server, err := server.NewServer(node, config.Host, strconv.Itoa(config.Port), &config.SSL)
 
 	if err != nil {
@@ -86,10 +87,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	go metrics.Run()
+
 	t := tebata.New(syscall.SIGINT, syscall.SIGTERM)
 
 	done := make(chan bool)
 
+	t.Reserve(metrics.Shutdown)
 	t.Reserve(server.Stop)
 	t.Reserve(node.Shutdown)
 
@@ -102,6 +106,7 @@ func main() {
 	if err = server.Start(); err != nil {
 		if !server.Stopped() {
 			ctx.Errorf("Server stopped: %v", err)
+			os.Exit(1)
 		}
 	}
 

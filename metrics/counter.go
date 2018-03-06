@@ -5,14 +5,16 @@ import "sync/atomic"
 // Counter stores information about something "countable".
 // Store
 type Counter struct {
+	Name              string
+	Desc              string
 	value             int64
 	lastIntervalValue int64
 	lastIntervalDelta int64
 }
 
 // NewCounter creates new Counter.
-func NewCounter() *Counter {
-	return &Counter{value: 0}
+func NewCounter(name string, desc string) *Counter {
+	return &Counter{Name: name, Desc: desc, value: 0}
 }
 
 // Value allows to get raw counter value.

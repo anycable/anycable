@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/anycable/anycable-go/config"
+	"github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/node"
 	"github.com/apex/log"
 
@@ -21,18 +22,26 @@ const (
 
 	initialCapacity = 5
 	maxCapacity     = 50
+
+	metricsRPCCalls    = "rpc_call_total"
+	metricsRPCFailures = "rpc_error_total"
 )
 
 // Controller implements node.Controller interface for gRPC
 type Controller struct {
-	host string
-	pool grpcpool.Pool
-	log  *log.Entry
+	host    string
+	pool    grpcpool.Pool
+	metrics *metrics.Metrics
+	log     *log.Entry
 }
 
 // NewController builds new Controller from config
-func NewController(config *config.Config) *Controller {
-	return &Controller{log: log.WithField("context", "rpc"), host: config.RPCHost}
+func NewController(config *config.Config, metrics *metrics.Metrics) *Controller {
+
+	metrics.RegisterCounter(metricsRPCCalls, "The total number of RPC calls")
+	metrics.RegisterCounter(metricsRPCFailures, "The total number of failed RPC calls")
+
+	return &Controller{log: log.WithField("context", "rpc"), metrics: metrics, host: config.RPCHost}
 }
 
 // Start initializes RPC connection pool
@@ -98,9 +107,13 @@ func (c *Controller) Authenticate(path string, headers *map[string]string) (stri
 		return client.Connect(context.Background(), &pb.ConnectionRequest{Path: path, Headers: *headers})
 	}
 
+	c.metrics.Counter(metricsRPCCalls).Inc()
+
 	response, err := retry(op)
 
 	if err != nil {
+		c.metrics.Counter(metricsRPCFailures).Inc()
+
 		return "", nil, err
 	}
 
@@ -114,6 +127,8 @@ func (c *Controller) Authenticate(path string, headers *map[string]string) (stri
 
 		return "", nil, fmt.Errorf("Application error: %s", r.ErrorMsg)
 	}
+
+	c.metrics.Counter(metricsRPCFailures).Inc()
 
 	return "", nil, errors.New("Failed to deserialize connection response")
 }
@@ -197,9 +212,12 @@ func (c *Controller) Disconnect(sid string, id string, subscriptions []string, p
 		return client.Disconnect(context.Background(), &pb.DisconnectRequest{Identifiers: id, Subscriptions: subscriptions, Path: path, Headers: *headers})
 	}
 
+	c.metrics.Counter(metricsRPCCalls).Inc()
+
 	response, err := retry(op)
 
 	if err != nil {
+		c.metrics.Counter(metricsRPCFailures).Inc()
 		return err
 	}
 
@@ -210,6 +228,8 @@ func (c *Controller) Disconnect(sid string, id string, subscriptions []string, p
 			return nil
 		}
 
+		c.metrics.Counter(metricsRPCFailures).Inc()
+
 		return fmt.Errorf("Application error: %s", r.ErrorMsg)
 	}
 
@@ -217,7 +237,11 @@ func (c *Controller) Disconnect(sid string, id string, subscriptions []string, p
 }
 
 func (c *Controller) parseCommandResponse(response interface{}, err error) (*node.CommandResult, error) {
+	c.metrics.Counter(metricsRPCCalls).Inc()
+
 	if err != nil {
+		c.metrics.Counter(metricsRPCFailures).Inc()
+
 		return nil, err
 	}
 
@@ -237,6 +261,8 @@ func (c *Controller) parseCommandResponse(response interface{}, err error) (*nod
 
 		return res, fmt.Errorf("Application error: %s", r.ErrorMsg)
 	}
+
+	c.metrics.Counter(metricsRPCFailures).Inc()
 
 	return nil, errors.New("Failed to deserialize command response")
 }

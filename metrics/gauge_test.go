@@ -7,7 +7,7 @@ import (
 )
 
 func TestGauge(t *testing.T) {
-	g := NewGauge()
+	g := NewGauge("test", "")
 	assert.Equal(t, int64(0), g.Value())
 	g.Set(20)
 	assert.Equal(t, int64(20), g.Value())

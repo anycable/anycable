@@ -7,7 +7,7 @@ import (
 )
 
 func TestCounter(t *testing.T) {
-	cnt := NewCounter()
+	cnt := NewCounter("test", "")
 	assert.Equal(t, int64(0), cnt.IntervalValue())
 	for i := 0; i < 1000; i++ {
 		cnt.Inc()
