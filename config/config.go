@@ -13,18 +13,21 @@ func (opts *SSLOptions) Available() bool {
 
 // Config contains main application configuration
 type Config struct {
-	RPCHost        string
-	RedisURL       string
-	RedisChannel   string
-	Host           string
-	Port           int
-	Path           string
-	Headers        []string
-	SSL            SSLOptions
-	DisconnectRate int
-	LogLevel       string
-	LogFormat      string
-	MetricsLog     bool
+	RPCHost            string
+	RedisURL           string
+	RedisChannel       string
+	Host               string
+	Port               int
+	Path               string
+	Headers            []string
+	SSL                SSLOptions
+	DisconnectRate     int
+	LogLevel           string
+	LogFormat          string
+	MetricsLog         bool
+	MetricsLogInterval int
+	MetricsHTTP        string
+	MetricsPort        int
 }
 
 // New returns a new empty config
@@ -32,4 +35,14 @@ func New() Config {
 	config := Config{}
 	config.SSL = SSLOptions{}
 	return config
+}
+
+// MetricsLogEnabled returns true iff MetricsLog is true
+func (c *Config) MetricsLogEnabled() bool {
+	return c.MetricsLog
+}
+
+// MetricsHTTPEnabled returns true iff MetricsHTTP is not empty
+func (c *Config) MetricsHTTPEnabled() bool {
+	return c.MetricsHTTP != ""
 }

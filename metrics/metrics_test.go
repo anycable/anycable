@@ -7,7 +7,7 @@ import (
 )
 
 func TestMetricsSnapshot(t *testing.T) {
-	m := NewMetrics(nil)
+	m := NewMetrics(false, 10)
 
 	m.RegisterCounter("test_count", "")
 	m.RegisterGauge("test_gauge", "")
@@ -32,7 +32,7 @@ func TestMetricsSnapshot(t *testing.T) {
 }
 
 func TestMetricsGauges(t *testing.T) {
-	m := NewMetrics(nil)
+	m := NewMetrics(false, 10)
 
 	m.RegisterGauge("test_gauge", "First")
 	m.RegisterGauge("test_gauge_2", "Second")
@@ -62,7 +62,7 @@ func TestMetricsGauges(t *testing.T) {
 }
 
 func TestMetricsCounters(t *testing.T) {
-	m := NewMetrics(nil)
+	m := NewMetrics(false, 10)
 
 	m.RegisterCounter("test_counter", "First")
 	m.RegisterCounter("test_counter_2", "Second")

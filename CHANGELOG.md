@@ -1,8 +1,24 @@
 # Change log
 
-## master (0.6.0)
+## master
 
-- Add basic metrics.
+- Add `--metrics_log_interval` option. ([@palkan][])
+
+- Add HTTP `/metrics` endpoint. ([@palkan][])
+
+Serves Prometheus-formatted metrics.
+
+Enabled with `--metrics_http=/metrics` option.
+
+Specify custom port with `--metrics_http_port=1234`.
+
+- Add RPC metrics. ([@palkan][])
+
+- Refactor metrics: add descriptions, change names.  ([@palkan][])
+
+## 0.6.0-preview1
+
+- Add basic metrics.  ([@palkan][])
 
 Added `metrics` package with some basic metrics (_counters_ and _gauges_).
 
@@ -18,7 +34,7 @@ Example metrics log entry:
 INFO 2018-03-05T16:20:07.367Z auth_failures_count=0 broadcast_msg_count=228 client_msg_count=2228 clients_num=10000 context=metrics disconnect_queue_size=0 goroutines_num=21273 streams_num=1 uniq_clients_num=10000 unknown_broadcast_msg_count=0 unknown_client_msg_count=0
 ```
 
-- Add signal handling and graceful shutdown.
+- Add signal handling and graceful shutdown.  ([@palkan][])
 
 When receiving `SIGINT` or `SIGTERM` we:
 - Stop the server (to not accept new connections)
@@ -26,7 +42,7 @@ When receiving `SIGINT` or `SIGTERM` we:
 - Wait for pending Disconnect requests to complete
 - Wait for active RPC calls to finish.
 
-- **[Breaking Change]** New configuration and CLI options.
+- **[Breaking Change]** New configuration and CLI options.  ([@palkan][])
 
 Environment variables now should be prefixed with `ANYCABLE_`.
 
@@ -36,7 +52,7 @@ Setting server address is split into two params: `--port` and `--host` (instead 
 
 Run `anycable-go -h` to learn more.
 
-- New logging format.
+- New logging format.  ([@palkan][])
 
 Now we use _structured_ logging with the help if [apex/log](https://github.com/apex/log). For example:
 
@@ -50,7 +66,7 @@ INFO 2018-03-05T08:44:57.695Z context=pubsub Subscribed to Redis channel: __anyc
 
 Also, `json` format is supported out-of-the-box (`--log_format=json` or `ANYCABLE_LOG_FORMAT=json`).
 
-- Add unique identifiers to connections.
+- Add unique identifiers to connections.  ([@palkan][])
 
 Helps to identify connections in logs. Will be included into RPC calls in the future releases.
 

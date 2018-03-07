@@ -1,0 +1,6 @@
+scrape_configs:
+  - job_name: 'anycable'
+    scrape_interval: 5s
+    scrape_timeout: 2s
+    static_configs:
+      - targets: ['docker.for.mac.localhost:8080']

@@ -87,3 +87,8 @@ func (s *HTTPServer) Stopped() bool {
 	s.mu.Unlock()
 	return val
 }
+
+// Address returns server host:port
+func (s *HTTPServer) Address() string {
+	return s.addr
+}

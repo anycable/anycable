@@ -4,51 +4,48 @@ import (
 	"sync"
 	"time"
 
-	"github.com/anycable/anycable-go/config"
 	"github.com/apex/log"
-)
-
-const (
-	rotateInterval = 15 * time.Second
 )
 
 // Metrics stores some useful stats about node
 type Metrics struct {
-	mu         sync.RWMutex
-	config     *config.Config
-	counters   map[string]*Counter
-	gauges     map[string]*Gauge
-	shutdownCh chan struct{}
-	log        *log.Entry
+	mu             sync.RWMutex
+	logEnabled     bool
+	rotateInterval time.Duration
+	counters       map[string]*Counter
+	gauges         map[string]*Gauge
+	shutdownCh     chan struct{}
+	log            *log.Entry
 }
 
 // NewMetrics build new metrics struct
-func NewMetrics(config *config.Config) *Metrics {
+func NewMetrics(logEnabled bool, logIntervalSeconds int) *Metrics {
+	rotateInterval := time.Duration(logIntervalSeconds) * time.Second
+
 	return &Metrics{
-		config:     config,
-		counters:   make(map[string]*Counter),
-		gauges:     make(map[string]*Gauge),
-		shutdownCh: make(chan struct{}),
-		log:        log.WithField("context", "metrics"),
+		logEnabled:     logEnabled,
+		rotateInterval: rotateInterval,
+		counters:       make(map[string]*Counter),
+		gauges:         make(map[string]*Gauge),
+		shutdownCh:     make(chan struct{}),
+		log:            log.WithField("context", "metrics"),
 	}
 }
 
 // Run periodically updates counters delta (and logs metrics if necessary)
 func (m *Metrics) Run() {
-	logMetrics := m.config.MetricsLog
-
-	if logMetrics {
-		m.log.Info("Metrics logging enabled")
+	if m.logEnabled {
+		m.log.Infof("Log metrics every %s", m.rotateInterval)
 	}
 
 	for {
 		select {
 		case <-m.shutdownCh:
 			return
-		case <-time.After(rotateInterval):
+		case <-time.After(m.rotateInterval):
 			m.rotate()
 
-			if logMetrics {
+			if m.logEnabled {
 				snapshot := m.IntervalSnapshot()
 				fields := make(log.Fields, len(snapshot))
 

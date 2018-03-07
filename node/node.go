@@ -344,7 +344,7 @@ func (n *Node) collectStatsOnce() {
 
 	n.Metrics.Gauge(metricsClientsNum).Set(n.hub.Size())
 	n.Metrics.Gauge(metricsUniqClientsNum).Set(n.hub.UniqSize())
-	n.Metrics.Gauge(metricsBroadcastMsg).Set(n.hub.StreamsSize())
+	n.Metrics.Gauge(metricsStreamsNum).Set(n.hub.StreamsSize())
 	n.Metrics.Gauge(metricsDisconnectQueue).Set(n.disconnector.Size())
 }
 
@@ -353,7 +353,7 @@ func (n *Node) registerMetrics() {
 
 	n.Metrics.RegisterGauge(metricsClientsNum, "The number of active clients")
 	n.Metrics.RegisterGauge(metricsUniqClientsNum, "The number of unique clients (with respect to connection identifiers)")
-	n.Metrics.RegisterGauge(metricsBroadcastMsg, "The number of active broadcasting streams")
+	n.Metrics.RegisterGauge(metricsStreamsNum, "The number of active broadcasting streams")
 	n.Metrics.RegisterGauge(metricsDisconnectQueue, "The size of delayed disconnect")
 
 	n.Metrics.RegisterCounter(metricsFailedAuths, "The total number of failed authentication attempts")

@@ -51,11 +51,18 @@ func init() {
 	fs.IntVar(&defaults.Port, "port", portDefault, "")
 	fs.StringVar(&defaults.Path, "path", "/cable", "")
 	fs.IntVar(&defaults.DisconnectRate, "disconnect_rate", 100, "")
+
 	fs.StringVar(&defaults.SSL.CertPath, "ssl_cert", "", "")
 	fs.StringVar(&defaults.SSL.KeyPath, "ssl_key", "", "")
+
 	fs.StringVar(&defaults.LogLevel, "log_level", "info", "")
 	fs.StringVar(&defaults.LogFormat, "log_format", "text", "")
+
 	fs.BoolVar(&defaults.MetricsLog, "metrics_log", false, "")
+	fs.IntVar(&defaults.MetricsLogInterval, "metrics_log_interval", 15, "")
+	fs.IntVar(&defaults.MetricsPort, "metrics_port", 0, "")
+	fs.StringVar(&defaults.MetricsHTTP, "metrics_http", "", "")
+
 	// CLI vars
 	fs.BoolVar(&showVersion, "v", false, "")
 	fs.BoolVar(&showHelp, "h", false, "")
@@ -94,28 +101,31 @@ Usage:
 
 The flags are:
 
-  --host              Server host, default: localhost, env: ANYCABLE_HOST
-  --port              Server port, default: 8080, env: ANYCABLE_PORT, PORT
-  --path              WebSocket endpoint path, default: /cable, env: ANYCABLE_PATH
+  --host                   Server host, default: localhost, env: ANYCABLE_HOST
+  --port                   Server port, default: 8080, env: ANYCABLE_PORT, PORT
+  --path                   WebSocket endpoint path, default: /cable, env: ANYCABLE_PATH
 
-  --ssl_cert          SSL certificate path, env: ANYCABLE_SSL_CERT
-  --ssl_key           SSL private key path, env: ANYCABLE_SSL_KEY
+  --ssl_cert               SSL certificate path, env: ANYCABLE_SSL_CERT
+  --ssl_key                SSL private key path, env: ANYCABLE_SSL_KEY
 
-  --redis_url         Redis url, default: redis://localhost:6379/5, env: ANYCABLE_REDIS_URL, REDIS_URL
-  --redis_channel     Redis channel for broadcasts, default: __anycable__, env: ANYCABLE_REDIS_CHANNEL
+  --redis_url              Redis url, default: redis://localhost:6379/5, env: ANYCABLE_REDIS_URL, REDIS_URL
+  --redis_channel          Redis channel for broadcasts, default: __anycable__, env: ANYCABLE_REDIS_CHANNEL
 
-  --rpc_host          RPC service address, default: 0.0.0.0:50051, env: ANYCABLE_RPC_HOST
-  --headers           List of headers to proxy to RPC, default: cookie, env: ANYCABLE_HEADERS
-  --disconnect_rate   Max number of Disconnect calls per second, default: 100, env: ANYCABLE_DISCONNECT_RATE
+  --rpc_host               RPC service address, default: 0.0.0.0:50051, env: ANYCABLE_RPC_HOST
+  --headers                List of headers to proxy to RPC, default: cookie, env: ANYCABLE_HEADERS
+  --disconnect_rate        Max number of Disconnect calls per second, default: 100, env: ANYCABLE_DISCONNECT_RATE
 
-  --log_level         Set logging level (debug/info/warn/error/fatal), default: info, env: ANYCABLE_LOG_LEVEL
-  --log_format        Set logging format (text, json), default: text, env: ANYCABLE_LOG_FORMAT
-  --debug             Enable debug mode (more verbose logging), default: false, env: ANYCABLE_DEBUG
+  --log_level              Set logging level (debug/info/warn/error/fatal), default: info, env: ANYCABLE_LOG_LEVEL
+  --log_format             Set logging format (text, json), default: text, env: ANYCABLE_LOG_FORMAT
+  --debug                  Enable debug mode (more verbose logging), default: false, env: ANYCABLE_DEBUG
 
-  --metrics_log       Enable metrics logging (with info level)
+  --metrics_log            Enable metrics logging (with info level), default: false, env: ANYCABLE_METRICS_LOG
+  --metrics_log_interval   Specify how often flush metrics logs (in seconds), defailt: 15, env: ANYCABLE_METRICS_LOG_INTERVAL
+  --metrics_http           Enable HTTP metrics endpoint at the specified path, default: "" (disabled), env: ANYCABLE_METRICS_PATH
+  --metrics_port           Server port for metrics endpoint, default: the same as for main server, env: ANYCABLE_METRICS_PORT
 
-  -h                  This help screen
-  -v                  Show version
+  -h                       This help screen
+  -v                       Show version
 
 `
 
@@ -132,6 +142,10 @@ func ensureParsed() {
 		if debugMode {
 			defaults.LogLevel = "debug"
 			defaults.LogFormat = "text"
+		}
+
+		if defaults.MetricsPort == 0 {
+			defaults.MetricsPort = defaults.Port
 		}
 	}
 }
