@@ -5,7 +5,7 @@ notifications:
   email: false
 
 go:
-  - 1.9
+  - "1.10"
 services:
   - redis-server
 before_install:
