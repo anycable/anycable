@@ -208,6 +208,8 @@ func (s *Session) sendPing() {
 
 	if err == nil {
 		s.addPing()
+	} else {
+		s.Disconnect("Ping failed")
 	}
 }
 
