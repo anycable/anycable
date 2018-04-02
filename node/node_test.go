@@ -186,3 +186,29 @@ func TestHandlePubsubCommand(t *testing.T) {
 	msg2 := <-session2.send
 	assert.Equalf(t, expected, string(msg2), "Expected to receive %s but got %s", expected, string(msg2))
 }
+
+func TestSubscriptionsList(t *testing.T) {
+	subscriptions := map[string]bool{
+		"{\"channel\":\"SystemNotificationChannel\"}":              true,
+		"{\"channel\":\"ClassSectionTableChannel\",\"id\":288528}": true,
+		"{\"channel\":\"ScheduleChannel\",\"id\":23376}":           true,
+		"{\"channel\":\"DressageChannel\",\"id\":23376}":           true,
+		"{\"channel\":\"TimekeepingChannel\",\"id\":23376}":        true,
+		"{\"channel\":\"ClassSectionChannel\",\"id\":288528}":      true,
+	}
+
+	expected := []string{
+		"{\"channel\":\"SystemNotificationChannel\"}",
+		"{\"channel\":\"ClassSectionTableChannel\",\"id\":288528}",
+		"{\"channel\":\"ScheduleChannel\",\"id\":23376}",
+		"{\"channel\":\"DressageChannel\",\"id\":23376}",
+		"{\"channel\":\"TimekeepingChannel\",\"id\":23376}",
+		"{\"channel\":\"ClassSectionChannel\",\"id\":288528}",
+	}
+
+	actual := subscriptionsList(subscriptions)
+
+	for _, key := range expected {
+		assert.Contains(t, actual, key)
+	}
+}

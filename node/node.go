@@ -369,6 +369,7 @@ func subscriptionsList(m map[string]bool) []string {
 
 	for k := range m {
 		keys[i] = k
+		i++
 	}
 	return keys
 }
