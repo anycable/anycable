@@ -2,7 +2,7 @@
 
 ## master
 
-## 0.6.0-preview3
+## 0.6.0-preview4
 
 - Fixed memory leak (caused by leaking mutex goroutines).
 
