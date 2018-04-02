@@ -35,7 +35,7 @@ module Anycable
     end
 
     def disconnect(request, _unused_call)
-      logger.debug("RPC Disonnect: #{request}")
+      logger.debug("RPC Disconnect: #{request}")
 
       socket = build_socket(env: rack_env(request))
 
