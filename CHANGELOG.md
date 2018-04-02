@@ -2,6 +2,14 @@
 
 ## master
 
+## 0.6.0-preview3
+
+- Fixed memory leak (caused by leaking mutex goroutines).
+
+- Other minor fixes.
+
+##  0.6.0-preview2
+
 - Add `--metrics_log_interval` option. ([@palkan][])
 
 - Add HTTP `/metrics` endpoint. ([@palkan][])
