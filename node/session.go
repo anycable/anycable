@@ -1,6 +1,7 @@
 package node
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"sync"
@@ -33,6 +34,7 @@ type Session struct {
 	connected     bool
 	mu            sync.Mutex
 	pingTimer     *time.Timer
+	cancelSend    context.CancelFunc
 
 	UID         string
 	Identifiers string
@@ -90,7 +92,11 @@ func NewSession(node *Node, ws *websocket.Conn, request *http.Request) (*Session
 		return nil, err
 	}
 
-	go session.SendMessages()
+	sendCtx, cancel := context.WithCancel(context.Background())
+
+	session.cancelSend = cancel
+
+	go session.SendMessages(sendCtx)
 
 	session.addPing()
 
@@ -98,10 +104,14 @@ func NewSession(node *Node, ws *websocket.Conn, request *http.Request) (*Session
 }
 
 // SendMessages waits for incoming messages and send them to the client connection
-func (s *Session) SendMessages() {
+func (s *Session) SendMessages(ctx context.Context) {
 	defer s.Disconnect("Write Failed")
 	for {
 		select {
+		case <-ctx.Done():
+			s.Log.Debug("send channel closed")
+			close(s.send)
+			return
 		case message, ok := <-s.send:
 			if !ok {
 				return
@@ -173,7 +183,7 @@ func (s *Session) ReadMessages() {
 // Disconnect enqueues RPC disconnect request and closes the connection
 func (s *Session) Disconnect(reason string) {
 	s.mu.Lock()
-	if !s.connected {
+	if s.connected {
 		s.node.Disconnect(s)
 	}
 	s.connected = false
@@ -185,9 +195,16 @@ func (s *Session) Disconnect(reason string) {
 // Close websocket connection with the specified reason
 func (s *Session) Close(reason string) {
 	s.mu.Lock()
+
 	if s.closed {
+		s.mu.Unlock()
 		return
 	}
+
+	if s.cancelSend != nil {
+		s.cancelSend()
+	}
+
 	s.closed = true
 	s.mu.Unlock()
 
