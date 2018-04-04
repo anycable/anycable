@@ -73,12 +73,6 @@
   version = "v1.0.0"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/soveran/redisurl"
-  packages = ["."]
-  revision = "ac42ec99510b5f21d11560d316adcc5bc41f0915"
-
-[[projects]]
   name = "github.com/stretchr/testify"
   packages = ["assert"]
   revision = "2aa2c176b9dab406a6970f6a55f513e8a8c8b18f"
@@ -167,6 +161,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "843e8e9ca061bfc473cfc6163be8a582d559caed79e1f632e2c9bced182f0a7f"
+  inputs-digest = "a4714ba7d854464fca01b6f61acfc6c5a9ee7a96eb5033b05643c9f4a583e28a"
   solver-name = "gps-cdcl"
   solver-version = 1

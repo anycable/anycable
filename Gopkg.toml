@@ -20,10 +20,6 @@
 #  version = "2.4.0"
 
 [[constraint]]
-  branch = "master"
-  name = "github.com/soveran/redisurl"
-
-[[constraint]]
   name = "github.com/apex/log"
   version = "1.0.0"
 

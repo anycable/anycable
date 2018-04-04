@@ -9,7 +9,6 @@ import (
 	"github.com/anycable/anycable-go/node"
 	"github.com/apex/log"
 	"github.com/garyburd/redigo/redis"
-	"github.com/soveran/redisurl"
 )
 
 const (
@@ -66,7 +65,7 @@ func (s *RedisSubscriber) Start() error {
 }
 
 func (s *RedisSubscriber) listen() error {
-	c, err := redisurl.ConnectToURL(s.url)
+	c, err := redis.DialURL(s.url)
 
 	if err != nil {
 		return err
