@@ -17,15 +17,6 @@
   revision = "ecdeabc65495df2dec95d7c4a4c3e021903035e5"
 
 [[projects]]
-  name = "github.com/garyburd/redigo"
-  packages = [
-    "internal",
-    "redis"
-  ]
-  revision = "a69d19351219b6dd56f274f96d85a7014a2ec34e"
-  version = "v1.6.0"
-
-[[projects]]
   name = "github.com/golang/protobuf"
   packages = [
     "proto",
@@ -36,6 +27,15 @@
   ]
   revision = "925541529c1fa6821df4e44ce2723319eb2be768"
   version = "v1.0.0"
+
+[[projects]]
+  name = "github.com/gomodule/redigo"
+  packages = [
+    "internal",
+    "redis"
+  ]
+  revision = "9c11da706d9b7902c6da69c592f75637793fe121"
+  version = "v2.0.0"
 
 [[projects]]
   name = "github.com/gorilla/websocket"
@@ -161,6 +161,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "a4714ba7d854464fca01b6f61acfc6c5a9ee7a96eb5033b05643c9f4a583e28a"
+  inputs-digest = "ddee0bfbab204085276fee7d0368f65156be7e6f452043cc9941ebe6fb1158c7"
   solver-name = "gps-cdcl"
   solver-version = 1
