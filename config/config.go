@@ -27,6 +27,7 @@ type Config struct {
 	MetricsLog         bool
 	MetricsLogInterval int
 	MetricsHTTP        string
+	MetricsHost        string
 	MetricsPort        int
 }
 

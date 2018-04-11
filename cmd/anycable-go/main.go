@@ -102,7 +102,11 @@ func main() {
 
 		if config.MetricsPort != config.Port {
 			port := strconv.Itoa(config.MetricsPort)
-			metricsServer = buildServer(node, config.Host, port, &config.SSL)
+			host := config.Host
+			if config.MetricsHost != "" {
+				host = config.MetricsHost
+			}
+			metricsServer = buildServer(node, host, port, &config.SSL)
 			ctx.Infof("Serve metrics at %s:%s%s", config.Host, port, config.MetricsHTTP)
 		} else {
 			ctx.Infof("Serve metrics at %s", config.MetricsHTTP)
