@@ -52,7 +52,7 @@ Anycable-Go provides useful statistical information about the service (such as a
 
 To enable a HTTP endpoint to serve [Prometheus](https://prometheus.io)-compatible metrics (disabled by default) you must specify `--metrics_http` option (e.g. `--metrics_http="/metrics"`).
 
-You can also change a listnening port through `--metrics_port` option (by default the same as the main (websocket) server port, i.e. using the same server).
+You can also change a listening port and listening host through `--metrics_port` and `--metrics_host` options respectively (by default the same as the main (websocket) server port and host, i.e. using the same server).
 
 The exported metrics format is the following:
 

@@ -2,6 +2,10 @@
 
 ## master
 
+## 0.6.0-preview5
+
+- Add `--metrics_host` option.
+
 ## 0.6.0-preview4
 
 - Fixed memory leak (caused by leaking mutex goroutines).
