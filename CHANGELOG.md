@@ -2,6 +2,8 @@
 
 ## master
 
+## 0.6.0-preview5
+
 - [Fixes [#34](https://github.com/anycable/anycable-go/issues/34)] Fix `panic` when trying to send to a closed channel. ([@palkan][])
 
 - Add `--metrics_host` option. ([@shedimon][])
