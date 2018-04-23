@@ -15,7 +15,7 @@ module Anycable
 
     # Handle connection request from WebSocket server
     def connect(request, _unused_call)
-      logger.debug("RPC Connect: #{request}")
+      logger.debug("RPC Connect: #{request.inspect}")
 
       socket = build_socket(env: rack_env(request))
 
@@ -35,7 +35,7 @@ module Anycable
     end
 
     def disconnect(request, _unused_call)
-      logger.debug("RPC Disconnect: #{request}")
+      logger.debug("RPC Disconnect: #{request.inspect}")
 
       socket = build_socket(env: rack_env(request))
 
@@ -53,7 +53,7 @@ module Anycable
     end
 
     def command(message, _unused_call)
-      logger.debug("RPC Command: #{message}")
+      logger.debug("RPC Command: #{message.inspect}")
 
       socket = build_socket
 
