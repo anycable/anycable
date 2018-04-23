@@ -109,8 +109,6 @@ func (s *Session) SendMessages(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			s.Log.Debug("send channel closed")
-			close(s.send)
 			return
 		case message, ok := <-s.send:
 			if !ok {
@@ -145,19 +143,25 @@ func (s *Session) write(message []byte, deadline time.Time) error {
 
 // Send data to client connection
 func (s *Session) Send(msg []byte) {
+	s.mu.Lock()
+
+	if s.send == nil {
+		s.mu.Unlock()
+		return
+	}
+
 	select {
 	case s.send <- msg:
 	default:
-		s.mu.Lock()
-
 		if s.send != nil {
 			close(s.send)
 			defer s.Disconnect("Write failed")
 		}
 
-		defer s.mu.Unlock()
 		s.send = nil
 	}
+
+	s.mu.Unlock()
 }
 
 // ReadMessages reads messages from ws connection and send them to node
@@ -184,7 +188,7 @@ func (s *Session) ReadMessages() {
 func (s *Session) Disconnect(reason string) {
 	s.mu.Lock()
 	if s.connected {
-		s.node.Disconnect(s)
+		defer s.node.Disconnect(s)
 	}
 	s.connected = false
 	s.mu.Unlock()

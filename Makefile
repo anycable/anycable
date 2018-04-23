@@ -59,7 +59,7 @@ build-protos:
 	protoc --proto_path=./etc --go_out=plugins=grpc:./protos ./etc/rpc.proto
 
 test:
-	go test github.com/anycable/anycable-go/cli \
+	go test -race github.com/anycable/anycable-go/cli \
 		github.com/anycable/anycable-go/config \
 		github.com/anycable/anycable-go/node \
 		github.com/anycable/anycable-go/pool \

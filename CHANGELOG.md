@@ -2,7 +2,9 @@
 
 ## master
 
-- Add `--metrics_host` option.
+- [Fixes [#34](https://github.com/anycable/anycable-go/issues/34)] Fix `panic` when trying to send to a closed channel. ([@palkan][])
+
+- Add `--metrics_host` option. ([@shedimon][])
 
 ## 0.6.0-preview4
 
@@ -164,3 +166,4 @@ No more race conditions.
 
 [@palkan]: https://github.com/palkan
 [@woodcrust]: https://github.com/woodcrust
+[@shedimon]: https://github.com/shedimon

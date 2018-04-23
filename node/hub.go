@@ -72,7 +72,7 @@ func NewHub() *Hub {
 	return &Hub{
 		broadcast:       make(chan *StreamMessage, 256),
 		register:        make(chan *Session, 128),
-		unregister:      make(chan *Session, 128),
+		unregister:      make(chan *Session, 2048),
 		subscribe:       make(chan *SubscriptionInfo, 128),
 		unsubscribe:     make(chan *SubscriptionInfo, 128),
 		sessions:        make(map[string]*Session),

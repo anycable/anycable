@@ -202,10 +202,10 @@ func (n *Node) Authenticate(s *Session, path string, headers *map[string]string)
 // Subscribe subscribes session to a channel
 func (n *Node) Subscribe(s *Session, msg *Message) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	if _, ok := s.subscriptions[msg.Identifier]; ok {
 		s.Log.Warnf("Already subscribed to %s", msg.Identifier)
+		s.mu.Unlock()
 		return
 	}
 
@@ -218,6 +218,8 @@ func (n *Node) Subscribe(s *Session, msg *Message) {
 		s.Log.Debugf("Subscribed to channel: %s", msg.Identifier)
 	}
 
+	s.mu.Unlock()
+
 	if res != nil {
 		n.handleCommandReply(s, msg, res)
 	}
@@ -226,10 +228,10 @@ func (n *Node) Subscribe(s *Session, msg *Message) {
 // Unsubscribe unsubscribes session from a channel
 func (n *Node) Unsubscribe(s *Session, msg *Message) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	if _, ok := s.subscriptions[msg.Identifier]; !ok {
 		s.Log.Warnf("Unknown subscription %s", msg.Identifier)
+		s.mu.Unlock()
 		return
 	}
 
@@ -245,6 +247,8 @@ func (n *Node) Unsubscribe(s *Session, msg *Message) {
 
 		s.Log.Debugf("Unsubscribed from channel: %s", msg.Identifier)
 	}
+
+	s.mu.Unlock()
 
 	if res != nil {
 		n.handleCommandReply(s, msg, res)

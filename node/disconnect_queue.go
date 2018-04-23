@@ -38,7 +38,7 @@ func NewDisconnectQueue(node *Node, rate int) *DisconnectQueue {
 
 	return &DisconnectQueue{
 		node:       node,
-		disconnect: make(chan *Session, 128),
+		disconnect: make(chan *Session, 2048),
 		rate:       rateDuration,
 		log:        ctx,
 		shutdown:   false,
