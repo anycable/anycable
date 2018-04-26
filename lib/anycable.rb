@@ -47,7 +47,8 @@ module Anycable
       @pubsub ||= PubSub.new
     end
 
-    # Broadcast message to the channel
+    # Raw broadcast message to the channel, sends only string!
+    # To send hash or object use ActionCable.server.broadcast instead!
     def broadcast(channel, payload)
       pubsub.broadcast(channel, payload)
     end
