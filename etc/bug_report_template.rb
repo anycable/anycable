@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "bundler/inline"
 
 # This reproduction script is based on `anyt` gem
@@ -71,4 +73,4 @@ begin
 ensure
   Anyt::Command.stop if Anyt.config.command
   Anyt::RPC.stop
-end  
+end
