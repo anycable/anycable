@@ -173,5 +173,7 @@ Remote disconnect | - (WIP)
 
 Bug reports and pull requests are welcome on GitHub at https://github.com/anycable/anycable-go.
 
+Please, provide reproduction script (using [this template](https://github.com/anycable/anycable/blob/master/etc/bug_report_template.rb)) when submitting bugs if possible.
+
 ## License
 The library is available as open source under the terms of the [MIT License](http://opensource.org/licenses/MIT).
