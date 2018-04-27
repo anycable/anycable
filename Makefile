@@ -3,6 +3,8 @@ else
 	VERSION := $(shell sh -c 'git describe --always --tags')
 endif
 
+OUTPUT ?= dist/anycable-go
+
 ifdef GOBIN
 PATH := $(GOBIN):$(PATH)
 else
@@ -17,10 +19,17 @@ install:
 	go install ./...
 
 build:
-	go build -ldflags "-s -w -X main.version=$(VERSION)" -o dist/anycable-go cmd/anycable-go/main.go
+	env CGO_ENABLED=1 go build -ldflags "-s -w -X main.version=$(VERSION)" -o $(OUTPUT) cmd/anycable-go/main.go
+
+prepare-mruby:
+	(cd vendor/github.com/mitchellh/go-mruby && make)
 
 build-linux:
 	env CGO_ENABLED=0 GOOS=linux GOARCH=386 go build -ldflags "-X main.version=$(VERSION)" -a -installsuffix cgo -o "dist/anycable-go-$(VERSION)-linux-386" cmd/anycable-go/main.go
+
+build-all-mruby:
+	env CGO_ENABLED=1 go build -ldflags "-s -w -X main.version=$(VERSION)" -o "dist/anycable-go-$(VERSION)-mrb-macos-amd64" cmd/anycable-go/main.go
+	docker run --rm -v $(PWD):/go/src/github.com/anycable/anycable-go -w /go/src/github.com/anycable/anycable-go -e OUTPUT="dist/anycable-go-$(VERSION)-mrb-linux-amd64" amd64/golang:1.10 make build
 
 build-all:
 	rm -rf ./dist
@@ -59,7 +68,7 @@ build-protos:
 	protoc --proto_path=./etc --go_out=plugins=grpc:./protos ./etc/rpc.proto
 
 test:
-	go test -race github.com/anycable/anycable-go/cli \
+	go test github.com/anycable/anycable-go/cli \
 		github.com/anycable/anycable-go/config \
 		github.com/anycable/anycable-go/node \
 		github.com/anycable/anycable-go/pool \
@@ -74,7 +83,7 @@ test-cable:
 	anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable"
 	anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token --ssl_key=etc/ssl/server.key --ssl_cert=etc/ssl/server.crt --port=8443" --target-url="wss://localhost:8443/cable"
 
-test-ci: prepare test test-cable
+test-ci: prepare prepare-mruby test test-cable
 
 # Get dependencies and use gdm to checkout changesets
 prepare:
