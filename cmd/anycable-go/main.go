@@ -59,7 +59,13 @@ func main() {
 
 	ctx.Infof("Starting AnyCable %s", version)
 
-	metrics := metrics.NewMetrics(config.MetricsLogEnabled(), config.MetricsLogInterval)
+	var metricsPrinter metrics.Printer
+
+	if config.MetricsLogEnabled() {
+		metricsPrinter = metrics.NewBasePrinter()
+	}
+
+	metrics := metrics.NewMetrics(metricsPrinter, config.MetricsLogInterval)
 
 	controller := rpc.NewController(&config, metrics)
 
