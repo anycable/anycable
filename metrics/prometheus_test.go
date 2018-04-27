@@ -7,7 +7,7 @@ import (
 )
 
 func TestPrometheus(t *testing.T) {
-	m := NewMetrics(false, 10)
+	m := NewMetrics(nil, 10)
 
 	m.RegisterCounter("test_total", "Total number of smth")
 	m.RegisterCounter("any_total", "Total number of anything")
