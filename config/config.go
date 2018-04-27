@@ -26,6 +26,7 @@ type Config struct {
 	LogFormat          string
 	MetricsLog         bool
 	MetricsLogInterval int
+	MetricsLogPrinter  string
 	MetricsHTTP        string
 	MetricsHost        string
 	MetricsPort        int
@@ -46,4 +47,9 @@ func (c *Config) MetricsLogEnabled() bool {
 // MetricsHTTPEnabled returns true iff MetricsHTTP is not empty
 func (c *Config) MetricsHTTPEnabled() bool {
 	return c.MetricsHTTP != ""
+}
+
+// MetricsLogPrinterEnabled returns true iff MetricsLogPrinter is not empty
+func (c *Config) MetricsLogPrinterEnabled() bool {
+	return c.MetricsLogPrinter != ""
 }

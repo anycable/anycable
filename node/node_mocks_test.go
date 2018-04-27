@@ -24,7 +24,7 @@ func NewMockNode() Node {
 	node := Node{
 		controller: &controller,
 		hub:        NewHub(),
-		Metrics:    metrics.NewMetrics(false, 10),
+		Metrics:    metrics.NewMetrics(nil, 10),
 		log:        log.WithField("context", "test"),
 	}
 	node.registerMetrics()
