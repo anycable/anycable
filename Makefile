@@ -76,6 +76,7 @@ test:
 		github.com/anycable/anycable-go/rpc \
 		github.com/anycable/anycable-go/server \
 		github.com/anycable/anycable-go/metrics \
+		github.com/anycable/anycable-go/mrb \
 		github.com/anycable/anycable-go/utils
 
 test-cable:

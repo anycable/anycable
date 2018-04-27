@@ -13,23 +13,23 @@ func (opts *SSLOptions) Available() bool {
 
 // Config contains main application configuration
 type Config struct {
-	RPCHost            string
-	RedisURL           string
-	RedisChannel       string
-	Host               string
-	Port               int
-	Path               string
-	Headers            []string
-	SSL                SSLOptions
-	DisconnectRate     int
-	LogLevel           string
-	LogFormat          string
-	MetricsLog         bool
-	MetricsLogInterval int
-	MetricsLogPrinter  string
-	MetricsHTTP        string
-	MetricsHost        string
-	MetricsPort        int
+	RPCHost             string
+	RedisURL            string
+	RedisChannel        string
+	Host                string
+	Port                int
+	Path                string
+	Headers             []string
+	SSL                 SSLOptions
+	DisconnectRate      int
+	LogLevel            string
+	LogFormat           string
+	MetricsLog          bool
+	MetricsLogInterval  int
+	MetricsLogFormatter string
+	MetricsHTTP         string
+	MetricsHost         string
+	MetricsPort         int
 }
 
 // New returns a new empty config
@@ -41,7 +41,7 @@ func New() Config {
 
 // MetricsLogEnabled returns true iff MetricsLog is true
 func (c *Config) MetricsLogEnabled() bool {
-	return c.MetricsLog
+	return c.MetricsLog || c.MetricsLogFormatterEnabled()
 }
 
 // MetricsHTTPEnabled returns true iff MetricsHTTP is not empty
@@ -49,7 +49,7 @@ func (c *Config) MetricsHTTPEnabled() bool {
 	return c.MetricsHTTP != ""
 }
 
-// MetricsLogPrinterEnabled returns true iff MetricsLogPrinter is not empty
-func (c *Config) MetricsLogPrinterEnabled() bool {
-	return c.MetricsLogPrinter != ""
+// MetricsLogFormatterEnabled returns true iff MetricsLogFormatter is not empty
+func (c *Config) MetricsLogFormatterEnabled() bool {
+	return c.MetricsLogFormatter != ""
 }
