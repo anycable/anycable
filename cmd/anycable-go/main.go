@@ -62,7 +62,18 @@ func main() {
 	var metricsPrinter metrics.Printer
 
 	if config.MetricsLogEnabled() {
-		metricsPrinter = metrics.NewBasePrinter()
+		if config.MetricsLogPrinterEnabled() {
+			customPrinter, err := metrics.NewCustomPrinter(config.MetricsLogPrinter)
+
+			if err == nil {
+				metricsPrinter = customPrinter
+			} else {
+				log.Errorf("!!! Failed to initialize custom log printer !!!\n%v", err)
+				os.Exit(1)
+			}
+		} else {
+			metricsPrinter = metrics.NewBasePrinter()
+		}
 	}
 
 	metrics := metrics.NewMetrics(metricsPrinter, config.MetricsLogInterval)
