@@ -7,10 +7,15 @@ import (
 	"github.com/apex/log"
 )
 
+// Printer describes metrics logging interface
+type Printer interface {
+	Print(snapshot map[string]int64)
+}
+
 // Metrics stores some useful stats about node
 type Metrics struct {
 	mu             sync.RWMutex
-	logEnabled     bool
+	printer        Printer
 	rotateInterval time.Duration
 	counters       map[string]*Counter
 	gauges         map[string]*Gauge
@@ -18,12 +23,34 @@ type Metrics struct {
 	log            *log.Entry
 }
 
+// BasePrinter simply logs stats as structured log
+type BasePrinter struct {
+}
+
+// NewBasePrinter returns new base printer struct
+func NewBasePrinter() *BasePrinter {
+	return &BasePrinter{}
+}
+
+// Print logs stats data using global logger with info level
+func (*BasePrinter) Print(snapshot map[string]int64) {
+	fields := make(log.Fields, len(snapshot)+1)
+
+	fields["context"] = "metrics"
+
+	for k, v := range snapshot {
+		fields[k] = v
+	}
+
+	log.WithFields(fields).Info("")
+}
+
 // NewMetrics build new metrics struct
-func NewMetrics(logEnabled bool, logIntervalSeconds int) *Metrics {
+func NewMetrics(printer Printer, logIntervalSeconds int) *Metrics {
 	rotateInterval := time.Duration(logIntervalSeconds) * time.Second
 
 	return &Metrics{
-		logEnabled:     logEnabled,
+		printer:        printer,
 		rotateInterval: rotateInterval,
 		counters:       make(map[string]*Counter),
 		gauges:         make(map[string]*Gauge),
@@ -34,7 +61,7 @@ func NewMetrics(logEnabled bool, logIntervalSeconds int) *Metrics {
 
 // Run periodically updates counters delta (and logs metrics if necessary)
 func (m *Metrics) Run() {
-	if m.logEnabled {
+	if m.printer != nil {
 		m.log.Infof("Log metrics every %s", m.rotateInterval)
 	}
 
@@ -45,15 +72,10 @@ func (m *Metrics) Run() {
 		case <-time.After(m.rotateInterval):
 			m.rotate()
 
-			if m.logEnabled {
+			if m.printer != nil {
 				snapshot := m.IntervalSnapshot()
-				fields := make(log.Fields, len(snapshot))
 
-				for k, v := range snapshot {
-					fields[k] = v
-				}
-
-				m.log.WithFields(fields).Info("")
+				m.printer.Print(snapshot)
 			}
 		}
 	}
