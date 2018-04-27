@@ -56,6 +56,12 @@
   version = "v0.0.3"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/mitchellh/go-mruby"
+  packages = ["."]
+  revision = "8fb57ad89650eef30e72be20f980679d7aa1e90c"
+
+[[projects]]
   name = "github.com/namsral/flag"
   packages = ["."]
   revision = "91bb473a91a4a5e1ea554fb8ddce84f832be9aca"
@@ -161,6 +167,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "ddee0bfbab204085276fee7d0368f65156be7e6f452043cc9941ebe6fb1158c7"
+  inputs-digest = "37a01c7c02af3a307b9603e1d4f2bf18e4394ec9f3226c8d86550f5e8c22fc48"
   solver-name = "gps-cdcl"
   solver-version = 1
