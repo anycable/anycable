@@ -1,4 +1,4 @@
-module MetricsHandler
+module MetricsFormatter
   def self.call(data)
     parts = []
 

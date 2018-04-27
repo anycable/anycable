@@ -62,8 +62,8 @@ func main() {
 	var metricsPrinter metrics.Printer
 
 	if config.MetricsLogEnabled() {
-		if config.MetricsLogPrinterEnabled() {
-			customPrinter, err := metrics.NewCustomPrinter(config.MetricsLogPrinter)
+		if config.MetricsLogFormatterEnabled() {
+			customPrinter, err := metrics.NewCustomPrinter(config.MetricsLogFormatter)
 
 			if err == nil {
 				metricsPrinter = customPrinter

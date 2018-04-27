@@ -60,7 +60,7 @@ func init() {
 
 	fs.BoolVar(&defaults.MetricsLog, "metrics_log", false, "")
 	fs.IntVar(&defaults.MetricsLogInterval, "metrics_log_interval", 15, "")
-	fs.StringVar(&defaults.MetricsLogPrinter, "metrics_log_printer", "", "")
+	fs.StringVar(&defaults.MetricsLogFormatter, "metrics_log_formatter", "", "")
 	fs.StringVar(&defaults.MetricsHost, "metrics_host", "", "")
 	fs.IntVar(&defaults.MetricsPort, "metrics_port", 0, "")
 	fs.StringVar(&defaults.MetricsHTTP, "metrics_http", "", "")
@@ -123,7 +123,7 @@ The flags are:
 
   --metrics_log            Enable metrics logging (with info level), default: false, env: ANYCABLE_METRICS_LOG
   --metrics_log_interval   Specify how often flush metrics logs (in seconds), default: 15, env: ANYCABLE_METRICS_LOG_INTERVAL
-  --metrics_log_printer    Specify the path to custom Ruby formatter script (only supported on MacOS and Linux), default: "" (none), env: ANYCABLE_METRICS_LOG_PRINTER
+  --metrics_log_formatter  Specify the path to custom Ruby formatter script (only supported on MacOS and Linux), default: "" (none), env: ANYCABLE_METRICS_LOG_FORMATTER
   --metrics_http           Enable HTTP metrics endpoint at the specified path, default: "" (disabled), env: ANYCABLE_METRICS_PATH
   --metrics_host           Server host for metrics endpoint, default: the same as for main server, env: ANYCABLE_METRICS_HOST
   --metrics_port           Server port for metrics endpoint, default: the same as for main server, env: ANYCABLE_METRICS_PORT

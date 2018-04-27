@@ -25,7 +25,7 @@ func NewCustomPrinter(path string) (*RubyPrinter, error) {
 		return nil, err
 	}
 
-	mod := engine.VM.Module("MetricsHandler")
+	mod := engine.VM.Module("MetricsFormatter")
 
 	modValue := mod.MrbValue(engine.VM)
 
