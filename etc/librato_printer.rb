@@ -3,9 +3,9 @@ module MetricsFormatter
     parts = []
 
     data.each do |key, value|
-      parts << "anycable.#{key}=#{value}"
+      parts << "sample##{key}=#{value}"
     end
 
-    "sample##{parts.join(' ')}"
+    parts.join(' ')
   end
 end
