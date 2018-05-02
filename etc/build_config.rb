@@ -85,26 +85,26 @@ MRuby::Build.new do |conf|
 end
 
 if ENV['MRUBY_CROSS_OS'] == 'linux'
-  MRuby::CrossBuild.new("linux-arm64") do |conf|
-    toolchain :gcc
+  # MRuby::CrossBuild.new("linux-arm64") do |conf|
+  #   toolchain :gcc
 
-    url = 'http://crossgcc.rts-software.org/doku.php?id=compiling_for_linux'
+  #   url = 'http://crossgcc.rts-software.org/doku.php?id=compiling_for_linux'
 
-    cgcc = "/usr/local/gcc-4.8.1-for-linux64/bin/x86_64-pc-linux-gcc"
-    car = "/usr/local/gcc-4.8.1-for-linux64/bin/x86_64-pc-linux-ar"
+  #   cgcc = "/usr/local/gcc-4.8.1-for-linux64/bin/x86_64-pc-linux-gcc"
+  #   car = "/usr/local/gcc-4.8.1-for-linux64/bin/x86_64-pc-linux-ar"
 
-    fail "Can't find #{cgcc}. Please download compiler from #{url}" unless File.exist? cgcc
-    fail "Can't find #{car}. Please download compiler from #{url}" unless File.exist? car
+  #   fail "Can't find #{cgcc}. Please download compiler from #{url}" unless File.exist? cgcc
+  #   fail "Can't find #{car}. Please download compiler from #{url}" unless File.exist? car
 
-    MRuby.targets["host"].gems.each do |mrbgem|
-      conf.gem mrbgem.dir
-    end
+  #   MRuby.targets["host"].gems.each do |mrbgem|
+  #     conf.gem mrbgem.dir
+  #   end
 
-    conf.cc.command = cgcc
-    conf.cc.flags << "-static"
-    conf.linker.command = cgcc
-    conf.archiver.command = car
-  end
+  #   conf.cc.command = cgcc
+  #   conf.cc.flags << "-static"
+  #   conf.linker.command = cgcc
+  #   conf.archiver.command = car
+  # end
 
   MRuby::CrossBuild.new("linux-amd64") do |conf|
     toolchain :gcc
@@ -127,24 +127,24 @@ if ENV['MRUBY_CROSS_OS'] == 'linux'
     conf.archiver.command = car
   end
 
-  MRuby::CrossBuild.new("linux-386") do |conf|
-    toolchain :gcc
+  # MRuby::CrossBuild.new("linux-386") do |conf|
+  #   toolchain :gcc
 
-    url = 'http://crossgcc.rts-software.org/doku.php?id=compiling_for_linux'
+  #   url = 'http://crossgcc.rts-software.org/doku.php?id=compiling_for_linux'
 
-    cgcc = "/usr/local/gcc-4.8.1-for-linux32/bin/i586-pc-linux-gcc"
-    car = "/usr/local/gcc-4.8.1-for-linux32/bin/i586-pc-linux-ar"
+  #   cgcc = "/usr/local/gcc-4.8.1-for-linux32/bin/i586-pc-linux-gcc"
+  #   car = "/usr/local/gcc-4.8.1-for-linux32/bin/i586-pc-linux-ar"
 
-    fail "Can't find #{cgcc}. Please download compiler from #{url}" unless File.exist? cgcc
-    fail "Can't find #{car}. Please download compiler from #{url}" unless File.exist? car
+  #   fail "Can't find #{cgcc}. Please download compiler from #{url}" unless File.exist? cgcc
+  #   fail "Can't find #{car}. Please download compiler from #{url}" unless File.exist? car
 
-    MRuby.targets["host"].gems.each do |mrbgem|
-      conf.gem mrbgem.dir
-    end
+  #   MRuby.targets["host"].gems.each do |mrbgem|
+  #     conf.gem mrbgem.dir
+  #   end
 
-    conf.cc.command = cgcc
-    conf.cc.flags << "-static"
-    conf.linker.command = cgcc
-    conf.archiver.command = car
-  end
+  #   conf.cc.command = cgcc
+  #   conf.cc.flags << "-static"
+  #   conf.linker.command = cgcc
+  #   conf.archiver.command = car
+  # end
 end
