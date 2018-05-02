@@ -21,8 +21,11 @@ install:
 build:
 	env CGO_ENABLED=1 go build -ldflags "-s -w -X main.version=$(VERSION)" -o $(OUTPUT) cmd/anycable-go/main.go
 
+prepare-cross-mruby:
+	(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CROSS_OS=linux MRUBY_CONFIG=../../../../../../etc/build_config.rb make)
+
 prepare-mruby:
-	(cd vendor/github.com/mitchellh/go-mruby && make)
+	(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CONFIG=../../../../../../etc/build_config.rb make)
 
 build-linux:
 	env CGO_ENABLED=0 GOOS=linux GOARCH=386 go build -ldflags "-X main.version=$(VERSION)" -a -installsuffix cgo -o "dist/anycable-go-$(VERSION)-linux-386" cmd/anycable-go/main.go
