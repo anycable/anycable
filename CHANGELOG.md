@@ -2,6 +2,43 @@
 
 ## master
 
+## 0.6.0-preview6
+
+- Add experimental mruby integration for custom metrics logging. ([@palkan][])
+
+**NOTE:** This feature _experimental_, i.e. the final API may (and likely will) change.
+
+You can write custom Ruby script to implement statistics logging.
+
+For example, to provide Librato-comatible output you can write a custom formatter like this:
+
+```ruby
+# my-metrics-formatter.rb
+# This MetricsFormatter name is required!
+module MetricsFormatter
+  KEYS = %w(clients_num clients_unique_num goroutines_num)
+
+  # `data` is a Hash containing all the metrics data
+  def self.call(data)
+    parts = []
+
+    data.each do |key, value|
+      parts << "sample##{key}=#{value}" if KEYS.include?(key)
+    end
+
+    parts.join(' ')
+  end
+end
+```
+
+And then use it like this:
+
+```sh
+anycable-go --metrics_log_formatter="my-metrics-formatter.rb"
+
+>INFO 2018-04-27T14:11:59.701Z sample#clients_num=0 sample#clients_uniq_num=0 sample#goroutines_num=0
+```
+
 ## 0.6.0-preview5
 
 - [Fixes [#34](https://github.com/anycable/anycable-go/issues/34)] Fix `panic` when trying to send to a closed channel. ([@palkan][])
