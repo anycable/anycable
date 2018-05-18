@@ -19,7 +19,7 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   spec.add_dependency "anyway_config", "~> 1.1", ">= 1.1.1"
-  spec.add_dependency "grpc", "~> 1.6"
+  spec.add_dependency "grpc", "1.12.0"
   spec.add_dependency "redis", ">= 3.2"
 
   spec.add_development_dependency "bundler", "~> 1"
