@@ -96,7 +96,7 @@ module Anycable
     end
 
     def build_socket(**options)
-      Anycable::Socket.new(**options)
+      Anycable::Socket.new(options)
     end
 
     def build_headers(headers)
