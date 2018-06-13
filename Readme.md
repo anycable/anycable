@@ -19,7 +19,13 @@ brew install anycable/anycable/anycable-go
 Of course, you can install it from source too:
 
 ```shell
-go get -u -f github.com/anycable/anycable-go/cmd/anycable-go
+CGO_ENABLED=0 go get -u -f github.com/anycable/anycable-go/cmd/anycable-go
+```
+
+**NOTE:** right now it's not possible to build `anycable-go` with mruby support using the command above (that's why we added `CGO_ENABLED=0`). To install `anycable-go` with mruby from source try:
+
+```
+go get -d -u -f github.com/anycable/anycable-go/cmd/anycable-go && (cd $GOPATH/src/github.com/anycable/anycable-go && make prepare-mruby install)
 ```
 
 ## Upgrade
