@@ -1,6 +1,12 @@
 # Change log
 
-## 0.5.0 (master)
+## master
+
+## 0.5.1 (2018-06-13)
+
+Minor fixes.
+
+## 0.5.0 (2017-10-21)
 
 - [#2](https://github.com/anycable/anycable/issues/2) Add support for [Redis Sentinel](https://redis.io/topics/sentinel). ([@accessd](https://github.com/accessd))
 
