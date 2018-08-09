@@ -28,7 +28,6 @@ Thumbs.db
 .docker/
 log/*.log
 *.gz
-pkg/
 
 tmp/
 coverage/
