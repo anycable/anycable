@@ -1,0 +1,246 @@
+version: 2
+
+workflows:
+  version: 2
+
+  test_and_release:
+    jobs:
+    - prepare_code
+    - prepare_mruby:
+        requires:
+        - prepare_code
+    - go_tests:
+        requires:
+        - prepare_mruby
+    - build_binary_for_anyt_test:
+        requires:
+        - prepare_code
+    - build_linux:
+        requires:
+        - prepare_code
+    - build_windows:
+        requires:
+        - prepare_code
+    - build_darwin:
+        requires:
+        - prepare_code
+    - build_freebsd:
+        requires:
+        - prepare_code
+    - build_linux_mruby:
+        requires:
+        - prepare_mruby
+    - anyt_test:
+        requires:
+        - build_binary_for_anyt_test
+    - build_docker:
+        requires:
+        - go_tests
+        - anyt_test
+        - build_linux
+        - build_windows
+        - build_darwin
+        - build_freebsd
+        - build_linux_mruby
+
+# YAML Templates
+golang_image: &golang_image
+  docker:
+  - image: circleci/golang:1.10.3-stretch
+
+ruby_image: &ruby_image
+  docker:
+  - image: circleci/ruby:2.5.1-stretch
+
+# Jobs definitions
+jobs:
+  prepare_code:
+    <<: *golang_image
+    working_directory: /go/src/github.com/anycable/anycable-go/
+    steps:
+    - attach_workspace:
+        at: .
+    - checkout
+    - run: dep ensure
+    - persist_to_workspace:
+        root: .
+        paths: .
+
+  prepare_mruby:
+    <<: *ruby_image
+    steps:
+    - attach_workspace:
+        at: .
+    - run: sudo apt update
+    - run: sudo apt -y install bison
+    - run: bash -c '(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)'
+    - persist_to_workspace:
+        root: .
+        paths:
+        - ./vendor/github.com/mitchellh/go-mruby/vendor/
+        - ./vendor/github.com/mitchellh/go-mruby/libmruby.a
+
+  go_tests:
+    <<: *golang_image
+    working_directory: /go/src/github.com/anycable/anycable-go/
+    steps:
+    - attach_workspace:
+        at: /go/src/github.com/anycable/anycable-go/
+    - run: make test
+    - run: make vet
+    - run: make fmt
+
+  build_binary_for_anyt_test:
+    <<: *golang_image
+    working_directory: /go/src/github.com/anycable/anycable-go/
+    environment:
+      CGO_ENABLED: "0"
+      GOOS: linux
+      GOARCH: amd64
+    steps:
+    - attach_workspace:
+        at: /go/src/github.com/anycable/anycable-go/
+    - run:
+        name: Building Linux amd64 binary
+        command: env GOARCH=amd64 go build -ldflags "-X main.version=$(git describe --abbrev=0 --tags)" -a -installsuffix cgo -o "/tmp/anycable-go-test" cmd/anycable-go/main.go
+    - save_cache:
+        key: binary-for-anyt-test-{{ .Revision }}
+        paths: /tmp/anycable-go-test
+
+  build_linux:
+    <<: *golang_image
+    working_directory: /go/src/github.com/anycable/anycable-go/
+    environment:
+      CGO_ENABLED: "0"
+      GOOS: linux
+    steps:
+    - attach_workspace:
+        at: /go/src/github.com/anycable/anycable-go/
+    - run:
+        name: Building Linux i386 binary
+        command: env GOARCH=386 go build -ldflags "-X main.version=$(git describe --abbrev=0 --tags)" -a -installsuffix cgo -o "dist/anycable-go-$(git describe --abbrev=0 --tags)-linux-386" cmd/anycable-go/main.go
+    - run:
+        name: Building Linux amd64 binary
+        command: env GOARCH=amd64 go build -ldflags "-X main.version=$(git describe --abbrev=0 --tags)" -a -installsuffix cgo -o "dist/anycable-go-$(git describe --abbrev=0 --tags)-linux-amd64" cmd/anycable-go/main.go
+    - run:
+        name: Building Linux arm binary
+        command: env GOARCH=arm go build -ldflags "-X main.version=$(git describe --abbrev=0 --tags)" -a -installsuffix cgo -o "dist/anycable-go-$(git describe --abbrev=0 --tags)-linux-arm" cmd/anycable-go/main.go
+    - run:
+        name: Building Linux arm binary
+        command: env GOARCH=arm64 go build -ldflags "-X main.version=$(git describe --abbrev=0 --tags)" -a -installsuffix cgo -o "dist/anycable-go-$(git describe --abbrev=0 --tags)-linux-arm64" cmd/anycable-go/main.go
+    - save_cache:
+        key: linux-nomruby-{{ .Revision }}
+        paths: dist/
+
+  build_windows:
+    <<: *golang_image
+    working_directory: /go/src/github.com/anycable/anycable-go/
+    environment:
+      CGO_ENABLED: "0"
+      GOOS: windows
+    steps:
+    - attach_workspace:
+        at: /go/src/github.com/anycable/anycable-go/
+    - run:
+        name: Building Windows i386 binary
+        command: env GOARCH=386 go build -ldflags "-X main.version=$(git describe --abbrev=0 --tags)" -a -installsuffix cgo -o "dist/anycable-go-$(git describe --abbrev=0 --tags)-win-386" cmd/anycable-go/main.go
+    - run:
+        name: Building Windows amd64 binary
+        command: env GOARCH=amd64 go build -ldflags "-X main.version=$(git describe --abbrev=0 --tags)" -a -installsuffix cgo -o "dist/anycable-go-$(git describe --abbrev=0 --tags)-win-amd64" cmd/anycable-go/main.go
+    - save_cache:
+        key: windows-{{ .Revision }}
+        paths: dist/
+
+  build_darwin:
+    <<: *golang_image
+    working_directory: /go/src/github.com/anycable/anycable-go/
+    environment:
+      CGO_ENABLED: "0"
+      GOOS: darwin
+    steps:
+    - attach_workspace:
+        at: /go/src/github.com/anycable/anycable-go/
+    - run:
+        name: Building Darwin i386 binary
+        command: env GOARCH=386 go build -ldflags "-X main.version=$(git describe --abbrev=0 --tags)" -a -installsuffix cgo -o "dist/anycable-go-$(git describe --abbrev=0 --tags)-win-386" cmd/anycable-go/main.go
+    - run:
+        name: Building Darwin amd64 binary
+        command: env GOARCH=amd64 go build -ldflags "-X main.version=$(git describe --abbrev=0 --tags)" -a -installsuffix cgo -o "dist/anycable-go-$(git describe --abbrev=0 --tags)-win-amd64" cmd/anycable-go/main.go
+    - save_cache:
+        key: darwin-nomruby-{{ .Revision }}
+        paths: dist/
+
+  build_freebsd:
+    <<: *golang_image
+    working_directory: /go/src/github.com/anycable/anycable-go/
+    environment:
+      CGO_ENABLED: "0"
+      GOOS: freebsd
+    steps:
+    - attach_workspace:
+        at: /go/src/github.com/anycable/anycable-go/
+    - run:
+        name: Building FreeBSD i386 binary
+        command: env GOARCH=386 go build -ldflags "-X main.version=$(git describe --abbrev=0 --tags)" -a -installsuffix cgo -o "dist/anycable-go-$(git describe --abbrev=0 --tags)-freebsd-386" cmd/anycable-go/main.go
+    - run:
+        name: Building FreeBSD amd64 binary
+        command: env GOARCH=amd64 go build -ldflags "-X main.version=$(git describe --abbrev=0 --tags)" -a -installsuffix cgo -o "dist/anycable-go-$(git describe --abbrev=0 --tags)-freebsd-amd64" cmd/anycable-go/main.go
+    - run:
+        name: Building FreeBSD arm binary
+        command: env GOARCH=arm go build -ldflags "-X main.version=$(git describe --abbrev=0 --tags)" -a -installsuffix cgo -o "dist/anycable-go-$(git describe --abbrev=0 --tags)-freebsd-arm" cmd/anycable-go/main.go
+    - save_cache:
+        key: freebsd-{{ .Revision }}
+        paths: dist/
+
+  build_linux_mruby:
+    <<: *golang_image
+    working_directory: /go/src/github.com/anycable/anycable-go/
+    environment:
+      CGO_ENABLED: "1"
+      GOOS: linux
+      GOARCH: amd64
+    steps:
+    - attach_workspace:
+        at: /go/src/github.com/anycable/anycable-go/
+    - run:
+        name: Building Linux amd64 binary
+        command: env go build -ldflags "-X main.version=$(git describe --abbrev=0 --tags)" -a -installsuffix cgo -o "dist/anycable-go-$(git describe --abbrev=0 --tags)-mrb-linux-amd64" cmd/anycable-go/main.go
+    - save_cache:
+        key: linux-mruby-{{ .Revision }}
+        paths: dist/
+
+  anyt_test:
+    docker:
+    - image: circleci/ruby:2.5.1-stretch
+    - image: circleci/redis:4.0.11-alpine3.8
+    steps:
+    - attach_workspace:
+        at: .
+    - restore_cache:
+        key: binary-for-anyt-test-{{ .Revision }}
+    - run:
+        name: Install gem anyt (conformance testing tool)
+        command: gem install anyt
+    - run:
+        name: Wait for Redis
+        command: dockerize -wait tcp://localhost:6379 -timeout 1m
+    - run: anyt -c "/tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable"
+    - run: anyt -c "/tmp/anycable-go-test --headers=cookie,x-api-token --ssl_key=etc/ssl/server.key --ssl_cert=etc/ssl/server.crt --port=8443" --target-url="wss://localhost:8443/cable"
+
+  build_docker:
+    docker:
+    - image: docker:17.12.1-ce-git
+    steps:
+    - setup_remote_docker:
+        version: 17.11.0-ce
+    - restore_cache:
+        key: linux-nomruby-{{ .Revision }}
+    - restore_cache:
+        key: windows-{{ .Revision }}
+    - restore_cache:
+        key: darwin-nomruby-{{ .Revision }}
+    - restore_cache:
+        key: freebsd-{{ .Revision }}
+    - restore_cache:
+        key: linux-mruby-{{ .Revision }}
+    - run: ls -lah
