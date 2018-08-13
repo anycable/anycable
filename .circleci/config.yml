@@ -6,6 +6,7 @@ workflows:
   test_and_release:
     jobs:
     - prepare_code
+    - build_darwin_mruby
     - prepare_mruby:
         requires:
         - prepare_code
@@ -38,10 +39,12 @@ workflows:
         - go_tests
         - anyt_test
         - build_linux
-        - build_windows
-        - build_darwin
-        - build_freebsd
         - build_linux_mruby
+        filters:
+          tags:
+            only: /^v.*/
+          branches:
+            ignore: /.*/
 
 # YAML Templates
 golang_image: &golang_image
@@ -106,6 +109,25 @@ jobs:
     - save_cache:
         key: binary-for-anyt-test-{{ .Revision }}
         paths: /tmp/anycable-go-test
+
+  build_darwin_mruby:
+    macos:
+      xcode: "10.0.0"
+    environment:
+      GOPATH: /Users/circleci/go
+      CGO_ENABLED: 1
+    working_directory: /Users/circleci/go/src/github.com/anycable/anycable-go/
+    steps:
+    - run: mkdir -p /Users/circleci/go/src/github.com/anycable/anycable-go/
+    - checkout
+    # - install golang
+    # - install dep
+    # - run:
+    #     name: prepare mruby
+    #     command: bash -c "(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)"
+    # - run:
+    #     name: Build Darwin amd64 binary (with mruby)
+    #     command: go build -ldflags "-s -w -X main.version=0.6.0-preview5" -o "dist/anycable-go-mrb-macos-amd64" cmd/anycable-go/main.go
 
   build_linux:
     <<: *golang_image
@@ -229,18 +251,65 @@ jobs:
 
   build_docker:
     docker:
-    - image: docker:17.12.1-ce-git
+    - image: docker:18.06.0-ce
     steps:
     - setup_remote_docker:
-        version: 17.11.0-ce
+        version: 18.06.0-ce
+    - attach_workspace:
+        at: .
     - restore_cache:
         key: linux-nomruby-{{ .Revision }}
-    - restore_cache:
-        key: windows-{{ .Revision }}
-    - restore_cache:
-        key: darwin-nomruby-{{ .Revision }}
-    - restore_cache:
-        key: freebsd-{{ .Revision }}
+    - run:
+        name: Prepare SSL certificates bundle
+        command: cp /etc/ssl/certs/ca-certificates.crt .docker/
+    - run:
+        name: Prepare binary
+        command: cp /go/src/github.com/anycable/anycable-go/anycable-go.*-linux-amd64 .docker/anycable-go-linux-amd64
+    - run:
+        name: Build Docker image
+        command: docker build -f Dockerfile.linux-amd64 -t anycable/anycable-go:${CIRCLE_TAG} ./
+    - run:
+        name: Login to Docker registry
+        command: docker login -u ${DOCKER_USER} -p ${DOCKER_PASS}
+    - run:
+        name: Push Docker image
+        command: docker push anycable/anycable-go:${CIRCLE_TAG}
+
+  build_docker_mruby:
+    docker:
+    - image: docker:18.06.0-ce
+    steps:
+    - setup_remote_docker:
+        version: 18.06.0-ce
+    - attach_workspace:
+        at: .
     - restore_cache:
         key: linux-mruby-{{ .Revision }}
-    - run: ls -lah
+    - run:
+        name: Prepare binary
+        command: cp /go/src/github.com/anycable/anycable-go/anycable-go.*-mrb-linux-amd64 .docker/anycable-go-mrb-linux-amd64
+    - run:
+        name: Build Docker image
+        command: docker build -f Dockerfile.mrb-linux-amd64 -t anycable/anycable-go:${CIRCLE_TAG}-mrb ./
+    - run:
+        name: Login to Docker registry
+        command: docker login -u ${DOCKER_USER} -p ${DOCKER_PASS}
+    - run:
+        name: Push Docker image
+        command: docker push anycable/anycable-go:${CIRCLE_TAG}-mrb
+
+  # github_release:
+  #   docker:
+  #   - image: WAT?
+  #   steps:
+  #   - restore_cache:
+  #       key: linux-nomruby-{{ .Revision }}
+  #   - restore_cache:
+  #       key: windows-{{ .Revision }}
+  #   - restore_cache:
+  #       key: darwin-nomruby-{{ .Revision }}
+  #   - restore_cache:
+  #       key: freebsd-{{ .Revision }}
+  #   - restore_cache:
+  #       key: linux-mruby-{{ .Revision }}
+  #   - run: ls -lah
