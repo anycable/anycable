@@ -114,20 +114,31 @@ jobs:
     macos:
       xcode: "10.0.0"
     environment:
-      GOPATH: /Users/circleci/go
+      GOPATH: /Users/distiller/go
       CGO_ENABLED: 1
-    working_directory: /Users/circleci/go/src/github.com/anycable/anycable-go/
+      GOARCH: amd64
+    working_directory: /Users/distiller/go/src/github.com/anycable/anycable-go/
     steps:
-    - run: mkdir -p /Users/circleci/go/src/github.com/anycable/anycable-go/
+    - run: mkdir -p /Users/distiller/go/src/github.com/anycable/anycable-go/
     - checkout
-    # - install golang
-    # - install dep
-    # - run:
-    #     name: prepare mruby
-    #     command: bash -c "(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)"
-    # - run:
-    #     name: Build Darwin amd64 binary (with mruby)
-    #     command: go build -ldflags "-s -w -X main.version=0.6.0-preview5" -o "dist/anycable-go-mrb-macos-amd64" cmd/anycable-go/main.go
+    - run:
+        name: Installing Golang
+        command: |
+          curl -o go.pkg https://dl.google.com/go/go1.10.3.darwin-amd64.pkg
+          echo "6ea2b88dd10fa7efe4c68fcf990162475020fdb1789e0fa03b470fbddc1600c4  go.pkg" | shasum -a 256 -c -
+          sudo installer -pkg go.pkg -target /
+    - run:
+        name: Prepare code for the build
+        command: |
+          /usr/local/go/bin/go get -u github.com/golang/dep/cmd/dep
+          /Users/distiller/go/bin/dep ensure
+          bash -c "(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)"
+    - run:
+        name: Build Darwin amd64 binary (with mruby)
+        command: /usr/local/go/bin/go build -ldflags "-s -w -X main.version=0.6.0-preview5" -o "dist/anycable-go-$(git describe --abbrev=0 --tags)-mrb-dawrin-amd64" cmd/anycable-go/main.go
+    - save_cache:
+        key: darwin-mruby-{{ .Revision }}
+        paths: dist/
 
   build_linux:
     <<: *golang_image
@@ -261,7 +272,7 @@ jobs:
         key: linux-nomruby-{{ .Revision }}
     - run:
         name: Prepare SSL certificates bundle
-        command: cp /etc/ssl/certs/ca-certificates.crt .docker/
+        command: cp /etc/ssl/certs/ca-certificates.crt ./.docker/ca-certificates.crt
     - run:
         name: Prepare binary
         command: cp /go/src/github.com/anycable/anycable-go/anycable-go.*-linux-amd64 .docker/anycable-go-linux-amd64
