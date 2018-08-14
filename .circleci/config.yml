@@ -10,7 +10,7 @@ ruby_image: &ruby_image
   - image: circleci/ruby:2.5.1-stretch
 
 github_release_requires: &github_release_requires
-  require:
+  requires:
   - anyt_test
   - build_darwin
   - build_darwin_mruby
@@ -21,28 +21,9 @@ github_release_requires: &github_release_requires
   - go_tests
 
 requires_prepared_code: &requires_prepared_code
-  require:
+  requires:
   - prepare_code
 
-release_steps: &release_steps
-- restore_cache:
-    key: darwin-mruby-{{ .Revision }}
-- restore_cache:
-    key: darwin-nomruby-{{ .Revision }}
-- restore_cache:
-    key: linux-mruby-{{ .Revision }}
-- restore_cache:
-    key: linux-nomruby-{{ .Revision }}
-- restore_cache:
-    key: freebsd-{{ .Revision }}
-- restore_cache:
-    key: windows-{{ .Revision }}
-- run:
-    name: Generate SHA256 checksums
-    command: sha256sum anycable-go-* > SHA256SUM
-- run:
-    name: Install ghr tool
-    command: go get github.com/tcnksm/ghr
 
 # Workflow definition
 workflows:
@@ -357,7 +338,24 @@ jobs:
     <<: *golang_image
     working_directory: /go/src/github.com/anycable/anycable-go/dist/
     steps:
-    - *release_steps
+    - restore_cache:
+        key: darwin-mruby-{{ .Revision }}
+    - restore_cache:
+        key: darwin-nomruby-{{ .Revision }}
+    - restore_cache:
+        key: linux-mruby-{{ .Revision }}
+    - restore_cache:
+        key: linux-nomruby-{{ .Revision }}
+    - restore_cache:
+        key: freebsd-{{ .Revision }}
+    - restore_cache:
+        key: windows-{{ .Revision }}
+    - run:
+        name: Generate SHA256 checksums
+        command: sha256sum anycable-go-* > SHA256SUM
+    - run:
+        name: Install ghr tool
+        command: go get github.com/tcnksm/ghr
     - run:
         name: Upload GitHub release
         command: ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -delete ${CIRCLE_TAG} ./
@@ -366,7 +364,24 @@ jobs:
     <<: *golang_image
     working_directory: /go/src/github.com/anycable/anycable-go/dist/
     steps:
-    - *release_steps
+    - restore_cache:
+        key: darwin-mruby-{{ .Revision }}
+    - restore_cache:
+        key: darwin-nomruby-{{ .Revision }}
+    - restore_cache:
+        key: linux-mruby-{{ .Revision }}
+    - restore_cache:
+        key: linux-nomruby-{{ .Revision }}
+    - restore_cache:
+        key: freebsd-{{ .Revision }}
+    - restore_cache:
+        key: windows-{{ .Revision }}
+    - run:
+        name: Generate SHA256 checksums
+        command: sha256sum anycable-go-* > SHA256SUM
+    - run:
+        name: Install ghr tool
+        command: go get github.com/tcnksm/ghr
     - run:
         name: Upload GitHub release
         command: ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -prerelease -delete ${CIRCLE_TAG} ./
