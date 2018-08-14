@@ -1,5 +1,50 @@
 version: 2
 
+# YAML Templates
+golang_image: &golang_image
+  docker:
+  - image: circleci/golang:1.10.3-stretch
+
+ruby_image: &ruby_image
+  docker:
+  - image: circleci/ruby:2.5.1-stretch
+
+github_release_requires: &github_release_requires
+  require:
+  - anyt_test
+  - build_darwin
+  - build_darwin_mruby
+  - build_freebsd
+  - build_linux
+  - build_linux_mruby
+  - build_windows
+  - go_tests
+
+requires_prepared_code: &requires_prepared_code
+  require:
+  - prepare_code
+
+release_steps: &release_steps
+- restore_cache:
+    key: darwin-mruby-{{ .Revision }}
+- restore_cache:
+    key: darwin-nomruby-{{ .Revision }}
+- restore_cache:
+    key: linux-mruby-{{ .Revision }}
+- restore_cache:
+    key: linux-nomruby-{{ .Revision }}
+- restore_cache:
+    key: freebsd-{{ .Revision }}
+- restore_cache:
+    key: windows-{{ .Revision }}
+- run:
+    name: Generate SHA256 checksums
+    command: sha256sum anycable-go-* > SHA256SUM
+- run:
+    name: Install ghr tool
+    command: go get github.com/tcnksm/ghr
+
+# Workflow definition
 workflows:
   version: 2
 
@@ -8,26 +53,20 @@ workflows:
     - prepare_code
     - build_darwin_mruby
     - prepare_mruby:
-        requires:
-        - prepare_code
+        <<: *requires_prepared_code
     - go_tests:
         requires:
         - prepare_mruby
     - build_binary_for_anyt_test:
-        requires:
-        - prepare_code
+        <<: *requires_prepared_code
     - build_linux:
-        requires:
-        - prepare_code
+        <<: *requires_prepared_code
     - build_windows:
-        requires:
-        - prepare_code
+        <<: *requires_prepared_code
     - build_darwin:
-        requires:
-        - prepare_code
+        <<: *requires_prepared_code
     - build_freebsd:
-        requires:
-        - prepare_code
+        <<: *requires_prepared_code
     - build_linux_mruby:
         requires:
         - prepare_mruby
@@ -45,15 +84,20 @@ workflows:
             only: /^v.*/
           branches:
             ignore: /.*/
-
-# YAML Templates
-golang_image: &golang_image
-  docker:
-  - image: circleci/golang:1.10.3-stretch
-
-ruby_image: &ruby_image
-  docker:
-  - image: circleci/ruby:2.5.1-stretch
+    - github_release:
+        <<: *github_release_requires
+        filters:
+          tags:
+            only: /^v[0-9]+\.[0-9]+\.[0-9]+$/
+          branches:
+            ignore: /.*/
+    - github_release_preview:
+        <<: *github_release_requires
+        filters:
+          tags:
+            only: /^v[0-9]+\.[0-9]+\.[0-9]+-preview.*$/
+          branches:
+            ignore: /.*/
 
 # Jobs definitions
 jobs:
@@ -309,18 +353,20 @@ jobs:
         name: Push Docker image
         command: docker push anycable/anycable-go:${CIRCLE_TAG}-mrb
 
-  # github_release:
-  #   docker:
-  #   - image: WAT?
-  #   steps:
-  #   - restore_cache:
-  #       key: linux-nomruby-{{ .Revision }}
-  #   - restore_cache:
-  #       key: windows-{{ .Revision }}
-  #   - restore_cache:
-  #       key: darwin-nomruby-{{ .Revision }}
-  #   - restore_cache:
-  #       key: freebsd-{{ .Revision }}
-  #   - restore_cache:
-  #       key: linux-mruby-{{ .Revision }}
-  #   - run: ls -lah
+  github_release:
+    <<: *golang_image
+    working_directory: /go/src/github.com/anycable/anycable-go/dist/
+    steps:
+    - *release_steps
+    - run:
+        name: Upload GitHub release
+        command: ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -delete ${CIRCLE_TAG} ./
+
+  github_release_preview:
+    <<: *golang_image
+    working_directory: /go/src/github.com/anycable/anycable-go/dist/
+    steps:
+    - *release_steps
+    - run:
+        name: Upload GitHub release
+        command: ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -prerelease -delete ${CIRCLE_TAG} ./
