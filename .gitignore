@@ -25,7 +25,7 @@
 Thumbs.db
 
 .bundle/
-.docker/
+.docker/*.crt
 log/*.log
 *.gz
 
