@@ -19,5 +19,7 @@ class TestLogger
     define_method severity.downcase do |msg|
       @store[severity.downcase] << msg
     end
+
+    define_method("#{severity.downcase}?") { true }
   end
 end
