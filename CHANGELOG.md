@@ -2,6 +2,8 @@
 
 ## master
 
+- [#48](https://github.com/anycable/anycable/pull/48) Add HTTP health server ([@DarthSim](https://github.com/DarthSim))
+
 ## 0.5.1 (2018-06-13)
 
 Minor fixes.
