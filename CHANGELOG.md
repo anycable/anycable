@@ -2,7 +2,9 @@
 
 ## master
 
-- [#48](https://github.com/anycable/anycable/pull/48) Add HTTP health server ([@DarthSim](https://github.com/DarthSim))
+## 0.5.2 (2018-09-06)
+
+- [#48](https://github.com/anycable/anycable/pull/48) Add HTTP health server ([@DarthSim][])
 
 ## 0.5.1 (2018-06-13)
 
@@ -10,7 +12,7 @@ Minor fixes.
 
 ## 0.5.0 (2017-10-21)
 
-- [#2](https://github.com/anycable/anycable/issues/2) Add support for [Redis Sentinel](https://redis.io/topics/sentinel). ([@accessd](https://github.com/accessd))
+- [#2](https://github.com/anycable/anycable/issues/2) Add support for [Redis Sentinel](https://redis.io/topics/sentinel). ([@accessd][])
 
 - [#28](https://github.com/anycable/anycable/issues/28) Support arbitrary headers. ([@palkan][])
 
@@ -93,3 +95,5 @@ Implement `Disconnect` handler, which invokes `Connection#disconnect` (along wit
 
 [@palkan]: https://github.com/palkan
 [@sadovnik]: https://github.com/sadovnik
+[@accessd]: https://github.com/accessd
+[@DarthSim]: https://github.com/DarthSim
