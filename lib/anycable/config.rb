@@ -21,6 +21,7 @@ module Anycable
       super
       # Set log params if debug is true
       return unless debug
+
       self.log_level = :debug
       self.log_grpc = true
     end
