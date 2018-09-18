@@ -18,6 +18,7 @@ module Anycable
 
       def stop
         return unless running?
+
         @health_server.shutdown
       end
 

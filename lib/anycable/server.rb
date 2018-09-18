@@ -19,6 +19,7 @@ module Anycable
 
       def stop
         return unless running?
+
         @grpc_server.stop
       end
 
@@ -51,6 +52,7 @@ module Anycable
 
       def start_http_health_server
         return unless Anycable.config.http_health_port_provided?
+
         Anycable::HealthServer.start(Anycable.config.http_health_port)
         at_exit { Anycable::HealthServer.stop }
       end
