@@ -1,4 +1,4 @@
-// +build darwin,cgo linux,cgo
+// +build darwin,mrb linux,mrb
 
 package mrb
 

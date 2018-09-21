@@ -1,4 +1,4 @@
-// +build darwin
+// +build darwin,mrb linux,mrb
 
 package mrb
 

@@ -10,6 +10,7 @@ import (
 	"github.com/anycable/anycable-go/cli"
 	"github.com/anycable/anycable-go/config"
 	"github.com/anycable/anycable-go/metrics"
+	"github.com/anycable/anycable-go/mrb"
 	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/pubsub"
 	"github.com/anycable/anycable-go/rpc"
@@ -27,6 +28,10 @@ var (
 func init() {
 	if version == "" {
 		version = "0.6.0-unknown"
+
+		if mrb.Supported() {
+			version = version + "-mrb"
+		}
 	}
 }
 
