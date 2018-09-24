@@ -293,12 +293,14 @@ func (n *Node) Disconnect(s *Session) {
 
 // DisconnectNow execute disconnect on controller
 func (n *Node) DisconnectNow(s *Session) error {
-	s.Log.Debugf("Disconnect %s %s %v %v", s.Identifiers, s.path, s.headers, s.subscriptions)
+	sessionSubscriptions := subscriptionsList(s.subscriptions)
+
+	s.Log.Debugf("Disconnect %s %s %v %v", s.Identifiers, s.path, s.headers, sessionSubscriptions)
 
 	err := n.controller.Disconnect(
 		s.UID,
 		s.Identifiers,
-		subscriptionsList(s.subscriptions),
+		sessionSubscriptions,
 		s.path,
 		&s.headers,
 	)
