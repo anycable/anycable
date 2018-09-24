@@ -212,3 +212,23 @@ func TestSubscriptionsList(t *testing.T) {
 		assert.Contains(t, actual, key)
 	}
 }
+
+func TestSubscriptionsListWithSameChannel(t *testing.T) {
+	subscriptions := map[string]bool{
+		"{\"channel\":\"GraphqlChannel\",\"channelId\":\"165d8949069\"}": true,
+		"{\"channel\":\"GraphqlChannel\",\"channelId\":\"165d8941e62\"}": true,
+		"{\"channel\":\"GraphqlChannel\",\"channelId\":\"165d8942db1\"}": true,
+	}
+
+	expected := []string{
+		"{\"channel\":\"GraphqlChannel\",\"channelId\":\"165d8949069\"}",
+		"{\"channel\":\"GraphqlChannel\",\"channelId\":\"165d8941e62\"}",
+		"{\"channel\":\"GraphqlChannel\",\"channelId\":\"165d8942db1\"}",
+	}
+
+	actual := subscriptionsList(subscriptions)
+
+	for _, key := range expected {
+		assert.Contains(t, actual, key)
+	}
+}
