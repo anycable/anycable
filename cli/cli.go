@@ -44,7 +44,7 @@ func init() {
 	}
 
 	// Config vars
-	fs.StringVar(&defaults.RPCHost, "rpc_host", "0.0.0.0:50051", "")
+	fs.StringVar(&defaults.RPCHost, "rpc_host", "localhost:50051", "")
 	fs.StringVar(&defaults.RedisURL, "redis_url", redisDefault, "")
 	fs.StringVar(&defaults.RedisChannel, "redis_channel", "__anycable__", "")
 	fs.StringVar(&defaults.Host, "host", "0.0.0.0", "")
@@ -113,7 +113,7 @@ The flags are:
   --redis_url              Redis url, default: redis://localhost:6379/5, env: ANYCABLE_REDIS_URL, REDIS_URL
   --redis_channel          Redis channel for broadcasts, default: __anycable__, env: ANYCABLE_REDIS_CHANNEL
 
-  --rpc_host               RPC service address, default: 0.0.0.0:50051, env: ANYCABLE_RPC_HOST
+  --rpc_host               RPC service address, default: localhost:50051, env: ANYCABLE_RPC_HOST
   --headers                List of headers to proxy to RPC, default: cookie, env: ANYCABLE_HEADERS
   --disconnect_rate        Max number of Disconnect calls per second, default: 100, env: ANYCABLE_DISCONNECT_RATE
 
