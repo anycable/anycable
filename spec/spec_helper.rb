@@ -10,6 +10,10 @@ if ENV['COVER']
 end
 
 ENV['ANYCABLE_CONF'] = File.join(File.dirname(__FILE__), "support/anycable.yml")
+
+# TEMP! remove after upgrading anyway_config
+ENV['ANYCABLE_RPC_HOST'] = "localhost:50123"
+
 require "anycable"
 require "json"
 require "rack"

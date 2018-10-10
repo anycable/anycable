@@ -13,11 +13,9 @@ describe Anycable::Config do
   end
 
   it "loads config vars from anycable.yml", :aggregate_failures do
-    expect(config.rpc_host).to eq "localhost:50123"
-    expect(config.redis_url).to eq "redis://localhost:6379/2"
-    expect(config.redis_sentinels).to eq sentinel_config
-    # default value
-    expect(config.redis_channel).to eq "__anycable__"
+    expect(config.rpc.host).to eq "localhost:50123"
+    # FIXME: add a separate config
+    # expect(config.redis_channel).to eq "__anycable__"
     expect(config.log_level).to eq :info
     expect(config.log_grpc).to eq false
   end

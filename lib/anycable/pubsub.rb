@@ -3,22 +3,21 @@
 require "redis"
 require "json"
 
+require "anycable/config/redis"
+
 module Anycable
   # PubSub for broadcasting
   class PubSub
-    attr_reader :redis_conn
+    attr_reader :redis_conn, :config
 
-    def initialize
-      redis_config = { url: Anycable.config.redis_url }
-      unless Anycable.config.redis_sentinels.empty?
-        redis_config[:sentinels] = Anycable.config.redis_sentinels
-      end
-      @redis_conn = Redis.new(redis_config)
+    def initialize(config = RedisConfig.new)
+      @config = config
+      @redis_conn = Redis.new(config.to_redis_params)
     end
 
     def broadcast(channel, payload)
       redis_conn.publish(
-        Anycable.config.redis_channel,
+        config.channel,
         { stream: channel, data: payload }.to_json
       )
     end

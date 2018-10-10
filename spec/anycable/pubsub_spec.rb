@@ -3,25 +3,23 @@
 require 'spec_helper'
 
 describe Anycable::PubSub do
-  let(:config) { Anycable.config }
-  subject { described_class.new }
-
-  after { Anycable.config.reload }
+  let(:config) { RedisConfig.new }
+  subject { described_class.new(config) }
 
   context "with sentinel" do
+    let(:config) { Anycable::RedisConfig.new(overrides: { url: "localhost:4310/0", sentinels: [{ host: "redis-1", port: 26_379 }, { host: "redis-12", port: 26_380 }] }) }
+
     it do
-      expect(Redis).to receive(:new).with(url: config.redis_url, sentinels: config.redis_sentinels)
+      expect(Redis).to receive(:new).with(url: "localhost:4310/0", sentinels: [{ host: "redis-1", port: 26_379 }, { host: "redis-12", port: 26_380 }])
       subject
     end
   end
 
   context "without sentinel" do
-    before do
-      Anycable.config.redis_sentinels = []
-    end
+    let(:config) { Anycable::RedisConfig.new(overrides: { url: "localhost:4310/0", sentinels: [] }) }
 
     it do
-      expect(Redis).to receive(:new).with(url: config.redis_url)
+      expect(Redis).to receive(:new).with(url: "localhost:4310/0")
       subject
     end
   end
