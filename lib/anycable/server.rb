@@ -20,22 +20,31 @@ module Anycable
   class Server
     class << self
       # TODO: deprecate me
-      # rubocop:disable Metrics/AbcSize
+      # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
       def start(**options)
         log_grpc! if Anycable.config.log_grpc
 
         server = new(host: Anycable.config.rpc_host, **Anycable.config.to_grpc_params, **options)
 
-        Anycable::HealthServer.start(server, Anycable.config.http_health_port)
+        if Anycable.config.http_health_port_provided?
+          health_server = Anycable::HealthServer.new(
+            server,
+            **Anycable.config.to_http_health_params
+          )
+          health_server.start
+        end
 
-        at_exit { server.stop }
+        at_exit do
+          server.stop
+          health_server&.stop
+        end
 
         Anycable.logger.info "Broadcasting Redis channel: #{Anycable.config.redis_channel}"
 
         server.start
         server.wait_till_terminated
       end
-      # rubocop:enable Metrics/AbcSize
+      # rubocop:enable Metrics/AbcSize, Metrics/MethodLength
 
       # FIXME: move out of server
       def log_grpc!

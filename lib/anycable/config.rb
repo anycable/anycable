@@ -31,7 +31,8 @@ module Anycable
       debug: false, # Shortcut to enable GRPC logging and debug level
 
       ### Health check options
-      http_health_port: nil
+      http_health_port: nil,
+      http_health_path: "/health"
     )
 
     def initialize(*)
@@ -63,6 +64,14 @@ module Anycable
       { url: redis_url }.tap do |params|
         params[:sentinels] = redis_sentinels unless redis_sentinels.empty?
       end
+    end
+
+    # Build HTTP health server parameters
+    def to_http_health_params
+      {
+        port: http_health_port,
+        path: http_health_path
+      }
     end
   end
 end

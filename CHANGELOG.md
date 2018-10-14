@@ -17,6 +17,7 @@ AnyCable.configure do |config|
 end
 ```
 - `REDIS_URL` env is used by default if present (and no `ANYCABLE_REDIS_URL` specified)
+- Make HTTP health check url configurable
 ```
 
 ## 0.5.2 (2018-09-06)
