@@ -2,6 +2,24 @@
 
 ## master
 
+## 0.6.0-dev
+
+#### Configuration
+
+- Default server host is changed from `localhost:50051` to `0.0.0.0:50051`
+- Expose gRPC server parameters via `rpc_*` config params:
+
+```ruby
+AnyCable.configure do |config|
+  config.rpc_pool_size = 120
+  config.rpc_max_waiting_requests = 10
+  # etc
+end
+```
+- `REDIS_URL` env is used by default if present (and no `ANYCABLE_REDIS_URL` specified)
+- Make HTTP health check url configurable
+```
+
 ## 0.5.2 (2018-09-06)
 
 - [#48](https://github.com/anycable/anycable/pull/48) Add HTTP health server ([@DarthSim][])

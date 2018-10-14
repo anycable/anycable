@@ -10,6 +10,7 @@ if ENV['COVER']
 end
 
 ENV['ANYCABLE_CONF'] = File.join(File.dirname(__FILE__), "support/anycable.yml")
+
 require "anycable"
 require "json"
 require "rack"

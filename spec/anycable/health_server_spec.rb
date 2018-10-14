@@ -6,7 +6,7 @@ require "net/http"
 
 describe "health server" do
   context "when server is running" do
-    before { allow(Anycable::Server).to receive(:running?).and_return(true) }
+    before { allow_any_instance_of(Anycable::Server).to receive(:running?).and_return(true) }
 
     it "responds with 200" do
       res = Net::HTTP.get_response(URI("http://localhost:#{Anycable.config.http_health_port}/health"))
@@ -15,7 +15,7 @@ describe "health server" do
   end
 
   context "when server is not running" do
-    before { allow(Anycable::Server).to receive(:running?).and_return(false) }
+    before { allow_any_instance_of(Anycable::Server).to receive(:running?).and_return(false) }
 
     it "responds with 200" do
       res = Net::HTTP.get_response(URI("http://localhost:#{Anycable.config.http_health_port}/health"))

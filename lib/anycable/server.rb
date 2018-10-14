@@ -5,56 +5,110 @@ require 'anycable/rpc_handler'
 require 'anycable/health_server'
 
 module Anycable
-  # Wrapper over GRPC server
-  module Server
+  # Wrapper over gRPC server.
+  #
+  # Basic example:
+  #
+  #   # create new server listening on 0.0.0.0:50051 (default host)
+  #   server = Anycable::Server.new(host: "0.0.0.0:50051")
+  #
+  #   # run gRPC server in bakground
+  #   server.start
+  #
+  #   # stop server
+  #   server.stop
+  class Server
     class << self
-      attr_reader :grpc_server
-
-      def start
+      # TODO: deprecate me
+      # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
+      def start(**options)
         log_grpc! if Anycable.config.log_grpc
 
-        start_http_health_server
-        start_grpc_server
+        server = new(host: Anycable.config.rpc_host, **Anycable.config.to_grpc_params, **options)
+
+        if Anycable.config.http_health_port_provided?
+          health_server = Anycable::HealthServer.new(
+            server,
+            **Anycable.config.to_http_health_params
+          )
+          health_server.start
+        end
+
+        at_exit do
+          server.stop
+          health_server&.stop
+        end
+
+        Anycable.logger.info "Broadcasting Redis channel: #{Anycable.config.redis_channel}"
+
+        server.start
+        server.wait_till_terminated
       end
+      # rubocop:enable Metrics/AbcSize, Metrics/MethodLength
 
-      def stop
-        return unless running?
-
-        @grpc_server.stop
-      end
-
-      def running?
-        grpc_server&.running_state == :running
-      end
-
-      # Enable GRPC logging
+      # FIXME: move out of server
       def log_grpc!
         GRPC.define_singleton_method(:logger) { Anycable.logger }
       end
+    end
 
-      private
+    DEFAULT_HOST = "0.0.0.0:50051"
 
-      def start_grpc_server
-        @grpc_server ||= build_server
+    attr_reader :grpc_server, :host
 
-        Anycable.logger.info "RPC server is listening on #{Anycable.config.rpc_host}"
-        Anycable.logger.info "Broadcasting Redis channel: #{Anycable.config.redis_channel}"
+    def initialize(host: DEFAULT_HOST, logger: Anycable.logger, **options)
+      @logger = logger
+      @host = host
+      @grpc_server = build_server(options)
+    end
 
-        grpc_server.run_till_terminated
-      end
+    # Start gRPC server in background and
+    # wait untill it ready to accept connections
+    def start
+      return if running?
 
-      def build_server
-        GRPC::RpcServer.new.tap do |server|
-          server.add_http2_port(Anycable.config.rpc_host, :this_port_is_insecure)
-          server.handle(Anycable::RPCHandler)
-        end
-      end
+      raise "Cannot re-start stopped server" if stopped?
 
-      def start_http_health_server
-        return unless Anycable.config.http_health_port_provided?
+      logger.info "RPC server is starting..."
 
-        Anycable::HealthServer.start(Anycable.config.http_health_port)
-        at_exit { Anycable::HealthServer.stop }
+      @start_thread = Thread.new { grpc_server.run }
+
+      grpc_server.wait_till_running
+
+      logger.info "RPC server is listening on #{host}"
+    end
+
+    def wait_till_terminated
+      raise "Server is not running" unless running?
+
+      start_thread.join
+    end
+
+    # Stop gRPC server if it's running
+    def stop
+      return unless running?
+
+      grpc_server.stop
+
+      logger.info "RPC server stopped"
+    end
+
+    def running?
+      grpc_server.running_state == :running
+    end
+
+    def stopped?
+      grpc_server.running_state == :stopped
+    end
+
+    private
+
+    attr_reader :logger, :start_thread
+
+    def build_server(options)
+      GRPC::RpcServer.new(options).tap do |server|
+        server.add_http2_port(host, :this_port_is_insecure)
+        server.handle(Anycable::RPCHandler)
       end
     end
   end

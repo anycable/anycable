@@ -9,11 +9,7 @@ module Anycable
     attr_reader :redis_conn
 
     def initialize
-      redis_config = { url: Anycable.config.redis_url }
-      unless Anycable.config.redis_sentinels.empty?
-        redis_config[:sentinels] = Anycable.config.redis_sentinels
-      end
-      @redis_conn = Redis.new(redis_config)
+      @redis_conn = Redis.new(Anycable.config.to_redis_params)
     end
 
     def broadcast(channel, payload)
