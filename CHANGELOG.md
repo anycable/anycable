@@ -7,35 +7,16 @@
 #### Configuration
 
 - Default server host is changed from `localhost:50051` to `0.0.0.0:50051`
-- Expose gRPC server parameters via `rpc` sub-config:
+- Expose gRPC server parameters via `rpc_*` config params:
 
 ```ruby
 AnyCable.configure do |config|
-  config.rpc.pool_size = 120
-  config.rpc.max_waiting_requests = 10
+  config.rpc_pool_size = 120
+  config.rpc_max_waiting_requests = 10
   # etc
 end
 ```
-
-- Redis config is extracted into a separate class (`AnyCable::RedisConfig`)
 - `REDIS_URL` env is used by default if present (and no `ANYCABLE_REDIS_URL` specified)
-- \[WIP\] YAML config new format:
-
-```yml
-rpc:
-  host: 0.0.0.0:51345
-  pool_size: 30
-  # ...
-pubsub:
-  adapter: redis
-  options:
-    url: "redis://localhost:6379/2"
-    sentinels:
-      # TODO: passing objects through anyway_config env??
-      - { host: 'redis-1-1', port: 26379 }
-      - { host: 'redis-1-2', port: 26379 }
-      - { host: 'redis-1-3', port: 26379 }
-http_health_port: 54321
 ```
 
 ## 0.5.2 (2018-09-06)

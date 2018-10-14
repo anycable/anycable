@@ -37,15 +37,15 @@ module Anycable
       def start_grpc_server
         @grpc_server ||= build_server
 
-        Anycable.logger.info "RPC server is listening on #{Anycable.config.rpc.host}"
-        Anycable.logger.info "Broadcasting Redis channel: #{Anycable.pubsub.config.channel}"
+        Anycable.logger.info "RPC server is listening on #{Anycable.config.rpc_host}"
+        Anycable.logger.info "Broadcasting Redis channel: #{Anycable.config.redis_channel}"
 
         grpc_server.run_till_terminated
       end
 
       def build_server
-        GRPC::RpcServer.new(Anycable.config.rpc.to_grpc_params).tap do |server|
-          server.add_http2_port(Anycable.config.rpc.host, :this_port_is_insecure)
+        GRPC::RpcServer.new(Anycable.config.to_grpc_params).tap do |server|
+          server.add_http2_port(Anycable.config.rpc_host, :this_port_is_insecure)
           server.handle(Anycable::RPCHandler)
         end
       end
