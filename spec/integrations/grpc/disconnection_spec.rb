@@ -1,9 +1,8 @@
 # frozen_string_literal: true
 
 require "spec_helper"
-require "bg_helper"
 
-describe "disconnection", :rpc_command do
+describe "disconnection", :with_grpc_server, :rpc_command do
   include_context "rpc stub"
 
   let(:user) { 'disco' }

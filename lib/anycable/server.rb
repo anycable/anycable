@@ -9,8 +9,8 @@ module Anycable
   #
   # Basic example:
   #
-  #   # create new server listening on 0.0.0.0:50051 (default host)
-  #   server = Anycable::Server.new(host: "0.0.0.0:50051")
+  #   # create new server listening on [::]:50051 (default host)
+  #   server = Anycable::Server.new(host: "[::]:50051")
   #
   #   # run gRPC server in bakground
   #   server.start

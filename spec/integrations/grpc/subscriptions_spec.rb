@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "spec_helper"
-require "bg_helper"
 
 class TestSubscriptionsChannel < Anycable::TestFactory::Channel
   def handle_subscribe
@@ -27,7 +26,7 @@ end
 
 Anycable::TestFactory.register_channel 'test_subscriptions', TestSubscriptionsChannel
 
-describe "subscriptions", :rpc_command do
+describe "subscriptions", :with_grpc_server, :rpc_command do
   include_context "rpc stub"
 
   let(:channel) { 'test_subscriptions' }

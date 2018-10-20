@@ -1,9 +1,8 @@
 # frozen_string_literal: true
 
 require "spec_helper"
-require "bg_helper"
 
-describe "client connection" do
+describe "client connection", :with_grpc_server do
   include_context "rpc stub"
 
   subject { service.connect(request) }

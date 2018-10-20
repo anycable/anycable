@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "spec_helper"
-require "bg_helper"
 
 class TestPerformChannel < Anycable::TestFactory::Channel
   def follow(*)
@@ -16,7 +15,7 @@ end
 
 Anycable::TestFactory.register_channel 'test_perform', TestPerformChannel
 
-describe "client messages", :rpc_command do
+describe "client messages", :with_grpc_server, :rpc_command do
   include_context "rpc stub"
 
   let(:channel) { 'test_perform' }
