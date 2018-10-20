@@ -19,9 +19,9 @@ describe "client connection", :with_grpc_server do
     let(:request) do
       Anycable::ConnectionRequest.new(
         headers: {
-          'Cookie' => 'username=john;'
+          "Cookie" => "username=john;"
         },
-        path: 'http://example.io/cable?token=123'
+        path: "http://example.io/cable?token=123"
       )
     end
 
@@ -29,11 +29,11 @@ describe "client connection", :with_grpc_server do
       expect(subject.status).to eq :SUCCESS
       identifiers = JSON.parse(subject.identifiers)
       expect(identifiers).to include(
-        'current_user' => 'john',
-        'path' => '/cable',
-        'token' => '123'
+        "current_user" => "john",
+        "path" => "/cable",
+        "token" => "123"
       )
-      expect(subject.transmissions.first).to eq JSON.dump('type' => 'welcome')
+      expect(subject.transmissions.first).to eq JSON.dump("type" => "welcome")
     end
   end
 
@@ -41,11 +41,11 @@ describe "client connection", :with_grpc_server do
     let(:request) do
       Anycable::ConnectionRequest.new(
         headers: {
-          'cookie' => 'username=john;',
-          'x-api-token' => 'abc123',
-          'X-Forwarded-For' => '1.2.3.4'
+          "cookie" => "username=john;",
+          "x-api-token" => "abc123",
+          "X-Forwarded-For" => "1.2.3.4"
         },
-        path: 'http://example.io/cable'
+        path: "http://example.io/cable"
       )
     end
 
@@ -53,10 +53,10 @@ describe "client connection", :with_grpc_server do
       expect(subject.status).to eq :SUCCESS
       identifiers = JSON.parse(subject.identifiers)
       expect(identifiers).to include(
-        'token' => 'abc123',
-        'remote_ip' => '1.2.3.4'
+        "token" => "abc123",
+        "remote_ip" => "1.2.3.4"
       )
-      expect(subject.transmissions.first).to eq JSON.dump('type' => 'welcome')
+      expect(subject.transmissions.first).to eq JSON.dump("type" => "welcome")
     end
   end
 end

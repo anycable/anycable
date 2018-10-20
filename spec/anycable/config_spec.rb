@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'spec_helper'
+require "spec_helper"
 
 describe Anycable::Config do
   subject(:config) { Anycable.config }
@@ -13,7 +13,7 @@ describe Anycable::Config do
   end
 
   context "when DEBUG is set" do
-    around { |ex| with_env('ANYCABLE_DEBUG' => '1', &ex) }
+    around { |ex| with_env("ANYCABLE_DEBUG" => "1", &ex) }
 
     subject(:config) { described_class.new }
 

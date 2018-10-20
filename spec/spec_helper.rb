@@ -2,14 +2,14 @@
 
 require "pry-byebug"
 
-if ENV['COVER']
-  require 'simplecov'
-  SimpleCov.root File.join(File.dirname(__FILE__), '..')
+if ENV["COVER"]
+  require "simplecov"
+  SimpleCov.root File.join(File.dirname(__FILE__), "..")
   SimpleCov.add_filter "/spec/"
   SimpleCov.start
 end
 
-ENV['ANYCABLE_CONF'] = File.join(File.dirname(__FILE__), "support/anycable.yml")
+ENV["ANYCABLE_CONF"] = File.join(File.dirname(__FILE__), "support/anycable.yml")
 
 require "anycable"
 require "json"
@@ -20,14 +20,14 @@ Dir["#{File.dirname(__FILE__)}/support/**/*.rb"].each { |f| require f }
 Anycable.connection_factory = Anycable::TestFactory
 Anycable.logger = TestLogger.new
 
-Anycable::Server.log_grpc! if ENV['LOG']
+Anycable::Server.log_grpc! if ENV["LOG"]
 
 module TestExHandler
   class << self
     attr_reader :last_error
 
-    def call(ex)
-      @last_error = ex
+    def call(exp)
+      @last_error = exp
     end
   end
 end

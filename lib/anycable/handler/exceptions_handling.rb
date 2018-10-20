@@ -6,33 +6,33 @@ module Anycable
     module ExceptionsHandling
       def connect(*)
         super
-      rescue StandardError => ex
-        handle_exception(ex)
-        Anycable::ConnectionResponse.new(status: Anycable::Status::ERROR, error_msg: ex.message)
+      rescue StandardError => exp
+        handle_exception(exp)
+        Anycable::ConnectionResponse.new(status: Anycable::Status::ERROR, error_msg: exp.message)
       end
 
       def disconnect(*)
         super
-      rescue StandardError => ex
-        handle_exception(ex)
-        Anycable::DisconnectResponse.new(status: Anycable::Status::ERROR, error_msg: ex.message)
+      rescue StandardError => exp
+        handle_exception(exp)
+        Anycable::DisconnectResponse.new(status: Anycable::Status::ERROR, error_msg: exp.message)
       end
 
       def command(*)
         super
-      rescue StandardError => ex
-        handle_exception(ex)
-        Anycable::CommandResponse.new(status: Anycable::Status::ERROR, error_msg: ex.message)
+      rescue StandardError => exp
+        handle_exception(exp)
+        Anycable::CommandResponse.new(status: Anycable::Status::ERROR, error_msg: exp.message)
       end
 
-      def handle_exception(ex)
+      def handle_exception(exp)
         Anycable.error_handlers.each do |handler|
           begin
-            handler.call(ex)
-          rescue StandardError => ex
+            handler.call(exp)
+          rescue StandardError => exp
             Anycable.logger.error "!!! ERROR HANDLER THREW AN ERROR !!!"
-            Anycable.logger.error ex
-            Anycable.logger.error ex.backtrace.join("\n") unless ex.backtrace.nil?
+            Anycable.logger.error exp
+            Anycable.logger.error exp.backtrace.join("\n") unless exp.backtrace.nil?
           end
         end
       end

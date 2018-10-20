@@ -6,10 +6,7 @@ AllCops:
     - 'spec/**/*.rb'
   Exclude:
     - 'bin/**/*'
-    - 'spec/dummy/**/*'
     - 'tmp/**/*'
-    - 'bench/**/*'
-    - 'vendor/**/*'
     - 'lib/anycable/rpc/**/*'
     - 'gemfiles/**/*'
     - 'Gemfile'
@@ -19,24 +16,27 @@ AllCops:
   StyleGuideCopsOnly: false
   TargetRubyVersion: 2.4
 
-Naming/AccessorMethodName:
+Rails:
   Enabled: false
 
-Naming/UncommunicativeMethodParamName:
-  Enabled: false
+# Naming/AccessorMethodName:
+#   Enabled: false
 
-Style/PercentLiteralDelimiters:
-  Enabled: false
+# Naming/UncommunicativeMethodParamName:
+#   Enabled: false
 
-Style/TrivialAccessors:
-  Enabled: false
+# Style/PercentLiteralDelimiters:
+#   Enabled: false
+
+# Style/TrivialAccessors:
+#   Enabled: false
 
 Style/Documentation:
   Exclude:
     - 'spec/**/*.rb'
 
 Style/StringLiterals: 
-  Enabled: false
+  EnforcedStyle: double_quotes
 
 Layout/SpaceInsideStringInterpolation:
   EnforcedStyle: no_space
@@ -44,12 +44,6 @@ Layout/SpaceInsideStringInterpolation:
 Style/BlockDelimiters:
   Exclude:
     - 'spec/**/*.rb'
-
-Lint/AmbiguousRegexpLiteral:
-  Enabled: false
-
-Lint/MissingCopEnableDirective:
-  Enabled: false
 
 Metrics/MethodLength:
   Exclude:
@@ -60,12 +54,13 @@ Metrics/LineLength:
   Exclude:
     - 'spec/**/*.rb'
 
+Metrics/AbcSize:
+  Exclude:
+    - 'spec/**/*.rb'
+
 Metrics/BlockLength:
   Exclude:
     - 'spec/**/*.rb'
 
-Rails/Date:
-  Enabled: false
-
-Rails/TimeZone:
+Lint/HandleExceptions:
   Enabled: false

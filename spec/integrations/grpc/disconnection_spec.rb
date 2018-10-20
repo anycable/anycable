@@ -5,10 +5,10 @@ require "spec_helper"
 describe "disconnection", :with_grpc_server, :rpc_command do
   include_context "rpc stub"
 
-  let(:user) { 'disco' }
-  let(:url) { 'http://example.io/cable_lite?token=123' }
-  let(:subscriptions) { %w(a b) }
-  let(:headers) { { 'Cookie' => 'username=jack;' } }
+  let(:user) { "disco" }
+  let(:url) { "http://example.io/cable_lite?token=123" }
+  let(:subscriptions) { %w[a b] }
+  let(:headers) { { "Cookie" => "username=jack;" } }
 
   let(:request) do
     Anycable::DisconnectRequest.new(
@@ -27,7 +27,7 @@ describe "disconnection", :with_grpc_server, :rpc_command do
     it "invokes #disconnect method with correct data" do
       expect { subject }.to change { log.size }.by(1)
 
-      expect(log.last[:data]).to eq(name: 'disco', path: '/cable_lite', subscriptions: %w(a b))
+      expect(log.last[:data]).to eq(name: "disco", path: "/cable_lite", subscriptions: %w[a b])
     end
   end
 end

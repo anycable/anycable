@@ -1,8 +1,9 @@
 # frozen_string_literal: true
 
-require 'grpc'
-require 'anycable/rpc_handler'
-require 'anycable/health_server'
+require "grpc"
+
+require "anycable/rpc_handler"
+require "anycable/health_server"
 
 module Anycable
   # Wrapper over gRPC server.

@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
-require 'anycable/socket'
-require 'anycable/rpc/rpc_pb'
-require 'anycable/rpc/rpc_services_pb'
+require "anycable/socket"
+require "anycable/rpc/rpc_pb"
+require "anycable/rpc/rpc_services_pb"
 
-require 'anycable/handler/exceptions_handling'
+require "anycable/handler/exceptions_handling"
 
 # rubocop:disable Metrics/AbcSize
 # rubocop:disable Metrics/MethodLength
@@ -83,15 +83,15 @@ module Anycable
     def rack_env(request)
       uri = URI.parse(request.path)
       {
-        'QUERY_STRING' => uri.query,
-        'SCRIPT_NAME' => '',
-        'PATH_INFO' => uri.path,
-        'SERVER_PORT' => uri.port.to_s,
-        'HTTP_HOST' => uri.host,
+        "QUERY_STRING" => uri.query,
+        "SCRIPT_NAME" => "",
+        "PATH_INFO" => uri.path,
+        "SERVER_PORT" => uri.port.to_s,
+        "HTTP_HOST" => uri.host,
         # Hack to avoid Missing rack.input error
-        'rack.request.form_input' => '',
-        'rack.input' => '',
-        'rack.request.form_hash' => {}
+        "rack.request.form_input" => "",
+        "rack.input" => "",
+        "rack.request.form_hash" => {}
       }.merge(build_headers(request.headers))
     end
 
@@ -102,7 +102,7 @@ module Anycable
     def build_headers(headers)
       headers.each_with_object({}) do |(k, v), obj|
         k = k.upcase
-        k.tr!('-', '_')
+        k.tr!("-", "_")
         obj["HTTP_#{k}"] = v
       end
     end
@@ -116,3 +116,5 @@ module Anycable
     end
   end
 end
+# rubocop:enable Metrics/AbcSize
+# rubocop:enable Metrics/MethodLength

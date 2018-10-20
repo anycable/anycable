@@ -12,15 +12,14 @@ module Anycable
         @subscriptions = subscriptions
       end
 
-      # rubocop:disable Metrics/AbcSize
       def handle_open
-        @identifiers['current_user'] = request.cookies["username"]
-        @identifiers['path'] = request.path
-        @identifiers['token'] = request.params['token'] || request.get_header('HTTP_X_API_TOKEN')
-        @identifiers['remote_ip'] = request.ip
+        @identifiers["current_user"] = request.cookies["username"]
+        @identifiers["path"] = request.path
+        @identifiers["token"] = request.params["token"] || request.get_header("HTTP_X_API_TOKEN")
+        @identifiers["remote_ip"] = request.ip
 
-        if @identifiers['current_user']
-          transmit(type: 'welcome')
+        if @identifiers["current_user"]
+          transmit(type: "welcome")
         else
           close
         end
@@ -28,8 +27,8 @@ module Anycable
 
       def handle_close
         TestFactory.log_event(
-          'disconnect',
-          name: @identifiers['current_user'],
+          "disconnect",
+          name: @identifiers["current_user"],
           path: request.path,
           subscriptions: subscriptions
         )
@@ -84,7 +83,7 @@ module Anycable
 
       def handle_action(data)
         decoded = JSON.parse(data)
-        action = decoded.delete('action')
+        action = decoded.delete("action")
         public_send(action, decoded)
       end
 

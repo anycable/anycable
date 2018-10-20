@@ -18,9 +18,7 @@ module Anycable
     # a Connection object
     attr_accessor :connection_factory
 
-    def logger=(logger)
-      @logger = logger
-    end
+    attr_writer :logger
 
     def logger
       return @logger if instance_variable_defined?(:@logger)
