@@ -15,6 +15,7 @@ Gem::Specification.new do |spec|
   spec.homepage      = "http://github.com/anycable/anycable"
   spec.license       = "MIT"
 
+  spec.executables   = ["anycable"]
   spec.files         = `git ls-files -z`.split("\x0").reject { |f| f.match(%r{^(test|spec|features)/}) }
   spec.require_paths = ["lib"]
 
