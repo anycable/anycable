@@ -8,6 +8,7 @@ AllCops:
     - 'bin/**/*'
     - 'tmp/**/*'
     - 'lib/anycable/rpc/**/*'
+    - 'vendor/**/*'
     - 'gemfiles/**/*'
     - 'Gemfile'
     - 'Rakefile'
