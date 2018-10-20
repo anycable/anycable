@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require "grpc"
+require "grpc/health/checker"
+require "grpc/health/v1/health_services_pb"
 
 require "anycable/rpc_handler"
 require "anycable/health_server"
@@ -110,7 +112,17 @@ module Anycable
       GRPC::RpcServer.new(options).tap do |server|
         server.add_http2_port(host, :this_port_is_insecure)
         server.handle(Anycable::RPCHandler)
+        server.handle(build_health_checker)
       end
+    end
+
+    def build_health_checker
+      health_checker = Grpc::Health::Checker.new
+      health_checker.add_status(
+        "anycable.RPC",
+        Grpc::Health::V1::HealthCheckResponse::ServingStatus::SERVING
+      )
+      health_checker
     end
   end
 end
