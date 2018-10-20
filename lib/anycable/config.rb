@@ -73,5 +73,14 @@ module Anycable
         path: http_health_path
       }
     end
+
+    # TEMP: https://github.com/palkan/anyway_config/pull/18
+    def parse_options!(args)
+      OptionParser.new do |o|
+        o.on "--rpc-host=HOSTNAME" do |arg|
+          set_value(:rpc_host, arg)
+        end
+      end.parse!(args)
+    end
   end
 end
