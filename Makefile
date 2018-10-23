@@ -11,6 +11,9 @@ else
 PATH := $(subst :,/bin:,$(GOPATH))/bin:$(PATH)
 endif
 
+LD_FLAGS="-s -w -X main.version=$(VERSION)"
+GOBUILD=go build -ldflags $(LD_FLAGS) -a
+
 # Standard build
 default: prepare build
 
@@ -22,7 +25,7 @@ install-with-mruby:
 	go install -tags mrb ./...
 
 build:
-	env go build -tags mrb -ldflags "-s -w -X main.version=$(VERSION)" -o $(OUTPUT) cmd/anycable-go/main.go
+	env go build -tags mrb -ldflags $(LD_FLAGS) -o $(OUTPUT) cmd/anycable-go/main.go
 
 prepare-cross-mruby:
 	(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CROSS_OS=linux MRUBY_CONFIG=../../../../../../etc/build_config.rb make)
@@ -30,26 +33,27 @@ prepare-cross-mruby:
 prepare-mruby:
 	(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CONFIG=../../../../../../etc/build_config.rb make)
 
-build-linux:
-	env GOOS=linux GOARCH=386 go build -ldflags "-X main.version=$(VERSION)" -a -o "dist/anycable-go-$(VERSION)-linux-386" cmd/anycable-go/main.go
-
 build-all-mruby:
-	env go build -ldflags "-s -w -X main.version=$(VERSION)" -tags mrb -o "dist/anycable-go-$(VERSION)-mrb-macos-amd64" cmd/anycable-go/main.go
+	env $(GOBUILD) -tags mrb -o "dist/anycable-go-$(VERSION)-mrb-macos-amd64" cmd/anycable-go/main.go
 	docker run --rm -v $(PWD):/go/src/github.com/anycable/anycable-go -w /go/src/github.com/anycable/anycable-go -e OUTPUT="dist/anycable-go-$(VERSION)-mrb-linux-amd64" amd64/golang:1.10 make build
 
-build-all:
+build-clean:
 	rm -rf ./dist
-	env GOOS=linux GOARCH=arm go build -ldflags "-X main.version=$(VERSION)" -a -o "dist/anycable-go-$(VERSION)-linux-arm" cmd/anycable-go/main.go
-	env GOOS=linux GOARCH=arm64 go build -ldflags "-X main.version=$(VERSION)" -a -o "dist/anycable-go-$(VERSION)-linux-arm64" cmd/anycable-go/main.go
-	env GOOS=linux GOARCH=386 go build -ldflags "-X main.version=$(VERSION)" -a -o "dist/anycable-go-$(VERSION)-linux-386" cmd/anycable-go/main.go
-	env GOOS=linux GOARCH=amd64 go build -ldflags "-X main.version=$(VERSION)" -a -o "dist/anycable-go-$(VERSION)-linux-amd64" cmd/anycable-go/main.go
-	env GOOS=windows GOARCH=386 go build -ldflags "-X main.version=$(VERSION)" -a -o "dist/anycable-go-$(VERSION)-win-386" cmd/anycable-go/main.go
-	env GOOS=windows GOARCH=amd64 go build -ldflags "-X main.version=$(VERSION)" -a -o "dist/anycable-go-$(VERSION)-win-amd64" cmd/anycable-go/main.go
-	env GOOS=darwin GOARCH=386 go build -ldflags "-X main.version=$(VERSION)" -a -o "dist/anycable-go-$(VERSION)-macos-386" cmd/anycable-go/main.go
-	env GOOS=darwin GOARCH=amd64 go build -ldflags "-X main.version=$(VERSION)" -a -o "dist/anycable-go-$(VERSION)-macos-amd64" cmd/anycable-go/main.go
-	env GOOS=freebsd GOARCH=arm go build -ldflags "-X main.version=$(VERSION)" -a -o "dist/anycable-go-$(VERSION)-freebsd-arm" cmd/anycable-go/main.go
-	env GOOS=freebsd GOARCH=386 go build -ldflags "-X main.version=$(VERSION)" -a -o "dist/anycable-go-$(VERSION)-freebsd-386" cmd/anycable-go/main.go
-	env GOOS=freebsd GOARCH=amd64 go build -ldflags "-X main.version=$(VERSION)" -a -o "dist/anycable-go-$(VERSION)-freebsd-amd64" cmd/anycable-go/main.go
+
+build-linux:
+	env GOOS=linux   GOARCH=386   $(GOBUILD) -o "dist/anycable-go-$(VERSION)-linux-386"     cmd/anycable-go/main.go
+
+build-all: build-clean build-linux
+	env GOOS=linux   GOARCH=arm   $(GOBUILD) -o "dist/anycable-go-$(VERSION)-linux-arm"     cmd/anycable-go/main.go
+	env GOOS=linux   GOARCH=arm64 $(GOBUILD) -o "dist/anycable-go-$(VERSION)-linux-arm64"   cmd/anycable-go/main.go
+	env GOOS=linux   GOARCH=amd64 $(GOBUILD) -o "dist/anycable-go-$(VERSION)-linux-amd64"   cmd/anycable-go/main.go
+	env GOOS=windows GOARCH=386   $(GOBUILD) -o "dist/anycable-go-$(VERSION)-win-386"       cmd/anycable-go/main.go
+	env GOOS=windows GOARCH=amd64 $(GOBUILD) -o "dist/anycable-go-$(VERSION)-win-amd64"     cmd/anycable-go/main.go
+	env GOOS=darwin  GOARCH=386   $(GOBUILD) -o "dist/anycable-go-$(VERSION)-macos-386"     cmd/anycable-go/main.go
+	env GOOS=darwin  GOARCH=amd64 $(GOBUILD) -o "dist/anycable-go-$(VERSION)-macos-amd64"   cmd/anycable-go/main.go
+	env GOOS=freebsd GOARCH=arm   $(GOBUILD) -o "dist/anycable-go-$(VERSION)-freebsd-arm"   cmd/anycable-go/main.go
+	env GOOS=freebsd GOARCH=386   $(GOBUILD) -o "dist/anycable-go-$(VERSION)-freebsd-386"   cmd/anycable-go/main.go
+	env GOOS=freebsd GOARCH=amd64 $(GOBUILD) -o "dist/anycable-go-$(VERSION)-freebsd-amd64" cmd/anycable-go/main.go
 
 s3-deploy:
 	aws s3 cp --acl=public-read ./dist/anycable-go-$(VERSION)-linux-amd64 "s3://anycable/builds/$(VERSION)/anycable-go-$(VERSION)-heroku"
