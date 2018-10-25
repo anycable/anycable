@@ -6,7 +6,7 @@ module CLITesting
   class CLIControl
     DEFAULT_WAIT_TIME = 2
 
-    attr_reader :stdout, :stderr, :pid
+    attr_reader :stdout, :stderr, :pid, :process_status
 
     def initialize(stdout, stderr, pid)
       @stdout = stdout
@@ -17,7 +17,7 @@ module CLITesting
 
     def has_stopped?(wait: DEFAULT_WAIT_TIME)
       loop do
-        break true unless PTY.check(pid).nil?
+        break true if stopped?
         break false if wait <= 0
 
         sleep 0.2
@@ -29,21 +29,24 @@ module CLITesting
       return true if output.any? { |line| line.include?(text) }
 
       loop do
-        line = stdout.gets&.chomp
-        raise_line_not_found!(text) if line.nil?
+        res = IO.select([stdout], nil, nil, 0.2)
 
-        output << line
-        break true if line.include?(text)
+        if res.nil?
+          wait -= 0.2
+        else
+          line = stdout.gets&.chomp
+          raise_line_not_found!(text) if line.nil?
+
+          output << line
+          break true if line.include?(text)
+        end
 
         raise_line_not_found!(text) if wait <= 0
-        sleep 0.2
-        wait -= 0.2
       end
     end
 
     def has_exit_status?(status)
-      process_status = PTY.check(pid)
-      raise "Process is still running" if process_status.nil?
+      raise "Process is still running" unless stopped?
 
       status == process_status.exitstatus
     end
@@ -56,21 +59,33 @@ module CLITesting
       raise RSpec::Expectations::ExpectationNotMetError, "Expected to have in the output line: #{line}, but had instead:" \
         "\n#{output.join("\n")}"
     end
+
+    def stopped?
+      return true unless process_status.nil?
+
+      @process_status = PTY.check(pid)
+    end
   end
 
   def run_cli(opt_string = "", chdir: nil)
+    rspex = nil
+
     PTY.spawn(
       "bundle exec anycable #{opt_string}",
-      chdir: chdir || File.expand_path("../../bin", __dir__)
+      chdir: chdir || File.join(PROJECT_ROOT, "bin")
     ) do |stdout, stderr, pid|
       begin
         yield CLIControl.new(stdout, stderr, pid)
+      rescue Exception => e # rubocop:disable Lint/RescueException
+        rspex = e
       ensure
         Process.kill("SIGKILL", pid) if PTY.check(pid).nil?
       end
     end
   rescue PTY::ChildExited, Errno::ESRCH
     # no-op
+  ensure
+    raise rspex unless rspex.nil?
   end
 end
 

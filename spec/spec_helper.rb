@@ -9,6 +9,8 @@ if ENV["COVER"]
   SimpleCov.start
 end
 
+PROJECT_ROOT = File.expand_path("../", __dir__)
+
 ENV["ANYCABLE_CONF"] = File.join(File.dirname(__FILE__), "support/anycable.yml")
 
 require "anycable"
