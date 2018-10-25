@@ -26,10 +26,10 @@ func (m *Metrics) Prometheus() string {
 	}
 
 	for _, gauge := range m.Gauges() {
-		name := prometheusNamespace + `_` + gauge.Name
+		name := prometheusNamespace + `_` + gauge.Name()
 
 		buf.WriteString(
-			"\n# HELP " + name + " " + gauge.Desc + "\n",
+			"\n# HELP " + name + " " + gauge.Desc() + "\n",
 		)
 		buf.WriteString("# TYPE " + name + " gauge\n")
 		buf.WriteString(name + " " + strconv.FormatInt(gauge.Value(), 10) + "\n")

@@ -7,13 +7,23 @@ import (
 // Gauge stores an int value
 type Gauge struct {
 	value int64
-	Name  string
-	Desc  string
+	name  string
+	desc  string
 }
 
 // NewGauge initializes Gauge.
 func NewGauge(name string, desc string) *Gauge {
-	return &Gauge{Name: name, Desc: desc, value: 0}
+	return &Gauge{name: name, desc: desc, value: 0}
+}
+
+// Name returns gauge name
+func (g *Gauge) Name() string {
+	return g.name
+}
+
+// Desc returns gauge description
+func (g *Gauge) Desc() string {
+	return g.desc
 }
 
 // Set gauge value

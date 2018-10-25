@@ -43,19 +43,19 @@ func TestMetricsGauges(t *testing.T) {
 	gauges := m.Gauges()
 
 	for _, gauge := range gauges {
-		if gauge.Name == "test_gauge" {
+		if gauge.Name() == "test_gauge" {
 			assert.Equal(t, int64(123), gauge.Value())
-		} else if gauge.Name == "test_gauge_2" {
+		} else if gauge.Name() == "test_gauge_2" {
 			assert.Equal(t, int64(321), gauge.Value())
 		} else {
-			t.Errorf("Unknown gauge: %s", gauge.Name)
+			t.Errorf("Unknown gauge: %s", gauge.Name())
 		}
 	}
 
 	m.Gauge("test_gauge").Set(231)
 
 	for _, gauge := range gauges {
-		if gauge.Name == "test_gauge" {
+		if gauge.Name() == "test_gauge" {
 			assert.Equal(t, int64(123), gauge.Value())
 		}
 	}
