@@ -37,3 +37,4 @@ coverage/
 dist/
 
 debug*
+.vscode/

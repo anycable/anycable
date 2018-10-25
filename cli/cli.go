@@ -96,13 +96,12 @@ func DebugMode() bool {
 	return debugMode
 }
 
-const usage = `AnyCable-Go, The WebSocket server for anycable.io
+const usage = `AnyCable-Go, The WebSocket server for https://anycable.io
 
-Usage:
-	Usage: anycable-go [options]
+USAGE
+  anycable-go [options]
 
-The flags are:
-
+OPTIONS
   --host                   Server host, default: localhost, env: ANYCABLE_HOST
   --port                   Server port, default: 8080, env: ANYCABLE_PORT, PORT
   --path                   WebSocket endpoint path, default: /cable, env: ANYCABLE_PATH
