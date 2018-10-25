@@ -73,19 +73,19 @@ func TestMetricsCounters(t *testing.T) {
 	counters := m.Counters()
 
 	for _, counter := range counters {
-		if counter.Name == "test_counter" {
+		if counter.Name() == "test_counter" {
 			assert.Equal(t, int64(1), counter.Value())
-		} else if counter.Name == "test_counter_2" {
+		} else if counter.Name() == "test_counter_2" {
 			assert.Equal(t, int64(3), counter.Value())
 		} else {
-			t.Errorf("Unknown counter: %s", counter.Name)
+			t.Errorf("Unknown counter: %s", counter.Name())
 		}
 	}
 
 	m.Counter("test_counter").Inc()
 
 	for _, counter := range counters {
-		if counter.Name == "test_counter" {
+		if counter.Name() == "test_counter" {
 			assert.Equal(t, int64(1), counter.Value())
 		}
 	}

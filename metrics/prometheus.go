@@ -16,10 +16,10 @@ func (m *Metrics) Prometheus() string {
 	var buf strings.Builder
 
 	for _, counter := range m.Counters() {
-		name := prometheusNamespace + `_` + counter.Name
+		name := prometheusNamespace + `_` + counter.Name()
 
 		buf.WriteString(
-			"\n# HELP " + name + " " + counter.Desc + "\n",
+			"\n# HELP " + name + " " + counter.Desc() + "\n",
 		)
 		buf.WriteString("# TYPE " + name + " counter\n")
 		buf.WriteString(name + " " + strconv.FormatInt(counter.Value(), 10) + "\n")
