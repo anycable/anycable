@@ -115,22 +115,14 @@ func (m *Metrics) Counter(name string) *Counter {
 	return m.counters[name]
 }
 
-// Counters returns all counters
-func (m *Metrics) Counters() []Counter {
+// EachCounter applies function f(*Gauge) to each gauge in a set
+func (m *Metrics) EachCounter(f func(c *Counter)) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	counters := make([]Counter, len(m.counters))
-
-	i := 0
-
 	for _, counter := range m.counters {
-		dcounter := *counter
-		counters[i] = dcounter
-		i++
+		f(counter)
 	}
-
-	return counters
 }
 
 // Gauge returns gauge by name
@@ -138,22 +130,14 @@ func (m *Metrics) Gauge(name string) *Gauge {
 	return m.gauges[name]
 }
 
-// Gauges returns all gauges
-func (m *Metrics) Gauges() []Gauge {
+// EachGauge applies function f(*Gauge) to each gauge in a set
+func (m *Metrics) EachGauge(f func(g *Gauge)) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	gauges := make([]Gauge, len(m.gauges))
-
-	i := 0
-
 	for _, gauge := range m.gauges {
-		dgauge := *gauge
-		gauges[i] = dgauge
-		i++
+		f(gauge)
 	}
-
-	return gauges
 }
 
 // IntervalSnapshot returns recorded interval metrics snapshot

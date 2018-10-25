@@ -15,7 +15,7 @@ const (
 func (m *Metrics) Prometheus() string {
 	var buf strings.Builder
 
-	for _, counter := range m.Counters() {
+	m.EachCounter(func(counter *Counter) {
 		name := prometheusNamespace + `_` + counter.Name()
 
 		buf.WriteString(
@@ -23,9 +23,9 @@ func (m *Metrics) Prometheus() string {
 		)
 		buf.WriteString("# TYPE " + name + " counter\n")
 		buf.WriteString(name + " " + strconv.FormatInt(counter.Value(), 10) + "\n")
-	}
+	})
 
-	for _, gauge := range m.Gauges() {
+	m.EachGauge(func(gauge *Gauge) {
 		name := prometheusNamespace + `_` + gauge.Name()
 
 		buf.WriteString(
@@ -33,7 +33,7 @@ func (m *Metrics) Prometheus() string {
 		)
 		buf.WriteString("# TYPE " + name + " gauge\n")
 		buf.WriteString(name + " " + strconv.FormatInt(gauge.Value(), 10) + "\n")
-	}
+	})
 
 	return buf.String()
 }

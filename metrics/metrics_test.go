@@ -31,7 +31,7 @@ func TestMetricsSnapshot(t *testing.T) {
 	assert.Equal(t, int64(123), m.IntervalSnapshot()["test_gauge"])
 }
 
-func TestMetricsGauges(t *testing.T) {
+func TestMetrics_EachGauge(t *testing.T) {
 	m := NewMetrics(nil, 10)
 
 	m.RegisterGauge("test_gauge", "First")
@@ -40,9 +40,7 @@ func TestMetricsGauges(t *testing.T) {
 	m.Gauge("test_gauge").Set(123)
 	m.Gauge("test_gauge_2").Set(321)
 
-	gauges := m.Gauges()
-
-	for _, gauge := range gauges {
+	m.EachGauge(func(gauge *Gauge) {
 		if gauge.Name() == "test_gauge" {
 			assert.Equal(t, int64(123), gauge.Value())
 		} else if gauge.Name() == "test_gauge_2" {
@@ -50,18 +48,10 @@ func TestMetricsGauges(t *testing.T) {
 		} else {
 			t.Errorf("Unknown gauge: %s", gauge.Name())
 		}
-	}
-
-	m.Gauge("test_gauge").Set(231)
-
-	for _, gauge := range gauges {
-		if gauge.Name() == "test_gauge" {
-			assert.Equal(t, int64(123), gauge.Value())
-		}
-	}
+	})
 }
 
-func TestMetricsCounters(t *testing.T) {
+func TestMetrics_EachCounter(t *testing.T) {
 	m := NewMetrics(nil, 10)
 
 	m.RegisterCounter("test_counter", "First")
@@ -70,9 +60,7 @@ func TestMetricsCounters(t *testing.T) {
 	m.Counter("test_counter").Inc()
 	m.Counter("test_counter_2").Add(3)
 
-	counters := m.Counters()
-
-	for _, counter := range counters {
+	m.EachCounter(func(counter *Counter) {
 		if counter.Name() == "test_counter" {
 			assert.Equal(t, int64(1), counter.Value())
 		} else if counter.Name() == "test_counter_2" {
@@ -80,13 +68,5 @@ func TestMetricsCounters(t *testing.T) {
 		} else {
 			t.Errorf("Unknown counter: %s", counter.Name())
 		}
-	}
-
-	m.Counter("test_counter").Inc()
-
-	for _, counter := range counters {
-		if counter.Name() == "test_counter" {
-			assert.Equal(t, int64(1), counter.Value())
-		}
-	}
+	})
 }
