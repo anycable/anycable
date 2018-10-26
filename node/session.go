@@ -14,8 +14,17 @@ import (
 )
 
 const (
-	// DefaultCloseStatus is what it states)
-	DefaultCloseStatus = 3000
+	// CloseNormalClosure indicates normal closure
+	CloseNormalClosure = websocket.CloseNormalClosure
+
+	// CloseInternalServerErr indicates closure because of internal error
+	CloseInternalServerErr = websocket.CloseInternalServerErr
+
+	// CloseAbnormalClosure indicates ubnormal close
+	CloseAbnormalClosure = websocket.CloseAbnormalClosure
+
+	// CloseGoingAway indicates ubnormal close
+	CloseGoingAway = websocket.CloseGoingAway
 
 	writeWait      = 10 * time.Second
 	maxMessageSize = 65536 // 64KB
@@ -73,7 +82,7 @@ func NewSession(node *Node, ws *websocket.Conn, request *http.Request) (*Session
 	uid, err := nanoid.Nanoid()
 
 	if err != nil {
-		defer session.Close("Nanoid Error")
+		defer session.Close("Nanoid Error", CloseInternalServerErr)
 		return nil, err
 	}
 
@@ -88,7 +97,7 @@ func NewSession(node *Node, ws *websocket.Conn, request *http.Request) (*Session
 	err = node.Authenticate(session, path, &headers)
 
 	if err != nil {
-		defer session.Close("Auth Error")
+		defer session.Close("Auth Error", CloseInternalServerErr)
 		return nil, err
 	}
 
@@ -105,7 +114,7 @@ func NewSession(node *Node, ws *websocket.Conn, request *http.Request) (*Session
 
 // SendMessages waits for incoming messages and send them to the client connection
 func (s *Session) SendMessages(ctx context.Context) {
-	defer s.Disconnect("Write Failed")
+	defer s.Disconnect("Write Failed", CloseAbnormalClosure)
 	for {
 		select {
 		case <-ctx.Done():
@@ -155,7 +164,7 @@ func (s *Session) Send(msg []byte) {
 	default:
 		if s.send != nil {
 			close(s.send)
-			defer s.Disconnect("Write failed")
+			defer s.Disconnect("Write failed", CloseAbnormalClosure)
 		}
 
 		s.send = nil
@@ -168,7 +177,7 @@ func (s *Session) Send(msg []byte) {
 func (s *Session) ReadMessages() {
 	s.ws.SetReadLimit(maxMessageSize)
 
-	defer s.Disconnect("")
+	defer s.Disconnect("", CloseAbnormalClosure)
 
 	for {
 		_, message, err := s.ws.ReadMessage()
@@ -185,7 +194,7 @@ func (s *Session) ReadMessages() {
 }
 
 // Disconnect enqueues RPC disconnect request and closes the connection
-func (s *Session) Disconnect(reason string) {
+func (s *Session) Disconnect(reason string, code int) {
 	s.mu.Lock()
 	if s.connected {
 		defer s.node.Disconnect(s)
@@ -193,11 +202,11 @@ func (s *Session) Disconnect(reason string) {
 	s.connected = false
 	s.mu.Unlock()
 
-	s.Close(reason)
+	s.Close(reason, code)
 }
 
 // Close websocket connection with the specified reason
-func (s *Session) Close(reason string) {
+func (s *Session) Close(reason string, code int) {
 	s.mu.Lock()
 
 	if s.closed {
@@ -218,7 +227,7 @@ func (s *Session) Close(reason string) {
 
 	// TODO: make deadline and status code configurable
 	deadline := time.Now().Add(time.Second)
-	msg := websocket.FormatCloseMessage(DefaultCloseStatus, reason)
+	msg := websocket.FormatCloseMessage(code, reason)
 	s.ws.WriteControl(websocket.CloseMessage, msg, deadline)
 	s.ws.Close()
 }
@@ -230,7 +239,7 @@ func (s *Session) sendPing() {
 	if err == nil {
 		s.addPing()
 	} else {
-		s.Disconnect("Ping failed")
+		s.Disconnect("Ping failed", CloseAbnormalClosure)
 	}
 }
 

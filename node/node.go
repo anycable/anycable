@@ -155,7 +155,7 @@ func (n *Node) Shutdown() {
 			n.log.Infof("Closing active connections: %d", active)
 			// Close all registered sessions
 			for _, session := range n.hub.sessions {
-				session.Disconnect("Shutdown")
+				session.Disconnect("Shutdown", CloseGoingAway)
 			}
 
 			// Wait to make sure that disconnect queue is not empty
@@ -320,7 +320,7 @@ func transmit(s *Session, transmissions []string) {
 
 func (n *Node) handleCommandReply(s *Session, msg *Message, reply *CommandResult) {
 	if reply.Disconnect {
-		defer s.Disconnect("Command Failed")
+		defer s.Disconnect("Command Failed", CloseAbnormalClosure)
 	}
 
 	if reply.StopAllStreams {
