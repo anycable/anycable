@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/signal"
 	"strconv"
 	"syscall"
 
@@ -115,6 +116,16 @@ func main() {
 
 	done := make(chan bool)
 
+	t.Reserve(func() {
+		ctx.Infof("Shutting down... (hit Ctrl-C to stop immediately)")
+		go func() {
+			termSig := make(chan os.Signal, 2)
+			signal.Notify(termSig, syscall.SIGINT, syscall.SIGTERM)
+			<-termSig
+			ctx.Warnf("Immediate termination requested. Stopped")
+			os.Exit(0)
+		}()
+	})
 	t.Reserve(metrics.Shutdown)
 	t.Reserve(wsServer.Stop)
 	t.Reserve(node.Shutdown)

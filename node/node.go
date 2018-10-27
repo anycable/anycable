@@ -142,8 +142,6 @@ func (n *Node) HandlePubsub(raw []byte) {
 
 // Shutdown stops all services (hub, controller)
 func (n *Node) Shutdown() {
-	n.log.Infof("Shutting down...")
-
 	close(n.shutdownCh)
 
 	if n.hub != nil {
