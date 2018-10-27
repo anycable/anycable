@@ -63,7 +63,7 @@ func main() {
 		ctx.Debug("🔧 🔧 🔧 Debug mode is on 🔧 🔧 🔧")
 	}
 
-	ctx.Infof("Starting AnyCable %s", version)
+	ctx.Infof("Starting AnyCable %s (pid: %d)", version, os.Getpid())
 
 	var metricsPrinter metrics.Printer
 
