@@ -158,6 +158,8 @@ func (n *Node) Shutdown() {
 				session.Disconnect("Shutdown", CloseGoingAway)
 			}
 
+			n.log.Info("All active connections closed")
+
 			// Wait to make sure that disconnect queue is not empty
 			time.Sleep(time.Second)
 		}
