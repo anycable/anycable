@@ -5,16 +5,18 @@
   remote_user: ubuntu
   gather_facts: False
   vars:
-    server_host: '172.31.17.82'
+    server_host: '172.31.21.207'
     hostname: ws-bench-client
-    local_ips: ['172.31.17.191', '172.31.17.192', '172.31.17.193', '172.31.17.194']
-    local_ips_str: '-l 172.31.17.191 -l 172.31.17.192 -l 172.31.17.193 -l 172.31.17.194'
-    steps: 20
+    local_ips: ['172.31.19.119', '172.31.19.120', '172.31.17.121', '172.31.17.122']
+    # local_ips_str: '-l 172.31.19.119 -l 172.31.19.120 -l 172.31.17.121 -l 172.31.17.122'
+    local_ips_str: ''
+    steps: 10
     step_size: 1000
     sample_size: 100
     concurrency: 8
     payload_size: 200
     prepare: False
+    log_file: "./last_bench.log"
   tasks:
     - name: Prepare the machine
       tags: prepare
@@ -41,15 +43,15 @@
         chdir: /webapps/anycable_bench
       ignore_errors: yes
 
-    - name: Print Plezi command
+    - name: Print base command
       debug: msg="bin/websocket-bench broadcast {{ local_ips_str }} --concurrent {{ concurrency }} --sample-size {{ sample_size }} --step-size {{ step_size }} --payload-padding {{ payload_size }} --total-steps {{ steps }} ws://{{ server_host }}:3334/cable"
-      tags: plezi
+      tags: base
 
-    - name: Plezi benchmark
+    - name: Base benchmark
       become_user: deplo
       shell: bin/websocket-bench broadcast {{ local_ips_str }} --concurrent {{ concurrency }} --sample-size {{ sample_size }} --step-size {{ step_size }} --payload-padding {{ payload_size }} --total-steps {{ steps }} ws://{{ server_host }}:3334/cable
       register: bench
-      tags: plezi
+      tags: base
       args:
         chdir: /webapps/anycable_bench
       ignore_errors: yes
@@ -58,10 +60,10 @@
       debug: var=bench.stdout_lines
       tags:
         - action_cable
-        - plezi
+        - base
 
     - name: Benchmark results (stderr)
       debug: var=bench.stderr_lines
       tags:
         - action_cable
-        - plezi
+        - base

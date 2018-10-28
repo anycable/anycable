@@ -13,24 +13,46 @@
         - action_cable
         - anycable
         - plezi
+        - iodine_cable
+        - falcon_cable
+        - falcon_async
+        - kill
       with_items:
         - "3334"
       ignore_errors: true
     - name: Run Action Cable
       become_user: deplo
       tags: action_cable
-      shell: WEB_CONCURRENCY={{ web_concurrency }} bundle exec rails s -p 3334 -e production
+      command: bash -lc "WEB_CONCURRENCY={{ web_concurrency }} bundle exec rails s -p 3334 -e production"
       args:
         chdir: /webapps/anycable_bench/ruby/action-cable-server
     - name: Run Anycable Go
       become_user: deplo
       tags: anycable
-      shell: ANYCABLE_GO_BIN="anycable-go-0.6.0" ANYCABLE_PORT="3334" bundle exec bin/anycable
+      shell: bash -lc "ANYCABLE_GO_BIN="anycable-go-0.6.0-alpha" ANYCABLE_PORT="3334" bundle exec bin/anycable"
       args:
         chdir: /webapps/anycable_bench/ruby/action-cable-server
     - name: Run Iodine/Plezi
       become_user: deplo
       tags: plezi
-      shell: iodine -p 3334
+      shell: bash -lc "bundle exec iodine -p 3334 -w {{ web_concurrency }} -t 16"
       args:
         chdir: /webapps/anycable_bench/ruby/plezi-iodine
+    - name: Run Iodine/ActionCable
+      become_user: deplo
+      tags: iodine_cable
+      shell:  bash -lc "RAILS_ENV=production bundle exec iodine -p 3334 -w {{ web_concurrency }} -t 16"
+      args:
+        chdir: /webapps/anycable_bench/ruby/action-cable-server
+    - name: Run Falcon/ActionCable
+      become_user: deplo
+      tags: falcon_cable
+      shell:  bash -lc "RAILS_ENV=production bundle exec falcon serve -b http://0.0.0.0:3334"
+      args:
+        chdir: /webapps/anycable_bench/ruby/action-cable-server
+    - name: Run Falcon/Async
+      become_user: deplo
+      tags: falcon_async
+      shell:  bash -lc "bundle exec falcon serve -b http://0.0.0.0:3334"
+      args:
+        chdir: /webapps/anycable_bench/ruby/falcon
