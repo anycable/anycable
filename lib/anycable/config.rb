@@ -62,7 +62,14 @@ module Anycable
     # Build Redis parameters
     def to_redis_params
       { url: redis_url }.tap do |params|
-        params[:sentinels] = redis_sentinels unless redis_sentinels.empty?
+        if redis_sentinels.any?
+          if redis_sentinels.first.is_a?(String)
+            params[:sentinels] = redis_sentinels_hash
+          else
+            # [DEPRECATION] use an array of host:port strings to configure Redis Sentinel hosts
+            params[:sentinels] = redis_sentinels
+          end
+        end
       end
     end
 
@@ -72,6 +79,15 @@ module Anycable
         port: http_health_port,
         path: http_health_path
       }
+    end
+
+    private
+
+    def redis_sentinels_hash
+      redis_sentinels.map do |sentinel|
+        host, port = sentinel.split(":")
+        { "host" => host, "port" => Integer(port) }
+      end
     end
   end
 end

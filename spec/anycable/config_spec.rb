@@ -24,16 +24,35 @@ describe Anycable::Config do
   end
 
   describe "#to_redis_params" do
-    let(:sentinel_config) do
-      [
-        { "host" => "redis-1-1", "port" => 26_379 },
-        { "host" => "redis-1-2", "port" => 26_380 }
-      ]
+    around do |ex|
+      old = config.redis_sentinels
+      config.redis_sentinels = sentinel_config
+      ex.run
+      config.redis_sentinels = old
     end
 
-    context "with sentinel" do
-      before do
-        config.redis_sentinels = sentinel_config
+    context "with host:port sentinel declaration" do
+      let(:sentinel_config) do
+        [
+          "redis-1-1:26379",
+          "redis-1-2:26380"
+        ]
+      end
+
+      specify do
+        expect(subject.to_redis_params).to eq(
+          url: "redis://localhost:6379/2",
+          sentinels: [{ "host" => "redis-1-1", "port" => 26_379 }, { "host" => "redis-1-2", "port" => 26_380 }]
+        )
+      end
+    end
+
+    context "with redis.rb legacy sentinel declaration" do
+      let(:sentinel_config) do
+        [
+          { "host" => "redis-1-1", "port" => 26_379 },
+          { "host" => "redis-1-2", "port" => 26_380 }
+        ]
       end
 
       specify do
@@ -45,9 +64,7 @@ describe Anycable::Config do
     end
 
     context "without sentinel" do
-      before do
-        config.redis_sentinels = []
-      end
+      let(:sentinel_config) { [] }
 
       specify do
         expect(subject.to_redis_params).to eq(
