@@ -36,7 +36,7 @@ module Anycable
 
       Thread.new { server.start }
 
-      logger.info "HTTP health server is listening on #{port}"
+      logger.info "HTTP health server is listening on localhost:#{port} and mounted at \"#{path}\""
     end
 
     def stop
