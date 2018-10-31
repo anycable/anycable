@@ -17,32 +17,47 @@ module Anycable
       ./config/anycable.rb
     ].freeze
 
-    def run(args)
-      unknown_opts = parse_cli_options!(args)
+    attr_reader :server, :health_server
 
-      begin
-        Anycable.config.parse_options!(unknown_opts)
-      rescue OptionParser::InvalidOption => e
-        $stdout.puts e.message
-        $stdout.puts "Run anycable -h to see available options"
-        exit(1)
-      end
+    # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
+    def run(args)
+      parse_options!(args)
+
+      log_grpc! if config.log_grpc
 
       boot_app!
 
-      Anycable::Server.start
+      @server = Anycable::Server.new(
+        host: config.rpc_host,
+        **config.to_grpc_params
+      )
+
+      start_health_server! if config.http_health_port_provided?
+      start_pubsub!
+
+      server.start
+      server.wait_till_terminated
     end
+    # rubocop:enable Metrics/AbcSize, Metrics/MethodLength
 
     private
 
     attr_reader :boot_file
+
+    def config
+      Anycable.config
+    end
+
+    def logger
+      Anycable.logger
+    end
 
     # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
     def boot_app!
       @boot_file ||= try_detect_app
 
       if boot_file.nil?
-        Anycable.logger.fatal(
+        logger.fatal(
           "Couldn't find an application to load. " \
           "Please specify the explicit path via -r option, e.g:" \
           " anycable -r ./config/boot.rb or anycable -r /app/config/load_me.rb"
@@ -50,12 +65,12 @@ module Anycable
         exit(1)
       end
 
-      Anycable.logger.info "Loading application from #{boot_file} ..."
+      logger.info "Loading application from #{boot_file} ..."
 
       begin
         require boot_file
       rescue LoadError => e
-        Anycable.logger.fatal(
+        logger.fatal(
           "Failed to load application: #{e.message}. " \
           "Please specify the explicit path via -r option, e.g:" \
           " anycable -r ./config/boot.rb or anycable -r /app/config/load_me.rb"
@@ -64,15 +79,43 @@ module Anycable
       end
 
       if defined?(::Rails)
-        Anycable.logger.info "Rails application is loaded"
+        logger.info "Rails application is loaded"
       else
-        Anycable.logger.info "Application is loaded"
+        logger.info "Application is loaded"
       end
     end
     # rubocop:enable Metrics/AbcSize, Metrics/MethodLength
 
     def try_detect_app
       APP_CANDIDATES.detect { |path| File.exist?(path) }
+    end
+
+    def start_health_server!
+      @health_server = Anycable::HealthServer.new(
+        server,
+        **config.to_http_health_params
+      )
+      health_server.start
+    end
+
+    def start_pubsub!
+      logger.info "Broadcasting Redis channel: #{config.redis_channel}"
+    end
+
+    def log_grpc!
+      ::GRPC.define_singleton_method(:logger) { Anycable.logger }
+    end
+
+    def parse_options!(args)
+      unknown_opts = parse_cli_options!(args)
+
+      begin
+        config.parse_options!(unknown_opts)
+      rescue OptionParser::InvalidOption => e
+        $stdout.puts e.message
+        $stdout.puts "Run anycable -h to see available options"
+        exit(1)
+      end
     end
 
     # rubocop:disable Metrics/MethodLength
