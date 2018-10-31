@@ -22,10 +22,11 @@ module Anycable
   #   server.stop
   class Server
     class << self
-      # TODO: deprecate me
       # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
       def start(**options)
-        log_grpc! if Anycable.config.log_grpc
+        warn <<~DEPRECATION
+          Using Anycable::Server.start is deprecated! Please, use anycable CLI instead.
+        DEPRECATION
 
         server = new(host: Anycable.config.rpc_host, **Anycable.config.to_grpc_params, **options)
 
@@ -48,11 +49,6 @@ module Anycable
         server.wait_till_terminated
       end
       # rubocop:enable Metrics/AbcSize, Metrics/MethodLength
-
-      # FIXME: move out of server
-      def log_grpc!
-        GRPC.define_singleton_method(:logger) { Anycable.logger }
-      end
     end
 
     DEFAULT_HOST = "0.0.0.0:50051"
