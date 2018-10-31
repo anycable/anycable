@@ -4,6 +4,25 @@
 
 ## 0.6.0-dev
 
+#### CLI
+
+AnyCable now ships with a CLI–`anycable`.
+
+Use it to run a gRPC server:
+
+```sh
+# run anycable and load app from app.rb
+bundle exec anycable -r app.rb
+# or
+bundle exec anycable --require app.rb
+```
+
+All configuration options are also supported as CLI options (see `anycable -h` for more information).
+
+The only required options is the application file to load (`-r/--require`).
+
+You can omit it if you want to load an app form `./config/environment.rb` (e.g. with Rails) or `./config/anycable.rb`.
+
 #### Configuration
 
 - Default server host is changed from `localhost:50051` to `0.0.0.0:50051`
@@ -18,6 +37,12 @@ end
 ```
 - `REDIS_URL` env is used by default if present (and no `ANYCABLE_REDIS_URL` specified)
 - Make HTTP health check url configurable
+- Add ability to pass Redis Sentinel config as array of string.
+
+Now it's possible to pass Sentinel configuration via env vars:
+
+```sh
+ANYCABLE_REDIS_SENTINELS=127.0.0.1:26380,127.0.0.1:26381 bundle exec anycable
 ```
 
 ## 0.5.2 (2018-09-06)
