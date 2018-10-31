@@ -1,7 +1,7 @@
 [![GitPitch](https://gitpitch.com/assets/badge.svg)](https://gitpitch.com/anycable/anycable/master?grs=github) [![Gem Version](https://badge.fury.io/rb/anycable.svg)](https://rubygems.org/gems/anycable) [![Build Status](https://travis-ci.org/anycable/anycable.svg?branch=master)](https://travis-ci.org/anycable/anycable)
 [![Gitter](https://img.shields.io/badge/gitter-join%20chat%20%E2%86%92-brightgreen.svg)](https://gitter.im/anycable/Lobby)
 
-# Anycable
+# AnyCable
 
 AnyCable allows you to use any WebSocket server (written in any language) as a replacement for your Ruby server (such as Faye, ActionCable, etc).
 
@@ -64,7 +64,7 @@ Read our [Wiki](https://github.com/anycable/anycable/wiki) for more.
 
 Anycable uses [anyway_config](https://github.com/palkan/anyway_config), thus it is also possible to set configuration variables through `secrets.yml` or environment vars.
 
-### Example with redis sentinel
+### Example with Redis Sentinel
 
 ```yaml
   rpc_host: "localhost:50123"
@@ -75,7 +75,7 @@ Anycable uses [anyway_config](https://github.com/palkan/anyway_config), thus it 
     - { host: 'redis-1-3', port: 26379 }
 ```
 
-## ActionCable Compatibility
+## Action Cable Compatibility
 
 This is the compatibility list for the AnyCable gem, not for AnyCable servers (which may not support some of the features yet).
 
