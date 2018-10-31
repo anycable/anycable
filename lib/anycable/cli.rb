@@ -14,6 +14,7 @@ module Anycable
     # different applications
     APP_CANDIDATES = %w[
       ./config/environment.rb
+      ./config/anycable.rb
     ].freeze
 
     def run(args)
