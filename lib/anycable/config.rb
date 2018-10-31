@@ -35,13 +35,19 @@ module Anycable
       http_health_path: "/health"
     )
 
-    def initialize(*)
-      super
-      # Set log params if debug is true
-      return unless debug
+    ignore_options :rpc_server_args, :redis_sentinels
+    flag_options :log_grpc, :debug
 
-      self.log_level = :debug
-      self.log_grpc = true
+    def log_level
+      debug ? :debug : @log_level
+    end
+
+    def log_grpc
+      debug || @log_grpc
+    end
+
+    def debug
+      @debug != false
     end
 
     def http_health_port_provided?
@@ -72,15 +78,6 @@ module Anycable
         port: http_health_port,
         path: http_health_path
       }
-    end
-
-    # TEMP: https://github.com/palkan/anyway_config/pull/18
-    def parse_options!(args)
-      OptionParser.new do |o|
-        o.on "--rpc-host=HOSTNAME" do |arg|
-          set_value(:rpc_host, arg)
-        end
-      end.parse!(args)
     end
   end
 end
