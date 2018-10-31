@@ -3,7 +3,7 @@
 require "fileutils"
 require "spec_helper"
 
-describe "CLI options", :cli do
+describe "CLI require app", :cli do
   context "when no application provided" do
     it "prints error and exit" do
       run_cli do |cli|

@@ -25,6 +25,10 @@ module Anycable
 
       log_grpc! if config.log_grpc
 
+      logger.info "Starting AnyCable gRPC server (pid: #{Process.pid})"
+      logger.info "AnyCable version: #{Anycable::VERSION}"
+      logger.info "gRPC version: #{GRPC::VERSION}"
+
       boot_app!
 
       @server = Anycable::Server.new(
@@ -36,9 +40,24 @@ module Anycable
       start_pubsub!
 
       server.start
-      server.wait_till_terminated
+
+      begin
+        wait_till_terminated
+      rescue Interrupt
+        logger.info "Stopping..."
+
+        shutdown
+
+        logger.info "Stopped. Good-bye!"
+        exit(0)
+      end
     end
     # rubocop:enable Metrics/AbcSize, Metrics/MethodLength
+
+    def shutdown
+      server.stop
+      health_server&.stop
+    end
 
     private
 
@@ -50,6 +69,28 @@ module Anycable
 
     def logger
       Anycable.logger
+    end
+
+    def wait_till_terminated
+      self_read = setup_signals
+
+      while readable_io = IO.select([self_read]) # rubocop:disable Lint/AssignmentInCondition
+        signal = readable_io.first[0].gets.strip
+        logger.info "SIG#{signal} received"
+        raise Interrupt
+      end
+    end
+
+    def setup_signals
+      self_read, self_write = IO.pipe
+
+      %w[INT TERM].each do |signal|
+        trap signal do
+          self_write.puts signal
+        end
+      end
+
+      self_read
     end
 
     # rubocop:disable Metrics/AbcSize, Metrics/MethodLength

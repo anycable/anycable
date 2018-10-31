@@ -15,6 +15,10 @@ module CLITesting
       @output = []
     end
 
+    def signal(sig)
+      Process.kill(sig, pid)
+    end
+
     def has_stopped?(wait: DEFAULT_WAIT_TIME)
       loop do
         break true if stopped?
