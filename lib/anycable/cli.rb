@@ -212,6 +212,7 @@ module Anycable
             --rpc-host=host                   Local address to run gRPC server on, default: "[::]:50051"
             --redis-url=url                   Redis URL for pub/sub, default: REDIS_URL or "redis://localhost:6379/5"
             --redis-channel=name              Redis channel for broadcasting, default: "__anycable__"
+            --redis-sentinels=<...hosts>      Redis Sentinel followers addresses (as a comma-separated list), default: nil
             --log-level=level                 Logging level, default: "info"
             --log-file=path                   Path to log file, default: <none> (log to STDOUT)
             --log-grpc                        Enable gRPC logging (disabled by default)

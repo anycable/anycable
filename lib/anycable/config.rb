@@ -21,7 +21,7 @@ module Anycable
 
       ### Redis options
       redis_url: ENV.fetch("REDIS_URL", "redis://localhost:6379/5"),
-      redis_sentinels: [],
+      redis_sentinels: nil,
       redis_channel: "__anycable__",
 
       ### Logging options
@@ -35,7 +35,7 @@ module Anycable
       http_health_path: "/health"
     )
 
-    ignore_options :rpc_server_args, :redis_sentinels
+    ignore_options :rpc_server_args
     flag_options :log_grpc, :debug
 
     def log_level
@@ -68,7 +68,14 @@ module Anycable
     # Build Redis parameters
     def to_redis_params
       { url: redis_url }.tap do |params|
-        params[:sentinels] = redis_sentinels unless redis_sentinels.empty?
+        next if redis_sentinels.nil?
+
+        raise ArgumentError, "redis_sentinels must be an array; got #{redis_sentinels}" unless
+          redis_sentinels.is_a?(Array)
+
+        next if redis_sentinels.empty?
+
+        params[:sentinels] = redis_sentinels.map(&method(:parse_sentinel))
       end
     end
 
@@ -78,6 +85,20 @@ module Anycable
         port: http_health_port,
         path: http_health_path
       }
+    end
+
+    private
+
+    SENTINEL_RXP = /^([\w\-_]*)\:(\d+)$/.freeze
+
+    def parse_sentinel(sentinel)
+      return sentinel if sentinel.is_a?(Hash)
+
+      matches = sentinel.match(SENTINEL_RXP)
+
+      raise ArgumentError, "Invalid Sentinel value: #{sentinel}" if matches.nil?
+
+      { "host" => matches[1], "port" => matches[2].to_i }
     end
   end
 end
