@@ -44,7 +44,7 @@ describe Anycable::Config do
       end
     end
 
-    fcontext "when REDIS_SENTINEL_HOSTS" do
+    context "when REDIS_SENTINEL_HOSTS" do
       around { |ex| with_env("ANYCABLE_REDIS_SENTINELS" => "redis-1-1:26379,redis-1-2:26380", &ex) }
 
       subject(:config) { described_class.new }
