@@ -7,11 +7,11 @@
 
 ### Tell us about your environment
 
-**Ruby Version:**
+**Ruby version:**
 
-**Framework Version (gRPC, Rails, whatever):**
+**`anycable` gem version:**
 
-**AnyCable Version:**
+**`grpc` gem version:**
 
 ### What did you do?
 
