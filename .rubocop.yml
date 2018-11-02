@@ -20,18 +20,6 @@ AllCops:
 Rails:
   Enabled: false
 
-# Naming/AccessorMethodName:
-#   Enabled: false
-
-# Naming/UncommunicativeMethodParamName:
-#   Enabled: false
-
-# Style/PercentLiteralDelimiters:
-#   Enabled: false
-
-# Style/TrivialAccessors:
-#   Enabled: false
-
 Style/Documentation:
   Exclude:
     - 'spec/**/*.rb'
@@ -60,6 +48,14 @@ Metrics/AbcSize:
     - 'spec/**/*.rb'
 
 Metrics/BlockLength:
+  Exclude:
+    - 'spec/**/*.rb'
+
+Metrics/CyclomaticComplexity:
+  Exclude:
+    - 'spec/**/*.rb'
+
+Metrics/PerceivedComplexity:
   Exclude:
     - 'spec/**/*.rb'
 

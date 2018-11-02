@@ -32,13 +32,20 @@ module CLITesting
     def has_output_line?(text, wait: DEFAULT_WAIT_TIME)
       return true if output.any? { |line| line.include?(text) }
 
+      line = nil
+
       loop do
         res = IO.select([stdout], nil, nil, 0.2)
 
         if res.nil?
           wait -= 0.2
         else
-          line = stdout.gets&.chomp
+          begin
+            line = stdout.gets&.chomp
+          rescue Errno::EIO
+            line = nil
+          end
+
           raise_line_not_found!(text) if line.nil?
           output << line
           break true if line.include?(text)
@@ -82,7 +89,7 @@ module CLITesting
       rescue Exception => e # rubocop:disable Lint/RescueException
         rspex = e
       ensure
-        Process.kill("SIGTERM", pid) if PTY.check(pid).nil?
+        Process.kill("SIGKILL", pid) if PTY.check(pid).nil?
       end
     end
   rescue PTY::ChildExited, Errno::ESRCH
