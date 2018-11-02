@@ -4,4 +4,3 @@ redis_sentinels:
   - { host: 'redis-1-1', port: 26379 }
   - { host: 'redis-1-2', port: 26379 }
   - { host: 'redis-1-3', port: 26379 }
-http_health_port: 54321
