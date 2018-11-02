@@ -1,4 +1,4 @@
-rpc_host: "localhost:50123"
+rpc_host: "0.0.0.0:50123"
 redis_url: "redis://localhost:6379/2"
 redis_sentinels:
   - { host: 'redis-1-1', port: 26379 }
