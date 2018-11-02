@@ -1,7 +1,11 @@
 [![GitPitch](https://gitpitch.com/assets/badge.svg)](https://gitpitch.com/anycable/anycable/master?grs=github) [![Gem Version](https://badge.fury.io/rb/anycable.svg)](https://rubygems.org/gems/anycable) [![Build Status](https://travis-ci.org/anycable/anycable.svg?branch=master)](https://travis-ci.org/anycable/anycable)
 [![Gitter](https://img.shields.io/badge/gitter-join%20chat%20%E2%86%92-brightgreen.svg)](https://gitter.im/anycable/Lobby)
+[![Documentation](https://img.shields.io/badge/docs-link-brightgreen.svg)](https://docs.anycable.io)
 
 # AnyCable
+
+<img align="right" height="150" width="129"
+     title="AnyCable logo" src="https://docs.anycable.io/assets/images/logo.svg">
 
 AnyCable allows you to use any WebSocket server (written in any language) as a replacement for your Ruby server (such as Faye, ActionCable, etc).
 
@@ -15,11 +19,9 @@ AnyCable uses ActionCable protocol, so you can use ActionCable [JavaScript clien
 - Ruby >= 2.4
 - Redis (for brodcasting, [discuss other options](https://github.com/anycable/anycable/issues/2) with us!)
 
-## How It Works?
+## Usage
 
-![](https://s3.amazonaws.com/anycable/Scheme.png)
-
-Read our [Wiki](https://github.com/anycable/anycable/wiki) for more.
+Check out our 📑 [Documentation](https://docs.anycable.io).
 
 ## Links
 
@@ -39,45 +41,10 @@ Read our [Wiki](https://github.com/anycable/anycable/wiki) for more.
 
 - RailsClub Moscow 2016 [slides](https://speakerdeck.com/palkan/railsclub-moscow-2016-anycable) and [video](https://www.youtube.com/watch?v=-k7GQKuBevY&list=PLiWUIs1hSNeOXZhotgDX7Y7qBsr24cu7o&index=4) (RU)
 
-
 ## Compatible WebSocket servers
 
 - [Anycable Go](https://github.com/anycable/anycable-go)
 - [ErlyCable](https://github.com/anycable/erlycable)
-
-## Configuration
-
-Anycable uses [anyway_config](https://github.com/palkan/anyway_config), thus it is also possible to set configuration variables through `secrets.yml` or environment vars.
-
-### Example with Redis Sentinel
-
-```yaml
-  rpc_host: "localhost:50123"
-  redis_url: "redis://redis-1-1:6379/2"
-  redis_sentinels:
-    - { host: 'redis-1-1', port: 26379 }
-    - { host: 'redis-1-2', port: 26379 }
-    - { host: 'redis-1-3', port: 26379 }
-```
-
-## Action Cable Compatibility
-
-This is the compatibility list for the AnyCable gem, not for AnyCable servers (which may not support some of the features yet).
-
-Feature                  | Status
--------------------------|--------
-Connection Identifiers   | +
-Connection Request (cookies, params) | +
-Disconnect Handling | +
-Subscribe to channels | +
-Parameterized subscriptions | +
-Unsubscribe from channels | +
-[Subscription Instance Variables](http://edgeapi.rubyonrails.org/classes/ActionCable/Channel/Streams.html) | -
-Performing Channel Actions | +
-Streaming | +
-[Custom stream callbacks](http://edgeapi.rubyonrails.org/classes/ActionCable/Channel/Streams.html) | -
-Broadcasting | +
-Custom pubsub adapter | Only redis
 
 ## Build
 
