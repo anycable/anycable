@@ -61,8 +61,8 @@ module Anycable
     # rubocop:enable Metrics/AbcSize, Metrics/MethodLength
 
     def shutdown
-      server.stop
       health_server&.stop
+      server.stop
     end
 
     private
