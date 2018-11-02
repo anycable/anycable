@@ -8,6 +8,8 @@ describe "CLI options", :cli do
     it "terminates gracefully on SIG#{signal}" do
       run_cli("-r ../spec/support/dummy.rb") do |cli|
         expect(cli).to have_output_line("RPC server is listening")
+        # wait before terminating
+        sleep 0.5
         cli.signal(signal)
         expect(cli).to have_output_line("SIG#{signal} received")
         expect(cli).to have_output_line("Stopping...")
