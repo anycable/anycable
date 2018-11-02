@@ -21,15 +21,21 @@ module Anycable
 
     # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
     def run(args)
-      parse_options!(args)
+      extra_options = parse_cli_options!(args)
 
-      log_grpc! if config.log_grpc
+      # Boot app first, 'cause it might change
+      # configuration, loggin settings, etc.
+      boot_app!
+
+      parse_gem_options!(extra_options)
 
       logger.info "Starting AnyCable gRPC server (pid: #{Process.pid})"
-      logger.info "AnyCable version: #{Anycable::VERSION}"
-      logger.info "gRPC version: #{GRPC::VERSION}"
 
-      boot_app!
+      print_versions!
+
+      logger.info "Serving #{defined?(::Rails) ? 'Rails ' : ''}application from #{boot_file}"
+
+      log_grpc! if config.log_grpc
 
       @server = Anycable::Server.new(
         host: config.rpc_host,
@@ -43,8 +49,8 @@ module Anycable
 
       begin
         wait_till_terminated
-      rescue Interrupt
-        logger.info "Stopping..."
+      rescue Interrupt => e
+        logger.info "Stopping... #{e.message}"
 
         shutdown
 
@@ -76,8 +82,7 @@ module Anycable
 
       while readable_io = IO.select([self_read]) # rubocop:disable Lint/AssignmentInCondition
         signal = readable_io.first[0].gets.strip
-        logger.info "SIG#{signal} received"
-        raise Interrupt
+        raise Interrupt, "SIG#{signal} received"
       end
     end
 
@@ -93,12 +98,17 @@ module Anycable
       self_read
     end
 
-    # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
+    def print_versions!
+      logger.info "AnyCable version: #{Anycable::VERSION}"
+      logger.info "gRPC version: #{GRPC::VERSION}"
+    end
+
+    # rubocop:disable Metrics/MethodLength
     def boot_app!
       @boot_file ||= try_detect_app
 
       if boot_file.nil?
-        logger.fatal(
+        $stdout.puts(
           "Couldn't find an application to load. " \
           "Please specify the explicit path via -r option, e.g:" \
           " anycable -r ./config/boot.rb or anycable -r /app/config/load_me.rb"
@@ -106,26 +116,18 @@ module Anycable
         exit(1)
       end
 
-      logger.info "Loading application from #{boot_file} ..."
-
       begin
         require boot_file
       rescue LoadError => e
-        logger.fatal(
+        $stdout.puts(
           "Failed to load application: #{e.message}. " \
           "Please specify the explicit path via -r option, e.g:" \
           " anycable -r ./config/boot.rb or anycable -r /app/config/load_me.rb"
         )
         exit(1)
       end
-
-      if defined?(::Rails)
-        logger.info "Rails application is loaded"
-      else
-        logger.info "Application is loaded"
-      end
     end
-    # rubocop:enable Metrics/AbcSize, Metrics/MethodLength
+    # rubocop:enable Metrics/MethodLength
 
     def try_detect_app
       APP_CANDIDATES.detect { |path| File.exist?(path) }
@@ -147,16 +149,12 @@ module Anycable
       ::GRPC.define_singleton_method(:logger) { Anycable.logger }
     end
 
-    def parse_options!(args)
-      unknown_opts = parse_cli_options!(args)
-
-      begin
-        config.parse_options!(unknown_opts)
-      rescue OptionParser::InvalidOption => e
-        $stdout.puts e.message
-        $stdout.puts "Run anycable -h to see available options"
-        exit(1)
-      end
+    def parse_gem_options!(args)
+      config.parse_options!(args)
+    rescue OptionParser::InvalidOption => e
+      $stdout.puts e.message
+      $stdout.puts "Run anycable -h to see available options"
+      exit(1)
     end
 
     # rubocop:disable Metrics/MethodLength

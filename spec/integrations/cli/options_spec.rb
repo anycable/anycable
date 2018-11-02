@@ -31,20 +31,20 @@ describe "CLI options", :cli do
 
   describe "server options" do
     specify "--rpc-host" do
-      run_cli("--rpc-host localhost:50053 -r ../spec/support/dummy.rb") do |cli|
-        expect(cli).to have_output_line("RPC server is listening on localhost:50053")
+      run_cli("--rpc-host 0.0.0.0:50053 -r ../spec/support/dummy.rb") do |cli|
+        expect(cli).to have_output_line("RPC server is listening on 0.0.0.0:50053")
       end
     end
 
     specify "many options" do
       run_cli(
-        "--rpc-host localhost:50053 -r ../spec/support/dummy.rb " \
+        "--rpc-host 0.0.0.0:50053 -r ../spec/support/dummy.rb " \
         "--rpc-pool-size 10 --rpc-max-waiting-requests 2 " \
         "--rpc-poll-period 0.2 --rpc-pool-keep-alive 0.5 " \
         "--redis-channel _test_cable_ --debug " \
         "--http-health-port 9009 --http-health-path '/hc'"
       ) do |cli|
-        expect(cli).to have_output_line("RPC server is listening on localhost:50053")
+        expect(cli).to have_output_line("RPC server is listening on 0.0.0.0:50053")
         expect(cli).to have_output_line(
           'HTTP health server is listening on localhost:9009 and mounted at "/hc"'
         )
