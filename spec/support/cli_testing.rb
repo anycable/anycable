@@ -40,7 +40,6 @@ module CLITesting
         else
           line = stdout.gets&.chomp
           raise_line_not_found!(text) if line.nil?
-
           output << line
           break true if line.include?(text)
         end
@@ -83,7 +82,7 @@ module CLITesting
       rescue Exception => e # rubocop:disable Lint/RescueException
         rspex = e
       ensure
-        Process.kill("SIGKILL", pid) if PTY.check(pid).nil?
+        Process.kill("SIGTERM", pid) if PTY.check(pid).nil?
       end
     end
   rescue PTY::ChildExited, Errno::ESRCH
