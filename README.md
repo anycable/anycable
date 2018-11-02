@@ -7,28 +7,13 @@ AnyCable allows you to use any WebSocket server (written in any language) as a r
 
 AnyCable uses ActionCable protocol, so you can use ActionCable [JavaScript client](https://www.npmjs.com/package/actioncable) without any monkey-patching.
 
-**NOTE**: Since version 0.4.0 this repository contains only core functionality and cannot be used separately as is.
-Rails plug-n-play integration has been extracted to [anycable-rails](https://github.com/anycable/anycable-rails) gem.
-
 <a href="https://evilmartians.com/">
 <img src="https://evilmartians.com/badges/sponsored-by-evil-martians.svg" alt="Sponsored by Evil Martians" width="236" height="54"></a>
 
 ## Requirements
 
-- Ruby >= 2.3, <= 2.5
+- Ruby >= 2.4
 - Redis (for brodcasting, [discuss other options](https://github.com/anycable/anycable/issues/2) with us!)
-
-Or you can try to [build it from source](https://github.com/grpc/grpc/blob/master/INSTALL.md#build-from-source).
-
-For MacOS there is also [the same problem](https://github.com/google/protobuf/issues/4098) with `google-protobuf` that can be solved
-the following way:
-
-```ruby
-# Gemfile
-git 'https://github.com/google/protobuf' do
-  gem 'google-protobuf'
-end
-```
 
 ## How It Works?
 
