@@ -4,6 +4,20 @@
 
 ## 0.6.0-dev
 
+#### Broadcast adapters
+
+AnyCable allows you to use custom broadcasting adapters (Redis is used by default):
+
+```ruby
+# Specify by name (tries to load `AnyCable::BroadcastAdapters::MyAdapter` from
+# "anycable/broadcast_adapters/my_adapter")
+AnyCable.broadcast_adapter = :my_adapter, { option: "value" }
+# or provide an instance (should respond_to #broadcast)
+AnyCable.broadcast_adapter = MyAdapter.new
+```
+
+**Breaking:** to use Redis adapter you must ensure that it is present in your Gemfile; AnyCable gem doesn't have `redis` as a dependency anymore.
+
 #### CLI
 
 AnyCable now ships with a CLI–`anycable`.
