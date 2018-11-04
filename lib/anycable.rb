@@ -4,6 +4,10 @@ require "anycable/version"
 require "anycable/config"
 require "logger"
 
+require "anycable/exceptions_handling"
+require "anycable/broadcast_adapters"
+require "anycable/server"
+
 # Anycable allows to use any websocket service (written in any language) as a replacement
 # for ActionCable server.
 #
@@ -37,10 +41,18 @@ module Anycable
       yield(config) if block_given?
     end
 
-    def error_handlers
-      return @error_handlers if instance_variable_defined?(:@error_handlers)
+    # Register a custom block that will be called
+    # when an exception is raised during gRPC call
+    def capture_exception(&block)
+      ExceptionsHandling << block
+    end
 
-      @error_handlers = []
+    def error_handlers
+      warn <<~DEPRECATION
+        Using `Anycable.error_handlers` is deprecated!
+        Please, use `AnyCable.capture_exception` instead.
+      DEPRECATION
+      ExceptionsHandling
     end
 
     def broadcast_adapter
@@ -69,5 +81,5 @@ module Anycable
   end
 end
 
-require "anycable/broadcast_adapters"
-require "anycable/server"
+# Add default exceptions handler: print error message to log
+Anycable.capture_exception { |e| Anycable.logger.error(e.message) }

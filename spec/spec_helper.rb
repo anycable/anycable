@@ -34,7 +34,7 @@ module TestExHandler
   end
 end
 
-Anycable.error_handlers << TestExHandler
+Anycable.capture_exception(&TestExHandler.method(:call))
 
 # Make sure that tmp is here (for CI)
 FileUtils.mkdir_p("tmp")
