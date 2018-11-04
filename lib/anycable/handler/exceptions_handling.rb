@@ -26,18 +26,8 @@ module Anycable
       end
 
       def handle_exception(exp)
-        Anycable.error_handlers.each do |handler|
-          begin
-            handler.call(exp)
-          rescue StandardError => exp
-            Anycable.logger.error "!!! ERROR HANDLER THREW AN ERROR !!!"
-            Anycable.logger.error exp
-            Anycable.logger.error exp.backtrace.join("\n") unless exp.backtrace.nil?
-          end
-        end
+        Anycable::ExceptionsHandling.notify(exp)
       end
     end
-
-    Anycable.error_handlers << proc { |e| Anycable.logger.error(e.message) }
   end
 end

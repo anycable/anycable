@@ -25,7 +25,8 @@ module Anycable
       # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
       def start(**options)
         warn <<~DEPRECATION
-          Using Anycable::Server.start is deprecated! Please, use anycable CLI instead.
+          Using Anycable::Server.start is deprecated!
+          Please, use anycable CLI instead.
         DEPRECATION
 
         server = new(host: Anycable.config.rpc_host, **Anycable.config.to_grpc_params, **options)
