@@ -21,6 +21,8 @@ module Anycable
 
     # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
     def run(args)
+      @at_stop = []
+
       extra_options = parse_cli_options!(args)
 
       # Boot app first, 'cause it might change
@@ -47,6 +49,8 @@ module Anycable
 
       server.start
 
+      run_custom_server_command! unless server_command.nil?
+
       begin
         wait_till_terminated
       rescue Interrupt => e
@@ -61,13 +65,13 @@ module Anycable
     # rubocop:enable Metrics/AbcSize, Metrics/MethodLength
 
     def shutdown
-      health_server&.stop
+      at_stop.each(&:call)
       server.stop
     end
 
     private
 
-    attr_reader :boot_file
+    attr_reader :boot_file, :server_command
 
     def config
       Anycable.config
@@ -75,6 +79,14 @@ module Anycable
 
     def logger
       Anycable.logger
+    end
+
+    def at_stop
+      if block_given?
+        @at_stop << Proc.new
+      else
+        @at_stop
+      end
     end
 
     def wait_till_terminated
@@ -139,11 +151,35 @@ module Anycable
         **config.to_http_health_params
       )
       health_server.start
+
+      at_stop { health_server.stop }
     end
 
     def start_pubsub!
       logger.info "Broadcasting Redis channel: #{config.redis_channel}"
     end
+
+    # rubocop: disable Metrics/MethodLength
+    def run_custom_server_command!
+      pid = nil
+      stopped = false
+      command_thread = Thread.new do
+        pid = Process.spawn(server_command)
+        logger.info "Started command: #{server_command} (pid: #{pid})"
+
+        Process.wait pid
+        pid = nil
+        raise Interrupt, "Server command exit unexpectedly" unless stopped
+      end
+
+      command_thread.abort_on_exception = true
+
+      at_stop do
+        stopped = true
+        Process.kill("SIGTERM", pid) unless pid.nil?
+      end
+    end
+    # rubocop: enable Metrics/MethodLength
 
     def log_grpc!
       ::GRPC.define_singleton_method(:logger) { Anycable.logger }
@@ -187,6 +223,10 @@ module Anycable
           @boot_file = arg
         end
 
+        o.on "--server-command VALUE", "Command to run WebSocket server" do |arg|
+          @server_command = arg
+        end
+
         o.on_tail "-h", "--help", "Show help" do
           $stdout.puts usage
           exit(0)
@@ -207,6 +247,7 @@ module Anycable
 
         BASIC OPTIONS
             -r, --require=path                Location of application file to require, default: "config/environment.rb"
+            --server-command=command          Command to run WebSocket server
             --rpc-host=host                   Local address to run gRPC server on, default: "[::]:50051"
             --redis-url=url                   Redis URL for pub/sub, default: REDIS_URL or "redis://localhost:6379/5"
             --redis-channel=name              Redis channel for broadcasting, default: "__anycable__"
