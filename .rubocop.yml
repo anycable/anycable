@@ -38,6 +38,10 @@ Style/ClassAndModuleChildren:
   Exclude:
     - 'spec/**/*.rb'
 
+Style/ParallelAssignment:
+  Exclude:
+    - 'spec/**/*.rb'
+
 Metrics/MethodLength:
   Exclude:
     - 'spec/**/*.rb'

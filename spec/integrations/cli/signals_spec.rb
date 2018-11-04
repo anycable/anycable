@@ -6,7 +6,7 @@ require "spec_helper"
 describe "CLI options", :cli do
   %w[INT TERM].each do |signal|
     it "terminates gracefully on SIG#{signal}" do
-      run_cli("-r ../spec/support/dummy.rb") do |cli|
+      run_cli("-r ../spec/dummies/app.rb") do |cli|
         expect(cli).to have_output_line("RPC server is listening")
         # wait before terminating
         sleep 0.5

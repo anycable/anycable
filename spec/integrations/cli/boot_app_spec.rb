@@ -18,7 +18,7 @@ describe "CLI require app", :cli do
     before do
       FileUtils.mkdir(File.join(PROJECT_ROOT, "bin/config"))
       FileUtils.cp(
-        File.join(PROJECT_ROOT, "spec/support/dummy_rails.rb"),
+        File.join(PROJECT_ROOT, "spec/dummies/rails.rb"),
         File.join(PROJECT_ROOT, "bin/config/environment.rb")
       )
     end
@@ -36,13 +36,13 @@ describe "CLI require app", :cli do
 
   context "when require option is present" do
     it "loads application when file exists" do
-      run_cli("-r ../spec/support/dummy.rb") do |cli|
-        expect(cli).to have_output_line("Serving application from ../spec/support/dummy.rb")
+      run_cli("-r ../spec/dummies/app.rb") do |cli|
+        expect(cli).to have_output_line("Serving application from ../spec/dummies/app.rb")
       end
     end
 
     it "prints application when file couldn't be loaded" do
-      run_cli("-r ../spec/support/dummy_fake.rb") do |cli|
+      run_cli("-r ../spec/dummies/fake.rb") do |cli|
         expect(cli).to have_output_line("cannot load such file")
         expect(cli).to have_stopped
         expect(cli).to have_exit_status(1)

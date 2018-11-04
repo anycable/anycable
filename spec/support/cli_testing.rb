@@ -4,7 +4,7 @@ require "pty"
 
 module CLITesting
   class CLIControl
-    DEFAULT_WAIT_TIME = 2
+    DEFAULT_WAIT_TIME = 5
 
     attr_reader :stdout, :stderr, :pid, :process_status
 
@@ -74,6 +74,8 @@ module CLITesting
       return true unless process_status.nil?
 
       @process_status = PTY.check(pid)
+
+      !process_status.nil?
     end
   end
 
