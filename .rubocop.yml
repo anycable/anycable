@@ -34,6 +34,10 @@ Style/BlockDelimiters:
   Exclude:
     - 'spec/**/*.rb'
 
+Style/ClassAndModuleChildren:
+  Exclude:
+    - 'spec/**/*.rb'
+
 Metrics/MethodLength:
   Exclude:
     - 'spec/**/*.rb'
