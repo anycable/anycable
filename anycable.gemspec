@@ -23,8 +23,8 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "anyway_config", "~> 1.4.1"
   spec.add_dependency "grpc", "~> 1.15"
-  spec.add_dependency "redis", "~> 4.0"
 
+  spec.add_development_dependency "redis", ">= 4.0"
   spec.add_development_dependency "bundler", "~> 1"
   spec.add_development_dependency "rake", ">= 10.0"
   spec.add_development_dependency "rack", "~> 2.0"
