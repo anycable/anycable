@@ -41,8 +41,12 @@ module Anycable
 
       @server = Anycable::Server.new(
         host: config.rpc_host,
-        **config.to_grpc_params
+        **config.to_grpc_params,
+        interceptors: Anycable.middleware.to_a
       )
+
+      # Make sure middlewares are not adding after server has started
+      Anycable.middleware.freeze
 
       start_health_server! if config.http_health_port_provided?
       start_pubsub!
