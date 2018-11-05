@@ -6,6 +6,9 @@ require "logger"
 
 require "anycable/exceptions_handling"
 require "anycable/broadcast_adapters"
+
+require "anycable/middleware_chain"
+
 require "anycable/server"
 
 # Anycable allows to use any websocket service (written in any language) as a replacement
@@ -23,6 +26,8 @@ module Anycable
     attr_accessor :connection_factory
 
     attr_writer :logger
+
+    attr_reader :middleware
 
     def logger
       return @logger if instance_variable_defined?(:@logger)
@@ -78,7 +83,13 @@ module Anycable
     def broadcast(channel, payload)
       broadcast_adapter.broadcast(channel, payload)
     end
+
+    private
+
+    attr_writer :middleware
   end
+
+  self.middleware = MiddlewareChain.new
 end
 
 # Add default exceptions handler: print error message to log

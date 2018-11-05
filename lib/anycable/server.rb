@@ -29,7 +29,14 @@ module Anycable
           Please, use anycable CLI instead.
         DEPRECATION
 
-        server = new(host: Anycable.config.rpc_host, **Anycable.config.to_grpc_params, **options)
+        server = new(
+          host: Anycable.config.rpc_host,
+          **Anycable.config.to_grpc_params,
+          interceptors: Anycable.middleware.to_a,
+          **options
+        )
+
+        Anycable.middleware.freeze
 
         if Anycable.config.http_health_port_provided?
           health_server = Anycable::HealthServer.new(
