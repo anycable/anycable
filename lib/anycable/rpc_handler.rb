@@ -4,14 +4,14 @@ require "anycable/socket"
 require "anycable/rpc/rpc_pb"
 require "anycable/rpc/rpc_services_pb"
 
-require "anycable/handler/exceptions_handling"
+require "anycable/handler/capture_exceptions"
 
 # rubocop:disable Metrics/AbcSize
 # rubocop:disable Metrics/MethodLength
 module Anycable
   # RPC service handler
   class RPCHandler < Anycable::RPC::Service
-    prepend Handler::ExceptionsHandling
+    prepend Anycable::Handler::CaptureExceptions
 
     # Handle connection request from WebSocket server
     def connect(request, _unused_call)
