@@ -3,8 +3,8 @@
 require "anyway_config"
 require "grpc"
 
-module Anycable
-  # Anycable configuration.
+module AnyCable
+  # AnyCable configuration.
   class Config < Anyway::Config
     config_name :anycable
 

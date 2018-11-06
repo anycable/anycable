@@ -5,7 +5,7 @@ require "net/http"
 
 describe "health server", :with_grpc_server do
   before(:all) do
-    @health_server = Anycable::HealthServer.new(
+    @health_server = AnyCable::HealthServer.new(
       @server,
       port: 54_321
     )

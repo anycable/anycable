@@ -2,7 +2,7 @@
 
 require "spec_helper"
 
-describe Anycable::Middleware do
+describe AnyCable::Middleware do
   let(:middleware) do
     Class.new(described_class) do
       def call(_req, _call, method)

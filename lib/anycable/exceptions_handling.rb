@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Anycable
+module AnyCable
   module ExceptionsHandling # :nodoc:
     class << self
       def add_handler(block)
@@ -15,9 +15,9 @@ module Anycable
           begin
             handler.call(exp)
           rescue StandardError => exp
-            Anycable.logger.error "!!! EXCEPTION HANDLER THREW AN ERROR !!!"
-            Anycable.logger.error exp
-            Anycable.logger.error exp.backtrace.join("\n") unless exp.backtrace.nil?
+            AnyCable.logger.error "!!! EXCEPTION HANDLER THREW AN ERROR !!!"
+            AnyCable.logger.error exp
+            AnyCable.logger.error exp.backtrace.join("\n") unless exp.backtrace.nil?
           end
         end
       end

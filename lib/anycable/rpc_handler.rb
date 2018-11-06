@@ -8,10 +8,10 @@ require "anycable/handler/capture_exceptions"
 
 # rubocop:disable Metrics/AbcSize
 # rubocop:disable Metrics/MethodLength
-module Anycable
+module AnyCable
   # RPC service handler
-  class RPCHandler < Anycable::RPC::Service
-    prepend Anycable::Handler::CaptureExceptions
+  class RPCHandler < AnyCable::RPC::Service
+    prepend AnyCable::Handler::CaptureExceptions
 
     # Handle connection request from WebSocket server
     def connect(request, _unused_call)
@@ -24,10 +24,10 @@ module Anycable
       connection.handle_open
 
       if socket.closed?
-        Anycable::ConnectionResponse.new(status: Anycable::Status::FAILURE)
+        AnyCable::ConnectionResponse.new(status: AnyCable::Status::FAILURE)
       else
-        Anycable::ConnectionResponse.new(
-          status: Anycable::Status::SUCCESS,
+        AnyCable::ConnectionResponse.new(
+          status: AnyCable::Status::SUCCESS,
           identifiers: connection.identifiers_json,
           transmissions: socket.transmissions
         )
@@ -46,9 +46,9 @@ module Anycable
       )
 
       if connection.handle_close
-        Anycable::DisconnectResponse.new(status: Anycable::Status::SUCCESS)
+        AnyCable::DisconnectResponse.new(status: AnyCable::Status::SUCCESS)
       else
-        Anycable::DisconnectResponse.new(status: Anycable::Status::FAILURE)
+        AnyCable::DisconnectResponse.new(status: AnyCable::Status::FAILURE)
       end
     end
 
@@ -68,8 +68,8 @@ module Anycable
         message.data
       )
 
-      Anycable::CommandResponse.new(
-        status: result ? Anycable::Status::SUCCESS : Anycable::Status::FAILURE,
+      AnyCable::CommandResponse.new(
+        status: result ? AnyCable::Status::SUCCESS : AnyCable::Status::FAILURE,
         disconnect: socket.closed?,
         stop_streams: socket.stop_streams?,
         streams: socket.streams,
@@ -96,7 +96,7 @@ module Anycable
     end
 
     def build_socket(**options)
-      Anycable::Socket.new(options)
+      AnyCable::Socket.new(options)
     end
 
     def build_headers(headers)
@@ -108,11 +108,11 @@ module Anycable
     end
 
     def logger
-      Anycable.logger
+      AnyCable.logger
     end
 
     def factory
-      Anycable.connection_factory
+      AnyCable.connection_factory
     end
   end
 end

@@ -9,7 +9,7 @@ shared_context "rpc command", rpc_command: true do
   let(:data) { {} }
 
   let(:request) do
-    Anycable::CommandMessage.new(
+    AnyCable::CommandMessage.new(
       command: command,
       identifier: channel,
       connection_identifiers: conn_id.to_json,

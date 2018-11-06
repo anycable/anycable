@@ -3,7 +3,7 @@
 
 require 'grpc'
 
-module Anycable
+module AnyCable
   module RPC
     class Service
 

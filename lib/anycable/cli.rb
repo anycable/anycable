@@ -6,7 +6,7 @@ require "anycable"
 
 $stdout.sync = true
 
-module Anycable
+module AnyCable
   # Command-line interface for running AnyCable gRPC server
   # rubocop:disable Metrics/ClassLength
   class CLI
@@ -39,14 +39,14 @@ module Anycable
 
       log_grpc! if config.log_grpc
 
-      @server = Anycable::Server.new(
+      @server = AnyCable::Server.new(
         host: config.rpc_host,
         **config.to_grpc_params,
-        interceptors: Anycable.middleware.to_a
+        interceptors: AnyCable.middleware.to_a
       )
 
       # Make sure middlewares are not adding after server has started
-      Anycable.middleware.freeze
+      AnyCable.middleware.freeze
 
       start_health_server! if config.http_health_port_provided?
       start_pubsub!
@@ -78,11 +78,11 @@ module Anycable
     attr_reader :boot_file, :server_command
 
     def config
-      Anycable.config
+      AnyCable.config
     end
 
     def logger
-      Anycable.logger
+      AnyCable.logger
     end
 
     def at_stop
@@ -115,7 +115,7 @@ module Anycable
     end
 
     def print_versions!
-      logger.info "AnyCable version: #{Anycable::VERSION}"
+      logger.info "AnyCable version: #{AnyCable::VERSION}"
       logger.info "gRPC version: #{GRPC::VERSION}"
     end
 
@@ -150,7 +150,7 @@ module Anycable
     end
 
     def start_health_server!
-      @health_server = Anycable::HealthServer.new(
+      @health_server = AnyCable::HealthServer.new(
         server,
         **config.to_http_health_params
       )
@@ -186,7 +186,7 @@ module Anycable
     # rubocop: enable Metrics/MethodLength
 
     def log_grpc!
-      ::GRPC.define_singleton_method(:logger) { Anycable.logger }
+      ::GRPC.define_singleton_method(:logger) { AnyCable.logger }
     end
 
     def parse_gem_options!(args)
@@ -219,7 +219,7 @@ module Anycable
     def build_cli_parser
       OptionParser.new do |o|
         o.on "-v", "--version", "Print version and exit" do |_arg|
-          $stdout.puts "AnyCable v#{Anycable::VERSION}"
+          $stdout.puts "AnyCable v#{AnyCable::VERSION}"
           exit(0)
         end
 
@@ -244,7 +244,7 @@ module Anycable
         anycable: run AnyCable gRPC server (https://anycable.io)
 
         VERSION
-          anycable/#{Anycable::VERSION}
+          anycable/#{AnyCable::VERSION}
 
         USAGE
           $ anycable [options]

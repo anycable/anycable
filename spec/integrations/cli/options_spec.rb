@@ -6,7 +6,7 @@ describe "CLI options", :cli do
   describe "version" do
     specify "-v" do
       run_cli("-v") do |cli|
-        expect(cli).to have_output_line("v#{Anycable::VERSION}")
+        expect(cli).to have_output_line("v#{AnyCable::VERSION}")
         expect(cli).to have_stopped
         expect(cli).to have_exit_status(0)
       end
@@ -14,7 +14,7 @@ describe "CLI options", :cli do
 
     specify "--version" do
       run_cli("--version") do |cli|
-        expect(cli).to have_output_line("v#{Anycable::VERSION}")
+        expect(cli).to have_output_line("v#{AnyCable::VERSION}")
         expect(cli).to have_stopped
         expect(cli).to have_exit_status(0)
       end

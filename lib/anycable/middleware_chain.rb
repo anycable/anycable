@@ -3,7 +3,7 @@
 require "anycable/middleware"
 require "monitor"
 
-module Anycable
+module AnyCable
   # Middleware chain is used to build the list of
   # gRPC server interceptors.
   #
@@ -44,9 +44,9 @@ module Anycable
 
     def build_middleware(middleware)
       middleware = middleware.new if
-        middleware.is_a?(Class) && middleware <= Anycable::Middleware
+        middleware.is_a?(Class) && middleware <= AnyCable::Middleware
 
-      unless middleware.is_a?(Anycable::Middleware)
+      unless middleware.is_a?(AnyCable::Middleware)
         raise ArgumentError,
               "AnyCable middleware must be a subclass of AnyCable::Middleware, " \
               "got #{middleware} instead"

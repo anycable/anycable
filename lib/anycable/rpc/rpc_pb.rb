@@ -45,7 +45,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
   end
 end
 
-module Anycable
+module AnyCable
   ConnectionRequest = Google::Protobuf::DescriptorPool.generated_pool.lookup("anycable.ConnectionRequest").msgclass
   ConnectionResponse = Google::Protobuf::DescriptorPool.generated_pool.lookup("anycable.ConnectionResponse").msgclass
   CommandMessage = Google::Protobuf::DescriptorPool.generated_pool.lookup("anycable.CommandMessage").msgclass

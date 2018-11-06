@@ -2,8 +2,8 @@
 
 require "spec_helper"
 
-describe Anycable::Config do
-  subject(:config) { Anycable.config }
+describe AnyCable::Config do
+  subject(:config) { AnyCable.config }
 
   it "loads config vars from anycable.yml", :aggregate_failures do
     expect(config.rpc_host).to eq "0.0.0.0:50123"

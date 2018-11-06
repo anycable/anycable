@@ -4,7 +4,7 @@ require "spec_helper"
 
 require "anycable/broadcast_adapters/redis"
 
-describe Anycable::BroadcastAdapters::Redis do
+describe AnyCable::BroadcastAdapters::Redis do
   let(:redis_conn) { double("redis_conn") }
 
   before do
@@ -15,9 +15,9 @@ describe Anycable::BroadcastAdapters::Redis do
     allow(::Redis).to receive(:new) { redis_conn }
   end
 
-  after { Anycable.config.reload }
+  after { AnyCable.config.reload }
 
-  let(:config) { Anycable.config }
+  let(:config) { AnyCable.config }
 
   it "uses config options by default" do
     adapter = described_class.new

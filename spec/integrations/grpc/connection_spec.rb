@@ -8,7 +8,7 @@ describe "client connection", :with_grpc_server do
   subject { service.connect(request) }
 
   context "no cookies" do
-    let(:request) { Anycable::ConnectionRequest.new }
+    let(:request) { AnyCable::ConnectionRequest.new }
 
     it "responds with exception if no cookies" do
       expect(subject.status).to eq :FAILURE
@@ -17,7 +17,7 @@ describe "client connection", :with_grpc_server do
 
   context "with cookies and path info" do
     let(:request) do
-      Anycable::ConnectionRequest.new(
+      AnyCable::ConnectionRequest.new(
         headers: {
           "Cookie" => "username=john;"
         },
@@ -39,7 +39,7 @@ describe "client connection", :with_grpc_server do
 
   context "with arbitrary headers" do
     let(:request) do
-      Anycable::ConnectionRequest.new(
+      AnyCable::ConnectionRequest.new(
         headers: {
           "cookie" => "username=john;",
           "x-api-token" => "abc123",
