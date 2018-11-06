@@ -3,14 +3,14 @@
 require "webrick"
 require "anycable/server"
 
-module Anycable
+module AnyCable
   # Server for HTTP healthchecks.
   #
   # Basic usage:
   #
   #  # create a new healthcheck server for a specified
   #  # gRPC server lisening on the port
-  #  health_server = Anycable::HealthServer.new(grpc_server, port)
+  #  health_server = AnyCable::HealthServer.new(grpc_server, port)
   #
   #  # start health server in background
   #  health_server.start
@@ -23,7 +23,7 @@ module Anycable
 
     attr_reader :grpc_server, :port, :path, :server
 
-    def initialize(grpc_server, port:, path: "/health", logger: Anycable.logger)
+    def initialize(grpc_server, port:, path: "/health", logger: AnyCable.logger)
       @grpc_server = grpc_server
       @port = port
       @path = path

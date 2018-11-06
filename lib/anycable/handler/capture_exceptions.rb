@@ -2,7 +2,7 @@
 
 require "anycable/rpc/rpc_pb"
 
-module Anycable
+module AnyCable
   module Handler # :nodoc:
     # Handle app-level errors.
     #
@@ -11,9 +11,9 @@ module Anycable
     # aborting the call and returning a data
     module CaptureExceptions
       RESPONSE_CLASS = {
-        command: Anycable::CommandResponse,
-        connect: Anycable::ConnectionResponse,
-        disconnect: Anycable::DisconnectResponse
+        command: AnyCable::CommandResponse,
+        connect: AnyCable::ConnectionResponse,
+        disconnect: AnyCable::DisconnectResponse
       }.freeze
 
       RESPONSE_CLASS.keys.each do |mid|
@@ -27,10 +27,10 @@ module Anycable
       def capture_exceptions(method_name)
         yield
       rescue StandardError => exp
-        Anycable::ExceptionsHandling.notify(exp)
+        AnyCable::ExceptionsHandling.notify(exp)
 
         RESPONSE_CLASS.fetch(method_name).new(
-          status: Anycable::Status::ERROR,
+          status: AnyCable::Status::ERROR,
           error_msg: exp.message
         )
       end

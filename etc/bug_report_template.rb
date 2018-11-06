@@ -25,7 +25,7 @@ ENV['ANYT_TARGET_URL'] ||= "ws://localhost:8080/cable"
 # Comment this line if you want to run WebSocket server manually
 ENV['ANYT_COMMAND'] ||= "anycable-go"
 
-ActionCable.server.config.logger = Rails.logger = Anycable.logger
+ActionCable.server.config.logger = Rails.logger = AnyCable.logger
 
 # Test scenario
 feature "issue_xyz" do

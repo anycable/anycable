@@ -3,7 +3,7 @@
 require_relative "../lib/anycable/cli"
 
 begin
-  cli = Anycable::CLI.new
+  cli = AnyCable::CLI.new
   cli.run(ARGV)
 rescue => e
   raise e if $DEBUG

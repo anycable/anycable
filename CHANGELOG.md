@@ -4,6 +4,9 @@
 
 ## 0.6.0-dev
 
+
+### Features
+
 #### Broadcast adapters
 
 AnyCable allows you to use custom broadcasting adapters (Redis is used by default):
@@ -58,6 +61,11 @@ Now it's possible to pass Sentinel configuration via env vars:
 ```sh
 ANYCABLE_REDIS_SENTINELS=127.0.0.1:26380,127.0.0.1:26381 bundle exec anycable
 ```
+
+### Misc
+
+- Use `AnyCable` instead of `Anycable` (the older namespace is also supported for backward compatibility)
+
 
 ## 0.5.2 (2018-09-06)
 

@@ -7,13 +7,13 @@ require "grpc/health/v1/health_services_pb"
 require "anycable/rpc_handler"
 require "anycable/health_server"
 
-module Anycable
+module AnyCable
   # Wrapper over gRPC server.
   #
   # Basic example:
   #
   #   # create new server listening on [::]:50051 (default host)
-  #   server = Anycable::Server.new(host: "[::]:50051")
+  #   server = AnyCable::Server.new(host: "[::]:50051")
   #
   #   # run gRPC server in bakground
   #   server.start
@@ -25,23 +25,23 @@ module Anycable
       # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
       def start(**options)
         warn <<~DEPRECATION
-          Using Anycable::Server.start is deprecated!
+          Using AnyCable::Server.start is deprecated!
           Please, use anycable CLI instead.
         DEPRECATION
 
         server = new(
-          host: Anycable.config.rpc_host,
-          **Anycable.config.to_grpc_params,
-          interceptors: Anycable.middleware.to_a,
+          host: AnyCable.config.rpc_host,
+          **AnyCable.config.to_grpc_params,
+          interceptors: AnyCable.middleware.to_a,
           **options
         )
 
-        Anycable.middleware.freeze
+        AnyCable.middleware.freeze
 
-        if Anycable.config.http_health_port_provided?
-          health_server = Anycable::HealthServer.new(
+        if AnyCable.config.http_health_port_provided?
+          health_server = AnyCable::HealthServer.new(
             server,
-            **Anycable.config.to_http_health_params
+            **AnyCable.config.to_http_health_params
           )
           health_server.start
         end
@@ -51,7 +51,7 @@ module Anycable
           health_server&.stop
         end
 
-        Anycable.logger.info "Broadcasting Redis channel: #{Anycable.config.redis_channel}"
+        AnyCable.logger.info "Broadcasting Redis channel: #{AnyCable.config.redis_channel}"
 
         server.start
         server.wait_till_terminated
@@ -63,7 +63,7 @@ module Anycable
 
     attr_reader :grpc_server, :host
 
-    def initialize(host: DEFAULT_HOST, logger: Anycable.logger, **options)
+    def initialize(host: DEFAULT_HOST, logger: AnyCable.logger, **options)
       @logger = logger
       @host = host
       @grpc_server = build_server(options)
@@ -115,7 +115,7 @@ module Anycable
     def build_server(options)
       GRPC::RpcServer.new(options).tap do |server|
         server.add_http2_port(host, :this_port_is_insecure)
-        server.handle(Anycable::RPCHandler)
+        server.handle(AnyCable::RPCHandler)
         server.handle(build_health_checker)
       end
     end

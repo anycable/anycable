@@ -2,7 +2,7 @@
 
 require "spec_helper"
 
-class TestPerformChannel < Anycable::TestFactory::Channel
+class TestPerformChannel < AnyCable::TestFactory::Channel
   def follow(*)
     stream_from "user_#{connection.identifiers['current_user']}"
     stream_from "all"
@@ -13,7 +13,7 @@ class TestPerformChannel < Anycable::TestFactory::Channel
   end
 end
 
-Anycable::TestFactory.register_channel "test_perform", TestPerformChannel
+AnyCable::TestFactory.register_channel "test_perform", TestPerformChannel
 
 describe "client messages", :with_grpc_server, :rpc_command do
   include_context "rpc stub"

@@ -43,7 +43,7 @@ Check out our 📑 [Documentation](https://docs.anycable.io).
 
 ## Compatible WebSocket servers
 
-- [Anycable Go](https://github.com/anycable/anycable-go)
+- [AnyCable Go](https://github.com/anycable/anycable-go)
 - [ErlyCable](https://github.com/anycable/erlycable)
 
 ## Build

@@ -2,7 +2,7 @@
 
 require "grpc"
 
-module Anycable
+module AnyCable
   # Middleware is a wrapper over gRPC interceptors
   # for request/response calls
   class Middleware < GRPC::Interceptor

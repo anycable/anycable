@@ -5,7 +5,7 @@ gem "redis", ">= 4.0"
 require "redis"
 require "json"
 
-module Anycable
+module AnyCable
   module BroadcastAdapters
     # Redis adapter for broadcasting.
     #
@@ -23,10 +23,10 @@ module Anycable
       attr_reader :redis_conn, :channel
 
       def initialize(
-        channel: Anycable.config.redis_channel,
+        channel: AnyCable.config.redis_channel,
         **options
       )
-        options = Anycable.config.to_redis_params.merge(options)
+        options = AnyCable.config.to_redis_params.merge(options)
         @redis_conn = ::Redis.new(options)
         @channel = channel
       end

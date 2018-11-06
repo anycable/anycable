@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Anycable
+module AnyCable
   module TestFactory
     class Connection
       attr_reader :request, :socket, :identifiers, :subscriptions

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Anycable
+module AnyCable
   module BroadcastAdapters # :nodoc:
     module_function
 

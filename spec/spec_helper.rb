@@ -19,10 +19,10 @@ require "rack"
 
 Dir["#{File.dirname(__FILE__)}/support/**/*.rb"].each { |f| require f }
 
-Anycable.connection_factory = Anycable::TestFactory
-Anycable.logger = TestLogger.new
+AnyCable.connection_factory = AnyCable::TestFactory
+AnyCable.logger = TestLogger.new
 
-Anycable::Server.log_grpc! if ENV["LOG"]
+AnyCable::Server.log_grpc! if ENV["LOG"]
 
 module TestExHandler
   class << self
@@ -34,7 +34,7 @@ module TestExHandler
   end
 end
 
-Anycable.capture_exception(&TestExHandler.method(:call))
+AnyCable.capture_exception(&TestExHandler.method(:call))
 
 # Make sure that tmp is here (for CI)
 FileUtils.mkdir_p("tmp")
@@ -55,6 +55,6 @@ RSpec.configure do |config|
 
   config.after(:each) do
     Anyway.env.clear
-    Anycable.logger.reset if Anycable.logger.respond_to?(:reset)
+    AnyCable.logger.reset if AnyCable.logger.respond_to?(:reset)
   end
 end

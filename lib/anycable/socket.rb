@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Anycable
+module AnyCable
   # Socket mock to be used with application connection
   class Socket
     attr_reader :transmissions, :env

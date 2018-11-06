@@ -2,9 +2,9 @@
 
 require "spec_helper"
 
-describe Anycable::MiddlewareChain do
+describe AnyCable::MiddlewareChain do
   let(:chain) { described_class.new }
-  let(:middleware_class) { Class.new(Anycable::Middleware) }
+  let(:middleware_class) { Class.new(AnyCable::Middleware) }
 
   it "handles classes" do
     chain.use(middleware_class)

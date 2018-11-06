@@ -2,7 +2,7 @@
 
 require "spec_helper"
 
-class TestSubscriptionsChannel < Anycable::TestFactory::Channel
+class TestSubscriptionsChannel < AnyCable::TestFactory::Channel
   def handle_subscribe
     if connection.identifiers["current_user"] != "john"
       @rejected = true
@@ -15,7 +15,7 @@ class TestSubscriptionsChannel < Anycable::TestFactory::Channel
 
   def handle_unsubscribe
     stop_all_streams
-    Anycable::TestFactory.log_event(
+    AnyCable::TestFactory.log_event(
       identifier,
       user: connection.identifiers["current_user"],
       type: "unsubscribed"
@@ -24,7 +24,7 @@ class TestSubscriptionsChannel < Anycable::TestFactory::Channel
   end
 end
 
-Anycable::TestFactory.register_channel "test_subscriptions", TestSubscriptionsChannel
+AnyCable::TestFactory.register_channel "test_subscriptions", TestSubscriptionsChannel
 
 describe "subscriptions", :with_grpc_server, :rpc_command do
   include_context "rpc stub"
@@ -67,7 +67,7 @@ describe "subscriptions", :with_grpc_server, :rpc_command do
   end
 
   describe "#unsubscribe" do
-    let(:log) { Anycable::TestFactory.events_log }
+    let(:log) { AnyCable::TestFactory.events_log }
 
     let(:command) { "unsubscribe" }
 
@@ -99,7 +99,7 @@ describe "subscriptions", :with_grpc_server, :rpc_command do
     end
 
     it "writes error to log" do
-      expect { subject }.to change { Anycable.logger[:error].size }.by(1)
+      expect { subject }.to change { AnyCable.logger[:error].size }.by(1)
     end
 
     it "notifies exception handler" do

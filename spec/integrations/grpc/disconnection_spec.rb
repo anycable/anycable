@@ -11,7 +11,7 @@ describe "disconnection", :with_grpc_server, :rpc_command do
   let(:headers) { { "Cookie" => "username=jack;" } }
 
   let(:request) do
-    Anycable::DisconnectRequest.new(
+    AnyCable::DisconnectRequest.new(
       identifiers: conn_id.to_json,
       subscriptions: subscriptions,
       path: url,
@@ -19,7 +19,7 @@ describe "disconnection", :with_grpc_server, :rpc_command do
     )
   end
 
-  let(:log) { Anycable::TestFactory.events_log }
+  let(:log) { AnyCable::TestFactory.events_log }
 
   subject { service.disconnect(request) }
 
