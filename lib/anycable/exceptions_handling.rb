@@ -4,14 +4,13 @@ module AnyCable
   module ExceptionsHandling # :nodoc:
     class << self
       def add_handler(block)
-        @handlers ||= []
-        @handlers << block
+        handlers << block
       end
 
       alias << add_handler
 
       def notify(exp)
-        @handlers.each do |handler|
+        handlers.each do |handler|
           begin
             handler.call(exp)
           rescue StandardError => exp
@@ -20,6 +19,12 @@ module AnyCable
             AnyCable.logger.error exp.backtrace.join("\n") unless exp.backtrace.nil?
           end
         end
+      end
+
+      private
+
+      def handlers
+        @handlers ||= []
       end
     end
   end
