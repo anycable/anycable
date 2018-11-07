@@ -37,6 +37,8 @@ module AnyCable
 
       logger.info "Serving #{defined?(::Rails) ? 'Rails ' : ''}application from #{boot_file}"
 
+      verify_connection_factory!
+
       log_grpc! if config.log_grpc
 
       log_errors!
@@ -201,6 +203,15 @@ module AnyCable
       else
         AnyCable.capture_exception { |e| AnyCable.logger.error(e.message) }
       end
+    end
+
+    def verify_connection_factory!
+      return if AnyCable.connection_factory
+
+      logger.error "AnyCable connection factory must be configured. " \
+                   "Make sure you've required a gem (e.g. `anycable-rails`) or " \
+                   "configured `AnyCable.connection_factory` yourself"
+      exit(1)
     end
 
     def parse_gem_options!(args)
