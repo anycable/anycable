@@ -50,6 +50,8 @@ module AnyCable
       @debug != false
     end
 
+    alias debug? debug
+
     def http_health_port_provided?
       !http_health_port.nil? && http_health_port != ""
     end
