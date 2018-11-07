@@ -2,3 +2,5 @@
 
 module Rails
 end
+
+AnyCable.connection_factory = -> {}
