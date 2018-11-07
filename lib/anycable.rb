@@ -92,8 +92,5 @@ module AnyCable
   self.middleware = MiddlewareChain.new
 end
 
-# Add default exceptions handler: print error message to log
-AnyCable.capture_exception { |e| AnyCable.logger.error(e.message) }
-
 # Backward compatibility
 Anycable = AnyCable

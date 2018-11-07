@@ -39,6 +39,8 @@ module AnyCable
 
       log_grpc! if config.log_grpc
 
+      log_errors!
+
       @server = AnyCable::Server.new(
         host: config.rpc_host,
         **config.to_grpc_params,
@@ -187,6 +189,18 @@ module AnyCable
 
     def log_grpc!
       ::GRPC.define_singleton_method(:logger) { AnyCable.logger }
+    end
+
+    # Add default exceptions handler: print error message to log
+    def log_errors!
+      if AnyCable.config.debug?
+        # Print error with backtrace in debug mode
+        AnyCable.capture_exception do |e|
+          AnyCable.logger.error("#{e.message}:\n#{e.backtrace.take(20).join("\n")}")
+        end
+      else
+        AnyCable.capture_exception { |e| AnyCable.logger.error(e.message) }
+      end
     end
 
     def parse_gem_options!(args)
