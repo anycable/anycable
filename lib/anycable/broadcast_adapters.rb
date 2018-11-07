@@ -10,7 +10,7 @@ module AnyCable
       path_to_adapter = "anycable/broadcast_adapters/#{adapter}"
       adapter_class_name = adapter.to_s.split("_").map(&:capitalize).join
 
-      unless const_defined?(adapter_class_name)
+      unless BroadcastAdapters.const_defined?(adapter_class_name, false)
         begin
           require path_to_adapter
         rescue LoadError => e
@@ -26,7 +26,7 @@ module AnyCable
         end
       end
 
-      const_get(adapter_class_name).new(options || {})
+      BroadcastAdapters.const_get(adapter_class_name, false).new(options || {})
     end
     # rubocop: enable Metrics/AbcSize, Metrics/MethodLength
   end
