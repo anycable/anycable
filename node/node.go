@@ -43,7 +43,7 @@ type CommandResult struct {
 // Controller is an interface describing business-logic handler (e.g. RPC)
 type Controller interface {
 	Shutdown() error
-	Authenticate(path string, headers *map[string]string) (string, []string, error)
+	Authenticate(sid string, path string, headers *map[string]string) (string, []string, error)
 	Subscribe(sid string, id string, channel string) (*CommandResult, error)
 	Unsubscribe(sid string, id string, channel string) (*CommandResult, error)
 	Perform(sid string, id string, channel string, data string) (*CommandResult, error)
@@ -183,7 +183,7 @@ func (n *Node) Shutdown() {
 // Authenticate calls controller to perform authentication.
 // If authentication is successful, session is registered with a hub.
 func (n *Node) Authenticate(s *Session, path string, headers *map[string]string) error {
-	id, transmissions, err := n.controller.Authenticate(path, headers)
+	id, transmissions, err := n.controller.Authenticate(s.UID, path, headers)
 
 	transmit(s, transmissions)
 

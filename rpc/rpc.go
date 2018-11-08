@@ -14,6 +14,7 @@ import (
 	grpcpool "github.com/anycable/anycable-go/pool"
 	pb "github.com/anycable/anycable-go/protos"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 const (
@@ -92,7 +93,7 @@ func (c *Controller) Shutdown() error {
 }
 
 // Authenticate performs Connect RPC call
-func (c *Controller) Authenticate(path string, headers *map[string]string) (string, []string, error) {
+func (c *Controller) Authenticate(sid string, path string, headers *map[string]string) (string, []string, error) {
 	conn, err := c.getConn()
 
 	if err != nil {
@@ -104,7 +105,7 @@ func (c *Controller) Authenticate(path string, headers *map[string]string) (stri
 	client := pb.NewRPCClient(conn.Conn)
 
 	op := func() (interface{}, error) {
-		return client.Connect(context.Background(), &pb.ConnectionRequest{Path: path, Headers: *headers})
+		return client.Connect(newContext(sid), &pb.ConnectionRequest{Path: path, Headers: *headers})
 	}
 
 	c.metrics.Counter(metricsRPCCalls).Inc()
@@ -146,7 +147,7 @@ func (c *Controller) Subscribe(sid string, id string, channel string) (*node.Com
 	client := pb.NewRPCClient(conn.Conn)
 
 	op := func() (interface{}, error) {
-		return client.Command(context.Background(), &pb.CommandMessage{Command: "subscribe", Identifier: channel, ConnectionIdentifiers: id})
+		return client.Command(newContext(sid), &pb.CommandMessage{Command: "subscribe", Identifier: channel, ConnectionIdentifiers: id})
 	}
 
 	response, err := retry(op)
@@ -167,7 +168,7 @@ func (c *Controller) Unsubscribe(sid string, id string, channel string) (*node.C
 	client := pb.NewRPCClient(conn.Conn)
 
 	op := func() (interface{}, error) {
-		return client.Command(context.Background(), &pb.CommandMessage{Command: "unsubscribe", Identifier: channel, ConnectionIdentifiers: id})
+		return client.Command(newContext(sid), &pb.CommandMessage{Command: "unsubscribe", Identifier: channel, ConnectionIdentifiers: id})
 	}
 
 	response, err := retry(op)
@@ -188,7 +189,7 @@ func (c *Controller) Perform(sid string, id string, channel string, data string)
 	client := pb.NewRPCClient(conn.Conn)
 
 	op := func() (interface{}, error) {
-		return client.Command(context.Background(), &pb.CommandMessage{Command: "message", Identifier: channel, ConnectionIdentifiers: id, Data: data})
+		return client.Command(newContext(sid), &pb.CommandMessage{Command: "message", Identifier: channel, ConnectionIdentifiers: id, Data: data})
 	}
 
 	response, err := retry(op)
@@ -209,7 +210,7 @@ func (c *Controller) Disconnect(sid string, id string, subscriptions []string, p
 	client := pb.NewRPCClient(conn.Conn)
 
 	op := func() (interface{}, error) {
-		return client.Disconnect(context.Background(), &pb.DisconnectRequest{Identifiers: id, Subscriptions: subscriptions, Path: path, Headers: *headers})
+		return client.Disconnect(newContext(sid), &pb.DisconnectRequest{Identifiers: id, Subscriptions: subscriptions, Path: path, Headers: *headers})
 	}
 
 	c.metrics.Counter(metricsRPCCalls).Inc()
@@ -293,4 +294,9 @@ func retry(callback func() (interface{}, error)) (res interface{}, err error) {
 
 		time.Sleep(retryInterval * time.Millisecond)
 	}
+}
+
+func newContext(sessionID string) context.Context {
+	md := metadata.Pairs("sid", sessionID)
+	return metadata.NewOutgoingContext(context.Background(), md)
 }

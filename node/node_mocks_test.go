@@ -58,7 +58,7 @@ func (c *MockController) Shutdown() error {
 // Authenticate emulates authentication process:
 // - if path is equal to "failure" then authentication failed
 // - otherwise returns value of headers['id'] as identifier
-func (c *MockController) Authenticate(path string, headers *map[string]string) (string, []string, error) {
+func (c *MockController) Authenticate(sid string, path string, headers *map[string]string) (string, []string, error) {
 	if path == "/failure" {
 		return "", []string{"unauthorized"}, errors.New("Auth Failed")
 	}
