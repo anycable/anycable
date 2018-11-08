@@ -52,7 +52,7 @@ For more information about available options run `anycable-go -h`.
 
 ## Metrics & Stats
 
-Anycable-Go provides useful statistical information about the service (such as a number of connected clients, received messages, etc.).
+AnyCable-Go provides useful statistical information about the service (such as a number of connected clients, received messages, etc.).
 
 ### Prometheus
 
