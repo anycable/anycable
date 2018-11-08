@@ -15,6 +15,18 @@ func TestAuthenticateSuccess(t *testing.T) {
 	assert.Nil(t, err, "Error must be nil")
 	assert.Equal(t, session.connected, true, "Session must be marked as connected")
 	assert.Equalf(t, session.Identifiers, "test_id", "Identifiers must be equal to %s", "test_id")
+
+	// Expected to send message to session
+	var msg []byte
+
+	select {
+	case m := <-session.send:
+		msg = m
+	default:
+		assert.Fail(t, "Expected session to receive message but none was sent")
+	}
+
+	assert.Equalf(t, []byte("welcome"), msg, "Sent message is invalid: %s", msg)
 }
 
 func TestAuthenticateFailure(t *testing.T) {
@@ -24,6 +36,18 @@ func TestAuthenticateFailure(t *testing.T) {
 	err := node.Authenticate(session, "/failure", &map[string]string{"id": "test_id"})
 
 	assert.NotNil(t, err, "Error must not be nil")
+
+	// Expected to send message to session
+	var msg []byte
+
+	select {
+	case m := <-session.send:
+		msg = m
+	default:
+		assert.Fail(t, "Expected session to receive message but none was sent")
+	}
+
+	assert.Equalf(t, []byte("unauthorized"), msg, "Sent message is invalid: %s", msg)
 }
 
 func TestSubscribeSuccess(t *testing.T) {

@@ -185,11 +185,11 @@ func (n *Node) Shutdown() {
 func (n *Node) Authenticate(s *Session, path string, headers *map[string]string) error {
 	id, transmissions, err := n.controller.Authenticate(path, headers)
 
+	transmit(s, transmissions)
+
 	if err == nil {
 		s.Identifiers = id
 		s.connected = true
-
-		transmit(s, transmissions)
 
 		n.hub.register <- s
 	} else {

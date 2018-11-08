@@ -125,7 +125,7 @@ func (c *Controller) Authenticate(path string, headers *map[string]string) (stri
 			return r.Identifiers, r.Transmissions, nil
 		}
 
-		return "", nil, fmt.Errorf("Application error: %s", r.ErrorMsg)
+		return "", r.Transmissions, fmt.Errorf("Application error: %s", r.ErrorMsg)
 	}
 
 	c.metrics.Counter(metricsRPCFailures).Inc()

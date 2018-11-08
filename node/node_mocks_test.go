@@ -60,10 +60,10 @@ func (c *MockController) Shutdown() error {
 // - otherwise returns value of headers['id'] as identifier
 func (c *MockController) Authenticate(path string, headers *map[string]string) (string, []string, error) {
 	if path == "/failure" {
-		return "", nil, errors.New("Auth Failed")
+		return "", []string{"unauthorized"}, errors.New("Auth Failed")
 	}
 
-	return (*headers)["id"], nil, nil
+	return (*headers)["id"], []string{"welcome"}, nil
 }
 
 // Subscribe emulates subscription process:
