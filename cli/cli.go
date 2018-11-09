@@ -134,7 +134,7 @@ OPTIONS
 
 // PrintHelp prints CLI usage instructions to STDOUT
 func PrintHelp() {
-	fmt.Printf(usage)
+	fmt.Print(usage)
 }
 
 func ensureParsed() {

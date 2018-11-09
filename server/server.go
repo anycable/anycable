@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -77,7 +78,7 @@ func (s *HTTPServer) Stop() error {
 	s.shutdown = true
 	s.mu.Unlock()
 
-	return s.server.Shutdown(nil)
+	return s.server.Shutdown(context.Background())
 }
 
 // Stopped return true iff server has been stopped by user
