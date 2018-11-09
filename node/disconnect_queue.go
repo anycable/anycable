@@ -48,12 +48,13 @@ func NewDisconnectQueue(node *Node, rate int) *DisconnectQueue {
 
 // Run starts queue
 func (d *DisconnectQueue) Run() {
-	throttle := time.Tick(d.rate)
+	throttle := time.NewTicker(d.rate)
+	defer throttle.Stop()
 
 	for {
 		select {
 		case session := <-d.disconnect:
-			<-throttle
+			<-throttle.C
 			d.node.DisconnectNow(session)
 		case <-d.shutdownCh:
 			d.mu.Lock()
