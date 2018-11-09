@@ -29,10 +29,6 @@ var (
 func init() {
 	if version == "" {
 		version = "0.6.0-unknown"
-
-		if mrb.Supported() {
-			version = version + "-mrb"
-		}
 	}
 }
 
@@ -63,7 +59,13 @@ func main() {
 		ctx.Debug("🔧 🔧 🔧 Debug mode is on 🔧 🔧 🔧")
 	}
 
-	ctx.Infof("Starting AnyCable %s (pid: %d)", version, os.Getpid())
+	mrubySupport := ""
+
+	if mrb.Supported() {
+		mrubySupport = " (with mruby)"
+	}
+
+	ctx.Infof("Starting AnyCable %s%s (pid: %d)", version, mrubySupport, os.Getpid())
 
 	var metricsPrinter metrics.Printer
 

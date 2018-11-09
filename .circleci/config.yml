@@ -96,11 +96,11 @@ workflows:
             only: /^v[0-9]+\.[0-9]+\.[0-9]+$/
           branches:
             ignore: /.*/
-    - github_release_preview:
+    - github_release_preview_beta:
         <<: *github_release_requires
         filters:
           tags:
-            only: /^v[0-9]+\.[0-9]+\.[0-9]+-preview.*$/
+            only: /^v[0-9]+\.[0-9]+\.[0-9]+-(preview|beta).*$/
           branches:
             ignore: /.*/
 
@@ -187,7 +187,7 @@ jobs:
           bash -c "(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)"
     - run:
         name: Build Darwin amd64 binary (with mruby)
-        command: /usr/local/go/bin/go build -ldflags "-s -w -X main.version=0.6.0-preview5" -tags mrb -o "/tmp/dist/anycable-go-$(git describe --abbrev=0 --tags)-mrb-dawrin-amd64" cmd/anycable-go/main.go
+        command: /usr/local/go/bin/go build -ldflags "-s -w -X main.version=$(git describe --abbrev=0 --tags)-mrb" -tags mrb -o "/tmp/dist/anycable-go-$(git describe --abbrev=0 --tags)-mrb-dawrin-amd64" cmd/anycable-go/main.go
     - save_cache:
         key: darwin-mruby-{{ .Revision }}
         paths: /tmp/dist/
@@ -384,7 +384,7 @@ jobs:
         name: Upload GitHub release
         command: ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -delete ${CIRCLE_TAG} ./
 
-  github_release_preview:
+  github_release_preview_beta:
     <<: *golang_image
     working_directory: /tmp/dist/
     steps:
