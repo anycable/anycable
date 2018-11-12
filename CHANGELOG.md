@@ -2,6 +2,20 @@
 
 ## master
 
+## 0.6.0
+
+- Add force termination support (by sending the second signal). ([@palkan][])
+
+- Add session ID to outgoing RPC call's metadata. ([@palkan][])
+
+All RPC calls contains the related session ID to metadata (`sid` key).
+
+- Send transmissions to client even if authentication failed. ([@palkan][])
+
+- Fix websocket close status to reflect the reason for the closure. ([@sponomarev][])
+
+- Reduce binary size. ([@sponomarev][])
+
 ## 0.6.0-preview6
 
 - Add experimental mruby integration for custom metrics logging. ([@palkan][])
@@ -206,3 +220,4 @@ No more race conditions.
 [@palkan]: https://github.com/palkan
 [@woodcrust]: https://github.com/woodcrust
 [@shedimon]: https://github.com/shedimon
+[@sponomarev]: https://github.com/sponomarev
