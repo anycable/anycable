@@ -100,7 +100,7 @@ workflows:
         <<: *github_release_requires
         filters:
           tags:
-            only: /^v[0-9]+\.[0-9]+\.[0-9]+-(preview|beta).*$/
+            only: /^v[0-9]+\.[0-9]+\.[0-9]+-(preview|beta|rc\d+).*$/
           branches:
             ignore: /.*/
 
