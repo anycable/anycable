@@ -2,7 +2,7 @@
 
 ## master
 
-## 0.6.0
+## 0.6.0 (2018-11-11)
 
 - Add force termination support (by sending the second signal). ([@palkan][])
 
