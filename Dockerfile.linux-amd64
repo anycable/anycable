@@ -8,8 +8,6 @@ ADD .docker/anycable-go-linux-amd64 /usr/local/bin/anycable-go
 
 USER nobody
 
-ENV ADDR "0.0.0.0:8080"
-
 EXPOSE 8080
 
 ENTRYPOINT ["/usr/local/bin/anycable-go"]
