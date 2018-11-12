@@ -244,10 +244,10 @@ jobs:
         at: /go/src/github.com/anycable/anycable-go/
     - run:
         name: Building Darwin i386 binary
-        command: env GOARCH=386 go build -ldflags "-s -w -X main.version=$(git describe --tags)" -a -o "/tmp/dist/anycable-go-$(git describe --tags)-win-386" cmd/anycable-go/main.go
+        command: env GOARCH=386 go build -ldflags "-s -w -X main.version=$(git describe --tags)" -a -o "/tmp/dist/anycable-go-$(git describe --tags)-darwin-386" cmd/anycable-go/main.go
     - run:
         name: Building Darwin amd64 binary
-        command: env GOARCH=amd64 go build -ldflags "-s -w -X main.version=$(git describe --tags)" -a -o "/tmp/dist/anycable-go-$(git describe --tags)-win-amd64" cmd/anycable-go/main.go
+        command: env GOARCH=amd64 go build -ldflags "-s -w -X main.version=$(git describe --tags)" -a -o "/tmp/dist/anycable-go-$(git describe --tags)-darwin-amd64" cmd/anycable-go/main.go
     - save_cache:
         key: darwin-nomruby-{{ .Revision }}
         paths: /tmp/dist/
