@@ -4,7 +4,6 @@
 
 ## 0.6.0-dev
 
-
 ### Features
 
 #### Broadcast adapters
@@ -40,6 +39,12 @@ The only required options is the application file to load (`-r/--require`).
 
 You can omit it if you want to load an app form `./config/environment.rb` (e.g. with Rails) or `./config/anycable.rb`.
 
+AnyCable CLI also allows you to run a separate command (process) from within a RPC server:
+
+```sh
+$ bundle exec anycable --server-command "anycable-go -p 3334"
+```
+
 #### Configuration
 
 - Default server host is changed from `localhost:50051` to `0.0.0.0:50051`
@@ -62,9 +67,31 @@ Now it's possible to pass Sentinel configuration via env vars:
 ANYCABLE_REDIS_SENTINELS=127.0.0.1:26380,127.0.0.1:26381 bundle exec anycable
 ```
 
-### Misc
+#### Other
 
-- Use `AnyCable` instead of `Anycable` (the older namespace is also supported for backward compatibility)
+- Added middlewares support
+
+See [docs](https://docs.anycable.io/#/./middlewares).
+
+- Added gRPC health checker.
+
+See [docs](https://docs.anycable.io/#/./health_checking).
+
+### API changes
+
+**NOTE**: the old API is still working but deprecated (you'll see a notice).
+
+- Use `AnyCable` instead of `Anycable`
+
+- New API for registering error handlers:
+
+```ruby
+AnyCable.capture_exception do |ex|
+  Honeybadger.notify(ex)
+end
+```
+
+- `AnyCable::Server.start` is deprecated
 
 
 ## 0.5.2 (2018-09-06)

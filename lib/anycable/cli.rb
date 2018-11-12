@@ -13,8 +13,8 @@ module AnyCable
     # (not-so-big) List of common boot files for
     # different applications
     APP_CANDIDATES = %w[
-      ./config/environment.rb
       ./config/anycable.rb
+      ./config/environment.rb
     ].freeze
 
     attr_reader :server, :health_server
