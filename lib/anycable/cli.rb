@@ -17,6 +17,9 @@ module AnyCable
       ./config/environment.rb
     ].freeze
 
+    # Wait for external process termination (s)
+    WAIT_PROCESS = 2
+
     attr_reader :server, :health_server
 
     # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
@@ -167,7 +170,7 @@ module AnyCable
       logger.info "Broadcasting Redis channel: #{config.redis_channel}"
     end
 
-    # rubocop: disable Metrics/MethodLength
+    # rubocop: disable Metrics/MethodLength, Metrics/AbcSize
     def run_custom_server_command!
       pid = nil
       stopped = false
@@ -184,10 +187,26 @@ module AnyCable
 
       at_stop do
         stopped = true
-        Process.kill("SIGTERM", pid) unless pid.nil?
+        next if pid.nil?
+
+        Process.kill("SIGTERM", pid)
+
+        logger.info "Wait till process #{pid} stop..."
+
+        tick = 0
+
+        loop do
+          tick += 0.2
+          break if tick > WAIT_PROCESS
+
+          if pid.nil?
+            logger.info "Process #{pid} stopped."
+            break
+          end
+        end
       end
     end
-    # rubocop: enable Metrics/MethodLength
+    # rubocop: enable Metrics/MethodLength, Metrics/AbcSize
 
     def log_grpc!
       ::GRPC.define_singleton_method(:logger) { AnyCable.logger }
