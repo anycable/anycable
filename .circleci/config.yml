@@ -158,7 +158,7 @@ jobs:
         at: /go/src/github.com/anycable/anycable-go/
     - run:
         name: Building Linux amd64 binary
-        command: env GOARCH=amd64 go build -ldflags "-s -w -X main.version=$(git tag -l --points-at HEAD)" -a -o "/tmp/anycable-go-test" cmd/anycable-go/main.go
+        command: env GOARCH=amd64 go build -ldflags "-s -w -X main.version=$(git describe --tags)" -a -o "/tmp/anycable-go-test" cmd/anycable-go/main.go
     - save_cache:
         key: binary-for-anyt-test-{{ .Revision }}
         paths: /tmp/anycable-go-test
@@ -187,7 +187,7 @@ jobs:
           bash -c "(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)"
     - run:
         name: Build Darwin amd64 binary (with mruby)
-        command: /usr/local/go/bin/go build -ldflags "-s -w -X main.version=$(git tag -l --points-at HEAD)-mrb" -tags mrb -o "/tmp/dist/anycable-go-$(git tag -l --points-at HEAD)-mrb-dawrin-amd64" cmd/anycable-go/main.go
+        command: /usr/local/go/bin/go build -ldflags "-s -w -X main.version=$(git describe --tags)-mrb" -tags mrb -o "/tmp/dist/anycable-go-$(git describe --tags)-mrb-dawrin-amd64" cmd/anycable-go/main.go
     - save_cache:
         key: darwin-mruby-{{ .Revision }}
         paths: /tmp/dist/
@@ -202,16 +202,16 @@ jobs:
         at: /go/src/github.com/anycable/anycable-go/
     - run:
         name: Building Linux i386 binary
-        command: env GOARCH=386 go build -ldflags "-s -w -X main.version=$(git tag -l --points-at HEAD)" -a -o "/tmp/dist/anycable-go-$(git tag -l --points-at HEAD)-linux-386" cmd/anycable-go/main.go
+        command: env GOARCH=386 go build -ldflags "-s -w -X main.version=$(git describe --tags)" -a -o "/tmp/dist/anycable-go-$(git describe --tags)-linux-386" cmd/anycable-go/main.go
     - run:
         name: Building Linux amd64 binary
-        command: env GOARCH=amd64 go build -ldflags "-s -w -X main.version=$(git tag -l --points-at HEAD)" -a -o "/tmp/dist/anycable-go-$(git tag -l --points-at HEAD)-linux-amd64" cmd/anycable-go/main.go
+        command: env GOARCH=amd64 go build -ldflags "-s -w -X main.version=$(git describe --tags)" -a -o "/tmp/dist/anycable-go-$(git describe --tags)-linux-amd64" cmd/anycable-go/main.go
     - run:
         name: Building Linux arm binary
-        command: env GOARCH=arm go build -ldflags "-s -w -X main.version=$(git tag -l --points-at HEAD)" -a -o "/tmp/dist/anycable-go-$(git tag -l --points-at HEAD)-linux-arm" cmd/anycable-go/main.go
+        command: env GOARCH=arm go build -ldflags "-s -w -X main.version=$(git describe --tags)" -a -o "/tmp/dist/anycable-go-$(git describe --tags)-linux-arm" cmd/anycable-go/main.go
     - run:
         name: Building Linux arm binary
-        command: env GOARCH=arm64 go build -ldflags "-s -w -X main.version=$(git tag -l --points-at HEAD)" -a -o "/tmp/dist/anycable-go-$(git tag -l --points-at HEAD)-linux-arm64" cmd/anycable-go/main.go
+        command: env GOARCH=arm64 go build -ldflags "-s -w -X main.version=$(git describe --tags)" -a -o "/tmp/dist/anycable-go-$(git describe --tags)-linux-arm64" cmd/anycable-go/main.go
     - save_cache:
         key: linux-nomruby-{{ .Revision }}
         paths: /tmp/dist/
@@ -226,10 +226,10 @@ jobs:
         at: /go/src/github.com/anycable/anycable-go/
     - run:
         name: Building Windows i386 binary
-        command: env GOARCH=386 go build -ldflags "-s -w -X main.version=$(git tag -l --points-at HEAD)" -a -o "/tmp/dist/anycable-go-$(git tag -l --points-at HEAD)-win-386" cmd/anycable-go/main.go
+        command: env GOARCH=386 go build -ldflags "-s -w -X main.version=$(git describe --tags)" -a -o "/tmp/dist/anycable-go-$(git describe --tags)-win-386" cmd/anycable-go/main.go
     - run:
         name: Building Windows amd64 binary
-        command: env GOARCH=amd64 go build -ldflags "-s -w -X main.version=$(git tag -l --points-at HEAD)" -a -o "/tmp/dist/anycable-go-$(git tag -l --points-at HEAD)-win-amd64" cmd/anycable-go/main.go
+        command: env GOARCH=amd64 go build -ldflags "-s -w -X main.version=$(git describe --tags)" -a -o "/tmp/dist/anycable-go-$(git describe --tags)-win-amd64" cmd/anycable-go/main.go
     - save_cache:
         key: windows-{{ .Revision }}
         paths: /tmp/dist/
@@ -244,10 +244,10 @@ jobs:
         at: /go/src/github.com/anycable/anycable-go/
     - run:
         name: Building Darwin i386 binary
-        command: env GOARCH=386 go build -ldflags "-s -w -X main.version=$(git tag -l --points-at HEAD)" -a -o "/tmp/dist/anycable-go-$(git tag -l --points-at HEAD)-win-386" cmd/anycable-go/main.go
+        command: env GOARCH=386 go build -ldflags "-s -w -X main.version=$(git describe --tags)" -a -o "/tmp/dist/anycable-go-$(git describe --tags)-win-386" cmd/anycable-go/main.go
     - run:
         name: Building Darwin amd64 binary
-        command: env GOARCH=amd64 go build -ldflags "-s -w -X main.version=$(git tag -l --points-at HEAD)" -a -o "/tmp/dist/anycable-go-$(git tag -l --points-at HEAD)-win-amd64" cmd/anycable-go/main.go
+        command: env GOARCH=amd64 go build -ldflags "-s -w -X main.version=$(git describe --tags)" -a -o "/tmp/dist/anycable-go-$(git describe --tags)-win-amd64" cmd/anycable-go/main.go
     - save_cache:
         key: darwin-nomruby-{{ .Revision }}
         paths: /tmp/dist/
@@ -262,13 +262,13 @@ jobs:
         at: /go/src/github.com/anycable/anycable-go/
     - run:
         name: Building FreeBSD i386 binary
-        command: env GOARCH=386 go build -ldflags "-s -w -X main.version=$(git tag -l --points-at HEAD)" -a -o "/tmp/dist/anycable-go-$(git tag -l --points-at HEAD)-freebsd-386" cmd/anycable-go/main.go
+        command: env GOARCH=386 go build -ldflags "-s -w -X main.version=$(git describe --tags)" -a -o "/tmp/dist/anycable-go-$(git describe --tags)-freebsd-386" cmd/anycable-go/main.go
     - run:
         name: Building FreeBSD amd64 binary
-        command: env GOARCH=amd64 go build -ldflags "-s -w -X main.version=$(git tag -l --points-at HEAD)" -a -o "/tmp/dist/anycable-go-$(git tag -l --points-at HEAD)-freebsd-amd64" cmd/anycable-go/main.go
+        command: env GOARCH=amd64 go build -ldflags "-s -w -X main.version=$(git describe --tags)" -a -o "/tmp/dist/anycable-go-$(git describe --tags)-freebsd-amd64" cmd/anycable-go/main.go
     - run:
         name: Building FreeBSD arm binary
-        command: env GOARCH=arm go build -ldflags "-s -w -X main.version=$(git tag -l --points-at HEAD)" -a -o "/tmp/dist/anycable-go-$(git tag -l --points-at HEAD)-freebsd-arm" cmd/anycable-go/main.go
+        command: env GOARCH=arm go build -ldflags "-s -w -X main.version=$(git describe --tags)" -a -o "/tmp/dist/anycable-go-$(git describe --tags)-freebsd-arm" cmd/anycable-go/main.go
     - save_cache:
         key: freebsd-{{ .Revision }}
         paths: /tmp/dist/
@@ -284,7 +284,7 @@ jobs:
         at: /go/src/github.com/anycable/anycable-go/
     - run:
         name: Building Linux amd64 binary
-        command: env go build -ldflags "-s -w -X main.version=$(git tag -l --points-at HEAD)" -tags mrb -a -o "/tmp/dist/anycable-go-$(git tag -l --points-at HEAD)-mrb-linux-amd64" cmd/anycable-go/main.go
+        command: env go build -ldflags "-s -w -X main.version=$(git describe --tags)" -tags mrb -a -o "/tmp/dist/anycable-go-$(git describe --tags)-mrb-linux-amd64" cmd/anycable-go/main.go
     - save_cache:
         key: linux-mruby-{{ .Revision }}
         paths: /tmp/dist/
