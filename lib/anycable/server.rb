@@ -27,6 +27,8 @@ module AnyCable
         warn <<~DEPRECATION
           Using AnyCable::Server.start is deprecated!
           Please, use anycable CLI instead.
+
+          See https://docs.anycable.io/#upgrade_to_0_6_0
         DEPRECATION
 
         server = new(
