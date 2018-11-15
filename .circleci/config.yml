@@ -153,6 +153,7 @@ jobs:
     environment:
       GOOS: linux
       GOARCH: amd64
+      CGO_ENABLED: "0"
     steps:
     - attach_workspace:
         at: /go/src/github.com/anycable/anycable-go/
@@ -169,6 +170,7 @@ jobs:
     environment:
       GOPATH: /Users/distiller/go
       GOARCH: amd64
+      CGO_ENABLED: "1"
     working_directory: /Users/distiller/go/src/github.com/anycable/anycable-go/
     steps:
     - run: mkdir -p /Users/distiller/go/src/github.com/anycable/anycable-go/
@@ -197,6 +199,7 @@ jobs:
     working_directory: /go/src/github.com/anycable/anycable-go/
     environment:
       GOOS: linux
+      CGO_ENABLED: "0"
     steps:
     - attach_workspace:
         at: /go/src/github.com/anycable/anycable-go/
@@ -221,6 +224,7 @@ jobs:
     working_directory: /go/src/github.com/anycable/anycable-go/
     environment:
       GOOS: windows
+      CGO_ENABLED: "0"
     steps:
     - attach_workspace:
         at: /go/src/github.com/anycable/anycable-go/
@@ -239,6 +243,7 @@ jobs:
     working_directory: /go/src/github.com/anycable/anycable-go/
     environment:
       GOOS: darwin
+      CGO_ENABLED: "0"
     steps:
     - attach_workspace:
         at: /go/src/github.com/anycable/anycable-go/
@@ -257,6 +262,7 @@ jobs:
     working_directory: /go/src/github.com/anycable/anycable-go/
     environment:
       GOOS: freebsd
+      CGO_ENABLED: "0"
     steps:
     - attach_workspace:
         at: /go/src/github.com/anycable/anycable-go/
@@ -279,6 +285,7 @@ jobs:
     environment:
       GOOS: linux
       GOARCH: amd64
+      CGO_ENABLED: "1"
     steps:
     - attach_workspace:
         at: /go/src/github.com/anycable/anycable-go/
