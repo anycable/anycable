@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 
 	"github.com/anycable/anycable-go/cli"
@@ -62,7 +63,12 @@ func main() {
 	mrubySupport := ""
 
 	if mrb.Supported() {
-		mrubySupport = " (with mruby)"
+		mrbv, err := mrb.DefaultEngine().Eval("MRUBY_DESCRIPTION")
+		if err != nil {
+			log.Errorf("mruby failed to initialize: %v", err)
+		} else {
+			mrubySupport = " (with " + strings.TrimSpace(mrbv.String()) + ")"
+		}
 	}
 
 	ctx.Infof("Starting AnyCable %s%s (pid: %d)", version, mrubySupport, os.Getpid())
