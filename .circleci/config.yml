@@ -93,14 +93,7 @@ workflows:
         <<: *github_release_requires
         filters:
           tags:
-            only: /^v[0-9]+\.[0-9]+\.[0-9]+$/
-          branches:
-            ignore: /.*/
-    - github_release_preview_beta:
-        <<: *github_release_requires
-        filters:
-          tags:
-            only: /^v[0-9]+\.[0-9]+\.[0-9]+(\-|\.)(preview|beta|rc\d+).*$/
+            only: /^v[0-9]+\.[0-9]+\.[0-9]+((\-|\.)(preview|beta|rc)\d+)?$/
           branches:
             ignore: /.*/
 
@@ -366,32 +359,6 @@ jobs:
         command: docker push anycable/anycable-go:${CIRCLE_TAG}-mrb
 
   github_release:
-    <<: *golang_image
-    working_directory: /tmp/dist/
-    steps:
-    - restore_cache:
-        key: darwin-mruby-{{ .Revision }}
-    - restore_cache:
-        key: darwin-nomruby-{{ .Revision }}
-    - restore_cache:
-        key: linux-mruby-{{ .Revision }}
-    - restore_cache:
-        key: linux-nomruby-{{ .Revision }}
-    - restore_cache:
-        key: freebsd-{{ .Revision }}
-    - restore_cache:
-        key: windows-{{ .Revision }}
-    - run:
-        name: Generate SHA256 checksums
-        command: sha256sum anycable-go-* > SHA256SUM
-    - run:
-        name: Install ghr tool
-        command: go get github.com/tcnksm/ghr
-    - run:
-        name: Upload GitHub release
-        command: ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -delete ${CIRCLE_TAG} ./
-
-  github_release_preview_beta:
     <<: *golang_image
     working_directory: /tmp/dist/
     steps:
