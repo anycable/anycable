@@ -5,6 +5,7 @@ package mrb
 import (
 	"fmt"
 	"io/ioutil"
+	"strings"
 	"sync"
 
 	nanoid "github.com/matoous/go-nanoid"
@@ -42,6 +43,16 @@ func DefaultEngine() *Engine {
 	}
 
 	return defaultEngine
+}
+
+func Version() (v string, err error) {
+	mrbv, err := DefaultEngine().Eval("MRUBY_DESCRIPTION")
+	if err != nil {
+		return
+	}
+
+	v = strings.TrimSpace(mrbv.String())
+	return
 }
 
 // LoadFile loads, parses and eval Ruby file within a vm

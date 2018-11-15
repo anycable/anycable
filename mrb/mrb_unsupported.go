@@ -6,3 +6,8 @@ package mrb
 func Supported() bool {
 	return false
 }
+
+// Version returns mruby version
+func Version() (string, error) {
+	return "unknown", nil
+}
