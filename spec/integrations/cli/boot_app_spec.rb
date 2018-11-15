@@ -38,6 +38,7 @@ describe "CLI require app", :cli do
     it "loads application when file exists" do
       run_cli("-r ../spec/dummies/app.rb") do |cli|
         expect(cli).to have_output_line("Serving application from ../spec/dummies/app.rb")
+        expect(cli).to have_output_line("Hello from app, server!")
       end
     end
 

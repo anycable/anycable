@@ -60,6 +60,16 @@ module AnyCable
       ExceptionsHandling
     end
 
+    # Register a callback to be invoked before
+    # the server starts
+    def configure_server(&block)
+      server_callbacks << block
+    end
+
+    def server_callbacks
+      @server_callbacks ||= []
+    end
+
     def broadcast_adapter
       self.broadcast_adapter = :redis unless instance_variable_defined?(:@broadcast_adapter)
       @broadcast_adapter

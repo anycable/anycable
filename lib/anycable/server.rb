@@ -31,6 +31,8 @@ module AnyCable
           See https://docs.anycable.io/#upgrade_to_0_6_0
         DEPRECATION
 
+        AnyCable.server_callbacks.each(&:call)
+
         server = new(
           host: AnyCable.config.rpc_host,
           **AnyCable.config.to_grpc_params,

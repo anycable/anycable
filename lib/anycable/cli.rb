@@ -40,6 +40,8 @@ module AnyCable
 
       logger.info "Serving #{defined?(::Rails) ? 'Rails ' : ''}application from #{boot_file}"
 
+      configure_server!
+
       verify_connection_factory!
 
       log_grpc! if config.log_grpc
@@ -154,6 +156,10 @@ module AnyCable
 
     def try_detect_app
       APP_CANDIDATES.detect { |path| File.exist?(path) }
+    end
+
+    def configure_server!
+      AnyCable.server_callbacks.each(&:call)
     end
 
     def start_health_server!

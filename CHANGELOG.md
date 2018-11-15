@@ -77,6 +77,10 @@ See [docs](https://docs.anycable.io/#/./middlewares).
 
 See [docs](https://docs.anycable.io/#/./health_checking).
 
+- Added hook to run code only within RPC server context.
+
+Use `AnyCable.configure_server { ... }` to run code only when RPC server is running.
+
 ### API changes
 
 **NOTE**: the old API is still working but deprecated (you'll see a notice).
