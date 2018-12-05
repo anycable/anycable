@@ -34,13 +34,13 @@ module AnyCable
 
       parse_gem_options!(extra_options)
 
+      configure_server!
+
       logger.info "Starting AnyCable gRPC server (pid: #{Process.pid})"
 
       print_versions!
 
       logger.info "Serving #{defined?(::Rails) ? 'Rails ' : ''}application from #{boot_file}"
-
-      configure_server!
 
       verify_connection_factory!
 
