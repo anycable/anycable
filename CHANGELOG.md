@@ -2,6 +2,13 @@
 
 ## master
 
+## 0.6.1 (2018-12-21) "X-mas time is here again!" 🎅
+
+- Add HTTP health check endpoint. ([@sponomarev][])
+
+Go to `/health` (you can configure the path via `--health-path`) to see the _health_ message.
+You can use this endpoint as readiness/liveness check (e.g. for load balancers).
+
 ## 0.6.0 (2018-11-12)
 
 - Add force termination support (by sending the second signal). ([@palkan][])
