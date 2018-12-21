@@ -19,6 +19,7 @@ type Config struct {
 	Host                string
 	Port                int
 	Path                string
+	HealthPath          string
 	Headers             []string
 	SSL                 SSLOptions
 	DisconnectRate      int

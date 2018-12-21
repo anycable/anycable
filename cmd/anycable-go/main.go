@@ -115,6 +115,9 @@ func main() {
 	wsServer.Mux.Handle(config.Path, http.HandlerFunc(wsServer.WebsocketHandler))
 	ctx.Infof("Handle WebSocket connections at %s", config.Path)
 
+	wsServer.Mux.Handle(config.HealthPath, http.HandlerFunc(wsServer.HealthHandler))
+	ctx.Infof("Handle health connections at %s", config.HealthPath)
+
 	go runServer(wsServer)
 
 	go metrics.Run()

@@ -50,6 +50,7 @@ func init() {
 	fs.StringVar(&defaults.Host, "host", "0.0.0.0", "")
 	fs.IntVar(&defaults.Port, "port", portDefault, "")
 	fs.StringVar(&defaults.Path, "path", "/cable", "")
+	fs.StringVar(&defaults.HealthPath, "health-path", "/health", "")
 	fs.IntVar(&defaults.DisconnectRate, "disconnect_rate", 100, "")
 
 	fs.StringVar(&defaults.SSL.CertPath, "ssl_cert", "", "")
@@ -105,6 +106,7 @@ OPTIONS
   --host                   Server host, default: localhost, env: ANYCABLE_HOST
   --port                   Server port, default: 8080, env: ANYCABLE_PORT, PORT
   --path                   WebSocket endpoint path, default: /cable, env: ANYCABLE_PATH
+  --health-path            HTTP health endpoint path, default: /health, env: ANYCABLE_HEALTH_PATH
 
   --ssl_cert               SSL certificate path, env: ANYCABLE_SSL_CERT
   --ssl_key                SSL private key path, env: ANYCABLE_SSL_KEY
