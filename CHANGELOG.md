@@ -2,6 +2,10 @@
 
 ## master
 
+## 0.6.1 (2019-01-05)
+
+- [Fix #63](https://github.com/anycable/anycable-rails/issues/63) Load `anyway_config` after application boot to make sure that all frameworks dependent functionality is loaded. ([@palkan][])
+
 ## 0.6.0 (2018-11-15)
 
 ### Features

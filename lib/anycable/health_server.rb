@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "webrick"
-require "anycable/server"
 
 module AnyCable
   # Server for HTTP healthchecks.

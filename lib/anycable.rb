@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "anycable/version"
-require "anycable/config"
 require "logger"
 
 require "anycable/exceptions_handling"
@@ -39,7 +38,12 @@ module AnyCable
     end
 
     def config
-      @config ||= Config.new
+      @config ||= begin
+        # Load anyway_config as later as possible
+        # to make sure all framework-dependent patches are loaded
+        require "anycable/config"
+        Config.new
+      end
     end
 
     def configure

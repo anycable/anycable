@@ -2,7 +2,8 @@
 
 require "spec_helper"
 
-describe AnyCable::Config do
+describe "AnyCable::Config" do
+  let(:described_class) { AnyCable::Config }
   subject(:config) { AnyCable.config }
 
   it "loads config vars from anycable.yml", :aggregate_failures do
