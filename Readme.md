@@ -11,11 +11,13 @@ WebSocket server for [AnyCable](https://github.com/anycable/anycable).
 
 The easiest way to install AnyCable-Go is to [download](https://github.com/anycable/anycable-go/releases) a pre-compiled binary.
 
-Or with [Homebrew](https://brew.sh/)
+MacOS users could install it with [Homebrew](https://brew.sh/)
 
 ```shell
 brew install anycable-go
 ```
+
+Arch Linux users can install [anycable-go package from AUR](https://aur.archlinux.org/packages/anycable-go/).
 
 Of course, you can install it from source too:
 
