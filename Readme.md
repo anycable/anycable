@@ -1,4 +1,7 @@
-[![CircleCI](https://circleci.com/gh/anycable/anycable-go.svg?style=svg)](https://circleci.com/gh/anycable/anycable-go) [![Dependency Status](https://dependencyci.com/github/anycable/anycable-go/badge)](https://dependencyci.com/github/anycable/anycable-go) [![Gitter](https://img.shields.io/badge/gitter-join%20chat%20%E2%86%92-brightgreen.svg)](https://gitter.im/anycable/anycable-go)
+[![TravisCI](https://travis-ci.org/anycable/anycable-go.svg?branch=master)](https://travis-ci.org/anycable/anycable-go)
+[![CircleCI](https://circleci.com/gh/anycable/anycable-go.svg?style=svg)](https://circleci.com/gh/anycable/anycable-go)
+[![Dependency Status](https://dependencyci.com/github/anycable/anycable-go/badge)](https://dependencyci.com/github/anycable/anycable-go)
+[![Gitter](https://img.shields.io/badge/gitter-join%20chat%20%E2%86%92-brightgreen.svg)](https://gitter.im/anycable/anycable-go)
 [![Documentation](https://img.shields.io/badge/docs-link-brightgreen.svg)](https://docs.anycable.io/#go_getting_started)
 
 # AnyCable-Go WebSocket Server
