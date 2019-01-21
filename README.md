@@ -16,7 +16,7 @@ AnyCable uses ActionCable protocol, so you can use ActionCable [JavaScript clien
 
 ## Requirements
 
-- Ruby >= 2.4
+- Ruby >= 2.4; **NOTE:** Ruby 2.6 requires additional installations steps unless `grpc`/`protobufs` libs with pre-built binaries haven't been released (see [#71](https://github.com/anycable/anycable-rails/issues/71))
 - Redis (for brodcasting, [discuss other options](https://github.com/anycable/anycable/issues/2) with us!)
 
 ## Usage
