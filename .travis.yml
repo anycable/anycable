@@ -7,10 +7,18 @@ notifications:
     on_failure: always
 
 go:
-  - "1.10"
+  - 1.10.x
+  - 1.11.x
+  - master
+
+matrix:
+  allow_failures:
+    - go: master
+  fast_finish: true
+
 services:
   - redis-server
 before_install:
-  - rvm use 2.4.2 --install --binary --fuzzy
+  - rvm use 2.5 --install --binary --fuzzy
   - gem install anyt
 script: make test-ci

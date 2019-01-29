@@ -1,4 +1,7 @@
-[![CircleCI](https://circleci.com/gh/anycable/anycable-go.svg?style=svg)](https://circleci.com/gh/anycable/anycable-go) [![Dependency Status](https://dependencyci.com/github/anycable/anycable-go/badge)](https://dependencyci.com/github/anycable/anycable-go) [![Gitter](https://img.shields.io/badge/gitter-join%20chat%20%E2%86%92-brightgreen.svg)](https://gitter.im/anycable/anycable-go)
+[![TravisCI](https://travis-ci.org/anycable/anycable-go.svg?branch=master)](https://travis-ci.org/anycable/anycable-go)
+[![CircleCI](https://circleci.com/gh/anycable/anycable-go.svg?style=svg)](https://circleci.com/gh/anycable/anycable-go)
+[![Dependency Status](https://dependencyci.com/github/anycable/anycable-go/badge)](https://dependencyci.com/github/anycable/anycable-go)
+[![Gitter](https://img.shields.io/badge/gitter-join%20chat%20%E2%86%92-brightgreen.svg)](https://gitter.im/anycable/anycable-go)
 [![Documentation](https://img.shields.io/badge/docs-link-brightgreen.svg)](https://docs.anycable.io/#go_getting_started)
 
 # AnyCable-Go WebSocket Server
@@ -11,11 +14,13 @@ WebSocket server for [AnyCable](https://github.com/anycable/anycable).
 
 The easiest way to install AnyCable-Go is to [download](https://github.com/anycable/anycable-go/releases) a pre-compiled binary.
 
-Or with [Homebrew](https://brew.sh/)
+MacOS users could install it with [Homebrew](https://brew.sh/)
 
 ```shell
-brew install anycable/anycable/anycable-go
+brew install anycable-go
 ```
+
+Arch Linux users can install [anycable-go package from AUR](https://aur.archlinux.org/packages/anycable-go/).
 
 Of course, you can install it from source too:
 

@@ -28,14 +28,14 @@ build:
 	env go build -tags mrb -ldflags $(LD_FLAGS) -o $(OUTPUT) cmd/anycable-go/main.go
 
 prepare-cross-mruby:
-	(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CROSS_OS=linux MRUBY_CONFIG=../../../../../../etc/build_config.rb make)
+	(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CROSS_OS=linux MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)
 
 prepare-mruby:
-	(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CONFIG=../../../../../../etc/build_config.rb make)
+	(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)
 
 build-all-mruby:
 	env $(GOBUILD) -tags mrb -o "dist/anycable-go-$(VERSION)-mrb-macos-amd64" cmd/anycable-go/main.go
-	docker run --rm -v $(PWD):/go/src/github.com/anycable/anycable-go -w /go/src/github.com/anycable/anycable-go -e OUTPUT="dist/anycable-go-$(VERSION)-mrb-linux-amd64" amd64/golang:1.10 make build
+	docker run --rm -v $(PWD):/go/src/github.com/anycable/anycable-go -w /go/src/github.com/anycable/anycable-go -e OUTPUT="dist/anycable-go-$(VERSION)-mrb-linux-amd64" amd64/golang:1.11.4 make build
 
 build-clean:
 	rm -rf ./dist
@@ -57,7 +57,7 @@ build-all: build-clean build-linux
 
 release-heroku:
 	env GOOS=linux   GOARCH=amd64 $(GOBUILD) -o "dist/anycable-go-$(VERSION)-linux-amd64"   cmd/anycable-go/main.go
-	docker run --rm -v $(PWD):/go/src/github.com/anycable/anycable-go -w /go/src/github.com/anycable/anycable-go -e OUTPUT="dist/anycable-go-$(VERSION)-mrb-linux-amd64" amd64/golang:1.10 make build
+	docker run --rm -v $(PWD):/go/src/github.com/anycable/anycable-go -w /go/src/github.com/anycable/anycable-go -e OUTPUT="dist/anycable-go-$(VERSION)-mrb-linux-amd64" amd64/golang:1.11.4 make build
 	aws s3 cp --acl=public-read ./dist/anycable-go-$(VERSION)-linux-amd64 "s3://anycable/builds/$(VERSION)/anycable-go-$(VERSION)-heroku"
 	aws s3 cp --acl=public-read ./dist/anycable-go-$(VERSION)-mrb-linux-amd64 "s3://anycable/builds/$(VERSION)-mrb/anycable-go-$(VERSION)-mrb-heroku"
 
