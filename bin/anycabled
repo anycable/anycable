@@ -15,7 +15,7 @@ end
 
 options = {
   dir: "tmp/pids",
-  log_otput: false
+  log_output: false
 }
 
 # Preserve current directory. We need it inside the server.
