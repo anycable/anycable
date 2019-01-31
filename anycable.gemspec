@@ -15,7 +15,7 @@ Gem::Specification.new do |spec|
   spec.homepage      = "http://github.com/anycable/anycable"
   spec.license       = "MIT"
 
-  spec.executables   = ["anycable"]
+  spec.executables   = %w[anycable anycabled]
   spec.files         = `git ls-files README.md MIT-LICENSE CHANGELOG.md lib bin`.split
   spec.require_paths = ["lib"]
 

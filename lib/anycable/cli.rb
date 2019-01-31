@@ -23,7 +23,7 @@ module AnyCable
     attr_reader :server, :health_server
 
     # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
-    def run(args)
+    def run(args = {})
       @at_stop = []
 
       extra_options = parse_cli_options!(args)
