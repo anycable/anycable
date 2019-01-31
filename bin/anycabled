@@ -21,7 +21,10 @@ options = {
 # Preserve current directory. We need it inside the server.
 current_dir = Dir.pwd
 
+# Clean ARGV from daemon command and args
+_, _, args = Daemons::Controller.split_argv(ARGV)
+
 Daemons.run_proc("anycable", options) do
   Dir.chdir current_dir
-  AnyCable::CLI.new.run
+  AnyCable::CLI.new.run(args)
 end
