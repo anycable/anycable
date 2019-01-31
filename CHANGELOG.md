@@ -2,6 +2,24 @@
 
 ## master
 
+- Allow running the server as a detachable daemon ([@sponomarev][])
+
+Server is fully managed by the binary itself.
+
+```
+# Start anycable daemon
+$ bundle exec anycabled start
+
+# Pass cli options to anycable through daemon. Separate daemon options and anycable options with `--`
+$ bundle exec anycabled start -- --rpc-host 127.0.0.1:31337
+
+# Stop anycable daemon
+$ bundle exec anycabled stop
+
+# See more anycable daemon options
+$ bundle exec anycabled
+```
+
 ## 0.6.1 (2019-01-05)
 
 - [Fix #63](https://github.com/anycable/anycable-rails/issues/63) Load `anyway_config` after application boot to make sure that all frameworks dependent functionality is loaded. ([@palkan][])
@@ -116,7 +134,7 @@ Minor fixes.
 
 - [#28](https://github.com/anycable/anycable/issues/28) Support arbitrary headers. ([@palkan][])
 
-Previously we hardcoded only "Cookie" header. Now we add all passed headers by WebSocket server to request env. 
+Previously we hardcoded only "Cookie" header. Now we add all passed headers by WebSocket server to request env.
 
 - [#27](https://github.com/anycable/anycable/issues/27) Add `error_msg` to RPC responses. ([@palkan][])
 
@@ -130,7 +148,7 @@ We provide `error_msg` only when request status is `ERROR`.
 
 - [#25](https://github.com/anycable/anycable/issues/25) Improve logging and exceptions handling. ([@palkan][])
 
-Default logger logs to STDOUT with `info` level by default but can be configured to log to file with 
+Default logger logs to STDOUT with `info` level by default but can be configured to log to file with
 any severity.
 
 GRPC logging is turned off by default (can be turned on through `log_grpc` configuration parameter).
