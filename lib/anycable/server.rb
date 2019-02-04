@@ -12,8 +12,8 @@ module AnyCable
   #
   # Basic example:
   #
-  #   # create new server listening on [::]:50051 (default host)
-  #   server = AnyCable::Server.new(host: "[::]:50051")
+  #   # create new server listening on the loopback interface with 50051 port
+  #   server = AnyCable::Server.new(host: "127.0.0.1:50051")
   #
   #   # run gRPC server in bakground
   #   server.start
@@ -25,7 +25,7 @@ module AnyCable
       # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
       def start(**options)
         warn <<~DEPRECATION
-          Using AnyCable::Server.start is deprecated!
+          DEPRECATION WARNING: Using AnyCable::Server.start is deprecated!
           Please, use anycable CLI instead.
 
           See https://docs.anycable.io/#upgrade_to_0_6_0
@@ -63,11 +63,9 @@ module AnyCable
       # rubocop:enable Metrics/AbcSize, Metrics/MethodLength
     end
 
-    DEFAULT_HOST = "0.0.0.0:50051"
-
     attr_reader :grpc_server, :host
 
-    def initialize(host: DEFAULT_HOST, logger: AnyCable.logger, **options)
+    def initialize(host:, logger: AnyCable.logger, **options)
       @logger = logger
       @host = host
       @grpc_server = build_server(options)
@@ -79,6 +77,8 @@ module AnyCable
       return if running?
 
       raise "Cannot re-start stopped server" if stopped?
+
+      check_default_host
 
       logger.info "RPC server is starting..."
 
@@ -131,6 +131,22 @@ module AnyCable
         Grpc::Health::V1::HealthCheckResponse::ServingStatus::SERVING
       )
       health_checker
+    end
+
+    def check_default_host
+      return unless host.is_a?(Anycable::Config::DefaultHostWrapper)
+
+      warn <<~DEPRECATION
+        DEPRECATION WARNING: You're using default rpc_host configuration which starts AnyCable RPC
+        server on all available interfaces including external IPv4 and IPv6.
+        This is about to be changed to loopback interface only in future versions.
+
+        Please, consider switching to the loopback interface or set "[::]:50051"
+        explicitly in your configuration, if you want to continue with the current
+        behavior and supress this message.
+
+        See https://docs.anycable.io/#/configuration
+      DEPRECATION
     end
   end
 end

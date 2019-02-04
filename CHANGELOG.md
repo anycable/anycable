@@ -2,6 +2,11 @@
 
 ## master
 
+- Add deprecation warning to default host usage ([@sponomarev][])
+
+Exposing AnyCable publicly is considered to be harmful and planned to be changed
+in future versions.
+
 - Allow running the server as a detachable daemon ([@sponomarev][])
 
 Server is fully managed by the binary itself.
