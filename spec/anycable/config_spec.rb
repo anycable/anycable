@@ -8,6 +8,7 @@ describe "AnyCable::Config" do
 
   it "loads config vars from anycable.yml", :aggregate_failures do
     expect(config.rpc_host).to eq "0.0.0.0:50123"
+    expect(config.rpc_host).not_to be_a(AnyCable::Config::DefaultHostWrapper)
     expect(config.redis_channel).to eq "__anycable__"
     expect(config.log_level).to eq :info
     expect(config.log_grpc).to eq false
@@ -68,6 +69,22 @@ describe "AnyCable::Config" do
           url: "redis://localhost:6379/2"
         )
       end
+    end
+  end
+
+  describe "defaults" do
+    subject(:config) { described_class.new }
+
+    # Initialize config with plain defaults
+    around do |ex|
+      old_conf, ENV["ANYCABLE_CONF"] = ENV["ANYCABLE_CONF"], nil
+      ex.run
+      ENV["ANYCABLE_CONF"] = old_conf
+    end
+
+    describe "#rpc_host" do
+      specify { expect(config.rpc_host).to be_a(AnyCable::Config::DefaultHostWrapper) }
+      specify { expect(config.rpc_host).to eq("[::]:50051") }
     end
   end
 end

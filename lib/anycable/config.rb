@@ -8,9 +8,11 @@ module AnyCable
   class Config < Anyway::Config
     config_name :anycable
 
+    DefaultHostWrapper = Class.new(String)
+
     attr_config(
       ### gRPC options
-      rpc_host: "[::]:50051",
+      rpc_host: DefaultHostWrapper.new("[::]:50051"),
       # For defaults see https://github.com/grpc/grpc/blob/master/src/ruby/lib/grpc/generic/rpc_server.rb#L162-L170
       rpc_pool_size: GRPC::RpcServer::DEFAULT_POOL_SIZE,
       rpc_max_waiting_requests: GRPC::RpcServer::DEFAULT_MAX_WAITING_REQUESTS,
