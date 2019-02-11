@@ -15,7 +15,7 @@ LD_FLAGS="-s -w -X main.version=$(VERSION)"
 GOBUILD=go build -ldflags $(LD_FLAGS) -a
 
 # Standard build
-default: prepare build
+default: build
 
 # Install current version
 install:
@@ -25,13 +25,15 @@ install-with-mruby:
 	go install -tags mrb ./...
 
 build:
-	env go build -tags mrb -ldflags $(LD_FLAGS) -o $(OUTPUT) cmd/anycable-go/main.go
+	go build -tags mrb -ldflags $(LD_FLAGS) -o $(OUTPUT) cmd/anycable-go/main.go
 
 prepare-cross-mruby:
-	(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CROSS_OS=linux MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)
+	cd vendor/github.com/mitchellh/go-mruby && \
+	MRUBY_CROSS_OS=linux MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a
 
 prepare-mruby:
-	(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)
+	cd vendor/github.com/mitchellh/go-mruby && \
+	MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a
 
 build-all-mruby:
 	env $(GOBUILD) -tags mrb -o "dist/anycable-go-$(VERSION)-mrb-macos-amd64" cmd/anycable-go/main.go
@@ -81,28 +83,20 @@ build-protos:
 	protoc --proto_path=./etc --go_out=plugins=grpc:./protos ./etc/rpc.proto
 
 test:
-	go test -tags mrb github.com/anycable/anycable-go/cli \
-		github.com/anycable/anycable-go/config \
-		github.com/anycable/anycable-go/node \
-		github.com/anycable/anycable-go/pool \
-		github.com/anycable/anycable-go/pubsub \
-		github.com/anycable/anycable-go/rpc \
-		github.com/anycable/anycable-go/server \
-		github.com/anycable/anycable-go/metrics \
-		github.com/anycable/anycable-go/mrb \
-		github.com/anycable/anycable-go/utils
+	go test -tags mrb ./...
 
-test-cable:
+test-conformance:
 	go build -o tmp/anycable-go-test cmd/anycable-go/main.go
 	anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable"
 	anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token --ssl_key=etc/ssl/server.key --ssl_cert=etc/ssl/server.crt --port=8443" --target-url="wss://localhost:8443/cable"
 
-test-ci: prepare prepare-mruby test test-cable
+test-ci: prepare prepare-mruby test test-conformance
 
-# Get dependencies and use gdm to checkout changesets
+# Get and check dependencie
 prepare:
 	go get -u github.com/golang/dep/cmd/dep
-	dep ensure
+	dep ensure && dep check
+	gem install anyt
 
 gen-ssl:
 	mkdir -p tmp/ssl
