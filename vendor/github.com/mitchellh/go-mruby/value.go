@@ -41,6 +41,20 @@ func init() {
 	Nil = [0]byte{}
 }
 
+// SetInstanceVariable sets an instance variable on this value.
+func (v *MrbValue) SetInstanceVariable(variable string, value *MrbValue) {
+	cs := C.CString(variable)
+	defer C.free(unsafe.Pointer(cs))
+	C._go_mrb_iv_set(v.state, v.value, C.mrb_intern_cstr(v.state, cs), value.value)
+}
+
+// GetInstanceVariable gets an instance variable on this value.
+func (v *MrbValue) GetInstanceVariable(variable string) *MrbValue {
+	cs := C.CString(variable)
+	defer C.free(unsafe.Pointer(cs))
+	return newValue(v.state, C._go_mrb_iv_get(v.state, v.value, C.mrb_intern_cstr(v.state, cs)))
+}
+
 // Call calls a method with the given name and arguments on this
 // value.
 func (v *MrbValue) Call(method string, args ...Value) (*MrbValue, error) {

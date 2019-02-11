@@ -252,4 +252,20 @@ static inline struct RObject* _go_mrb_getobj(mrb_value v) {
   return mrb_obj_ptr(v);
 }
 
+static inline void _go_mrb_iv_set(mrb_state *m, mrb_value self, mrb_sym sym, mrb_value v) {
+  mrb_iv_set(m, self, sym, v);
+}
+
+static inline mrb_value _go_mrb_iv_get(mrb_state *m, mrb_value self, mrb_sym sym) {
+  return mrb_iv_get(m, self, sym);
+}
+
+static inline void _go_mrb_gv_set(mrb_state *m, mrb_sym sym, mrb_value v) {
+  mrb_gv_set(m, sym, v);
+}
+
+static inline mrb_value _go_mrb_gv_get(mrb_state *m, mrb_sym sym) {
+  return mrb_gv_get(m, sym);
+}
+
 #endif

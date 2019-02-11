@@ -71,11 +71,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:20b2087ee440af4495479aa2fc86990809b0d696978b244d256ee98f4d9bdfe7"
+  digest = "1:a8caf68821c37a361881381ea04688f299a098910b9dc54da37bf8a5e3befc29"
   name = "github.com/mitchellh/go-mruby"
   packages = ["."]
   pruneopts = ""
-  revision = "8fb57ad89650eef30e72be20f980679d7aa1e90c"
+  revision = "cd6a04a6ea57d3ecdf60ec703c927fb4984569ff"
 
 [[projects]]
   digest = "1:475cc4e796ffcc56140149f129493fa5824ba4dfb0e0c16973e70d502650fec2"

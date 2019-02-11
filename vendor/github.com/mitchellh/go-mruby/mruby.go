@@ -13,6 +13,22 @@ type Mrb struct {
 	state *C.mrb_state
 }
 
+// GetGlobalVariable returns the value of the global variable by the given name.
+func (m *Mrb) GetGlobalVariable(name string) *MrbValue {
+	cs := C.CString(name)
+	defer C.free(unsafe.Pointer(cs))
+	return newValue(m.state, C._go_mrb_gv_get(m.state, C.mrb_intern_cstr(m.state, cs)))
+}
+
+// SetGlobalVariable sets the value of the global variable by the given name.
+func (m *Mrb) SetGlobalVariable(name string, value Value) {
+	cs := C.CString(name)
+	defer C.free(unsafe.Pointer(cs))
+
+	v := value.MrbValue(m)
+	C._go_mrb_gv_set(m.state, C.mrb_intern_cstr(m.state, cs), v.value)
+}
+
 // ArenaIndex represents the index into the arena portion of the GC.
 //
 // See ArenaSave for more information.

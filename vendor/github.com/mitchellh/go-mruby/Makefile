@@ -13,6 +13,10 @@ gofmt:
 lint:
 	sh golint.sh
 
+megacheck:
+	go get honnef.co/go/tools/cmd/megacheck
+	GO111MODULE=off megacheck ./...
+
 libmruby.a: vendor/mruby
 	cd vendor/mruby && ${MAKE}
 	cp vendor/mruby/build/host/lib/libmruby.a .
