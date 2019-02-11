@@ -2,94 +2,121 @@
 
 
 [[projects]]
+  digest = "1:8c553c1834324fdc0c5583f6fee94cdc13ccf8d5e01a687c4e40453515ac016b"
   name = "github.com/apex/log"
   packages = [
     ".",
-    "handlers/json"
+    "handlers/json",
   ]
+  pruneopts = ""
   revision = "0296d6eb16bb28f8a0c55668affcf4876dc269be"
   version = "v1.0.0"
 
 [[projects]]
   branch = "master"
+  digest = "1:a1167e4b0cb9b77e29d829c9ba69e84561ed750f96309512658c94ab207f5692"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
+  pruneopts = ""
   revision = "ecdeabc65495df2dec95d7c4a4c3e021903035e5"
 
 [[projects]]
+  digest = "1:bcb38c8fc9b21bb8682ce2d605a7d4aeb618abc7f827e3ac0b27c0371fdb23fb"
   name = "github.com/golang/protobuf"
   packages = [
     "proto",
     "ptypes",
     "ptypes/any",
     "ptypes/duration",
-    "ptypes/timestamp"
+    "ptypes/timestamp",
   ]
+  pruneopts = ""
   revision = "925541529c1fa6821df4e44ce2723319eb2be768"
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:dcf8316121302735c0ac84e05f4686e3b34e284444435e9a206da48d8be18cb1"
   name = "github.com/gomodule/redigo"
   packages = [
     "internal",
-    "redis"
+    "redis",
   ]
+  pruneopts = ""
   revision = "9c11da706d9b7902c6da69c592f75637793fe121"
   version = "v2.0.0"
 
 [[projects]]
+  digest = "1:64d212c703a2b94054be0ce470303286b177ad260b2f89a307e3d1bb6c073ef6"
   name = "github.com/gorilla/websocket"
   packages = ["."]
+  pruneopts = ""
   revision = "ea4d1f681babbce9545c9c5f3d5194a789c89f5b"
   version = "v1.2.0"
 
 [[projects]]
   branch = "master"
+  digest = "1:a17aafd5f9b37b52f35a7593b4a914d9679c0ffb45c9ded0a3642e6a42d2e47b"
   name = "github.com/matoous/go-nanoid"
   packages = ["."]
+  pruneopts = ""
   revision = "958d370425a1ea42a4dd3c67d15bf02554a16b82"
 
 [[projects]]
+  digest = "1:78229b46ddb7434f881390029bd1af7661294af31f6802e0e1bedaad4ab0af3c"
   name = "github.com/mattn/go-isatty"
   packages = ["."]
+  pruneopts = ""
   revision = "0360b2af4f38e8d38c7fce2a9f4e702702d73a39"
   version = "v0.0.3"
 
 [[projects]]
   branch = "master"
+  digest = "1:20b2087ee440af4495479aa2fc86990809b0d696978b244d256ee98f4d9bdfe7"
   name = "github.com/mitchellh/go-mruby"
   packages = ["."]
+  pruneopts = ""
   revision = "8fb57ad89650eef30e72be20f980679d7aa1e90c"
 
 [[projects]]
+  digest = "1:475cc4e796ffcc56140149f129493fa5824ba4dfb0e0c16973e70d502650fec2"
   name = "github.com/namsral/flag"
   packages = ["."]
+  pruneopts = ""
   revision = "91bb473a91a4a5e1ea554fb8ddce84f832be9aca"
 
 [[projects]]
+  digest = "1:7365acd48986e205ccb8652cc746f09c8b7876030d53710ea6ef7d0bd0dcd7ca"
   name = "github.com/pkg/errors"
   packages = ["."]
+  pruneopts = ""
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
   version = "v0.8.0"
 
 [[projects]]
+  digest = "1:256484dbbcd271f9ecebc6795b2df8cad4c458dd0f5fd82a8c2fa0c29f233411"
   name = "github.com/pmezard/go-difflib"
   packages = ["difflib"]
+  pruneopts = ""
   revision = "792786c7400a136282c1664665ae0a8db921c6c2"
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:3b4870930878fb464616897c4e4bc100d323a8f95c3d8bbff0952d372571f7f7"
   name = "github.com/stretchr/testify"
   packages = ["assert"]
+  pruneopts = ""
   revision = "2aa2c176b9dab406a6970f6a55f513e8a8c8b18f"
 
 [[projects]]
   branch = "master"
+  digest = "1:4ceefcc72f64b2137d57d0bd07d5495d66712d252a4ffe415ccb38259fd2bd02"
   name = "github.com/syossan27/tebata"
   packages = ["."]
+  pruneopts = ""
   revision = "49bbbdf5eb8fb57a46fd63b6e7cb9b3d1b3f876a"
 
 [[projects]]
+  digest = "1:18b2d59fab74b4110c5d1883e49f0effbc62a49556d51337b6761aa5585a17c7"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -98,17 +125,21 @@
     "idna",
     "internal/timeseries",
     "lex/httplex",
-    "trace"
+    "trace",
   ]
+  pruneopts = ""
   revision = "cd69bc3fc700721b709c3a59e16e24c67b58f6ff"
 
 [[projects]]
   branch = "master"
+  digest = "1:aba25123b0b02601b134eaf08bd84afe8e12cab70e43770e7b38d8eef8f1d93e"
   name = "golang.org/x/sys"
   packages = ["unix"]
+  pruneopts = ""
   revision = "2c42eef0765b9837fbdab12011af7830f55f88f0"
 
 [[projects]]
+  digest = "1:706747bb1e3f870cf0dc52459cb94324cd347142fff3b61db56c0157a5f598d0"
   name = "golang.org/x/text"
   packages = [
     "collate",
@@ -124,17 +155,21 @@
     "unicode/bidi",
     "unicode/cldr",
     "unicode/norm",
-    "unicode/rangetable"
+    "unicode/rangetable",
   ]
+  pruneopts = ""
   revision = "c01e4764d870b77f8abe5096ee19ad20d80e8075"
 
 [[projects]]
   branch = "master"
+  digest = "1:02b227168a215a14f7f16af45ca649b7c1efc33919ce27a03996dfb54dcf556c"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
+  pruneopts = ""
   revision = "2c5e7ac708aaa719366570dd82bda44541ca2a63"
 
 [[projects]]
+  digest = "1:d2dc833c73202298c92b63a7e180e2b007b5a3c3c763e3b9fe1da249b5c7f5b9"
   name = "google.golang.org/grpc"
   packages = [
     ".",
@@ -159,14 +194,30 @@
     "stats",
     "status",
     "tap",
-    "transport"
+    "transport",
   ]
+  pruneopts = ""
   revision = "8e4536a86ab602859c20df5ebfd0bd4228d08655"
   version = "v1.10.0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "37a01c7c02af3a307b9603e1d4f2bf18e4394ec9f3226c8d86550f5e8c22fc48"
+  input-imports = [
+    "github.com/apex/log",
+    "github.com/apex/log/handlers/json",
+    "github.com/golang/protobuf/proto",
+    "github.com/gomodule/redigo/redis",
+    "github.com/gorilla/websocket",
+    "github.com/matoous/go-nanoid",
+    "github.com/mattn/go-isatty",
+    "github.com/mitchellh/go-mruby",
+    "github.com/namsral/flag",
+    "github.com/stretchr/testify/assert",
+    "github.com/syossan27/tebata",
+    "golang.org/x/net/context",
+    "google.golang.org/grpc",
+    "google.golang.org/grpc/metadata",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1
