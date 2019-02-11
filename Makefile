@@ -27,10 +27,6 @@ install-with-mruby:
 build:
 	go build -tags mrb -ldflags $(LD_FLAGS) -o $(OUTPUT) cmd/anycable-go/main.go
 
-prepare-cross-mruby:
-	cd vendor/github.com/mitchellh/go-mruby && \
-	MRUBY_CROSS_OS=linux MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a
-
 prepare-mruby:
 	cd vendor/github.com/mitchellh/go-mruby && \
 	MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a
