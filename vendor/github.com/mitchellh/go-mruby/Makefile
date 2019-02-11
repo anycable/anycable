@@ -15,10 +15,7 @@ lint:
 
 libmruby.a: vendor/mruby
 	cd vendor/mruby && ${MAKE}
-	cp vendor/mruby/build/host/lib/libmruby.a ./libmruby_darwin.a
-	cp vendor/mruby/build/linux-arm64/lib/libmruby.a ./libmruby_linux_arm64.a
-	cp vendor/mruby/build/linux-amd64/lib/libmruby.a ./libmruby_linux_amd64.a
-	cp vendor/mruby/build/linux-386/lib/libmruby.a ./libmruby_linux386.a
+	cp vendor/mruby/build/host/lib/libmruby.a .
 
 vendor/mruby:
 	mkdir -p vendor
