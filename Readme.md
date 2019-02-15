@@ -47,7 +47,7 @@ See [heroku-anycable-go](https://github.com/anycable/heroku-anycable-go) buildpa
 Run server:
 
 ```shell
-anycable-go --rpc_host=0.0.0.0:50051 --headers=cookie,x-api-token --redis_url=redis://localhost:6379/5 --redis_channel=anycable --host=0.0.0.0 --port=8080
+$ anycable-go
 
 => INFO 2018-03-05T08:44:57.684Z context=main Starting AnyCable 0.6.0
 ```
