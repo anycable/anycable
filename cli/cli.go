@@ -125,7 +125,7 @@ OPTIONS
   --metrics_log            Enable metrics logging (with info level), default: false, env: ANYCABLE_METRICS_LOG
   --metrics_log_interval   Specify how often flush metrics logs (in seconds), default: 15, env: ANYCABLE_METRICS_LOG_INTERVAL
   --metrics_log_formatter  Specify the path to custom Ruby formatter script (only supported on MacOS and Linux), default: "" (none), env: ANYCABLE_METRICS_LOG_FORMATTER
-  --metrics_http           Enable HTTP metrics endpoint at the specified path, default: "" (disabled), env: ANYCABLE_METRICS_PATH
+  --metrics_http           Enable HTTP metrics endpoint at the specified path, default: "" (disabled), env: ANYCABLE_METRICS_HTTP
   --metrics_host           Server host for metrics endpoint, default: the same as for main server, env: ANYCABLE_METRICS_HOST
   --metrics_port           Server port for metrics endpoint, default: the same as for main server, env: ANYCABLE_METRICS_PORT
 
