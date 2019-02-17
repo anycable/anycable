@@ -44,34 +44,36 @@ func init() {
 	}
 
 	// Config vars
-	fs.StringVar(&defaults.RPCHost, "rpc_host", "localhost:50051", "")
-	fs.StringVar(&defaults.RedisURL, "redis_url", redisDefault, "")
-	fs.StringVar(&defaults.RedisChannel, "redis_channel", "__anycable__", "")
 	fs.StringVar(&defaults.Host, "host", "0.0.0.0", "")
 	fs.IntVar(&defaults.Port, "port", portDefault, "")
 	fs.StringVar(&defaults.Path, "path", "/cable", "")
 	fs.StringVar(&defaults.HealthPath, "health-path", "/health", "")
-	fs.IntVar(&defaults.DisconnectRate, "disconnect_rate", 100, "")
-	fs.Int64Var(&defaults.MaxMessageSize, "max_message_size", 65536, "")
 
 	fs.StringVar(&defaults.SSL.CertPath, "ssl_cert", "", "")
 	fs.StringVar(&defaults.SSL.KeyPath, "ssl_key", "", "")
 
+	fs.StringVar(&defaults.RedisURL, "redis_url", redisDefault, "")
+	fs.StringVar(&defaults.RedisChannel, "redis_channel", "__anycable__", "")
+
+	fs.StringVar(&defaults.RPCHost, "rpc_host", "localhost:50051", "")
+	fs.StringVar(&headers, "headers", "cookie", "")
+	fs.IntVar(&defaults.DisconnectRate, "disconnect_rate", 100, "")
+	fs.Int64Var(&defaults.MaxMessageSize, "max_message_size", 65536, "")
+
 	fs.StringVar(&defaults.LogLevel, "log_level", "info", "")
 	fs.StringVar(&defaults.LogFormat, "log_format", "text", "")
+	fs.BoolVar(&debugMode, "debug", false, "")
 
 	fs.BoolVar(&defaults.MetricsLog, "metrics_log", false, "")
 	fs.IntVar(&defaults.MetricsLogInterval, "metrics_log_interval", 15, "")
 	fs.StringVar(&defaults.MetricsLogFormatter, "metrics_log_formatter", "", "")
+	fs.StringVar(&defaults.MetricsHTTP, "metrics_http", "", "")
 	fs.StringVar(&defaults.MetricsHost, "metrics_host", "", "")
 	fs.IntVar(&defaults.MetricsPort, "metrics_port", 0, "")
-	fs.StringVar(&defaults.MetricsHTTP, "metrics_http", "", "")
 
 	// CLI vars
-	fs.BoolVar(&showVersion, "v", false, "")
 	fs.BoolVar(&showHelp, "h", false, "")
-	fs.StringVar(&headers, "headers", "cookie", "")
-	fs.BoolVar(&debugMode, "debug", false, "")
+	fs.BoolVar(&showVersion, "v", false, "")
 }
 
 // GetConfig returns CLI configuration
@@ -104,7 +106,7 @@ USAGE
   anycable-go [options]
 
 OPTIONS
-  --host                   Server host, default: localhost, env: ANYCABLE_HOST
+  --host                   Server host, default: 0.0.0.0, env: ANYCABLE_HOST
   --port                   Server port, default: 8080, env: ANYCABLE_PORT, PORT
   --path                   WebSocket endpoint path, default: /cable, env: ANYCABLE_PATH
   --health-path            HTTP health endpoint path, default: /health, env: ANYCABLE_HEALTH_PATH
