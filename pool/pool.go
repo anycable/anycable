@@ -49,7 +49,7 @@ func (c *channelPool) wrapConn(conn *grpc.ClientConn) Conn {
 	return p
 }
 
-// NewChannelPool builds new pool with provided configuratin
+// NewChannelPool builds a new pool with provided configuration
 func NewChannelPool(initialCap, maxCap int, factory Factory) (Pool, error) {
 	if initialCap < 0 || maxCap <= 0 || initialCap > maxCap {
 		return nil, errors.New("invalid capacity settings")

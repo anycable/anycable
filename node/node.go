@@ -63,7 +63,7 @@ type StreamMessage struct {
 	Data   string `json:"data"`
 }
 
-// Node represents the whole applicaton
+// Node represents the whole application
 type Node struct {
 	Config  *config.Config
 	Metrics *metrics.Metrics
