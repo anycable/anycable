@@ -53,24 +53,6 @@ build-all: build-clean build-linux
 	env GOOS=freebsd GOARCH=386   $(GOBUILD) -o "dist/anycable-go-$(VERSION)-freebsd-386"   cmd/anycable-go/main.go
 	env GOOS=freebsd GOARCH=amd64 $(GOBUILD) -o "dist/anycable-go-$(VERSION)-freebsd-amd64" cmd/anycable-go/main.go
 
-release-heroku:
-	env GOOS=linux   GOARCH=amd64 $(GOBUILD) -o "dist/anycable-go-$(VERSION)-linux-amd64"   cmd/anycable-go/main.go
-	docker run --rm -v $(PWD):/go/src/github.com/anycable/anycable-go -w /go/src/github.com/anycable/anycable-go -e OUTPUT="dist/anycable-go-$(VERSION)-mrb-linux-amd64" amd64/golang:1.11.4 make build
-	aws s3 cp --acl=public-read ./dist/anycable-go-$(VERSION)-linux-amd64 "s3://anycable/builds/$(VERSION)/anycable-go-$(VERSION)-heroku"
-	aws s3 cp --acl=public-read ./dist/anycable-go-$(VERSION)-mrb-linux-amd64 "s3://anycable/builds/$(VERSION)-mrb/anycable-go-$(VERSION)-mrb-heroku"
-
-downloads-md:
-	ruby etc/generate_downloads.rb
-
-release: build-all s3-deploy dockerize
-
-docker-release: dockerize
-	docker push "anycable/anycable-go:$(VERSION)"
-
-dockerize:
-	GOOS=linux go build -ldflags "-X main.version=$(VERSION)" -a -o .docker/anycable-go cmd/anycable-go/main.go
-	docker build -t "anycable/anycable-go:$(VERSION)" .
-
 # Run server
 run:
 	go run ./cmd/anycable-go/main.go
@@ -86,12 +68,13 @@ test-conformance:
 	anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable"
 	anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token --ssl_key=etc/ssl/server.key --ssl_cert=etc/ssl/server.crt --port=8443" --target-url="wss://localhost:8443/cable"
 
-test-ci: prepare prepare-mruby test test-conformance
+test-ci: prepare check prepare-mruby test test-conformance
 
-# Get and check dependencie
+check:
+	dep ensure && dep check
+
 prepare:
 	go get -u github.com/golang/dep/cmd/dep
-	dep ensure && dep check
 	gem install anyt
 
 gen-ssl:
