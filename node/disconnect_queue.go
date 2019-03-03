@@ -23,7 +23,7 @@ type DisconnectQueue struct {
 	disconnect chan *Session
 	// Logger with context
 	log        *log.Entry
-	shutdownCh chan bool
+	shutdownCh chan struct{}
 	shutdown   bool
 	mu         sync.Mutex
 }
@@ -42,14 +42,13 @@ func NewDisconnectQueue(node *Node, rate int) *DisconnectQueue {
 		rate:       rateDuration,
 		log:        ctx,
 		shutdown:   false,
-		shutdownCh: make(chan bool),
+		shutdownCh: make(chan struct{}),
 	}
 }
 
 // Run starts queue
 func (d *DisconnectQueue) Run() {
 	throttle := time.NewTicker(d.rate)
-	defer throttle.Stop()
 
 	for {
 		select {
@@ -57,12 +56,7 @@ func (d *DisconnectQueue) Run() {
 			<-throttle.C
 			d.node.DisconnectNow(session)
 		case <-d.shutdownCh:
-			d.mu.Lock()
-			defer d.mu.Unlock()
-			if d.shutdownCh != nil {
-				close(d.shutdownCh)
-				d.shutdownCh = nil
-			}
+			throttle.Stop()
 			return
 		}
 	}
@@ -76,7 +70,7 @@ func (d *DisconnectQueue) Shutdown() error {
 	}
 
 	d.shutdown = true
-	d.shutdownCh <- true
+	d.shutdownCh <- struct{}{}
 	d.mu.Unlock()
 
 	left := len(d.disconnect)

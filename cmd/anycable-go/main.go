@@ -124,12 +124,10 @@ func main() {
 
 	t := tebata.New(syscall.SIGINT, syscall.SIGTERM)
 
-	done := make(chan bool)
-
 	t.Reserve(func() {
 		ctx.Infof("Shutting down... (hit Ctrl-C to stop immediately)")
 		go func() {
-			termSig := make(chan os.Signal, 2)
+			termSig := make(chan os.Signal, 1)
 			signal.Notify(termSig, syscall.SIGINT, syscall.SIGTERM)
 			<-termSig
 			ctx.Warnf("Immediate termination requested. Stopped")
@@ -166,7 +164,7 @@ func main() {
 	t.Reserve(os.Exit, 0)
 
 	// Hang forever unless Exit is called
-	<-done
+	select {}
 }
 
 func buildServer(node *node.Node, host string, port string, ssl *config.SSLOptions) *server.HTTPServer {

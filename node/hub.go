@@ -2,6 +2,7 @@ package node
 
 import (
 	"encoding/json"
+	"sync"
 
 	"github.com/apex/log"
 )
@@ -58,10 +59,10 @@ type Hub struct {
 	unsubscribe chan *SubscriptionInfo
 
 	// Control channel to shutdown hub
-	shutdown chan bool
+	shutdown chan struct{}
 
-	// Channel to wait for gracefully disconnect of all sessions
-	done chan bool
+	// Synchronization group to wait for gracefully disconnect of all sessions
+	done sync.WaitGroup
 
 	// Log context
 	log *log.Entry
@@ -79,14 +80,14 @@ func NewHub() *Hub {
 		identifiers:     make(map[string]map[string]bool),
 		streams:         make(map[string]map[string]string),
 		sessionsStreams: make(map[string]map[string][]string),
-		shutdown:        make(chan bool),
-		done:            make(chan bool),
+		shutdown:        make(chan struct{}),
 		log:             log.WithFields(log.Fields{"context": "hub"}),
 	}
 }
 
 // Run makes hub active
 func (h *Hub) Run() {
+	h.done.Add(1)
 	for {
 		select {
 		case s := <-h.register:
@@ -105,7 +106,7 @@ func (h *Hub) Run() {
 			h.broadcastToStream(message.Stream, message.Data)
 
 		case <-h.shutdown:
-			h.done <- true
+			h.done.Done()
 			return
 		}
 	}
@@ -113,10 +114,10 @@ func (h *Hub) Run() {
 
 // Shutdown sends shutdown command to hub
 func (h *Hub) Shutdown() {
-	h.shutdown <- true
+	h.shutdown <- struct{}{}
 
 	// Wait for stop listening channels
-	<-h.done
+	h.done.Wait()
 }
 
 // Size returns a number of active sessions
