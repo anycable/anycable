@@ -18,7 +18,7 @@ func TestDisconnectQueueShutdown(t *testing.T) {
 	assert.Equal(t, 1, dq.Size(), "Disconnect queue size should be equal to 1")
 
 	go func() {
-		<-dq.shutdownCh
+		<-dq.shutdown
 	}()
 
 	go dq.Enqueue(session2)

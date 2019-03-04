@@ -22,10 +22,13 @@ type DisconnectQueue struct {
 	// Call RPC Disconnect for connections
 	disconnect chan *Session
 	// Logger with context
-	log        *log.Entry
-	shutdownCh chan struct{}
-	shutdown   bool
-	mu         sync.Mutex
+	log *log.Entry
+	// Control channel to shutdown the executer
+	shutdown chan struct{}
+	// Executer stopped status
+	isStopped bool
+	// Mutex to work with stopped status concurrently
+	mu sync.Mutex
 }
 
 // NewDisconnectQueue builds new queue with a specified rate (max calls per second)
@@ -41,22 +44,21 @@ func NewDisconnectQueue(node *Node, rate int) *DisconnectQueue {
 		disconnect: make(chan *Session, 4096),
 		rate:       rateDuration,
 		log:        ctx,
-		shutdown:   false,
-		shutdownCh: make(chan struct{}),
+		shutdown:   make(chan struct{}),
 	}
 }
 
 // Run starts queue
 func (d *DisconnectQueue) Run() {
 	throttle := time.NewTicker(d.rate)
+	defer throttle.Stop()
 
 	for {
 		select {
 		case session := <-d.disconnect:
 			<-throttle.C
 			d.node.DisconnectNow(session)
-		case <-d.shutdownCh:
-			throttle.Stop()
+		case <-d.shutdown:
 			return
 		}
 	}
@@ -65,12 +67,12 @@ func (d *DisconnectQueue) Run() {
 // Shutdown stops throttling and makes requests one by one
 func (d *DisconnectQueue) Shutdown() error {
 	d.mu.Lock()
-	if d.shutdown {
+	if d.isStopped {
 		return nil
 	}
 
-	d.shutdown = true
-	d.shutdownCh <- struct{}{}
+	d.isStopped = true
+	d.shutdown <- struct{}{}
 	d.mu.Unlock()
 
 	left := len(d.disconnect)
@@ -108,7 +110,7 @@ func (d *DisconnectQueue) Enqueue(s *Session) {
 	defer d.mu.Unlock()
 
 	// Check that we're not closed
-	if d.shutdown {
+	if d.isStopped {
 		return
 	}
 
