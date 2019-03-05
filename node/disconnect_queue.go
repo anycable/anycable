@@ -44,7 +44,7 @@ func NewDisconnectQueue(node *Node, rate int) *DisconnectQueue {
 		disconnect: make(chan *Session, 4096),
 		rate:       rateDuration,
 		log:        ctx,
-		shutdown:   make(chan struct{}),
+		shutdown:   make(chan struct{}, 1),
 	}
 }
 
@@ -68,6 +68,7 @@ func (d *DisconnectQueue) Run() {
 func (d *DisconnectQueue) Shutdown() error {
 	d.mu.Lock()
 	if d.isStopped {
+		d.mu.Unlock()
 		return nil
 	}
 
@@ -76,7 +77,6 @@ func (d *DisconnectQueue) Shutdown() error {
 	d.mu.Unlock()
 
 	left := len(d.disconnect)
-	defer close(d.disconnect)
 
 	if left == 0 {
 		return nil
