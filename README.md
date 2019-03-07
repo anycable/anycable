@@ -16,7 +16,7 @@ AnyCable uses ActionCable protocol, so you can use ActionCable [JavaScript clien
 
 ## Requirements
 
-- Ruby >= 2.4; **NOTE:** for Ruby 2.6 use RC version of `google-protobuf` gem. In your Gemfile: `gem "google-protobuf", '>=3.7.0.rc.2'` (see also https://github.com/anycable/anycable-rails/issues/71)
+- Ruby >= 2.4
 - Redis (for brodcasting, [discuss other options](https://github.com/anycable/anycable/issues/2) with us!)
 
 ## Usage
