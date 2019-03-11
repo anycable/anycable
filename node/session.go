@@ -31,6 +31,14 @@ const (
 	pingInterval   = 3 * time.Second
 )
 
+var (
+	expectedCloseStatuses = []int{
+		websocket.CloseNormalClosure,    // Reserved in case ActionCable fixes its behaviour
+		websocket.CloseGoingAway,        // Web browser page was closed
+		websocket.CloseNoStatusReceived, // ActionCable don't care about closing
+	}
+)
+
 // Session represents active client
 type Session struct {
 	node          *Node
@@ -177,14 +185,16 @@ func (s *Session) Send(msg []byte) {
 func (s *Session) ReadMessages() {
 	s.ws.SetReadLimit(maxMessageSize)
 
-	defer s.Disconnect("", CloseAbnormalClosure)
-
 	for {
 		_, message, err := s.ws.ReadMessage()
 
 		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
-				s.Log.Debugf("Websocket read error: %v", err)
+			if websocket.IsCloseError(err, expectedCloseStatuses...) {
+				s.Log.Debugf("Websocket closed: %v", err)
+				s.Disconnect("Read closed", CloseNormalClosure)
+			} else {
+				s.Log.Debugf("Websocket close error: %v", err)
+				s.Disconnect("Read failed", CloseAbnormalClosure)
 			}
 			break
 		}
