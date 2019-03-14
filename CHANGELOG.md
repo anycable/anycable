@@ -2,6 +2,22 @@
 
 ## master
 
+- Add GRPC service method name and message content to exception notifications ([@sponomarev][])
+
+`Anycable.capture_exception` allows accessing GRPC service method name and message content
+on which an exception was captured. It can be used for exceptions grouping in your tracker and
+providing additional data to investigate a root of a problem.
+
+Example:
+
+```ruby
+AnyCable.capture_exception do |ex, method, message|
+  Honeybadger.notify(ex, component: "any_cable", action: method, params: message)
+end
+```
+
+Usage of a handler proc with just a single argument is preserved for the sake of compatibility.
+
 - Add deprecation warning to default host usage ([@sponomarev][])
 
 Exposing AnyCable publicly is considered to be harmful and planned to be changed

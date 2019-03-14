@@ -25,11 +25,13 @@ AnyCable.logger = TestLogger.new
 AnyCable::Server.log_grpc! if ENV["LOG"]
 
 module TestExHandler
+  Error = Struct.new(:exception, :method, :message)
+
   class << self
     attr_reader :last_error
 
-    def call(exp)
-      @last_error = exp
+    def call(exp, method, message)
+      @last_error = Error.new(exp, method, message)
     end
 
     def flush!

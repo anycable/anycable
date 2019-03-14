@@ -18,16 +18,16 @@ module AnyCable
 
       RESPONSE_CLASS.keys.each do |mid|
         module_eval <<~CODE, __FILE__, __LINE__ + 1
-          def #{mid}(*)
-            capture_exceptions(:#{mid}) { super }
+          def #{mid}(message, *)
+            capture_exceptions(:#{mid}, message) { super }
           end
         CODE
       end
 
-      def capture_exceptions(method_name)
+      def capture_exceptions(method_name, message)
         yield
       rescue StandardError => exp
-        AnyCable::ExceptionsHandling.notify(exp)
+        AnyCable::ExceptionsHandling.notify(exp, method_name.to_s, message.to_h)
 
         RESPONSE_CLASS.fetch(method_name).new(
           status: AnyCable::Status::ERROR,

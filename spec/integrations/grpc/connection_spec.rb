@@ -28,7 +28,12 @@ describe "client connection", :with_grpc_server do
 
     it "notifies exception handler" do
       subject
-      expect(TestExHandler.last_error.message).to eq("sudden_connect_error")
+
+      expect(TestExHandler.last_error).to have_attributes(
+        exception: have_attributes(message: "sudden_connect_error"),
+        method: "connect",
+        message: request.to_h
+      )
     end
   end
 

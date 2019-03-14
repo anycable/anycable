@@ -100,7 +100,12 @@ describe "subscriptions", :with_grpc_server, :rpc_command do
 
     it "notifies exception handler" do
       subject
-      expect(TestExHandler.last_error.message).to eq "Unknown command"
+
+      expect(TestExHandler.last_error).to have_attributes(
+        exception: have_attributes(message: "Unknown command"),
+        method: "command",
+        message: request.to_h
+      )
     end
   end
 end
