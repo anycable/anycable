@@ -30,4 +30,18 @@ describe "disconnection", :with_grpc_server, :rpc_command do
       expect(log.last[:data]).to eq(name: "disco", path: "/cable_lite", subscriptions: %w[a b])
     end
   end
+
+  context "when exception" do
+    let(:url) { "http://example.io/cable_lite?raise=sudden_disconnect_error" }
+
+    it "responds with ERROR", :aggregate_failures do
+      expect(subject.status).to eq :ERROR
+      expect(subject.error_msg).to eq("sudden_disconnect_error")
+    end
+
+    it "notifies exception handler" do
+      subject
+      expect(TestExHandler.last_error.message).to eq("sudden_disconnect_error")
+    end
+  end
 end

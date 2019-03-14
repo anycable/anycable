@@ -15,6 +15,23 @@ describe "client connection", :with_grpc_server do
     end
   end
 
+  context "when exception" do
+    let(:request) do
+      AnyCable::ConnectionRequest.new(
+        path: "http://example.io/cable?raise=sudden_connect_error"
+      )
+    end
+    it "responds with ERROR", :aggregate_failures do
+      expect(subject.status).to eq :ERROR
+      expect(subject.error_msg).to eq("sudden_connect_error")
+    end
+
+    it "notifies exception handler" do
+      subject
+      expect(TestExHandler.last_error.message).to eq("sudden_connect_error")
+    end
+  end
+
   context "with cookies and path info" do
     let(:request) do
       AnyCable::ConnectionRequest.new(

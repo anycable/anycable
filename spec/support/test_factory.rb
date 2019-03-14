@@ -13,6 +13,8 @@ module AnyCable
       end
 
       def handle_open
+        raise request.params["raise"] if request.params["raise"]
+
         @identifiers["current_user"] = request.cookies["username"]
         @identifiers["path"] = request.path
         @identifiers["token"] = request.params["token"] || request.get_header("HTTP_X_API_TOKEN")
@@ -26,6 +28,8 @@ module AnyCable
       end
 
       def handle_close
+        raise request.params["raise"] if request.params["raise"]
+
         TestFactory.log_event(
           "disconnect",
           name: @identifiers["current_user"],
