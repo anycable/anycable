@@ -31,6 +31,10 @@ module TestExHandler
     def call(exp)
       @last_error = exp
     end
+
+    def flush!
+      @last_error = nil
+    end
   end
 end
 
@@ -56,5 +60,6 @@ RSpec.configure do |config|
   config.after(:each) do
     Anyway.env.clear if defined?(Anyway)
     AnyCable.logger.reset if AnyCable.logger.respond_to?(:reset)
+    TestExHandler.flush!
   end
 end

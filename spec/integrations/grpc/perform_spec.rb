@@ -49,6 +49,11 @@ describe "client messages", :with_grpc_server, :rpc_command do
         expect(subject.status).to eq :ERROR
         expect(subject.error_msg).to match(/can't be coerced/)
       end
+
+      it "notifies exception handler" do
+        subject
+        expect(TestExHandler.last_error.message).to match(/can't be coerced/)
+      end
     end
   end
 end
