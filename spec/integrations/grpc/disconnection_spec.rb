@@ -41,7 +41,12 @@ describe "disconnection", :with_grpc_server, :rpc_command do
 
     it "notifies exception handler" do
       subject
-      expect(TestExHandler.last_error.message).to eq("sudden_disconnect_error")
+
+      expect(TestExHandler.last_error).to have_attributes(
+        exception: have_attributes(message: "sudden_disconnect_error"),
+        method: "disconnect",
+        message: request.to_h
+      )
     end
   end
 end
