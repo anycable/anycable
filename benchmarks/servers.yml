@@ -6,6 +6,8 @@
   gather_facts: False
   vars:
     web_concurrency: 8
+    arena_max: 64 # default, 8 times the number of virtual CPUs
+    rpc_pool: 30 # default
   tasks:
     - name: Kill servers
       shell: pid=$(lsof -i:{{item}} -t); kill -TERM $pid || kill -KILL $pid
@@ -23,13 +25,13 @@
     - name: Run Action Cable
       become_user: deplo
       tags: action_cable
-      command: bash -lc "WEB_CONCURRENCY={{ web_concurrency }} bundle exec rails s -p 3334 -e production"
+      command: bash -lc "MALLOC_ARENA_MAX={{ arena_max }} WEB_CONCURRENCY={{ web_concurrency }} bundle exec rails s -p 3334 -e production"
       args:
         chdir: /webapps/anycable_bench/ruby/action-cable-server
     - name: Run Anycable Go
       become_user: deplo
       tags: anycable
-      shell: bash -lc "ANYCABLE_GO_BIN="anycable-go-0.6.0-alpha" ANYCABLE_PORT="3334" bundle exec bin/anycable"
+      shell: bash -lc "MALLOC_ARENA_MAX={{ arena_max }} ANYCABLE_RPC_POOL_SIZE={{ rpc_pool }} ADAPTER=any_cable ANYCABLE_PORT="3334" bundle exec bin/anycable"
       args:
         chdir: /webapps/anycable_bench/ruby/action-cable-server
     - name: Run Iodine/Plezi
