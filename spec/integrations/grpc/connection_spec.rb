@@ -21,6 +21,7 @@ describe "client connection", :with_grpc_server do
         path: "http://example.io/cable?raise=sudden_connect_error"
       )
     end
+
     it "responds with ERROR", :aggregate_failures do
       expect(subject.status).to eq :ERROR
       expect(subject.error_msg).to eq("sudden_connect_error")

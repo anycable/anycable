@@ -4,15 +4,12 @@ require "anycable/socket"
 require "anycable/rpc/rpc_pb"
 require "anycable/rpc/rpc_services_pb"
 
-require "anycable/handler/capture_exceptions"
-
 # rubocop:disable Metrics/AbcSize
 # rubocop:disable Metrics/MethodLength
+# rubocop:disable Metrics/ClassLength
 module AnyCable
   # RPC service handler
   class RPCHandler < AnyCable::RPC::Service
-    prepend AnyCable::Handler::CaptureExceptions
-
     # Handle connection request from WebSocket server
     def connect(request, _unused_call)
       logger.debug("RPC Connect: #{request.inspect}")
@@ -32,6 +29,13 @@ module AnyCable
           transmissions: socket.transmissions
         )
       end
+    rescue StandardError => exp
+      notify_exception(exp, :connect, request)
+
+      AnyCable::ConnectionResponse.new(
+        status: AnyCable::Status::ERROR,
+        error_msg: exp.message
+      )
     end
 
     def disconnect(request, _unused_call)
@@ -50,6 +54,13 @@ module AnyCable
       else
         AnyCable::DisconnectResponse.new(status: AnyCable::Status::FAILURE)
       end
+    rescue StandardError => exp
+      notify_exception(exp, :disconnect, request)
+
+      AnyCable::DisconnectResponse.new(
+        status: AnyCable::Status::ERROR,
+        error_msg: exp.message
+      )
     end
 
     def command(message, _unused_call)
@@ -74,6 +85,13 @@ module AnyCable
         stop_streams: socket.stop_streams?,
         streams: socket.streams,
         transmissions: socket.transmissions
+      )
+    rescue StandardError => exp
+      notify_exception(exp, :command, message)
+
+      AnyCable::CommandResponse.new(
+        status: AnyCable::Status::ERROR,
+        error_msg: exp.message
       )
     end
 
@@ -114,7 +132,12 @@ module AnyCable
     def factory
       AnyCable.connection_factory
     end
+
+    def notify_exception(exp, method_name, message)
+      AnyCable::ExceptionsHandling.notify(exp, method_name.to_s, message.to_h)
+    end
   end
 end
 # rubocop:enable Metrics/AbcSize
 # rubocop:enable Metrics/MethodLength
+# rubocop:enable Metrics/ClassLength
