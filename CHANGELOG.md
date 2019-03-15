@@ -2,6 +2,8 @@
 
 ## master
 
+## 0.6.2 (2019-03-15)
+
 - Add GRPC service method name and message content to exception notifications ([@sponomarev][])
 
 `Anycable.capture_exception` allows accessing GRPC service method name and message content
