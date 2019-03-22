@@ -26,9 +26,8 @@ const (
 	// CloseGoingAway indicates ubnormal close
 	CloseGoingAway = websocket.CloseGoingAway
 
-	writeWait      = 10 * time.Second
-	maxMessageSize = 65536 // 64KB
-	pingInterval   = 3 * time.Second
+	writeWait    = 10 * time.Second
+	pingInterval = 3 * time.Second
 )
 
 var (
@@ -183,7 +182,7 @@ func (s *Session) Send(msg []byte) {
 
 // ReadMessages reads messages from ws connection and send them to node
 func (s *Session) ReadMessages() {
-	s.ws.SetReadLimit(maxMessageSize)
+	s.ws.SetReadLimit(s.node.Config.MaxMessageSize)
 
 	for {
 		_, message, err := s.ws.ReadMessage()

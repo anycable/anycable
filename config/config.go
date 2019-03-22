@@ -22,6 +22,7 @@ type Config struct {
 	HealthPath          string
 	Headers             []string
 	SSL                 SSLOptions
+	MaxMessageSize      int64
 	DisconnectRate      int
 	LogLevel            string
 	LogFormat           string

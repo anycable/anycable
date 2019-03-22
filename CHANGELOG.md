@@ -2,6 +2,8 @@
 
 ## master
 
+- Configure maximum message size via `--max_message_size`. Defaults to 65536 (64kb).
+
 ## 0.6.1 (2018-12-21) "X-mas time is here again!" 🎅
 
 - Add HTTP health check endpoint. ([@sponomarev][])

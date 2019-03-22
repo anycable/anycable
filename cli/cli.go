@@ -52,6 +52,7 @@ func init() {
 	fs.StringVar(&defaults.Path, "path", "/cable", "")
 	fs.StringVar(&defaults.HealthPath, "health-path", "/health", "")
 	fs.IntVar(&defaults.DisconnectRate, "disconnect_rate", 100, "")
+	fs.Int64Var(&defaults.MaxMessageSize, "max_message_size", 65536, "")
 
 	fs.StringVar(&defaults.SSL.CertPath, "ssl_cert", "", "")
 	fs.StringVar(&defaults.SSL.KeyPath, "ssl_key", "", "")
@@ -117,6 +118,7 @@ OPTIONS
   --rpc_host               RPC service address, default: localhost:50051, env: ANYCABLE_RPC_HOST
   --headers                List of headers to proxy to RPC, default: cookie, env: ANYCABLE_HEADERS
   --disconnect_rate        Max number of Disconnect calls per second, default: 100, env: ANYCABLE_DISCONNECT_RATE
+  --max_message_size       Maximum size of a message in bytes, default: 65536, env: ANYCABLE_MAX_MESSAGE_SIZE
 
   --log_level              Set logging level (debug/info/warn/error/fatal), default: info, env: ANYCABLE_LOG_LEVEL
   --log_format             Set logging format (text, json), default: text, env: ANYCABLE_LOG_FORMAT
