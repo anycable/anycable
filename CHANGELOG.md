@@ -2,6 +2,8 @@
 
 ## master
 
+## 0.6.2 (2019-03-25)
+
 - Configure maximum message size via `--max_message_size`. Defaults to 65536 (64kb).
 
 ## 0.6.1 (2018-12-21) "X-mas time is here again!" 🎅
