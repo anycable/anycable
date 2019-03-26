@@ -2,6 +2,8 @@
 
 ## master
 
+## 0.6.3 (2019-03-26)
+
 - Relax `redis` gem version requirement. ([@palkan][])
 
 Use the same restriction as Action Cable does (`>= 3`).
