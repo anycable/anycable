@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-gem "redis", ">= 4.0"
+gem "redis", ">= 3"
 
 require "redis"
 require "json"

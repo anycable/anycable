@@ -2,6 +2,10 @@
 
 ## master
 
+- Relax `redis` gem version requirement. ([@palkan][])
+
+Use the same restriction as Action Cable does (`>= 3`).
+
 ## 0.6.2 (2019-03-15)
 
 - Add GRPC service method name and message content to exception notifications ([@sponomarev][])
