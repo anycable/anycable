@@ -2,6 +2,11 @@
 
 ## master
 
+- Use request id for session uids if available. ([@sponomarev][])
+
+If a load balancer standing in front of WebSocket server assigns `X-Request-ID` header,
+this request ID will be used for session identification.
+
 ## 0.6.2 (2019-03-25)
 
 - Configure maximum message size via `--max_message_size`. Defaults to 65536 (64kb).
@@ -222,7 +227,7 @@ Do not add `identifier` field.
 
 - Refactor `Pinger`. ([@palkan][])
 
-`Pinger` now is always running and track the number of active connections by itself 
+`Pinger` now is always running and track the number of active connections by itself
 (no need to call `hub.Size()`).
 No more race conditions.
 

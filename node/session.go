@@ -10,7 +10,6 @@ import (
 	"github.com/anycable/anycable-go/utils"
 	"github.com/apex/log"
 	"github.com/gorilla/websocket"
-	nanoid "github.com/matoous/go-nanoid"
 )
 
 const (
@@ -86,10 +85,9 @@ func NewSession(node *Node, ws *websocket.Conn, request *http.Request) (*Session
 		connected:     false,
 	}
 
-	uid, err := nanoid.Nanoid()
-
+	uid, err := utils.FetchUID(request)
 	if err != nil {
-		defer session.Close("Nanoid Error", CloseInternalServerErr)
+		defer session.Close("UID Retrieval Error", CloseInternalServerErr)
 		return nil, err
 	}
 

@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"os"
 
+	nanoid "github.com/matoous/go-nanoid"
 	"github.com/mattn/go-isatty"
 )
 
@@ -20,4 +21,14 @@ func FetchHeaders(r *http.Request, list []string) map[string]string {
 		res[header] = r.Header.Get(header)
 	}
 	return res
+}
+
+// FetchUID safely extracts uid from `X-Request-ID` header or generates a new one
+func FetchUID(r *http.Request) (string, error) {
+	requestID := r.Header.Get("X-Request-ID")
+	if requestID == "" {
+		return nanoid.Nanoid()
+	}
+
+	return requestID, nil
 }
