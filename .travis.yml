@@ -12,6 +12,11 @@ go:
   - 1.12.x
   - master
 
+env:
+  global:
+    - GO111MODULE=on
+    - GOFLAGS=-mod=vendor
+
 matrix:
   allow_failures:
     - go: master

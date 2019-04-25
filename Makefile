@@ -11,6 +11,9 @@ else
 PATH := $(subst :,/bin:,$(GOPATH))/bin:$(PATH)
 endif
 
+export GO111MODULE=on
+export GOFLAGS=-mod=vendor
+
 LD_FLAGS="-s -w -X main.version=$(VERSION)"
 GOBUILD=go build -ldflags $(LD_FLAGS) -a
 

@@ -80,6 +80,8 @@ executors:
     working_directory: /go/src/github.com/anycable/anycable-go/
     environment:
       CGO_ENABLED: "0"
+      GO111MODULE: "on"
+      GOFLAGS: "-mod=vendor"
   osx:
     macos:
       xcode: "10.0.0"
@@ -87,6 +89,8 @@ executors:
       GOPATH: /Users/distiller/go
       GOARCH: amd64
       CGO_ENABLED: "1"
+      GO111MODULE: "on"
+      GOFLAGS: "-mod=vendor"
       GO_VERSION: 1.12.4
       GO_SHA: 5b3c6aafd31746809e2776c685e89190f85307074e48af2681d472f8a6a3c504
     working_directory: /Users/distiller/go/src/github.com/anycable/anycable-go/
