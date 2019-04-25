@@ -76,7 +76,7 @@ workflows:
 executors:
   golang:
     docker:
-      - image: circleci/golang:1.11.4-stretch
+      - image: circleci/golang:1.12.4-stretch
     working_directory: /go/src/github.com/anycable/anycable-go/
     environment:
       CGO_ENABLED: "0"
@@ -87,8 +87,8 @@ executors:
       GOPATH: /Users/distiller/go
       GOARCH: amd64
       CGO_ENABLED: "1"
-      GO_VERSION: 1.11.4
-      GO_SHA: cc2b872aa1341ebe37bf65b9008a1aff7715ff9bde8b6503fb12c94dfe31b145
+      GO_VERSION: 1.12.4
+      GO_SHA: 5b3c6aafd31746809e2776c685e89190f85307074e48af2681d472f8a6a3c504
     working_directory: /Users/distiller/go/src/github.com/anycable/anycable-go/
   docker:
     docker:
