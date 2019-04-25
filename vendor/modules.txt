@@ -1,0 +1,73 @@
+# github.com/apex/log v1.0.0
+github.com/apex/log
+github.com/apex/log/handlers/json
+# github.com/davecgh/go-spew v0.0.0-20171005155431-ecdeabc65495
+github.com/davecgh/go-spew/spew
+# github.com/golang/protobuf v1.0.0
+github.com/golang/protobuf/proto
+github.com/golang/protobuf/ptypes
+github.com/golang/protobuf/ptypes/any
+github.com/golang/protobuf/ptypes/duration
+github.com/golang/protobuf/ptypes/timestamp
+# github.com/gomodule/redigo v2.0.0+incompatible
+github.com/gomodule/redigo/redis
+github.com/gomodule/redigo/internal
+# github.com/gorilla/websocket v1.2.0
+github.com/gorilla/websocket
+# github.com/matoous/go-nanoid v0.0.0-20180109130436-958d370425a1
+github.com/matoous/go-nanoid
+# github.com/mattn/go-isatty v0.0.3
+github.com/mattn/go-isatty
+# github.com/mitchellh/go-mruby v0.0.0-20181003231329-cd6a04a6ea57
+github.com/mitchellh/go-mruby
+# github.com/namsral/flag v0.0.0-20161013121303-91bb473a91a4
+github.com/namsral/flag
+# github.com/pkg/errors v0.8.0
+github.com/pkg/errors
+# github.com/pmezard/go-difflib v1.0.0
+github.com/pmezard/go-difflib/difflib
+# github.com/stretchr/testify v0.0.0-20171018052257-2aa2c176b9da
+github.com/stretchr/testify/assert
+# github.com/syossan27/tebata v0.0.0-20180226150551-49bbbdf5eb8f
+github.com/syossan27/tebata
+# golang.org/x/net v0.0.0-20171020204401-cd69bc3fc700
+golang.org/x/net/context
+golang.org/x/net/http2
+golang.org/x/net/trace
+golang.org/x/net/http2/hpack
+golang.org/x/net/idna
+golang.org/x/net/lex/httplex
+golang.org/x/net/internal/timeseries
+# golang.org/x/sys v0.0.0-20180117170059-2c42eef0765b
+golang.org/x/sys/unix
+# golang.org/x/text v0.0.0-20171013141220-c01e4764d870
+golang.org/x/text/secure/bidirule
+golang.org/x/text/unicode/norm
+golang.org/x/text/transform
+golang.org/x/text/unicode/bidi
+# google.golang.org/genproto v0.0.0-20180301225018-2c5e7ac708aa
+google.golang.org/genproto/googleapis/rpc/status
+# google.golang.org/grpc v1.10.0
+google.golang.org/grpc
+google.golang.org/grpc/metadata
+google.golang.org/grpc/balancer
+google.golang.org/grpc/balancer/roundrobin
+google.golang.org/grpc/codes
+google.golang.org/grpc/connectivity
+google.golang.org/grpc/credentials
+google.golang.org/grpc/encoding
+google.golang.org/grpc/encoding/proto
+google.golang.org/grpc/grpclb/grpc_lb_v1/messages
+google.golang.org/grpc/grpclog
+google.golang.org/grpc/internal
+google.golang.org/grpc/keepalive
+google.golang.org/grpc/naming
+google.golang.org/grpc/peer
+google.golang.org/grpc/resolver
+google.golang.org/grpc/resolver/dns
+google.golang.org/grpc/resolver/passthrough
+google.golang.org/grpc/stats
+google.golang.org/grpc/status
+google.golang.org/grpc/tap
+google.golang.org/grpc/transport
+google.golang.org/grpc/balancer/base
