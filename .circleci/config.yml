@@ -130,7 +130,6 @@ jobs:
     - attach_workspace:
         at: .
     - checkout
-    - run: dep ensure && dep check
     - persist_to_workspace:
         root: .
         paths: .
@@ -197,9 +196,6 @@ jobs:
     - run:
         name: Prepare code for the build
         command: |
-          go get -u github.com/golang/dep/cmd/dep && \
-          dep ensure && \
-          dep check && \
           bash -c "(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)"
     - build-mruby:
         os: darwin

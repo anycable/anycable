@@ -68,13 +68,9 @@ test-conformance:
 	anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable"
 	anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token --ssl_key=etc/ssl/server.key --ssl_cert=etc/ssl/server.crt --port=8443" --target-url="wss://localhost:8443/cable"
 
-test-ci: prepare check prepare-mruby test test-conformance
-
-check:
-	dep ensure && dep check
+test-ci: prepare prepare-mruby test test-conformance
 
 prepare:
-	go get -u github.com/golang/dep/cmd/dep
 	gem install anyt
 
 gen-ssl:
