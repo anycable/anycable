@@ -74,29 +74,28 @@ func init() {
 	// CLI vars
 	fs.BoolVar(&showHelp, "h", false, "")
 	fs.BoolVar(&showVersion, "v", false, "")
+
+	fs.Parse(os.Args[1:])
 }
 
-// GetConfig returns CLI configuration
-func GetConfig() config.Config {
-	ensureParsed()
+// Config returns CLI configuration
+func Config() config.Config {
+	prepareComplexDefaults()
 	return defaults
 }
 
 // ShowVersion returns true if -v flag was provided
 func ShowVersion() bool {
-	ensureParsed()
 	return showVersion
 }
 
 // ShowHelp returns true if -h flag was provided
 func ShowHelp() bool {
-	ensureParsed()
 	return showHelp
 }
 
 // DebugMode returns true if -debug flag is provided
 func DebugMode() bool {
-	ensureParsed()
 	return debugMode
 }
 
@@ -143,9 +142,7 @@ func PrintHelp() {
 	fmt.Print(usage)
 }
 
-func ensureParsed() {
-	if !fs.Parsed() {
-		fs.Parse(os.Args[1:])
+func prepareComplexDefaults() {
 		defaults.Headers = parseHeaders(headers)
 
 		if debugMode {
@@ -157,7 +154,6 @@ func ensureParsed() {
 			defaults.MetricsPort = defaults.Port
 		}
 	}
-}
 
 // parseHeaders returns a headers list with the values from
 // a comma-separated string list

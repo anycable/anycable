@@ -43,7 +43,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	config := cli.GetConfig()
+	config := cli.Config()
 
 	// init logging
 	err := utils.InitLogger(config.LogFormat, config.LogLevel)
