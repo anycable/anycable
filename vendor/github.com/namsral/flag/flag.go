@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 /*Package flag implements command-line flag parsing.
-
+okdaokddadok
 Usage:
 
 Define flags using flag.String(), Bool(), Int(), etc.
@@ -76,6 +76,11 @@ import (
 // EnvironmentPrefix defines a string that will be implicitely prefixed to a
 // flag name before looking it up in the environment variables.
 var EnvironmentPrefix = ""
+
+// DefaultConfigFlagname defines the flag name of the optional config file
+// path. Used to lookup and parse the config file when a default is set and
+// available on disk.
+var DefaultConfigFlagname = "config"
 
 // ErrHelp is the error returned if the flag -help is invoked but no such flag is defined.
 var ErrHelp = errors.New("flag: help requested")
@@ -831,9 +836,15 @@ func (f *FlagSet) Parse(arguments []string) error {
 	}
 
 	// Parse configuration from file
-	configFlag := f.actual["config"]
-	if configFlag != nil {
-		if err := f.ParseFile(configFlag.Value.String()); err != nil {
+	var cFile string
+	if cf := f.formal[DefaultConfigFlagname]; cf != nil {
+		cFile = cf.Value.String()
+	}
+	if cf := f.actual[DefaultConfigFlagname]; cf != nil {
+		cFile = cf.Value.String()
+	}
+	if cFile != "" {
+		if err := f.ParseFile(cFile); err != nil {
 			switch f.errorHandling {
 			case ContinueOnError:
 				return err

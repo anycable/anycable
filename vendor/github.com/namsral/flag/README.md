@@ -86,7 +86,7 @@ Example:
 ```go
 import "github.com/namsral/flag"
 
-flag.String("config", "", "help message for config")
+flag.String(flag.DefaultConfigFlagname, "", "path to config file")
 flag.Int("age", 24, "help message for age")
 
 flag.Parse()
@@ -119,13 +119,21 @@ hacker
 Add a "config" flag:
 
 ```go
-flag.String("config", "", "help message for config")
+flag.String(flag.DefaultConfigFlagname, "", "path to config file")
 ```
 
 Run the command:
 
 ```go
 $ go run ./gopher.go -config ./gopher.conf
+```
+
+The default flag name for the configuration file is "config" and can be changed
+by setting `flag.DefaultConfigFlagname`:
+
+```go
+flag.DefaultConfigFlagname = "conf"
+flag.Parse()
 ```
 
 #### Parsing Environment Variables

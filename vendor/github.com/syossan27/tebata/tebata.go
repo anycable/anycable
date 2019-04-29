@@ -1,7 +1,6 @@
 package tebata
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -9,10 +8,11 @@ import (
 	"sync"
 )
 
-type status struct {
+// Tebata struct has any status.
+type Tebata struct {
 	mutex            *sync.Mutex
 	signalCh         chan os.Signal
-	ReservedFunction []functionData
+	reservedFunction []functionData
 }
 
 type functionData struct {
@@ -20,8 +20,9 @@ type functionData struct {
 	args     []interface{}
 }
 
-func New(signals ...os.Signal) *status {
-	s := &status{
+// New Tebata struct, and start to catch signal.
+func New(signals ...os.Signal) *Tebata {
+	s := &Tebata{
 		mutex:    new(sync.Mutex),
 		signalCh: make(chan os.Signal, 1),
 	}
@@ -30,35 +31,19 @@ func New(signals ...os.Signal) *status {
 	return s
 }
 
-func (s *status) Reserve(function interface{}, args ...interface{}) error {
-	defer s.mutex.Unlock()
-	s.mutex.Lock()
-	if reflect.ValueOf(function).Kind() != reflect.Func {
-		return errors.New(
-			fmt.Sprintf("Invalid \"function\" argument.\n Expect Type: func"),
-		)
+func (s *Tebata) listen() {
+	for {
+		select {
+		case <-s.signalCh:
+			s.exec()
+		}
 	}
-	if reflect.ValueOf(args).Kind() != reflect.Slice {
-		return errors.New(
-			fmt.Sprintf("Invalid \"args\" argument.\n Expect Type: slice"),
-		)
-	}
-
-	s.ReservedFunction = append(
-		s.ReservedFunction,
-		functionData{
-			function,
-			convertInterfaceSlice(args),
-		},
-	)
-
-	return nil
 }
 
-func (s *status) exec() {
+func (s *Tebata) exec() {
 	defer s.mutex.Unlock()
 	s.mutex.Lock()
-	for _, rf := range s.ReservedFunction {
+	for _, rf := range s.reservedFunction {
 		argsValueOf := reflect.ValueOf(rf.args)
 		argsKind := argsValueOf.Kind()
 		argsTypeName := argsValueOf.Type().Name()
@@ -81,6 +66,28 @@ func (s *status) exec() {
 	}
 }
 
+// Reserve the function to be executed when receiving the Linux signal.
+func (s *Tebata) Reserve(function interface{}, args ...interface{}) error {
+	defer s.mutex.Unlock()
+	s.mutex.Lock()
+	if reflect.ValueOf(function).Kind() != reflect.Func {
+		return fmt.Errorf("Invalid \"function\" argument.\n Expect Type: func")
+	}
+	if reflect.ValueOf(args).Kind() != reflect.Slice {
+		return fmt.Errorf("Invalid \"args\" argument.\n Expect Type: slice")
+	}
+
+	s.reservedFunction = append(
+		s.reservedFunction,
+		functionData{
+			function,
+			convertInterfaceSlice(args),
+		},
+	)
+
+	return nil
+}
+
 func convertInterfaceSlice(args interface{}) (convertedSlice []interface{}) {
 	a := reflect.ValueOf(args)
 	length := a.Len()
@@ -91,14 +98,4 @@ func convertInterfaceSlice(args interface{}) (convertedSlice []interface{}) {
 	}
 
 	return convertedSlice
-}
-
-func (s *status) listen() {
-	for {
-		select {
-		case <-s.signalCh:
-			s.exec()
-			return
-		}
-	}
 }
