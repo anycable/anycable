@@ -34,16 +34,18 @@ func TestFetchHeaders(t *testing.T) {
 	t.Run("Without specified headers ", func(t *testing.T) {
 		headers := FetchHeaders(req, []string{})
 
-		assert.Len(t, headers, 0)
+		assert.Len(t, headers, 1)
+		assert.Equal(t, "192.0.2.1", headers["REMOTE_ADDR"])
 	})
 
 	t.Run("With specified headers ", func(t *testing.T) {
 		headers := FetchHeaders(req, []string{"cookies", "x-api-token"})
 
-		assert.Len(t, headers, 2)
+		assert.Len(t, headers, 3)
 
-		assert.Equal(t, "42", headers["x-api-token"])
-		assert.Equal(t, "yummy_cookie=raisin; tasty_cookie=strawberry", headers["cookies"])
 		assert.Empty(t, headers["accept-language"])
+		assert.Equal(t, req.Header.Get("x-api-token"), headers["x-api-token"])
+		assert.Equal(t, req.Header.Get("cookies"), headers["cookies"])
+		assert.Equal(t, "192.0.2.1", headers["REMOTE_ADDR"])
 	})
 }

@@ -1,12 +1,15 @@
 package utils
 
 import (
+	"net"
 	"net/http"
 	"os"
 
 	nanoid "github.com/matoous/go-nanoid"
 	"github.com/mattn/go-isatty"
 )
+
+const remoteAddrHeader = "REMOTE_ADDR"
 
 // IsTTY returns true if program is running with TTY
 func IsTTY() bool {
@@ -20,6 +23,7 @@ func FetchHeaders(r *http.Request, list []string) map[string]string {
 	for _, header := range list {
 		res[header] = r.Header.Get(header)
 	}
+	res[remoteAddrHeader], _, _ = net.SplitHostPort(r.RemoteAddr)
 	return res
 }
 

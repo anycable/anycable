@@ -2,6 +2,10 @@
 
 ## master
 
+- Set `REMOTE_ADDR` synthetic header ([@sponomarev][])
+
+It can be used on a RPC server side to access remote connection IP address.
+
 - Use request id for session uids if available. ([@sponomarev][])
 
 If a load balancer standing in front of WebSocket server assigns `X-Request-ID` header,
