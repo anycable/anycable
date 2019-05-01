@@ -82,4 +82,33 @@ describe "client connection", :with_grpc_server do
       expect(subject.transmissions.first).to eq JSON.dump("type" => "welcome")
     end
   end
+
+  describe "env building" do
+    let(:request) do
+      AnyCable::ConnectionRequest.new(
+        headers: {
+          "Cookie" => "username=john;"
+        },
+        path: "https://example.io/cable?token=123"
+      )
+    end
+
+    it "builds properly structured Rack-compatible env" do
+      identifiers = JSON.parse(subject.identifiers)
+      request = Rack::Request.new(identifiers["env"])
+
+      expect(request).to have_attributes(
+        request_method: "GET",
+        script_name: "",
+        scheme: "https",
+        host: "example.io",
+        port: 443,
+        path: "/cable",
+        query_string: "token=123",
+        params: a_hash_including(
+          "token" => "123"
+        )
+      )
+    end
+  end
 end

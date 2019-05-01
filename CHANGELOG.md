@@ -2,6 +2,11 @@
 
 ## master
 
+- Align socket env to be more compatibile with Rack Spec ([@sponomarev][])
+
+Provide as much env details as possible to be able to reconstruct the full
+request object in a custom connection factory.
+
 ## 0.6.3 (2019-03-26)
 
 - Relax `redis` gem version requirement. ([@palkan][])

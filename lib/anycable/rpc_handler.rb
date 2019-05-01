@@ -97,19 +97,20 @@ module AnyCable
 
     private
 
-    # Build env from path
+    # Build Rack env from request
     def rack_env(request)
       uri = URI.parse(request.path)
       {
-        "QUERY_STRING" => uri.query,
+        # Minimum required variables according to Rack Spec
+        "REQUEST_METHOD" => "GET",
         "SCRIPT_NAME" => "",
         "PATH_INFO" => uri.path,
+        "QUERY_STRING" => uri.query,
+        "SERVER_NAME" => uri.host,
         "SERVER_PORT" => uri.port.to_s,
         "HTTP_HOST" => uri.host,
-        # Hack to avoid Missing rack.input error
-        "rack.request.form_input" => "",
-        "rack.input" => "",
-        "rack.request.form_hash" => {}
+        "rack.url_scheme" => uri.scheme,
+        "rack.input" => ""
       }.merge(build_headers(request.headers))
     end
 
