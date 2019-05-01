@@ -100,8 +100,9 @@ module AnyCable
     # Build Rack env from request
     def rack_env(request)
       uri = URI.parse(request.path)
-      {
-        # Minimum required variables according to Rack Spec
+
+      # Minimum required variables according to Rack Spec
+      env = {
         "REQUEST_METHOD" => "GET",
         "SCRIPT_NAME" => "",
         "PATH_INFO" => uri.path,
@@ -109,9 +110,12 @@ module AnyCable
         "SERVER_NAME" => uri.host,
         "SERVER_PORT" => uri.port.to_s,
         "HTTP_HOST" => uri.host,
+        "REMOTE_ADDR" => request.headers.delete("REMOTE_ADDR"),
         "rack.url_scheme" => uri.scheme,
         "rack.input" => ""
-      }.merge(build_headers(request.headers))
+      }
+
+      env.merge!(build_headers(request.headers))
     end
 
     def build_socket(**options)

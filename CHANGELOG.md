@@ -2,6 +2,13 @@
 
 ## master
 
+– Add `REMOTE_ADDR` socket env variable using a synthetic header passed from a websocket
+server. ([@sponomarev][])
+
+Recreating a request object in your custom connection factory using `Rack::Request` or
+`ActionDispatch::Request` (already implemented in [anycable-rails](https://github.com/anycable/anycable-rails))
+gives you an access to `request.ip` with the properly set IP address.
+
 - Align socket env to be more compatibile with Rack Spec ([@sponomarev][])
 
 Provide as much env details as possible to be able to reconstruct the full
@@ -249,3 +256,4 @@ Implement `Disconnect` handler, which invokes `Connection#disconnect` (along wit
 [@sadovnik]: https://github.com/sadovnik
 [@accessd]: https://github.com/accessd
 [@DarthSim]: https://github.com/DarthSim
+[@sponomarev]: https://github.com/sponomarev
