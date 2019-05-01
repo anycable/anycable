@@ -18,7 +18,8 @@ module AnyCable
         @identifiers["current_user"] = request.cookies["username"]
         @identifiers["path"] = request.path
         @identifiers["token"] = request.params["token"] || request.get_header("HTTP_X_API_TOKEN")
-        @identifiers["remote_ip"] = request.ip
+        @identifiers["ip"] = request.ip
+        @identifiers["remote_addr"] = request.get_header("HTTP_REMOTE_ADDR")
         @identifiers["env"] = socket.env
 
         if @identifiers["current_user"]

@@ -65,8 +65,7 @@ describe "client connection", :with_grpc_server do
       AnyCable::ConnectionRequest.new(
         headers: {
           "cookie" => "username=john;",
-          "x-api-token" => "abc123",
-          "X-Forwarded-For" => "1.2.3.4"
+          "x-api-token" => "abc123"
         },
         path: "http://example.io/cable"
       )
@@ -76,10 +75,29 @@ describe "client connection", :with_grpc_server do
       expect(subject.status).to eq :SUCCESS
       identifiers = JSON.parse(subject.identifiers)
       expect(identifiers).to include(
-        "token" => "abc123",
-        "remote_ip" => "1.2.3.4"
+        "token" => "abc123"
       )
       expect(subject.transmissions.first).to eq JSON.dump("type" => "welcome")
+    end
+  end
+
+  context "with remote ip from headers" do
+    let(:request) do
+      AnyCable::ConnectionRequest.new(
+        headers: {
+          "cookie" => "username=john;",
+          "REMOTE_ADDR" => "1.2.3.4"
+        },
+        path: "http://example.io/cable"
+      )
+    end
+
+    it "sets ip and cleans synthetic header", :aggregate_failures do
+      identifiers = JSON.parse(subject.identifiers)
+      expect(identifiers).to include(
+        "ip" => "1.2.3.4",
+        "remote_addr" => nil
+      )
     end
   end
 
