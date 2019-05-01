@@ -19,6 +19,7 @@ module AnyCable
         @identifiers["path"] = request.path
         @identifiers["token"] = request.params["token"] || request.get_header("HTTP_X_API_TOKEN")
         @identifiers["remote_ip"] = request.ip
+        @identifiers["env"] = socket.env
 
         if @identifiers["current_user"]
           transmit(type: "welcome")
