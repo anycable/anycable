@@ -69,3 +69,6 @@ Metrics/PerceivedComplexity:
 
 Lint/HandleExceptions:
   Enabled: false
+
+Naming/RescuedExceptionsVariableName:
+  Enabled: false
