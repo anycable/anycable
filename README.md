@@ -71,3 +71,8 @@ Please, provide reproduction script (using [this template](https://github.com/an
 
 ## License
 The gem is available as open source under the terms of the [MIT License](http://opensource.org/licenses/MIT).
+
+## Security Contact
+
+To report a security vulnerability, please use the [Tidelift security contact](https://tidelift.com/security). Tidelift will coordinate the fix and disclosure.
+
