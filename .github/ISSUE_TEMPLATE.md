@@ -3,6 +3,10 @@
 
   This template is for bug reports. If you are reporting a bug, please continue on. If you are here for another reason, 
   feel free to skip the rest of this template.
+
+  Please, check the documentation website (https://docs.anycable.io/),
+  especially, the "Troubleshooting" section (https://docs.anycable.io/#/troubleshooting)
+  before submiting the issue.
 -->
 
 ### Tell us about your environment
