@@ -14,6 +14,13 @@ Gem::Specification.new do |spec|
   spec.description   = "AnyCable is a polyglot replacement for ActionCable-compatible servers"
   spec.homepage      = "http://github.com/anycable/anycable"
   spec.license       = "MIT"
+  spec.metadata = {
+    "bug_tracker_uri" => "http://github.com/anycable/anycable/issues",
+    "changelog_uri" => "https://github.com/anycable/anycable/blob/master/CHANGELOG.md",
+    "documentation_uri" => "https://docs.anycable.io/",
+    "homepage_uri" => "https://anycable.io/",
+    "source_code_uri" => "http://github.com/anycable/anycable"
+  }
 
   spec.executables   = %w[anycable anycabled]
   spec.files         = `git ls-files README.md MIT-LICENSE CHANGELOG.md lib bin`.split
