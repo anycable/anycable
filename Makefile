@@ -30,6 +30,9 @@ install-with-mruby:
 build:
 	go build -tags mrb -ldflags $(LD_FLAGS) -o $(OUTPUT) cmd/anycable-go/main.go
 
+build-gobench:
+	go build -tags mrb -ldflags $(LD_FLAGS) -o dist/gobench-cable cmd/gobench-cable/main.go
+
 prepare-mruby:
 	cd vendor/github.com/mitchellh/go-mruby && \
 	MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a
