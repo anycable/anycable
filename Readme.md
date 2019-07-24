@@ -62,6 +62,10 @@ For more information about available options run `anycable-go -h`.
 ## Build
 
 ```shell
+# first, prepare mruby (we embed it by default)
+make prepare-mruby
+
+# then build the Go binary (will be available in dist/anycable-go)
 make
 ```
 
