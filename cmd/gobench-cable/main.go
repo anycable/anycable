@@ -57,7 +57,7 @@ func main() {
 		ctx.Debug("🔧 🔧 🔧 Debug mode is on 🔧 🔧 🔧")
 	}
 
-	ctx.Infof("Starting GoBenchCable %s (pid: %d)", version, os.Getpid())
+	ctx.Infof("Starting GoBenchCable %s (pid: %d, open file limit: %s)", version, os.Getpid(), utils.OpenFileLimit())
 
 	var metricsPrinter metrics.Printer
 

@@ -64,13 +64,13 @@ func main() {
 	if mrb.Supported() {
 		mrbv, err := mrb.Version()
 		if err != nil {
-			log.Errorf("mruby failed to initialize: %v", err)
+			ctx.Errorf("mruby failed to initialize: %v", err)
 		} else {
 			mrubySupport = " (with " + mrbv + ")"
 		}
 	}
 
-	ctx.Infof("Starting AnyCable %s%s (pid: %d)", version, mrubySupport, os.Getpid())
+	ctx.Infof("Starting AnyCable %s%s (pid: %d, open file limit: %s)", version, mrubySupport, os.Getpid(), utils.OpenFileLimit())
 
 	var metricsPrinter metrics.Printer
 
