@@ -1,15 +1,12 @@
 [![TravisCI](https://img.shields.io/travis/anycable/anycable-go.svg?label=TravisCI&style=flat)](https://travis-ci.org/anycable/anycable-go)
 [![CircleCI](https://img.shields.io/circleci/project/github/anycable/anycable-go.svg?label=CircleCI)](https://circleci.com/gh/anycable/anycable-go)
 [![Docker](https://img.shields.io/docker/pulls/anycable/anycable-go.svg)](https://hub.docker.com/r/anycable/anycable-go/)
-[![Dependency Status](https://dependencyci.com/github/anycable/anycable-go/badge?style=flat)](https://dependencyci.com/github/anycable/anycable-go)
 [![Gitter](https://img.shields.io/badge/gitter-join%20chat%20%E2%86%92-brightgreen.svg)](https://gitter.im/anycable/anycable-go)
 [![Documentation](https://img.shields.io/badge/docs-link-brightgreen.svg)](https://docs.anycable.io/#go_getting_started)
 
 # AnyCable-Go WebSocket Server
 
 WebSocket server for [AnyCable](https://github.com/anycable/anycable).
-
-**NOTE:** this is a readme for the 0.6.x version. [Go to 0.5.x version](https://github.com/anycable/anycable-go/tree/0-5-stable).
 
 ## Installation
 
