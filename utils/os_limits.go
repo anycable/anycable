@@ -1,4 +1,4 @@
-// +build darwin linux
+// +build !windows
 
 package utils
 
