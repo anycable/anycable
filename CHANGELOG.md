@@ -2,6 +2,8 @@
 
 ## master
 
+## 0.6.3 (2019-08-05)
+
 - Set `REMOTE_ADDR` synthetic header ([@sponomarev][])
 
 It can be used on a RPC server side to access remote connection IP address.
