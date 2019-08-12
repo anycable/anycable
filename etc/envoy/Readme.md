@@ -8,19 +8,19 @@ We can use Envoy for load balancing and zero-disconnect deployments.
 
 Launch 2 RPC servers:
 
-```
+```sh
 # first
-$ bundle exec anycable --rpc-host="0.0.0.0:50060"
+bundle exec anycable --rpc-host="0.0.0.0:50060"
 
 # second
-$ bundle exec anycable --rpc-host="0.0.0.0:50061"
+bundle exec anycable --rpc-host="0.0.0.0:50061"
 ```
 
 Build and run Envoy Docker image:
 
-```
+```sh
 docker rmi -f envoy:v1
-
+docker build -t envoy:v1 .
 docker run -p 9901:9901 -p 50051:50051 --name envoy-cable envoy:v1
 ```
 

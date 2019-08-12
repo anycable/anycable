@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"sort"
+	"sync/atomic"
 	"time"
 
 	"github.com/golang-collections/go-datastructures/queue"
@@ -19,6 +21,11 @@ import (
 	"google.golang.org/grpc/keepalive"
 )
 
+const (
+	retryInterval = 10
+	invokeTimeout = 3000
+)
+
 // Options describes benchmark options
 type Options struct {
 	host            string
@@ -27,12 +34,14 @@ type Options struct {
 	concurrency     int
 	total           int
 	pool            bool
+	debug           bool
 }
 
 // Benchmark implements shared methods for the benchmark
 type Benchmark struct {
 	buffer  *queue.RingBuffer
 	pool    *grpcpool.Pool
+	sem     chan (struct{})
 	conn    *grpc.ClientConn
 	resChan chan (time.Duration)
 	errChan chan (error)
@@ -43,19 +52,42 @@ var kacp = keepalive.ClientParameters{
 	PermitWithoutStream: true,             // send pings even without active streams
 }
 
+var retryCount = uint64(0)
+var retryTime = uint64(0)
+
 func main() {
 	var b Benchmark
 	var options Options
 
+	parseOptions(&options)
+
 	// init logging
-	err := utils.InitLogger("text", "debug")
+	logLevel := "info"
+
+	if options.debug {
+		logLevel = "debug"
+	}
+
+	err := utils.InitLogger("text", logLevel)
 
 	if err != nil {
 		log.Errorf("!!! Failed to initialize logger !!!\n%v", err)
 		os.Exit(1)
 	}
 
-	parseOptions(&options)
+	log.WithField(
+		"concurrency",
+		options.concurrency,
+	).WithField(
+		"total",
+		options.total,
+	).WithField(
+		"capacity",
+		options.capacity,
+	).WithField(
+		"pool",
+		options.pool,
+	).Infof("Running RPC benchmark for %s", options.host)
 
 	factory := func() (*grpc.ClientConn, error) {
 		return grpc.Dial(options.host, grpc.WithInsecure(), grpc.WithKeepaliveParams(kacp))
@@ -78,6 +110,10 @@ func main() {
 			os.Exit(1)
 		}
 
+		b.sem = make(chan struct{}, options.capacity)
+		for i := 0; i < options.capacity; i++ {
+			b.sem <- struct{}{}
+		}
 		b.conn = conn
 	}
 
@@ -114,6 +150,9 @@ func main() {
 	if failures > 0 {
 		log.Errorf("%d requests failed out of %d", failures, completed)
 	}
+	if retryCount > 0 {
+		log.Warnf("%d requests retried (total time %dms)", retryCount, retryTime)
+	}
 }
 
 func parseOptions(options *Options) {
@@ -123,21 +162,8 @@ func parseOptions(options *Options) {
 	flag.IntVar(&options.initialCapacity, "init", 10, "RPC clients pool initial capacity")
 	flag.IntVar(&options.total, "t", 1000, "Total number of requests to perform")
 	flag.BoolVar(&options.pool, "pool", false, "Use clients pool or single client")
+	flag.BoolVar(&options.debug, "debug", false, "Enable debug logging")
 	flag.Parse()
-
-	log.WithField(
-		"concurrency",
-		options.concurrency,
-	).WithField(
-		"total",
-		options.total,
-	).WithField(
-		"capacity",
-		options.capacity,
-	).WithField(
-		"pool",
-		options.pool,
-	).Infof("Running RPC benchmark for %s", options.host)
 }
 
 func (b *Benchmark) startWorker() {
@@ -174,17 +200,50 @@ func (b *Benchmark) performPoolRequest() (err error) {
 
 	client := pb.NewRPCClient(conn.Conn)
 
-	_, err = client.Connect(context.Background(), &pb.ConnectionRequest{Path: "/cable", Headers: make(map[string]string)})
+	_, err = retry(func() (interface{}, error) {
+		return client.Connect(context.Background(), &pb.ConnectionRequest{Path: "/cable", Headers: make(map[string]string)})
+	})
 
 	return
 }
 
 func (b *Benchmark) performRequest() (err error) {
+	<-b.sem
+	defer func() { b.sem <- struct{}{} }()
+
 	client := pb.NewRPCClient(b.conn)
 
-	_, err = client.Connect(context.Background(), &pb.ConnectionRequest{Path: "/cable", Headers: make(map[string]string)})
+	_, err = retry(func() (interface{}, error) {
+		return client.Connect(context.Background(), &pb.ConnectionRequest{Path: "/cable", Headers: make(map[string]string)})
+	})
 
 	return
+}
+
+func retry(callback func() (interface{}, error)) (res interface{}, err error) {
+	attempts := int(math.Ceil(math.Log2(invokeTimeout / retryInterval)))
+
+	for i := 0; ; i++ {
+		res, err = callback()
+
+		if err == nil {
+			return res, nil
+		}
+
+		if i >= (attempts - 1) {
+			return nil, err
+		}
+
+		log.Debugf("RPC failure %v", err)
+
+		delayMS := math.Pow(2, float64(i)) * retryInterval
+		delay := time.Duration(delayMS)
+
+		atomic.AddUint64(&retryCount, 1)
+		atomic.AddUint64(&retryTime, uint64(delayMS))
+
+		time.Sleep(delay * time.Millisecond)
+	}
 }
 
 func printResults(res *resAggregate) {
