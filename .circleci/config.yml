@@ -353,7 +353,7 @@ jobs:
         command: sha256sum anycable-go-* > SHA256SUM
     - run:
         name: Install ghr tool
-        command: go get github.com/tcnksm/ghr
+        command: env GO111MODULE=off go get github.com/tcnksm/ghr
     - run:
         name: Upload GitHub release
         command: ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -prerelease -delete ${CIRCLE_TAG} ./
