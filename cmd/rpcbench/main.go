@@ -18,12 +18,15 @@ import (
 
 	"github.com/namsral/flag"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/keepalive"
+	"google.golang.org/grpc/status"
 )
 
 const (
-	retryInterval = 10
-	invokeTimeout = 3000
+	retryExhaustedInterval   = 10
+	retryUnavailableInterval = 100
+	invokeTimeout            = 3000
 )
 
 // Options describes benchmark options
@@ -221,28 +224,52 @@ func (b *Benchmark) performRequest() (err error) {
 }
 
 func retry(callback func() (interface{}, error)) (res interface{}, err error) {
-	attempts := int(math.Ceil(math.Log2(invokeTimeout / retryInterval)))
+	retryAge := 0
+	attempt := 0
+	wasExhausted := false
 
-	for i := 0; ; i++ {
+	for {
 		res, err = callback()
 
 		if err == nil {
 			return res, nil
 		}
 
-		if i >= (attempts - 1) {
+		if retryAge > invokeTimeout {
 			return nil, err
 		}
 
-		log.Debugf("RPC failure %v", err)
+		st, ok := status.FromError(err)
+		if !ok {
+			return nil, err
+		}
 
-		delayMS := math.Pow(2, float64(i)) * retryInterval
+		log.Debugf("RPC failure %v %v", st.Message(), st.Code())
+
+		interval := retryUnavailableInterval
+
+		if st.Code() == codes.ResourceExhausted {
+			interval = retryExhaustedInterval
+			if !wasExhausted {
+				attempt = 0
+				wasExhausted = true
+			}
+		} else if wasExhausted {
+			wasExhausted = false
+			attempt = 0
+		}
+
+		delayMS := int(math.Pow(2, float64(attempt))) * interval
 		delay := time.Duration(delayMS)
+
+		retryAge += delayMS
 
 		atomic.AddUint64(&retryCount, 1)
 		atomic.AddUint64(&retryTime, uint64(delayMS))
 
 		time.Sleep(delay * time.Millisecond)
+
+		attempt++
 	}
 }
 
