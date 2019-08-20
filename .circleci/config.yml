@@ -26,6 +26,10 @@ workflows:
         <<: *common_tags_filter
         requires:
         - prepare_mruby
+    - benchmark:
+        <<: *common_tags_filter
+        requires:
+        - prepare_mruby
     - build_binary_for_conformance:
         <<: *requires_prepared_code
         <<: *common_tags_filter
@@ -176,6 +180,24 @@ jobs:
     - run: make test
     - run: make vet
     - run: make fmt
+
+  benchmark:
+    executor: golang
+    environment:
+      CGO_ENABLED: "1"
+    steps:
+    - attach_workspace:
+        at: /go/src/github.com/anycable/anycable-go/
+    - run: env GO111MODULE=off go get github.com/anycable/websocket-bench
+    - run: make build-gobench
+    - run:
+        command: dist/gobench-cable
+        background: true
+    - run:
+        name: Wait for gobench cable
+        command: dockerize -wait tcp://localhost:8080 -timeout 5s
+    - run:
+        command: websocket-bench broadcast --concurrent 40 --sample-size 100 --step-size 200 --payload-padding 200 --total-steps 5 ws://localhost:8080/cable --server-type=actioncable
 
   build_binary_for_conformance:
     executor: golang
