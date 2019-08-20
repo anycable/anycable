@@ -9,7 +9,6 @@ import (
 	"syscall"
 
 	"github.com/anycable/anycable-go/cli"
-	"github.com/anycable/anycable-go/config"
 	"github.com/anycable/anycable-go/gobench"
 	"github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/node"
@@ -59,24 +58,12 @@ func main() {
 
 	ctx.Infof("Starting GoBenchCable %s (pid: %d, open file limit: %s)", version, os.Getpid(), utils.OpenFileLimit())
 
-	var metricsPrinter metrics.Printer
+	metrics, err := metrics.FromConfig(&config.Metrics)
 
-	if config.MetricsLogEnabled() {
-		if config.MetricsLogFormatterEnabled() {
-			customPrinter, err := metrics.NewCustomPrinter(config.MetricsLogFormatter)
-
-			if err == nil {
-				metricsPrinter = customPrinter
-			} else {
-				log.Errorf("!!! Failed to initialize custom log printer !!!\n%v", err)
-				os.Exit(1)
-			}
-		} else {
-			metricsPrinter = metrics.NewBasePrinter()
-		}
+	if err != nil {
+		log.Errorf("!!! Failed to initialize custom log printer !!!\n%v", err)
+		os.Exit(1)
 	}
-
-	metrics := metrics.NewMetrics(metricsPrinter, config.MetricsLogInterval)
 
 	controller := gobench.NewController(metrics)
 
@@ -95,8 +82,8 @@ func main() {
 		}
 	}()
 
-	wsServer := buildServer(appNode, config.Host, strconv.Itoa(config.Port), &config.SSL)
-	wsServer.Mux.Handle(config.Path, server.WebsocketHandler(appNode, config.Headers, config.MaxMessageSize))
+	wsServer := buildServer(config.Host, strconv.Itoa(config.Port), &config.SSL)
+	wsServer.Mux.Handle(config.Path, server.WebsocketHandler(appNode, config.Headers, &config.WS))
 	ctx.Infof("Handle WebSocket connections at %s", config.Path)
 
 	wsServer.Mux.Handle(config.HealthPath, http.HandlerFunc(wsServer.HealthHandler))
@@ -122,22 +109,22 @@ func main() {
 	t.Reserve(wsServer.Stop)
 	t.Reserve(appNode.Shutdown)
 
-	if config.MetricsHTTPEnabled() {
+	if config.Metrics.HTTPEnabled() {
 		metricsServer := wsServer
 
-		if config.MetricsPort != config.Port {
-			port := strconv.Itoa(config.MetricsPort)
+		if config.Metrics.Port != config.Port {
+			port := strconv.Itoa(config.Metrics.Port)
 			host := config.Host
-			if config.MetricsHost != "" {
-				host = config.MetricsHost
+			if config.Metrics.Host != "" {
+				host = config.Metrics.Host
 			}
-			metricsServer = buildServer(appNode, host, port, &config.SSL)
-			ctx.Infof("Serve metrics at %s:%s%s", config.Host, port, config.MetricsHTTP)
+			metricsServer = buildServer(host, port, &config.SSL)
+			ctx.Infof("Serve metrics at %s:%s%s", config.Host, port, config.Metrics.HTTP)
 		} else {
-			ctx.Infof("Serve metrics at %s", config.MetricsHTTP)
+			ctx.Infof("Serve metrics at %s", config.Metrics.HTTP)
 		}
 
-		metricsServer.Mux.Handle(config.MetricsHTTP, http.HandlerFunc(metrics.PrometheusHandler))
+		metricsServer.Mux.Handle(config.Metrics.HTTP, http.HandlerFunc(metrics.PrometheusHandler))
 
 		if metricsServer != wsServer {
 			go runServer(metricsServer)
@@ -151,8 +138,8 @@ func main() {
 	select {}
 }
 
-func buildServer(node *node.Node, host string, port string, ssl *config.SSLOptions) *server.HTTPServer {
-	s, err := server.NewServer(node, host, port, ssl)
+func buildServer(host string, port string, ssl *server.SSLConfig) *server.HTTPServer {
+	s, err := server.NewServer(host, port, ssl)
 
 	if err != nil {
 		fmt.Printf("!!! Failed to initialize HTTP server at %s:%s !!!\n%v", err, host, port)
