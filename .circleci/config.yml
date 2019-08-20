@@ -50,6 +50,16 @@ workflows:
             only: /^v.*/
           branches:
             ignore: /.*/
+    - build_docker_alpine:
+        requires:
+        - test
+        - conformance
+        - build
+        filters:
+          tags:
+            only: /^v.*/
+          branches:
+            ignore: /.*/
     - build_docker_mruby:
         requires:
         - test
@@ -307,13 +317,37 @@ jobs:
           cp /tmp/dist/anycable-go-*-linux-amd64 .docker/anycable-go-linux-amd64
     - run:
         name: Build Docker image
-        command: docker build -f Dockerfile.linux-amd64 -t anycable/anycable-go:${CIRCLE_TAG} ./
+        command: docker build -f .docker/Dockerfile.linux-amd64 -t anycable/anycable-go:${CIRCLE_TAG} ./
     - run:
         name: Login to Docker registry
         command: docker login -u ${DOCKER_USER} -p ${DOCKER_PASS}
     - run:
         name: Push Docker image
         command: docker push anycable/anycable-go:${CIRCLE_TAG}
+
+  build_docker_alpine:
+    executor: docker
+    steps:
+    - setup_remote_docker:
+        version: 18.06.0-ce
+    - attach_workspace:
+        at: .
+    - restore_cache:
+        key: build-{{ .Revision }}
+    - run:
+        name: Prepare files for Docker build
+        command: |
+          cp /etc/ssl/certs/ca-certificates.crt ./.docker/ca-certificates.crt && \
+          cp /tmp/dist/anycable-go-*-linux-amd64 .docker/anycable-go-linux-amd64
+    - run:
+        name: Build Docker image
+        command: docker build -f .docker/Dockerfile.alpine-linux-amd64 -t anycable/anycable-go:${CIRCLE_TAG}-alpine ./
+    - run:
+        name: Login to Docker registry
+        command: docker login -u ${DOCKER_USER} -p ${DOCKER_PASS}
+    - run:
+        name: Push Docker image
+        command: docker push anycable/anycable-go:${CIRCLE_TAG}-alpine
 
   build_docker_mruby:
     executor: docker
@@ -330,7 +364,7 @@ jobs:
           cp /tmp/dist/anycable-go-*-mrb-linux-amd64 .docker/anycable-go-mrb-linux-amd64
     - run:
         name: Build Docker image
-        command: docker build -f Dockerfile.mrb-linux-amd64 -t anycable/anycable-go:${CIRCLE_TAG}-mrb ./
+        command: docker build -f .docker/Dockerfile.mrb-linux-amd64 -t anycable/anycable-go:${CIRCLE_TAG}-mrb ./
     - run:
         name: Login to Docker registry
         command: docker login -u ${DOCKER_USER} -p ${DOCKER_PASS}

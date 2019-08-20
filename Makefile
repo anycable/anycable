@@ -45,7 +45,7 @@ build-clean:
 	rm -rf ./dist
 
 build-linux:
-	env GOOS=linux   GOARCH=386   $(GOBUILD) -o "dist/anycable-go-$(VERSION)-linux-386"     cmd/anycable-go/main.go
+	env GOOS=linux   GOARCH=amd64 $(GOBUILD) -o "dist/anycable-go-$(VERSION)-linux-amd64"   cmd/anycable-go/main.go
 
 build-all: build-clean build-linux
 	env GOOS=linux   GOARCH=arm   $(GOBUILD) -o "dist/anycable-go-$(VERSION)-linux-arm"     cmd/anycable-go/main.go

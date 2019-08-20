@@ -28,6 +28,7 @@ Thumbs.db
 
 .docker/*
 !.docker/*.nodoby
+!.docker/Dockerfile*
 
 log/*.log
 *.gz
