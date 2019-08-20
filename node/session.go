@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/anycable/anycable-go/utils"
 	"github.com/apex/log"
 	"github.com/gorilla/websocket"
 )
@@ -17,10 +18,10 @@ const (
 	// CloseInternalServerErr indicates closure because of internal error
 	CloseInternalServerErr = websocket.CloseInternalServerErr
 
-	// CloseAbnormalClosure indicates ubnormal close
+	// CloseAbnormalClosure indicates abnormal close
 	CloseAbnormalClosure = websocket.CloseAbnormalClosure
 
-	// CloseGoingAway indicates ubnormal close
+	// CloseGoingAway indicates closing because of server shuts down or client disconnects
 	CloseGoingAway = websocket.CloseGoingAway
 
 	writeWait    = 10 * time.Second
@@ -219,11 +220,7 @@ func (s *Session) Close(reason string, code int) {
 		s.pingTimer.Stop()
 	}
 
-	// TODO: make deadline and status code configurable
-	deadline := time.Now().Add(time.Second)
-	msg := websocket.FormatCloseMessage(code, reason)
-	s.ws.WriteControl(websocket.CloseMessage, msg, deadline)
-	s.ws.Close()
+	utils.CloseWS(s.ws, code, reason)
 }
 
 func (s *Session) sendPing() {
