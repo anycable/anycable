@@ -91,7 +91,9 @@ func main() {
 
 	metrics := metrics.NewMetrics(metricsPrinter, config.MetricsLogInterval)
 
-	controller := rpc.NewController(&config, metrics)
+	RPCConfig := rpc.NewConfig(config.RPCHost)
+
+	controller := rpc.NewController(&RPCConfig, metrics)
 
 	node := node.NewNode(&config, controller, metrics)
 
