@@ -3,6 +3,7 @@ package node
 import (
 	"errors"
 
+	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/metrics"
 
 	"github.com/apex/log"
@@ -45,8 +46,8 @@ func NewMockSession(uid string) *Session {
 }
 
 // NewMockResult builds a new result with sid as transmission
-func NewMockResult(sid string) *CommandResult {
-	return &CommandResult{Transmissions: []string{sid}, Disconnect: false, StopAllStreams: false}
+func NewMockResult(sid string) *common.CommandResult {
+	return &common.CommandResult{Transmissions: []string{sid}, Disconnect: false, StopAllStreams: false}
 }
 
 // Shutdown changes Started to false
@@ -71,7 +72,7 @@ func (c *MockController) Authenticate(sid string, path string, headers *map[stri
 // - if channel is equal to "disconnect" then returns result with disconnect set to true
 // - if channel is equal to "stream" then add "stream" to result.Streams
 // - otherwise returns success result with one transmission equal to sid
-func (c *MockController) Subscribe(sid string, id string, channel string) (*CommandResult, error) {
+func (c *MockController) Subscribe(sid string, id string, channel string) (*common.CommandResult, error) {
 	if channel == "failure" {
 		return nil, errors.New("Subscription Failure")
 	}
@@ -91,7 +92,7 @@ func (c *MockController) Subscribe(sid string, id string, channel string) (*Comm
 }
 
 // Unsubscribe returns command result
-func (c *MockController) Unsubscribe(sid string, id string, channel string) (*CommandResult, error) {
+func (c *MockController) Unsubscribe(sid string, id string, channel string) (*common.CommandResult, error) {
 	if channel == "failure" {
 		return nil, errors.New("Unsubscription Failure")
 	}
@@ -101,7 +102,7 @@ func (c *MockController) Unsubscribe(sid string, id string, channel string) (*Co
 }
 
 // Perform return result with Transmissions containing data (i.e. emulates "echo" action)
-func (c *MockController) Perform(sid string, id string, channel string, data string) (*CommandResult, error) {
+func (c *MockController) Perform(sid string, id string, channel string, data string) (*common.CommandResult, error) {
 	if channel == "failure" {
 		return nil, errors.New("Perform Failure")
 	}

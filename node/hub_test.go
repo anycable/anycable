@@ -3,6 +3,7 @@ package node
 import (
 	"testing"
 
+	"github.com/anycable/anycable-go/common"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -21,7 +22,7 @@ func TestUnsubscribeRaceConditions(t *testing.T) {
 	hub.addSession(session2)
 	hub.subscribeSession("321", "test", "test_channel")
 
-	hub.broadcast <- &StreamMessage{Stream: "test", Data: "hello"}
+	hub.broadcast <- &common.StreamMessage{Stream: "test", Data: "hello"}
 
 	<-session.send
 	<-session2.send
@@ -29,13 +30,13 @@ func TestUnsubscribeRaceConditions(t *testing.T) {
 	assert.Equal(t, 2, hub.Size(), "Connections size must be equal 2")
 
 	go func() {
-		hub.broadcast <- &StreamMessage{Stream: "test", Data: "pong"}
+		hub.broadcast <- &common.StreamMessage{Stream: "test", Data: "pong"}
 		hub.unregister <- session
-		hub.broadcast <- &StreamMessage{Stream: "test", Data: "ping"}
+		hub.broadcast <- &common.StreamMessage{Stream: "test", Data: "ping"}
 	}()
 
 	go func() {
-		hub.broadcast <- &StreamMessage{Stream: "test", Data: "bye-bye"}
+		hub.broadcast <- &common.StreamMessage{Stream: "test", Data: "bye-bye"}
 	}()
 
 	<-session2.send
