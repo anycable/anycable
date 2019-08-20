@@ -95,9 +95,15 @@ func main() {
 
 	controller := rpc.NewController(&RPCConfig, metrics)
 
-	node := node.NewNode(&config, controller, metrics)
+	appNode := node.NewNode(controller, metrics)
 
-	subscriber := pubsub.NewRedisSubscriber(node, config.RedisURL, config.RedisChannel)
+	// There could be different disconnectors in the future
+	disconnector := node.NewDisconnectQueue(appNode, config.DisconnectRate)
+	go disconnector.Run()
+
+	appNode.SetDisconnector(disconnector)
+
+	subscriber := pubsub.NewRedisSubscriber(appNode, config.RedisURL, config.RedisChannel)
 
 	go func() {
 		if err := subscriber.Start(); err != nil {
@@ -113,8 +119,9 @@ func main() {
 		}
 	}()
 
-	wsServer := buildServer(node, config.Host, strconv.Itoa(config.Port), &config.SSL)
-	wsServer.Mux.Handle(config.Path, http.HandlerFunc(wsServer.WebsocketHandler))
+	wsServer := buildServer(appNode, config.Host, strconv.Itoa(config.Port), &config.SSL)
+	wsServer.Mux.Handle(config.Path, server.WebsocketHandler(appNode, config.Headers, config.MaxMessageSize))
+
 	ctx.Infof("Handle WebSocket connections at %s", config.Path)
 
 	wsServer.Mux.Handle(config.HealthPath, http.HandlerFunc(wsServer.HealthHandler))
@@ -138,7 +145,7 @@ func main() {
 	})
 	t.Reserve(metrics.Shutdown)
 	t.Reserve(wsServer.Stop)
-	t.Reserve(node.Shutdown)
+	t.Reserve(appNode.Shutdown)
 
 	if config.MetricsHTTPEnabled() {
 		metricsServer := wsServer
@@ -149,7 +156,7 @@ func main() {
 			if config.MetricsHost != "" {
 				host = config.MetricsHost
 			}
-			metricsServer = buildServer(node, host, port, &config.SSL)
+			metricsServer = buildServer(appNode, host, port, &config.SSL)
 			ctx.Infof("Serve metrics at %s:%s%s", config.Host, port, config.MetricsHTTP)
 		} else {
 			ctx.Infof("Serve metrics at %s", config.MetricsHTTP)

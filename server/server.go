@@ -17,7 +17,6 @@ import (
 
 // HTTPServer is wrapper over http.Server
 type HTTPServer struct {
-	node     *node.Node
 	server   *http.Server
 	addr     string
 	secured  bool
@@ -48,7 +47,6 @@ func NewServer(node *node.Node, host string, port string, ssl *config.SSLOptions
 	}
 
 	return &HTTPServer{
-		node:     node,
 		server:   server,
 		addr:     addr,
 		Mux:      mux,

@@ -5,7 +5,6 @@ package gobench
 import (
 	"encoding/json"
 
-	"github.com/anycable/anycable-go/config"
 	"github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/node"
 	"github.com/apex/log"
@@ -40,7 +39,7 @@ type Controller struct {
 }
 
 // NewController builds new Controller from config
-func NewController(config *config.Config, metrics *metrics.Metrics) *Controller {
+func NewController(metrics *metrics.Metrics) *Controller {
 	metrics.RegisterCounter(metricsCalls, "The total number of Go channels calls")
 
 	return &Controller{log: log.WithField("context", "gobench"), metrics: metrics}

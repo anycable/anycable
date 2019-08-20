@@ -5,7 +5,6 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/anycable/anycable-go/config"
 	"github.com/anycable/anycable-go/metrics"
 	"github.com/apex/log"
 )
@@ -66,7 +65,6 @@ type StreamMessage struct {
 
 // Node represents the whole application
 type Node struct {
-	Config  *config.Config
 	Metrics *metrics.Metrics
 
 	hub          *Hub
@@ -77,9 +75,8 @@ type Node struct {
 }
 
 // NewNode builds new node struct
-func NewNode(config *config.Config, controller Controller, metrics *metrics.Metrics) *Node {
+func NewNode(controller Controller, metrics *metrics.Metrics) *Node {
 	node := &Node{
-		Config:     config,
 		Metrics:    metrics,
 		controller: controller,
 		shutdownCh: make(chan struct{}),
@@ -90,14 +87,15 @@ func NewNode(config *config.Config, controller Controller, metrics *metrics.Metr
 
 	go node.hub.Run()
 
-	node.disconnector = NewDisconnectQueue(node, config.DisconnectRate)
-
-	go node.disconnector.Run()
-
 	node.registerMetrics()
 	go node.collectStats()
 
 	return node
+}
+
+// SetDisconnector set disconnector for the node
+func (n *Node) SetDisconnector(d *DisconnectQueue) {
+	n.disconnector = d
 }
 
 // HandleCommand parses incoming message from client and

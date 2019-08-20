@@ -3,11 +3,9 @@ package node
 import (
 	"context"
 	"encoding/json"
-	"net/http"
 	"sync"
 	"time"
 
-	"github.com/anycable/anycable-go/utils"
 	"github.com/apex/log"
 	"github.com/gorilla/websocket"
 )
@@ -70,10 +68,7 @@ func (p *pingMessage) toJSON() []byte {
 }
 
 // NewSession build a new Session struct from ws connetion and http request
-func NewSession(node *Node, ws *websocket.Conn, request *http.Request) (*Session, error) {
-	path := request.URL.String()
-	headers := utils.FetchHeaders(request, node.Config.Headers)
-
+func NewSession(node *Node, ws *websocket.Conn, path string, headers map[string]string, uid string) (*Session, error) {
 	session := &Session{
 		node:          node,
 		ws:            ws,
@@ -85,12 +80,6 @@ func NewSession(node *Node, ws *websocket.Conn, request *http.Request) (*Session
 		connected:     false,
 	}
 
-	uid, err := utils.FetchUID(request)
-	if err != nil {
-		defer session.Close("UID Retrieval Error", CloseInternalServerErr)
-		return nil, err
-	}
-
 	session.UID = uid
 
 	ctx := node.log.WithFields(log.Fields{
@@ -99,7 +88,7 @@ func NewSession(node *Node, ws *websocket.Conn, request *http.Request) (*Session
 
 	session.Log = ctx
 
-	err = node.Authenticate(session, path, &headers)
+	err := node.Authenticate(session, path, &headers)
 
 	if err != nil {
 		defer session.Close("Auth Error", CloseInternalServerErr)
@@ -180,8 +169,6 @@ func (s *Session) Send(msg []byte) {
 
 // ReadMessages reads messages from ws connection and send them to node
 func (s *Session) ReadMessages() {
-	s.ws.SetReadLimit(s.node.Config.MaxMessageSize)
-
 	for {
 		_, message, err := s.ws.ReadMessage()
 
