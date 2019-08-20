@@ -45,6 +45,27 @@ func (*BasePrinter) Print(snapshot map[string]int64) {
 	log.WithFields(fields).Info("")
 }
 
+// FromConfig creates a new metrics instance from the prodived configuration
+func FromConfig(config *Config) (*Metrics, error) {
+	var metricsPrinter Printer
+
+	if config.LogEnabled() {
+		if config.LogFormatterEnabled() {
+			customPrinter, err := NewCustomPrinter(config.LogFormatter)
+
+			if err == nil {
+				metricsPrinter = customPrinter
+			} else {
+				return nil, err
+			}
+		} else {
+			metricsPrinter = NewBasePrinter()
+		}
+	}
+
+	return NewMetrics(metricsPrinter, config.LogInterval), nil
+}
+
 // NewMetrics build new metrics struct
 func NewMetrics(printer Printer, logIntervalSeconds int) *Metrics {
 	rotateInterval := time.Duration(logIntervalSeconds) * time.Second

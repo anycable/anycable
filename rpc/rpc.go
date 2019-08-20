@@ -27,16 +27,6 @@ const (
 	metricsRPCFailures = "rpc_error_total"
 )
 
-// Config contains RPC controller configuration
-type Config struct {
-	host string
-}
-
-// NewConfig builds a new config
-func NewConfig(host string) Config {
-	return Config{host: host}
-}
-
 // Controller implements node.Controller interface for gRPC
 type Controller struct {
 	config  *Config
@@ -46,8 +36,7 @@ type Controller struct {
 }
 
 // NewController builds new Controller
-func NewController(config *Config, metrics *metrics.Metrics) *Controller {
-
+func NewController(metrics *metrics.Metrics, config *Config) *Controller {
 	metrics.RegisterCounter(metricsRPCCalls, "The total number of RPC calls")
 	metrics.RegisterCounter(metricsRPCFailures, "The total number of failed RPC calls")
 
@@ -56,7 +45,7 @@ func NewController(config *Config, metrics *metrics.Metrics) *Controller {
 
 // Start initializes RPC connection pool
 func (c *Controller) Start() error {
-	host := c.config.host
+	host := c.config.Host
 
 	factory := func() (*grpc.ClientConn, error) {
 		return grpc.Dial(host, grpc.WithInsecure())

@@ -9,18 +9,28 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// WSConfig contains WebSocket connection configuration.
+type WSConfig struct {
+	ReadBufferSize  int
+	WriteBufferSize int
+	MaxMessageSize  int64
+}
+
+// NewWSConfig build a new WSConfig struct
+func NewWSConfig() WSConfig {
+	return WSConfig{}
+}
+
 // WebsocketHandler generate a new http handler for WebSocket connections
-func WebsocketHandler(app *node.Node, fetchHeaders []string, maxMessageSize int64) http.Handler {
+func WebsocketHandler(app *node.Node, fetchHeaders []string, config *WSConfig) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := log.WithField("context", "ws")
 
-		// TODO: make buffer sizes and compression configurable
 		upgrader := websocket.Upgrader{
-			// TODO: make origin check configurable
 			CheckOrigin:     func(r *http.Request) bool { return true },
 			Subprotocols:    []string{"actioncable-v1-json"},
-			ReadBufferSize:  1024,
-			WriteBufferSize: 1024,
+			ReadBufferSize:  config.ReadBufferSize,
+			WriteBufferSize: config.WriteBufferSize,
 		}
 
 		ws, err := upgrader.Upgrade(w, r, nil)
@@ -38,7 +48,7 @@ func WebsocketHandler(app *node.Node, fetchHeaders []string, maxMessageSize int6
 			return
 		}
 
-		ws.SetReadLimit(maxMessageSize)
+		ws.SetReadLimit(config.MaxMessageSize)
 
 		// Separate goroutine for better GC of caller's data.
 		go func() {
