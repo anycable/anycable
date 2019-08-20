@@ -2,7 +2,6 @@ package server
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/utils"
@@ -35,10 +34,7 @@ func WebsocketHandler(app *node.Node, fetchHeaders []string, maxMessageSize int6
 
 		uid, err := utils.FetchUID(r)
 		if err != nil {
-			deadline := time.Now().Add(time.Second)
-			msg := websocket.FormatCloseMessage(websocket.CloseAbnormalClosure, "UID Retrieval Error")
-			ws.WriteControl(websocket.CloseMessage, msg, deadline)
-			ws.Close()
+			utils.CloseWS(ws, websocket.CloseAbnormalClosure, "UID Retrieval Error")
 			return
 		}
 
