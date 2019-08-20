@@ -3,6 +3,7 @@ package node
 import (
 	"testing"
 
+	"github.com/anycable/anycable-go/common"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -54,7 +55,7 @@ func TestSubscribeSuccess(t *testing.T) {
 	node := NewMockNode()
 	session := NewMockSession("14")
 
-	node.Subscribe(session, &Message{Identifier: "test_channel"})
+	node.Subscribe(session, &common.Message{Identifier: "test_channel"})
 
 	// Adds subscription to session
 	assert.Contains(t, session.subscriptions, "test_channel", "Session subscription must be set")
@@ -76,7 +77,7 @@ func TestSubscribeWithStreamSuccess(t *testing.T) {
 	node := NewMockNode()
 	session := NewMockSession("14")
 
-	node.Subscribe(session, &Message{Identifier: "stream"})
+	node.Subscribe(session, &common.Message{Identifier: "stream"})
 
 	// Adds subscription to session
 	assert.Contains(t, session.subscriptions, "stream", "Session subsription must be set")
@@ -114,7 +115,7 @@ func TestUnsubscribeSuccess(t *testing.T) {
 
 	session.subscriptions["test_channel"] = true
 
-	node.Unsubscribe(session, &Message{Identifier: "test_channel"})
+	node.Unsubscribe(session, &common.Message{Identifier: "test_channel"})
 
 	// Removes subscription from session
 	assert.NotContains(t, session.subscriptions, "test_channel", "Shouldn't contain test_channel")
@@ -150,7 +151,7 @@ func TestPerformSuccess(t *testing.T) {
 	session := NewMockSession("14")
 
 	session.subscriptions["test_channel"] = true
-	node.Perform(session, &Message{Identifier: "test_channel", Data: "action"})
+	node.Perform(session, &common.Message{Identifier: "test_channel", Data: "action"})
 
 	// Expected to send message to session
 	var msg []byte

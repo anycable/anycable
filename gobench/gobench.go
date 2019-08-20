@@ -5,8 +5,8 @@ package gobench
 import (
 	"encoding/json"
 
+	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/metrics"
-	"github.com/anycable/anycable-go/node"
 	"github.com/apex/log"
 
 	nanoid "github.com/matoous/go-nanoid"
@@ -76,9 +76,9 @@ func (c *Controller) Authenticate(sid string, path string, headers *map[string]s
 }
 
 // Subscribe performs Command RPC call with "subscribe" command
-func (c *Controller) Subscribe(sid string, id string, channel string) (*node.CommandResult, error) {
+func (c *Controller) Subscribe(sid string, id string, channel string) (*common.CommandResult, error) {
 	c.metrics.Counter(metricsCalls).Inc()
-	res := &node.CommandResult{
+	res := &common.CommandResult{
 		Disconnect:     false,
 		StopAllStreams: false,
 		Streams:        []string{"all"},
@@ -88,9 +88,9 @@ func (c *Controller) Subscribe(sid string, id string, channel string) (*node.Com
 }
 
 // Unsubscribe performs Command RPC call with "unsubscribe" command
-func (c *Controller) Unsubscribe(sid string, id string, channel string) (*node.CommandResult, error) {
+func (c *Controller) Unsubscribe(sid string, id string, channel string) (*common.CommandResult, error) {
 	c.metrics.Counter(metricsCalls).Inc()
-	res := &node.CommandResult{
+	res := &common.CommandResult{
 		Disconnect:     false,
 		StopAllStreams: true,
 		Streams:        nil,
@@ -100,7 +100,7 @@ func (c *Controller) Unsubscribe(sid string, id string, channel string) (*node.C
 }
 
 // Perform performs Command RPC call with "perform" command
-func (c *Controller) Perform(sid string, id string, channel string, data string) (res *node.CommandResult, err error) {
+func (c *Controller) Perform(sid string, id string, channel string, data string) (res *common.CommandResult, err error) {
 	c.metrics.Counter(metricsCalls).Inc()
 
 	var payload map[string]interface{}
@@ -111,7 +111,7 @@ func (c *Controller) Perform(sid string, id string, channel string, data string)
 
 	switch action := payload["action"].(string); action {
 	case "echo":
-		res = &node.CommandResult{
+		res = &common.CommandResult{
 			Disconnect:     false,
 			StopAllStreams: false,
 			Streams:        nil,
@@ -124,7 +124,7 @@ func (c *Controller) Perform(sid string, id string, channel string, data string)
 			return nil, err
 		}
 
-		broadcast := node.StreamMessage{
+		broadcast := common.StreamMessage{
 			Stream: "all",
 			Data:   string(broadcastMsg),
 		}
@@ -142,15 +142,15 @@ func (c *Controller) Perform(sid string, id string, channel string, data string)
 			return nil, err
 		}
 
-		res = &node.CommandResult{
+		res = &common.CommandResult{
 			Disconnect:     false,
 			StopAllStreams: false,
 			Streams:        nil,
 			Transmissions:  []string{string(response)},
-			Broadcasts:     []*node.StreamMessage{&broadcast},
+			Broadcasts:     []*common.StreamMessage{&broadcast},
 		}
 	default:
-		res = &node.CommandResult{
+		res = &common.CommandResult{
 			Disconnect:     false,
 			StopAllStreams: false,
 			Streams:        nil,

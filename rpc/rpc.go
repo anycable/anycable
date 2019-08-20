@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/metrics"
-	"github.com/anycable/anycable-go/node"
 	"github.com/apex/log"
 
 	grpcpool "github.com/anycable/anycable-go/pool"
@@ -133,7 +133,7 @@ func (c *Controller) Authenticate(sid string, path string, headers *map[string]s
 }
 
 // Subscribe performs Command RPC call with "subscribe" command
-func (c *Controller) Subscribe(sid string, id string, channel string) (*node.CommandResult, error) {
+func (c *Controller) Subscribe(sid string, id string, channel string) (*common.CommandResult, error) {
 	conn, err := c.getConn()
 
 	if err != nil {
@@ -154,7 +154,7 @@ func (c *Controller) Subscribe(sid string, id string, channel string) (*node.Com
 }
 
 // Unsubscribe performs Command RPC call with "unsubscribe" command
-func (c *Controller) Unsubscribe(sid string, id string, channel string) (*node.CommandResult, error) {
+func (c *Controller) Unsubscribe(sid string, id string, channel string) (*common.CommandResult, error) {
 	conn, err := c.getConn()
 
 	if err != nil {
@@ -175,7 +175,7 @@ func (c *Controller) Unsubscribe(sid string, id string, channel string) (*node.C
 }
 
 // Perform performs Command RPC call with "perform" command
-func (c *Controller) Perform(sid string, id string, channel string, data string) (*node.CommandResult, error) {
+func (c *Controller) Perform(sid string, id string, channel string, data string) (*common.CommandResult, error) {
 	conn, err := c.getConn()
 
 	if err != nil {
@@ -235,7 +235,7 @@ func (c *Controller) Disconnect(sid string, id string, subscriptions []string, p
 	return errors.New("Failed to deserialize disconnect response")
 }
 
-func (c *Controller) parseCommandResponse(response interface{}, err error) (*node.CommandResult, error) {
+func (c *Controller) parseCommandResponse(response interface{}, err error) (*common.CommandResult, error) {
 	c.metrics.Counter(metricsRPCCalls).Inc()
 
 	if err != nil {
@@ -247,7 +247,7 @@ func (c *Controller) parseCommandResponse(response interface{}, err error) (*nod
 	if r, ok := response.(*pb.CommandResponse); ok {
 		c.log.Debugf("Command response: %v", r)
 
-		res := &node.CommandResult{
+		res := &common.CommandResult{
 			Disconnect:     r.Disconnect,
 			StopAllStreams: r.StopStreams,
 			Streams:        r.Streams,
