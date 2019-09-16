@@ -2,6 +2,12 @@
 
 ## master
 
+## 0.6.4 (2019-09-16)
+
+- Add ENV support to mruby scripts. ([@dmcrorieGIT][])
+
+Now it's possible to access ENV in custom log handlers written in mruby.
+
 ## 0.6.3 (2019-08-05)
 
 - Set `REMOTE_ADDR` synthetic header ([@sponomarev][])
@@ -243,3 +249,4 @@ No more race conditions.
 [@woodcrust]: https://github.com/woodcrust
 [@shedimon]: https://github.com/shedimon
 [@sponomarev]: https://github.com/sponomarev
+[@dmcrorieGIT]: https://github.com/dmcrorieGIT
