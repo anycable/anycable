@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "webrick"
-
 module AnyCable
   # Server for HTTP healthchecks.
   #
@@ -53,6 +51,8 @@ module AnyCable
     attr_reader :logger
 
     def build_server
+      require "webrick"
+
       WEBrick::HTTPServer.new(
         Port: port,
         Logger: logger,
