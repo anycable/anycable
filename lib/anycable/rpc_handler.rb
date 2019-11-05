@@ -66,7 +66,9 @@ module AnyCable
     def command(message, _unused_call)
       logger.debug("RPC Command: #{message.inspect}")
 
-      socket = build_socket
+      # We don't have path/headers information here,
+      # but we still want `connection.env` to work
+      socket = build_socket(env: base_rack_env)
 
       connection = factory.call(
         socket,
@@ -101,21 +103,34 @@ module AnyCable
     def rack_env(request)
       uri = URI.parse(request.path)
 
-      # Minimum required variables according to Rack Spec
-      env = {
-        "REQUEST_METHOD" => "GET",
-        "SCRIPT_NAME" => "",
+      env = base_rack_env
+      env.merge!(
         "PATH_INFO" => uri.path,
         "QUERY_STRING" => uri.query,
         "SERVER_NAME" => uri.host,
         "SERVER_PORT" => uri.port.to_s,
         "HTTP_HOST" => uri.host,
         "REMOTE_ADDR" => request.headers.delete("REMOTE_ADDR"),
-        "rack.url_scheme" => uri.scheme,
-        "rack.input" => ""
-      }
+        "rack.url_scheme" => uri.scheme
+      )
 
       env.merge!(build_headers(request.headers))
+    end
+
+    def base_rack_env
+      # Minimum required variables according to Rack Spec
+      # (not all of them though, just those enough for Action Cable to work)
+      # See https://rubydoc.info/github/rack/rack/master/file/SPEC
+      {
+        "REQUEST_METHOD" => "GET",
+        "SCRIPT_NAME" => "",
+        "PATH_INFO" => "/",
+        "QUERY_STRING" => "",
+        "SERVER_NAME" => "",
+        "SERVER_PORT" => "80",
+        "rack.url_scheme" => "http",
+        "rack.input" => ""
+      }
     end
 
     def build_socket(**options)
