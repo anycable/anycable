@@ -324,6 +324,14 @@ jobs:
     - run:
         name: Push Docker image
         command: docker push anycable/anycable-go:${CIRCLE_TAG/v/''}
+    - run:
+        name: Push the latest Docker image
+        command: |
+          if [[ "${CIRCLE_TAG}" == "$(git tag -l --sort=-version:refname "v*" | head -n1)" ]]
+          then
+              docker tag anycable/anycable-go:${CIRCLE_TAG/v/''} anycable/anycable-go:latest
+              docker push anycable/anycable-go:latest
+          fi
 
   build_docker_alpine:
     executor: docker
