@@ -314,16 +314,16 @@ jobs:
         name: Prepare files for Docker build
         command: |
           cp /etc/ssl/certs/ca-certificates.crt ./.docker/ca-certificates.crt && \
-          cp /tmp/dist/anycable-go-*-linux-amd64 .docker/anycable-go-linux-amd64
+          cp /tmp/dist/anycable-go-linux-amd64 .docker/anycable-go-linux-amd64
     - run:
         name: Build Docker image
-        command: docker build -f .docker/Dockerfile.linux-amd64 -t anycable/anycable-go:${CIRCLE_TAG} ./
+        command: docker build -f .docker/Dockerfile.linux-amd64 -t anycable/anycable-go:${CIRCLE_TAG/v/''} ./
     - run:
         name: Login to Docker registry
         command: docker login -u ${DOCKER_USER} -p ${DOCKER_PASS}
     - run:
         name: Push Docker image
-        command: docker push anycable/anycable-go:${CIRCLE_TAG}
+        command: docker push anycable/anycable-go:${CIRCLE_TAG/v/''}
 
   build_docker_alpine:
     executor: docker
@@ -338,16 +338,16 @@ jobs:
         name: Prepare files for Docker build
         command: |
           cp /etc/ssl/certs/ca-certificates.crt ./.docker/ca-certificates.crt && \
-          cp /tmp/dist/anycable-go-*-linux-amd64 .docker/anycable-go-linux-amd64
+          cp /tmp/dist/anycable-go-linux-amd64 .docker/anycable-go-linux-amd64
     - run:
         name: Build Docker image
-        command: docker build -f .docker/Dockerfile.alpine-linux-amd64 -t anycable/anycable-go:${CIRCLE_TAG}-alpine ./
+        command: docker build -f .docker/Dockerfile.alpine-linux-amd64 -t anycable/anycable-go:${CIRCLE_TAG/v/''}-alpine ./
     - run:
         name: Login to Docker registry
         command: docker login -u ${DOCKER_USER} -p ${DOCKER_PASS}
     - run:
         name: Push Docker image
-        command: docker push anycable/anycable-go:${CIRCLE_TAG}-alpine
+        command: docker push anycable/anycable-go:${CIRCLE_TAG/v/''}-alpine
 
   build_docker_mruby:
     executor: docker
@@ -361,16 +361,16 @@ jobs:
     - run:
         name: Prepare binary
         command:
-          cp /tmp/dist/anycable-go-*-mrb-linux-amd64 .docker/anycable-go-mrb-linux-amd64
+          cp /tmp/dist/anycable-go-mrb-linux-amd64 .docker/anycable-go-mrb-linux-amd64
     - run:
         name: Build Docker image
-        command: docker build -f .docker/Dockerfile.mrb-linux-amd64 -t anycable/anycable-go:${CIRCLE_TAG}-mrb ./
+        command: docker build -f .docker/Dockerfile.mrb-linux-amd64 -t anycable/anycable-go:${CIRCLE_TAG/v/''}-mrb ./
     - run:
         name: Login to Docker registry
         command: docker login -u ${DOCKER_USER} -p ${DOCKER_PASS}
     - run:
         name: Push Docker image
-        command: docker push anycable/anycable-go:${CIRCLE_TAG}-mrb
+        command: docker push anycable/anycable-go:${CIRCLE_TAG/v/''}-mrb
 
   github_release:
     executor: golang
