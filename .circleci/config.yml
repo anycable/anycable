@@ -122,7 +122,7 @@ commands:
       postfix:
         type: string
     steps:
-      - run: env GOOS=<< parameters.os >> GOARCH=<< parameters.arch >> go build -ldflags "-s -w -X main.version=$(git describe --tags)" -a -o "/tmp/dist/anycable-go-$(git describe --tags)-<< parameters.postfix >>" cmd/anycable-go/main.go
+      - run: env GOOS=<< parameters.os >> GOARCH=<< parameters.arch >> go build -ldflags "-s -w -X main.version=$(git describe --tags)" -a -o "/tmp/dist/anycable-go-<< parameters.postfix >>" cmd/anycable-go/main.go
   build-mruby:
     description: Build AnyCable Go binary with mruby support
     parameters:
@@ -133,7 +133,7 @@ commands:
       postfix:
         type: string
     steps:
-      - run: env GOOS=<< parameters.os >> GOARCH=<< parameters.arch >> go build -ldflags "-s -w -X main.version=$(git describe --tags)-mrb" -tags mrb -a -o "/tmp/dist/anycable-go-$(git describe --tags)-<< parameters.postfix >>" cmd/anycable-go/main.go
+      - run: env GOOS=<< parameters.os >> GOARCH=<< parameters.arch >> go build -ldflags "-s -w -X main.version=$(git describe --tags)-mrb" -tags mrb -a -o "/tmp/dist/anycable-go-<< parameters.postfix >>" cmd/anycable-go/main.go
 
 # Jobs definitions
 jobs:
