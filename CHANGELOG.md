@@ -1,6 +1,10 @@
 # Change log
 
-## master
+## 1.0.0-dev
+
+- **IMPORTANT**: Docker images versioning changed from `vX.Y.Z` to `X.Y.Z`. ([@bibendi][])
+
+Now you can specify only the part of the version, e.g. `anycable-go:1.0` instead of the full `anycable-go:v1.0.0`.
 
 ## 0.6.5 (2020-03-29)
 
@@ -255,3 +259,4 @@ No more race conditions.
 [@sponomarev]: https://github.com/sponomarev
 [@dmcrorieGIT]: https://github.com/dmcrorieGIT
 [@ericmatte]: https://github.com/ericmatte
+[@bibendi]: https://github.com/bibendi
