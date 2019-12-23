@@ -54,7 +54,7 @@ You can also provide configuration parameters through the corresponding environm
 
 For more information about available options run `anycable-go -h`.
 
-📑 [Documentation](https://docs.anycable.io/#go_getting_started)
+📑 [Documentation](https://docs.anycable.io/#/anycable-go/getting_started)
 
 ## Build
 
