@@ -31,6 +31,11 @@ func (g *Gauge) Set(value int) {
 	atomic.StoreInt64(&g.value, int64(value))
 }
 
+// Set64 sets gauge value as int64
+func (g *Gauge) Set64(value int64) {
+	atomic.StoreInt64(&g.value, value)
+}
+
 // Value returns the current gauge value
 func (g *Gauge) Value() int64 {
 	return atomic.LoadInt64(&g.value)

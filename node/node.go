@@ -18,6 +18,7 @@ const (
 	statsCollectInterval = 5 * time.Second
 
 	metricsGoroutines      = "goroutines_num"
+	metricsMemSys          = "mem_sys_bytes"
 	metricsClientsNum      = "clients_num"
 	metricsUniqClientsNum  = "clients_uniq_num"
 	metricsStreamsNum      = "broadcast_streams_num"
@@ -341,6 +342,10 @@ func (n *Node) collectStats() {
 func (n *Node) collectStatsOnce() {
 	n.Metrics.Gauge(metricsGoroutines).Set(runtime.NumGoroutine())
 
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	n.Metrics.Gauge(metricsMemSys).Set64(int64(m.Sys))
+
 	n.Metrics.Gauge(metricsClientsNum).Set(n.hub.Size())
 	n.Metrics.Gauge(metricsUniqClientsNum).Set(n.hub.UniqSize())
 	n.Metrics.Gauge(metricsStreamsNum).Set(n.hub.StreamsSize())
@@ -349,6 +354,7 @@ func (n *Node) collectStatsOnce() {
 
 func (n *Node) registerMetrics() {
 	n.Metrics.RegisterGauge(metricsGoroutines, "The number of Go routines")
+	n.Metrics.RegisterGauge(metricsMemSys, "The total bytes of memory obtained from the OS")
 
 	n.Metrics.RegisterGauge(metricsClientsNum, "The number of active clients")
 	n.Metrics.RegisterGauge(metricsUniqClientsNum, "The number of unique clients (with respect to connection identifiers)")
