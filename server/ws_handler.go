@@ -11,9 +11,10 @@ import (
 
 // WSConfig contains WebSocket connection configuration.
 type WSConfig struct {
-	ReadBufferSize  int
-	WriteBufferSize int
-	MaxMessageSize  int64
+	ReadBufferSize    int
+	WriteBufferSize   int
+	MaxMessageSize    int64
+	EnableCompression bool
 }
 
 // NewWSConfig build a new WSConfig struct
@@ -27,10 +28,11 @@ func WebsocketHandler(app *node.Node, fetchHeaders []string, config *WSConfig) h
 		ctx := log.WithField("context", "ws")
 
 		upgrader := websocket.Upgrader{
-			CheckOrigin:     func(r *http.Request) bool { return true },
-			Subprotocols:    []string{"actioncable-v1-json"},
-			ReadBufferSize:  config.ReadBufferSize,
-			WriteBufferSize: config.WriteBufferSize,
+			CheckOrigin:       func(r *http.Request) bool { return true },
+			Subprotocols:      []string{"actioncable-v1-json"},
+			ReadBufferSize:    config.ReadBufferSize,
+			WriteBufferSize:   config.WriteBufferSize,
+			EnableCompression: config.EnableCompression,
 		}
 
 		ws, err := upgrader.Upgrade(w, r, nil)
@@ -49,6 +51,10 @@ func WebsocketHandler(app *node.Node, fetchHeaders []string, config *WSConfig) h
 		}
 
 		ws.SetReadLimit(config.MaxMessageSize)
+
+		if config.EnableCompression {
+			ws.EnableWriteCompression(true)
+		}
 
 		// Separate goroutine for better GC of caller's data.
 		go func() {

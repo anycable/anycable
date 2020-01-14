@@ -61,6 +61,7 @@ func init() {
 	fs.IntVar(&defaults.WS.ReadBufferSize, "read_buffer_size", 1024, "")
 	fs.IntVar(&defaults.WS.WriteBufferSize, "write_buffer_size", 1024, "")
 	fs.Int64Var(&defaults.WS.MaxMessageSize, "max_message_size", 65536, "")
+	fs.BoolVar(&defaults.WS.EnableCompression, "enable_ws_compression", false, "")
 
 	fs.StringVar(&defaults.LogLevel, "log_level", "info", "")
 	fs.StringVar(&defaults.LogFormat, "log_format", "text", "")
@@ -136,6 +137,7 @@ OPTIONS
   --read_buffer_size       WebSocket connection read buffer size, default: 1024, env: ANYCABLE_READ_BUFFER_SIZE
   --write_buffer_size      WebSocket connection write buffer size, default: 1024, env: ANYCABLE_WRITE_BUFFER_SIZE
   --max_message_size       Maximum size of a message in bytes, default: 65536, env: ANYCABLE_MAX_MESSAGE_SIZE
+  --enable_ws_compression  Enable experimental WebSocket per message compression, default: false, env: ANYCABLE_ENABLE_WS_COMPRESSION
 
   -h                       This help screen
   -v                       Show version

@@ -2,6 +2,10 @@
 
 ## 1.0.0-dev
 
+- Add `--enable_ws_compression` option to enable WebSocket per message compression. ([@palkan][])
+
+Disabled by default due to the experimental status in [Gorilla](https://github.com/gorilla/websocket/blob/c3e18be99d19e6b3e8f1559eea2c161a665c4b6b/doc.go#L201-L214).
+
 - **IMPORTANT**: Docker images versioning changed from `vX.Y.Z` to `X.Y.Z`. ([@bibendi][])
 
 Now you can specify only the part of the version, e.g. `anycable-go:1.0` instead of the full `anycable-go:v1.0.0`.
