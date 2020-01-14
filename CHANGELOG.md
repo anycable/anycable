@@ -2,6 +2,11 @@
 
 ## 1.0.0-dev
 
+- Add `mem_sys_bytes` metric. ([@palkan][])
+
+Returns the total bytes of memory obtained from the OS
+(according to [`runtime.MemStats.Sys`](https://golang.org/pkg/runtime/#MemStats)).
+
 - Add `--enable_ws_compression` option to enable WebSocket per message compression. ([@palkan][])
 
 Disabled by default due to the experimental status in [Gorilla](https://github.com/gorilla/websocket/blob/c3e18be99d19e6b3e8f1559eea2c161a665c4b6b/doc.go#L201-L214).
