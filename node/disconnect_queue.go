@@ -49,7 +49,7 @@ func NewDisconnectQueue(node *Node, rate int) *DisconnectQueue {
 }
 
 // Run starts queue
-func (d *DisconnectQueue) Run() {
+func (d *DisconnectQueue) Run() error {
 	throttle := time.NewTicker(d.rate)
 	defer throttle.Stop()
 
@@ -59,7 +59,7 @@ func (d *DisconnectQueue) Run() {
 			<-throttle.C
 			d.node.DisconnectNow(session)
 		case <-d.shutdown:
-			return
+			return nil
 		}
 	}
 }
@@ -105,16 +105,18 @@ func (d *DisconnectQueue) Shutdown() error {
 }
 
 // Enqueue adds session to the disconnect queue
-func (d *DisconnectQueue) Enqueue(s *Session) {
+func (d *DisconnectQueue) Enqueue(s *Session) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
 	// Check that we're not closed
 	if d.isStopped {
-		return
+		return nil
 	}
 
 	d.disconnect <- s
+
+	return nil
 }
 
 // Size returns the number of enqueued tasks

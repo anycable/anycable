@@ -40,13 +40,21 @@ type Controller interface {
 	Disconnect(sid string, id string, subscriptions []string, path string, headers *map[string]string) error
 }
 
+// Disconnector is an interface for disconnect queue implementation
+type Disconnector interface {
+	Run() error
+	Shutdown() error
+	Enqueue(*Session) error
+	Size() int
+}
+
 // Node represents the whole application
 type Node struct {
 	Metrics *metrics.Metrics
 
 	hub          *Hub
 	controller   Controller
-	disconnector *DisconnectQueue
+	disconnector Disconnector
 	shutdownCh   chan struct{}
 	log          *log.Entry
 }
@@ -71,7 +79,7 @@ func NewNode(controller Controller, metrics *metrics.Metrics) *Node {
 }
 
 // SetDisconnector set disconnector for the node
-func (n *Node) SetDisconnector(d *DisconnectQueue) {
+func (n *Node) SetDisconnector(d Disconnector) {
 	n.disconnector = d
 }
 
@@ -261,9 +269,9 @@ func (n *Node) Broadcast(msg *common.StreamMessage) {
 }
 
 // Disconnect adds session to disconnector queue and unregister session from hub
-func (n *Node) Disconnect(s *Session) {
+func (n *Node) Disconnect(s *Session) error {
 	n.hub.unregister <- s
-	n.disconnector.Enqueue(s)
+	return n.disconnector.Enqueue(s)
 }
 
 // DisconnectNow execute disconnect on controller
