@@ -2,6 +2,15 @@
 
 ## 1.0.0-dev
 
+- Use single gRPC client instance instead of a pool. ([@palkan][])
+
+gRPC connection provides concurrency via H2 streams (with load balancing). Using a pool doesn't bring any performance
+improvements and sometimes 'cause unstability (e.g., ResourcesExhausted or Unavailable exceptions under the load).
+
+We still limit the number of concurrent RPC requests. Now you can configure it via `--rpc_concurrency` setting.
+
+See [PR#88](https://github.com/anycable/anycable-go/pull/88) for more.
+
 - Add `--disconnect_timeout` option to specify the timeout for graceful shutdown of the disconnect queue. ([@palkan][])
 
 - Add `mem_sys_bytes` metric. ([@palkan][])

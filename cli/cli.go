@@ -56,6 +56,7 @@ func init() {
 	fs.StringVar(&defaults.RedisChannel, "redis_channel", "__anycable__", "")
 
 	fs.StringVar(&defaults.RPC.Host, "rpc_host", "localhost:50051", "")
+	fs.IntVar(&defaults.RPC.Concurrency, "rpc_concurrency", 28, "")
 	fs.StringVar(&headers, "headers", "cookie", "")
 
 	fs.IntVar(&defaults.WS.ReadBufferSize, "read_buffer_size", 1024, "")
@@ -123,6 +124,7 @@ OPTIONS
   --redis_channel            Redis channel for broadcasts, default: __anycable__, env: ANYCABLE_REDIS_CHANNEL
 
   --rpc_host                 RPC service address, default: localhost:50051, env: ANYCABLE_RPC_HOST
+  --rpc_concurrency          Max number of concurrent RPC request; should be slightly less than the RPC server concurrency, default: 28, env: ANYCABLE_RPC_CONCURRENCY
   --headers                  List of headers to proxy to RPC, default: cookie, env: ANYCABLE_HEADERS
 
   --disconnect_rate          Max number of Disconnect calls per second, default: 100, env: ANYCABLE_DISCONNECT_RATE
