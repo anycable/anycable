@@ -27,7 +27,7 @@ var (
 
 func init() {
 	if version == "" {
-		version = "0.6.4-unknown"
+		version = "1.0.0-unknown"
 	}
 }
 

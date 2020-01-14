@@ -8,6 +8,11 @@
 
 WebSocket server for [AnyCable](https://github.com/anycable/anycable).
 
+## Versioning
+
+**Important** Use the same major version of AnyCable-Go as your AnyCable gem.
+AnyCable-Go uses the same major version number (and minor version as well for 0.x series) as other libraries to indicate the compatibility.
+
 ## Installation
 
 The easiest way to install AnyCable-Go is to [download](https://github.com/anycable/anycable-go/releases) a pre-compiled binary.
@@ -34,7 +39,7 @@ go get -d -u -f github.com/anycable/anycable-go/cmd/anycable-go && (cd $GOPATH/s
 
 ## Upgrade
 
-For instructions on how to upgrade to a newer version see [upgrade notes](https://docs.anycable.io/#upgrade_to_0_6_0?id=anycable-go).
+For instructions on how to upgrade to a newer version see [upgrade notes](https://docs.anycable.io/#upgrade_to_1_0_0?id=anycable-go).
 
 ### Heroku
 
@@ -47,7 +52,7 @@ Run server:
 ```shell
 $ anycable-go
 
-=> INFO 2018-03-05T08:44:57.684Z context=main Starting AnyCable 0.6.0
+=> INFO 2020-02-05T08:44:57.684Z context=main Starting AnyCable 1.0.0
 ```
 
 You can also provide configuration parameters through the corresponding environment variables (i.e. `ANYCABLE_RPC_HOST`, `ANYCABLE_REDIS_URL`, etc).
@@ -84,9 +89,9 @@ Performing Channel Actions | +
 Streaming | +
 Usage of the same stream name for different channels | +
 Broadcasting | +
-Remote disconnect | - (WIP)
+Remote disconnect | _coming soon_
+Subscription Instance Variables | _coming soon_
 [Custom stream callbacks](http://edgeapi.rubyonrails.org/classes/ActionCable/Channel/Streams.html) | -
-[Subscription Instance Variables](http://edgeapi.rubyonrails.org/classes/ActionCable/Channel/Streams.html) | -
 
 ## Contributing
 
