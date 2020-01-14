@@ -20,10 +20,6 @@ var (
 	fs          *flag.FlagSet
 )
 
-const (
-	deprecatedHost = "0.0.0.0|deprecated"
-)
-
 func init() {
 	// Configure namespaced flagSet with errorHandling set to ExitOnError (=1)
 	fs = flag.NewFlagSetWithEnvPrefix(os.Args[0], "ANYCABLE", 1)
@@ -48,7 +44,7 @@ func init() {
 	}
 
 	// Config vars
-	fs.StringVar(&defaults.Host, "host", deprecatedHost, "")
+	fs.StringVar(&defaults.Host, "host", "localhost", "")
 	fs.IntVar(&defaults.Port, "port", portDefault, "")
 	fs.StringVar(&defaults.Path, "path", "/cable", "")
 	fs.StringVar(&defaults.HealthPath, "health-path", "/health", "")
@@ -111,7 +107,7 @@ USAGE
   anycable-go [options]
 
 OPTIONS
-  --host                   Server host, default: 0.0.0.0 (deprecated, will be changed to "localhost"), env: ANYCABLE_HOST
+  --host                   Server host, default: localhost, env: ANYCABLE_HOST
   --port                   Server port, default: 8080, env: ANYCABLE_PORT, PORT
   --path                   WebSocket endpoint path, default: /cable, env: ANYCABLE_PATH
   --health-path            HTTP health endpoint path, default: /health, env: ANYCABLE_HEALTH_PATH
@@ -152,16 +148,6 @@ func PrintHelp() {
 }
 
 func prepareComplexDefaults() {
-	if defaults.Host == deprecatedHost {
-		fmt.Println(
-			`DEPRECATION WARNING: You're using default host configuration which starts AnyCable-Go
-server on all available interfaces including external ones. This is about to be changed
-to loopback interface only in future versions. Please, consider switching to "localhost"
-or set "0.0.0.0" explicitly in your configuration, if you want to continue with
-the current behavior and supress this message.`)
-
-		defaults.Host = "0.0.0.0"
-	}
 	defaults.Headers = parseHeaders(headers)
 
 	if debugMode {
