@@ -82,7 +82,7 @@ func main() {
 
 	appNode := node.NewNode(controller, metrics)
 
-	disconnector := node.NewDisconnectQueue(appNode, config.DisconnectRate)
+	disconnector := node.NewDisconnectQueue(appNode, &config.DisconnectQueue)
 	go disconnector.Run()
 
 	appNode.SetDisconnector(disconnector)

@@ -2,6 +2,8 @@
 
 ## 1.0.0-dev
 
+- Add `--disconnect_timeout` option to specify the timeout for graceful shutdown of the disconnect queue. ([@palkan][])
+
 - Add `mem_sys_bytes` metric. ([@palkan][])
 
 Returns the total bytes of memory obtained from the OS

@@ -8,17 +8,26 @@ import (
 	"github.com/apex/log"
 )
 
-const (
-	// How much time wait to call all enqueued calls
-	// TODO: make configurable
-	waitTime = 5 * time.Second
-)
+// DisconnectQueueConfig contains DisconnectQueue configuration
+type DisconnectQueueConfig struct {
+	// Limit the number of Disconnect RPC calls per second
+	Rate int
+	// How much time wait to call all enqueued calls at exit (in seconds)
+	ShutdownTimeout int
+}
+
+// NewDisconnectQueueConfig builds a new config
+func NewDisconnectQueueConfig() DisconnectQueueConfig {
+	return DisconnectQueueConfig{ShutdownTimeout: 5, Rate: 100}
+}
 
 // DisconnectQueue is a rate-limited executor
 type DisconnectQueue struct {
 	node *Node
-	// Limit the number of RPC calls per second
+	// Throttling rate
 	rate time.Duration
+	// Graceful shutdown timeout
+	timeout time.Duration
 	// Call RPC Disconnect for connections
 	disconnect chan *Session
 	// Logger with context
@@ -32,8 +41,9 @@ type DisconnectQueue struct {
 }
 
 // NewDisconnectQueue builds new queue with a specified rate (max calls per second)
-func NewDisconnectQueue(node *Node, rate int) *DisconnectQueue {
-	rateDuration := time.Millisecond * time.Duration(1000/rate)
+func NewDisconnectQueue(node *Node, config *DisconnectQueueConfig) *DisconnectQueue {
+	rateDuration := time.Millisecond * time.Duration(1000/config.Rate)
+	timeout := time.Duration(config.ShutdownTimeout) * time.Second
 
 	ctx := log.WithField("context", "disconnector")
 
@@ -43,6 +53,7 @@ func NewDisconnectQueue(node *Node, rate int) *DisconnectQueue {
 		node:       node,
 		disconnect: make(chan *Session, 4096),
 		rate:       rateDuration,
+		timeout:    timeout,
 		log:        ctx,
 		shutdown:   make(chan struct{}, 1),
 	}
@@ -82,7 +93,7 @@ func (d *DisconnectQueue) Shutdown() error {
 		return nil
 	}
 
-	d.log.Infof("Invoking remaining disconnects: %d", left)
+	d.log.Infof("Invoking remaining disconnects for %s: %d", d.timeout, left)
 
 	for {
 		select {
@@ -98,7 +109,7 @@ func (d *DisconnectQueue) Shutdown() error {
 			if left == 0 {
 				return nil
 			}
-		case <-time.After(waitTime):
+		case <-time.After(d.timeout):
 			return fmt.Errorf("Had no time to invoke Disconnect calls: %d", len(d.disconnect))
 		}
 	}

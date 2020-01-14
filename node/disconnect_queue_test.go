@@ -70,7 +70,9 @@ func TestDisconnectQueue_Enqueue(t *testing.T) {
 
 func newQueue() *DisconnectQueue {
 	node := NewMockNode()
-	q := NewDisconnectQueue(&node, 1)
+	config := NewDisconnectQueueConfig()
+	config.Rate = 1
+	q := NewDisconnectQueue(&node, &config)
 
 	return q
 }
