@@ -29,7 +29,9 @@ func NewMockNode() Node {
 		log:        log.WithField("context", "test"),
 	}
 	node.registerMetrics()
-	node.disconnector = NewDisconnectQueue(&node, 1)
+	config := NewDisconnectQueueConfig()
+	config.Rate = 1
+	node.disconnector = NewDisconnectQueue(&node, &config)
 	return node
 }
 
