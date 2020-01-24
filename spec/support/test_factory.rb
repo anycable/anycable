@@ -83,9 +83,11 @@ module AnyCable
         @identifier = identifier
       end
 
-      def handle_subscribe; end
+      def handle_subscribe
+      end
 
-      def handle_unsubscribe; end
+      def handle_unsubscribe
+      end
 
       def handle_action(data)
         decoded = JSON.parse(data)
@@ -128,7 +130,7 @@ module AnyCable
       end
 
       def log_event(source, data)
-        events_log << { source: source, data: data }
+        events_log << {source: source, data: data}
       end
 
       private

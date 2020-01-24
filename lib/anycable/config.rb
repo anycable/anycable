@@ -71,7 +71,7 @@ module AnyCable
 
     # Build Redis parameters
     def to_redis_params
-      { url: redis_url }.tap do |params|
+      {url: redis_url}.tap do |params|
         next if redis_sentinels.nil?
 
         raise ArgumentError, "redis_sentinels must be an array; got #{redis_sentinels}" unless
@@ -116,7 +116,7 @@ module AnyCable
 
       raise ArgumentError, "Invalid Sentinel value: #{sentinel}" if matches.nil?
 
-      { host: matches[1], port: matches[2].to_i }
+      {host: matches[1], port: matches[2].to_i}
     end
   end
 end

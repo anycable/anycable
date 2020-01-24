@@ -29,7 +29,7 @@ module AnyCable
           transmissions: socket.transmissions
         )
       end
-    rescue StandardError => exp
+    rescue => exp
       notify_exception(exp, :connect, request)
 
       AnyCable::ConnectionResponse.new(
@@ -54,7 +54,7 @@ module AnyCable
       else
         AnyCable::DisconnectResponse.new(status: AnyCable::Status::FAILURE)
       end
-    rescue StandardError => exp
+    rescue => exp
       notify_exception(exp, :disconnect, request)
 
       AnyCable::DisconnectResponse.new(
@@ -88,7 +88,7 @@ module AnyCable
         streams: socket.streams,
         transmissions: socket.transmissions
       )
-    rescue StandardError => exp
+    rescue => exp
       notify_exception(exp, :command, message)
 
       AnyCable::CommandResponse.new(

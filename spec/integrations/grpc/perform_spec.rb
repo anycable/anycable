@@ -4,7 +4,7 @@ require "spec_helper"
 
 class TestPerformChannel < AnyCable::TestFactory::Channel
   def follow(*)
-    stream_from "user_#{connection.identifiers['current_user']}"
+    stream_from "user_#{connection.identifiers["current_user"]}"
     stream_from "all"
   end
 
@@ -22,18 +22,18 @@ describe "client messages", :with_grpc_server, :rpc_command do
 
   describe "#perform" do
     let(:command) { "message" }
-    let(:data) { { action: "add", a: 1, b: 2 } }
+    let(:data) { {action: "add", a: 1, b: 2} }
 
     subject { service.command(request) }
 
     it "responds with result" do
       expect(subject.status).to eq :SUCCESS
       expect(subject.transmissions.size).to eq 1
-      expect(subject.transmissions.first).to include({ "result" => 3 }.to_json)
+      expect(subject.transmissions.first).to include({"result" => 3}.to_json)
     end
 
     context "with multiple stream_from" do
-      let(:data) { { action: "follow" } }
+      let(:data) { {action: "follow"} }
 
       it "responds with streams", :aggregate_failures do
         expect(subject.status).to eq :SUCCESS
@@ -43,7 +43,7 @@ describe "client messages", :with_grpc_server, :rpc_command do
     end
 
     context "when exception" do
-      let(:data) { { action: "add", a: 1, b: "smth" } }
+      let(:data) { {action: "add", a: 1, b: "smth"} }
 
       it "responds with ERROR", :aggregate_failures do
         expect(subject.status).to eq :ERROR

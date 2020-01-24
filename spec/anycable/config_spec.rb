@@ -28,8 +28,8 @@ describe "AnyCable::Config" do
   describe "#to_redis_params" do
     let(:sentinel_config) do
       [
-        { "host" => "redis-1-1", "port" => 26_379 },
-        { "host" => "redis-1-2", "port" => 26_380 }
+        {"host" => "redis-1-1", "port" => 26_379},
+        {"host" => "redis-1-2", "port" => 26_380}
       ]
     end
 
@@ -41,7 +41,7 @@ describe "AnyCable::Config" do
       specify do
         expect(subject.to_redis_params).to eq(
           url: "redis://localhost:6379/2",
-          sentinels: [{ host: "redis-1-1", port: 26_379 }, { host: "redis-1-2", port: 26_380 }]
+          sentinels: [{host: "redis-1-1", port: 26_379}, {host: "redis-1-2", port: 26_380}]
         )
       end
     end
@@ -54,7 +54,7 @@ describe "AnyCable::Config" do
       specify do
         expect(subject.to_redis_params).to eq(
           url: "redis://localhost:6379/2",
-          sentinels: [{ host: "redis-1-1", port: 26_379 }, { host: "redis-1-2", port: 26_380 }]
+          sentinels: [{host: "redis-1-1", port: 26_379}, {host: "redis-1-2", port: 26_380}]
         )
       end
     end

@@ -19,11 +19,11 @@ require "anyt/cli"
 require "anycable-rails"
 
 # WebSocket server url
-ENV['ANYT_TARGET_URL'] ||= "ws://localhost:8080/cable"
+ENV["ANYT_TARGET_URL"] ||= "ws://localhost:8080/cable"
 
 # Command to launch WebSocket server.
 # Comment this line if you want to run WebSocket server manually
-ENV['ANYT_COMMAND'] ||= "anycable-go"
+ENV["ANYT_COMMAND"] ||= "anycable-go"
 
 ActionCable.server.config.logger = Rails.logger = AnyCable.logger
 
@@ -43,13 +43,13 @@ feature "issue_xyz" do
   # You can use minitest/spec features here
   before do
     # `channel` contains identifier of the anonymous channel defined above
-    subscribe_request = { command: "subscribe", identifier: { channel: channel }.to_json }
+    subscribe_request = {command: "subscribe", identifier: {channel: channel}.to_json}
 
     # `client` represents a websocket client connected to a server
     client.send(subscribe_request)
 
     ack = {
-      "identifier" => { channel: channel }.to_json, "type" => "confirm_subscription"
+      "identifier" => {channel: channel}.to_json, "type" => "confirm_subscription"
     }
 
     # `receive` method returns the first message from the incoming messages queue;
@@ -58,9 +58,9 @@ feature "issue_xyz" do
   end
 
   # describe you bug scenario here
-  scenario %{
+  scenario %(
     Should work
-  } do
+  ) do
     # ...
   end
 end

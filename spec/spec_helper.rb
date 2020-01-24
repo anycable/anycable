@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
-require "pry-byebug"
+begin
+  require "pry-byebug"
+rescue LoadError
+end
 
 if ENV["COVER"]
   require "simplecov"
