@@ -13,7 +13,7 @@ module AnyCable
         handlers.each do |handler|
           begin
             handler.call(exp, method_name, message)
-          rescue StandardError => exp
+          rescue => exp
             AnyCable.logger.error "!!! EXCEPTION HANDLER THREW AN ERROR !!!"
             AnyCable.logger.error exp
             AnyCable.logger.error exp.backtrace.join("\n") unless exp.backtrace.nil?

@@ -42,7 +42,7 @@ describe AnyCable::BroadcastAdapters::Redis do
 
       expect(redis_conn).to have_received(:publish).with(
         "_test_",
-        { stream: "notification", data: "hello!" }.to_json
+        {stream: "notification", data: "hello!"}.to_json
       )
     end
   end

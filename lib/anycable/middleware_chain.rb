@@ -48,8 +48,8 @@ module AnyCable
 
       unless middleware.is_a?(AnyCable::Middleware)
         raise ArgumentError,
-              "AnyCable middleware must be a subclass of AnyCable::Middleware, " \
-              "got #{middleware} instead"
+          "AnyCable middleware must be a subclass of AnyCable::Middleware, " \
+          "got #{middleware} instead"
       end
 
       middleware

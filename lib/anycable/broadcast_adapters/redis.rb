@@ -34,7 +34,7 @@ module AnyCable
       def broadcast(stream, payload)
         redis_conn.publish(
           channel,
-          { stream: stream, data: payload }.to_json
+          {stream: stream, data: payload}.to_json
         )
       end
     end

@@ -40,7 +40,7 @@ module AnyCable
 
       print_versions!
 
-      logger.info "Serving #{defined?(::Rails) ? 'Rails ' : ''}application from #{boot_file}"
+      logger.info "Serving #{defined?(::Rails) ? "Rails " : ""}application from #{boot_file}"
 
       verify_connection_factory!
 
