@@ -1,5 +1,5 @@
 # frozen_string_literal: true
 
 module AnyCable
-  VERSION = "0.6.5"
+  VERSION = "1.0.0.dev"
 end

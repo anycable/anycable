@@ -11,13 +11,11 @@ module AnyCable
 
       def notify(exp, method_name, message)
         handlers.each do |handler|
-          begin
-            handler.call(exp, method_name, message)
-          rescue => exp
-            AnyCable.logger.error "!!! EXCEPTION HANDLER THREW AN ERROR !!!"
-            AnyCable.logger.error exp
-            AnyCable.logger.error exp.backtrace.join("\n") unless exp.backtrace.nil?
-          end
+          handler.call(exp, method_name, message)
+        rescue => exp
+          AnyCable.logger.error "!!! EXCEPTION HANDLER THREW AN ERROR !!!"
+          AnyCable.logger.error exp
+          AnyCable.logger.error exp.backtrace.join("\n") unless exp.backtrace.nil?
         end
       end
 
