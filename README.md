@@ -54,7 +54,7 @@ Check out our 📑 [Documentation](https://docs.anycable.io).
 
 ```
 gem install grpc
-gem install grpc-tools
+gem install grpc - tools
 ```
 
 - Re-generate GRPC files (if necessary):

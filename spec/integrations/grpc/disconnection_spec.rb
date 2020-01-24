@@ -8,7 +8,7 @@ describe "disconnection", :with_grpc_server, :rpc_command do
   let(:user) { "disco" }
   let(:url) { "http://example.io/cable_lite?token=123" }
   let(:subscriptions) { %w[a b] }
-  let(:headers) { { "Cookie" => "username=jack;" } }
+  let(:headers) { {"Cookie" => "username=jack;"} }
 
   let(:request) do
     AnyCable::DisconnectRequest.new(

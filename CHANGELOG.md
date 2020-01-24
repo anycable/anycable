@@ -84,7 +84,7 @@ AnyCable allows you to use custom broadcasting adapters (Redis is used by defaul
 ```ruby
 # Specify by name (tries to load `AnyCable::BroadcastAdapters::MyAdapter` from
 # "anycable/broadcast_adapters/my_adapter")
-AnyCable.broadcast_adapter = :my_adapter, { option: "value" }
+AnyCable.broadcast_adapter = :my_adapter, {option: "value"}
 # or provide an instance (should respond_to #broadcast)
 AnyCable.broadcast_adapter = MyAdapter.new
 ```

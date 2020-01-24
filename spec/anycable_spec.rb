@@ -41,7 +41,8 @@ describe AnyCable do
           @options = options
         end
 
-        def broadcast; end
+        def broadcast
+        end
       end
     end
 
@@ -66,7 +67,7 @@ describe AnyCable do
     end
 
     specify "set by symbol with options" do
-      AnyCable.broadcast_adapter = :my_custom_adapter, { url: "example.com" }
+      AnyCable.broadcast_adapter = :my_custom_adapter, {url: "example.com"}
       expect(AnyCable.broadcast_adapter).to be_a(AnyCable::BroadcastAdapters::MyCustomAdapter)
       expect(AnyCable.broadcast_adapter.options).to eq(url: "example.com")
     end
