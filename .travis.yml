@@ -11,6 +11,7 @@ rvm:
   - 2.4
   - 2.5
   - 2.6
+  - 2.7
   - ruby-head
 
 matrix:
@@ -18,6 +19,9 @@ matrix:
   allow_failures:
     - rvm: ruby-head
 
+env:
+  - BUNDLE_FORCE_RUBY_PLATFORM=1
+
 before_install:
-    - gem update --system
-    - gem install bundler
+  - gem update --system
+  - gem install bundler
