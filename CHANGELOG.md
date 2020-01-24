@@ -2,6 +2,10 @@
 
 ## master
 
+## 0.6.4 (2020-01-24)
+
+- Fix Ruby 2.7 warnings. ([@palkan])
+
 – Add `REMOTE_ADDR` socket env variable using a synthetic header passed from a websocket
 server. ([@sponomarev][])
 
