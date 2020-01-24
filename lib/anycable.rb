@@ -56,14 +56,6 @@ module AnyCable
       ExceptionsHandling << block
     end
 
-    def error_handlers
-      warn <<~DEPRECATION
-        Using `AnyCable.error_handlers` is deprecated!
-        Please, use `AnyCable.capture_exception` instead.
-      DEPRECATION
-      ExceptionsHandling
-    end
-
     # Register a callback to be invoked before
     # the server starts
     def configure_server(&block)
