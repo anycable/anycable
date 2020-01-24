@@ -21,48 +21,6 @@ module AnyCable
   #   # stop server
   #   server.stop
   class Server
-    class << self
-      # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
-      def start(**options)
-        warn <<~DEPRECATION
-          DEPRECATION WARNING: Using AnyCable::Server.start is deprecated!
-          Please, use anycable CLI instead.
-
-          See https://docs.anycable.io/#upgrade_to_0_6_0
-        DEPRECATION
-
-        AnyCable.server_callbacks.each(&:call)
-
-        server = new(
-          host: AnyCable.config.rpc_host,
-          **AnyCable.config.to_grpc_params,
-          interceptors: AnyCable.middleware.to_a,
-          **options
-        )
-
-        AnyCable.middleware.freeze
-
-        if AnyCable.config.http_health_port_provided?
-          health_server = AnyCable::HealthServer.new(
-            server,
-            **AnyCable.config.to_http_health_params
-          )
-          health_server.start
-        end
-
-        at_exit do
-          server.stop
-          health_server&.stop
-        end
-
-        AnyCable.logger.info "Broadcasting Redis channel: #{AnyCable.config.redis_channel}"
-
-        server.start
-        server.wait_till_terminated
-      end
-      # rubocop:enable Metrics/AbcSize, Metrics/MethodLength
-    end
-
     attr_reader :grpc_server, :host
 
     def initialize(host:, logger: AnyCable.logger, **options)
@@ -77,8 +35,6 @@ module AnyCable
       return if running?
 
       raise "Cannot re-start stopped server" if stopped?
-
-      check_default_host
 
       logger.info "RPC server is starting..."
 
@@ -131,22 +87,6 @@ module AnyCable
         Grpc::Health::V1::HealthCheckResponse::ServingStatus::SERVING
       )
       health_checker
-    end
-
-    def check_default_host
-      return unless host.is_a?(Anycable::Config::DefaultHostWrapper)
-
-      warn <<~DEPRECATION
-        DEPRECATION WARNING: You're using default rpc_host configuration which starts AnyCable RPC
-        server on all available interfaces including external IPv4 and IPv6.
-        This is about to be changed to loopback interface only in future versions.
-
-        Please, consider switching to the loopback interface or set "[::]:50051"
-        explicitly in your configuration, if you want to continue with the current
-        behavior and supress this message.
-
-        See https://docs.anycable.io/#/configuration
-      DEPRECATION
     end
   end
 end
