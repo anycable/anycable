@@ -86,13 +86,11 @@ module CLITesting
       "bundle exec anycable #{opt_string}",
       chdir: chdir || File.join(PROJECT_ROOT, "bin")
     ) do |stdout, stderr, pid|
-      begin
-        yield CLIControl.new(stdout, stderr, pid)
-      rescue Exception => e # rubocop:disable Lint/RescueException
-        rspex = e
-      ensure
-        Process.kill("SIGKILL", pid) if PTY.check(pid).nil?
-      end
+      yield CLIControl.new(stdout, stderr, pid)
+    rescue Exception => e # rubocop:disable Lint/RescueException
+      rspex = e
+    ensure
+      Process.kill("SIGKILL", pid) if PTY.check(pid).nil?
     end
   rescue PTY::ChildExited, Errno::ESRCH
     # no-op

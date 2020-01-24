@@ -83,13 +83,7 @@ describe "AnyCable::Config" do
     end
 
     describe "#rpc_host" do
-      # FIXME: remove in future
-      if Gem::Version.new(AnyCable::VERSION) < Gem::Version.new("0.7")
-        specify { expect(config.rpc_host).to be_a(AnyCable::Config::DefaultHostWrapper) }
-        specify { expect(config.rpc_host).to eq("[::]:50051") }
-      else
-        specify { expect(config.rpc_host).to eq("127.0.0.1:50051") }
-      end
+      specify { expect(config.rpc_host).to eq("127.0.0.1:50051") }
     end
   end
 end

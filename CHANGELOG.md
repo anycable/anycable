@@ -1,6 +1,12 @@
 # Change log
 
-## master
+## 🚧 1.0.0 (_coming soon_)
+
+- **Ruby 2.5+ is required**. ([@palkan][])
+
+- Change default server address from `[::]:50051` to `127.0.0.1:50051`. ([@palkan][])
+
+See [#71](https://github.com/anycable/anycable/pull/71).
 
 ## 0.6.4 (2020-01-24)
 
