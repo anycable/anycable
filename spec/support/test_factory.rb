@@ -112,7 +112,7 @@ module AnyCable
 
     class << self
       def call(socket, **options)
-        Connection.new(socket, options)
+        Connection.new(socket, **options)
       end
 
       def register_channel(identifier, channel)

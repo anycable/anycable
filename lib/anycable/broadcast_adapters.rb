@@ -26,7 +26,7 @@ module AnyCable
         end
       end
 
-      BroadcastAdapters.const_get(adapter_class_name, false).new(options || {})
+      BroadcastAdapters.const_get(adapter_class_name, false).new(**(options || {}))
     end
     # rubocop: enable Metrics/AbcSize, Metrics/MethodLength
   end

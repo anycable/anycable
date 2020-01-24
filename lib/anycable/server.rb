@@ -117,7 +117,7 @@ module AnyCable
     attr_reader :logger, :start_thread
 
     def build_server(options)
-      GRPC::RpcServer.new(options).tap do |server|
+      GRPC::RpcServer.new(**options).tap do |server|
         server.add_http2_port(host, :this_port_is_insecure)
         server.handle(AnyCable::RPCHandler)
         server.handle(build_health_checker)

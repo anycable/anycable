@@ -37,7 +37,7 @@ describe AnyCable do
     before(:all) do
       class AnyCable::BroadcastAdapters::MyCustomAdapter
         attr_reader :options
-        def initialize(options)
+        def initialize(**options)
           @options = options
         end
 
