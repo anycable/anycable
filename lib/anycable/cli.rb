@@ -36,7 +36,7 @@ module AnyCable
 
       configure_server!
 
-      logger.info "Starting AnyCable gRPC server (pid: #{Process.pid})"
+      logger.info "Starting AnyCable gRPC server (pid: #{Process.pid}, workers_num: #{config.rpc_pool_size})"
 
       print_versions!
 
