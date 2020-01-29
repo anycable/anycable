@@ -108,14 +108,18 @@ func (c *Controller) Shutdown() error {
 }
 
 // Authenticate performs Connect RPC call
-func (c *Controller) Authenticate(sid string, path string, headers *map[string]string) (string, []string, error) {
+func (c *Controller) Authenticate(sid string, env *common.SessionEnv) (string, []string, error) {
 	<-c.sem
 	defer func() { c.sem <- struct{}{} }()
 
 	client := pb.NewRPCClient(c.conn)
 
 	op := func() (interface{}, error) {
-		return client.Connect(newContext(sid), &pb.ConnectionRequest{Path: path, Headers: *headers})
+		return client.Connect(newContext(sid), &pb.ConnectionRequest{
+			Path:    env.Path,
+			Headers: *env.Headers,
+			Env:     &pb.Env{Path: env.Path, Headers: *env.Headers},
+		})
 	}
 
 	c.metrics.Counter(metricsRPCCalls).Inc()
@@ -145,14 +149,19 @@ func (c *Controller) Authenticate(sid string, path string, headers *map[string]s
 }
 
 // Subscribe performs Command RPC call with "subscribe" command
-func (c *Controller) Subscribe(sid string, id string, channel string) (*common.CommandResult, error) {
+func (c *Controller) Subscribe(sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error) {
 	<-c.sem
 	defer func() { c.sem <- struct{}{} }()
 
 	client := pb.NewRPCClient(c.conn)
 
 	op := func() (interface{}, error) {
-		return client.Command(newContext(sid), &pb.CommandMessage{Command: "subscribe", Identifier: channel, ConnectionIdentifiers: id})
+		return client.Command(newContext(sid), &pb.CommandMessage{
+			Command:               "subscribe",
+			Env:                   &pb.Env{Path: env.Path, Headers: *env.Headers},
+			Identifier:            channel,
+			ConnectionIdentifiers: id},
+		)
 	}
 
 	response, err := c.retry(op)
@@ -161,14 +170,19 @@ func (c *Controller) Subscribe(sid string, id string, channel string) (*common.C
 }
 
 // Unsubscribe performs Command RPC call with "unsubscribe" command
-func (c *Controller) Unsubscribe(sid string, id string, channel string) (*common.CommandResult, error) {
+func (c *Controller) Unsubscribe(sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error) {
 	<-c.sem
 	defer func() { c.sem <- struct{}{} }()
 
 	client := pb.NewRPCClient(c.conn)
 
 	op := func() (interface{}, error) {
-		return client.Command(newContext(sid), &pb.CommandMessage{Command: "unsubscribe", Identifier: channel, ConnectionIdentifiers: id})
+		return client.Command(newContext(sid), &pb.CommandMessage{
+			Command:               "unsubscribe",
+			Env:                   &pb.Env{Path: env.Path, Headers: *env.Headers},
+			Identifier:            channel,
+			ConnectionIdentifiers: id,
+		})
 	}
 
 	response, err := c.retry(op)
@@ -177,14 +191,20 @@ func (c *Controller) Unsubscribe(sid string, id string, channel string) (*common
 }
 
 // Perform performs Command RPC call with "perform" command
-func (c *Controller) Perform(sid string, id string, channel string, data string) (*common.CommandResult, error) {
+func (c *Controller) Perform(sid string, env *common.SessionEnv, id string, channel string, data string) (*common.CommandResult, error) {
 	<-c.sem
 	defer func() { c.sem <- struct{}{} }()
 
 	client := pb.NewRPCClient(c.conn)
 
 	op := func() (interface{}, error) {
-		return client.Command(newContext(sid), &pb.CommandMessage{Command: "message", Identifier: channel, ConnectionIdentifiers: id, Data: data})
+		return client.Command(newContext(sid), &pb.CommandMessage{
+			Command:               "message",
+			Env:                   &pb.Env{Path: env.Path, Headers: *env.Headers},
+			Identifier:            channel,
+			ConnectionIdentifiers: id,
+			Data:                  data,
+		})
 	}
 
 	response, err := c.retry(op)
@@ -193,14 +213,20 @@ func (c *Controller) Perform(sid string, id string, channel string, data string)
 }
 
 // Disconnect performs disconnect RPC call
-func (c *Controller) Disconnect(sid string, id string, subscriptions []string, path string, headers *map[string]string) error {
+func (c *Controller) Disconnect(sid string, env *common.SessionEnv, id string, subscriptions []string) error {
 	<-c.sem
 	defer func() { c.sem <- struct{}{} }()
 
 	client := pb.NewRPCClient(c.conn)
 
 	op := func() (interface{}, error) {
-		return client.Disconnect(newContext(sid), &pb.DisconnectRequest{Identifiers: id, Subscriptions: subscriptions, Path: path, Headers: *headers})
+		return client.Disconnect(newContext(sid), &pb.DisconnectRequest{
+			Identifiers:   id,
+			Subscriptions: subscriptions,
+			Path:          env.Path,
+			Headers:       *env.Headers,
+			Env:           &pb.Env{Path: env.Path, Headers: *env.Headers},
+		})
 	}
 
 	c.metrics.Counter(metricsRPCCalls).Inc()

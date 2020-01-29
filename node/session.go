@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/utils"
 	"github.com/apex/log"
 	"github.com/gorilla/websocket"
@@ -40,8 +41,7 @@ var (
 type Session struct {
 	node          *Node
 	ws            *websocket.Conn
-	path          string
-	headers       map[string]string
+	env           *common.SessionEnv
 	subscriptions map[string]bool
 	send          chan []byte
 	closed        bool
@@ -73,8 +73,7 @@ func NewSession(node *Node, ws *websocket.Conn, path string, headers map[string]
 	session := &Session{
 		node:          node,
 		ws:            ws,
-		path:          path,
-		headers:       headers,
+		env:           &common.SessionEnv{Path: path, Headers: &headers},
 		subscriptions: make(map[string]bool),
 		send:          make(chan []byte, 256),
 		closed:        false,
@@ -89,7 +88,7 @@ func NewSession(node *Node, ws *websocket.Conn, path string, headers map[string]
 
 	session.Log = ctx
 
-	err := node.Authenticate(session, path, &headers)
+	err := node.Authenticate(session)
 
 	if err != nil {
 		defer session.Close("Auth Error", CloseInternalServerErr)

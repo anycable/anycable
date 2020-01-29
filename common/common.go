@@ -1,6 +1,13 @@
 // Package common contains struts and interfaces shared between multiple components
 package common
 
+// SessionEnv represents the underlying HTTP connection data:
+// URL path and request headers
+type SessionEnv struct {
+	Path    string
+	Headers *map[string]string
+}
+
 // CommandResult is a result of performing controller action,
 // which contains informations about streams to subscribe,
 // messages to sent and broadcast.
