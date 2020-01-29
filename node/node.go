@@ -34,11 +34,11 @@ const (
 // Controller is an interface describing business-logic handler (e.g. RPC)
 type Controller interface {
 	Shutdown() error
-	Authenticate(sid string, path string, headers *map[string]string) (string, []string, error)
-	Subscribe(sid string, id string, channel string) (*common.CommandResult, error)
-	Unsubscribe(sid string, id string, channel string) (*common.CommandResult, error)
-	Perform(sid string, id string, channel string, data string) (*common.CommandResult, error)
-	Disconnect(sid string, id string, subscriptions []string, path string, headers *map[string]string) error
+	Authenticate(sid string, env *common.SessionEnv) (string, []string, error)
+	Subscribe(sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error)
+	Unsubscribe(sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error)
+	Perform(sid string, env *common.SessionEnv, id string, channel string, data string) (*common.CommandResult, error)
+	Disconnect(sid string, env *common.SessionEnv, id string, subscriptions []string) error
 }
 
 // Disconnector is an interface for disconnect queue implementation
@@ -164,8 +164,8 @@ func (n *Node) Shutdown() {
 
 // Authenticate calls controller to perform authentication.
 // If authentication is successful, session is registered with a hub.
-func (n *Node) Authenticate(s *Session, path string, headers *map[string]string) error {
-	id, transmissions, err := n.controller.Authenticate(s.UID, path, headers)
+func (n *Node) Authenticate(s *Session) error {
+	id, transmissions, err := n.controller.Authenticate(s.UID, s.env)
 
 	transmit(s, transmissions)
 
@@ -191,7 +191,7 @@ func (n *Node) Subscribe(s *Session, msg *common.Message) {
 		return
 	}
 
-	res, err := n.controller.Subscribe(s.UID, s.Identifiers, msg.Identifier)
+	res, err := n.controller.Subscribe(s.UID, s.env, s.Identifiers, msg.Identifier)
 
 	if err != nil {
 		s.Log.Errorf("Subscribe error: %v", err)
@@ -217,7 +217,7 @@ func (n *Node) Unsubscribe(s *Session, msg *common.Message) {
 		return
 	}
 
-	res, err := n.controller.Unsubscribe(s.UID, s.Identifiers, msg.Identifier)
+	res, err := n.controller.Unsubscribe(s.UID, s.env, s.Identifiers, msg.Identifier)
 
 	if err != nil {
 		s.Log.Errorf("Unsubscribe error: %v", err)
@@ -249,7 +249,7 @@ func (n *Node) Perform(s *Session, msg *common.Message) {
 
 	s.mu.Unlock()
 
-	res, err := n.controller.Perform(s.UID, s.Identifiers, msg.Identifier, msg.Data)
+	res, err := n.controller.Perform(s.UID, s.env, s.Identifiers, msg.Identifier, msg.Data)
 
 	if err != nil {
 		s.Log.Errorf("Perform error: %v", err)
@@ -279,14 +279,13 @@ func (n *Node) Disconnect(s *Session) error {
 func (n *Node) DisconnectNow(s *Session) error {
 	sessionSubscriptions := subscriptionsList(s.subscriptions)
 
-	s.Log.Debugf("Disconnect %s %s %v %v", s.Identifiers, s.path, s.headers, sessionSubscriptions)
+	s.Log.Debugf("Disconnect %s %s %v %v", s.Identifiers, s.env.Path, s.env.Headers, sessionSubscriptions)
 
 	err := n.controller.Disconnect(
 		s.UID,
+		s.env,
 		s.Identifiers,
 		sessionSubscriptions,
-		s.path,
-		&s.headers,
 	)
 
 	if err != nil {

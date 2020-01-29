@@ -44,6 +44,20 @@ func NewMockSession(uid string) *Session {
 		Identifiers:   uid,
 		Log:           log.WithField("sid", uid),
 		subscriptions: make(map[string]bool),
+		env:           &common.SessionEnv{Path: "/cable-test", Headers: &map[string]string{}},
+	}
+}
+
+// NewMockSession returns a new session with a specified uid, path and headers, and identifiers equal to uid
+func NewMockSessionWithEnv(uid string, path string, headers *map[string]string) *Session {
+	return &Session{
+		send:          make(chan []byte, 256),
+		closed:        true,
+		UID:           uid,
+		Identifiers:   uid,
+		Log:           log.WithField("sid", uid),
+		subscriptions: make(map[string]bool),
+		env:           &common.SessionEnv{Path: path, Headers: headers},
 	}
 }
 
@@ -61,12 +75,12 @@ func (c *MockController) Shutdown() error {
 // Authenticate emulates authentication process:
 // - if path is equal to "failure" then authentication failed
 // - otherwise returns value of headers['id'] as identifier
-func (c *MockController) Authenticate(sid string, path string, headers *map[string]string) (string, []string, error) {
-	if path == "/failure" {
+func (c *MockController) Authenticate(sid string, env *common.SessionEnv) (string, []string, error) {
+	if env.Path == "/failure" {
 		return "", []string{"unauthorized"}, errors.New("Auth Failed")
 	}
 
-	return (*headers)["id"], []string{"welcome"}, nil
+	return (*env.Headers)["id"], []string{"welcome"}, nil
 }
 
 // Subscribe emulates subscription process:
@@ -74,7 +88,7 @@ func (c *MockController) Authenticate(sid string, path string, headers *map[stri
 // - if channel is equal to "disconnect" then returns result with disconnect set to true
 // - if channel is equal to "stream" then add "stream" to result.Streams
 // - otherwise returns success result with one transmission equal to sid
-func (c *MockController) Subscribe(sid string, id string, channel string) (*common.CommandResult, error) {
+func (c *MockController) Subscribe(sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error) {
 	if channel == "failure" {
 		return nil, errors.New("Subscription Failure")
 	}
@@ -94,7 +108,7 @@ func (c *MockController) Subscribe(sid string, id string, channel string) (*comm
 }
 
 // Unsubscribe returns command result
-func (c *MockController) Unsubscribe(sid string, id string, channel string) (*common.CommandResult, error) {
+func (c *MockController) Unsubscribe(sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error) {
 	if channel == "failure" {
 		return nil, errors.New("Unsubscription Failure")
 	}
@@ -104,7 +118,7 @@ func (c *MockController) Unsubscribe(sid string, id string, channel string) (*co
 }
 
 // Perform return result with Transmissions containing data (i.e. emulates "echo" action)
-func (c *MockController) Perform(sid string, id string, channel string, data string) (*common.CommandResult, error) {
+func (c *MockController) Perform(sid string, env *common.SessionEnv, id string, channel string, data string) (*common.CommandResult, error) {
 	if channel == "failure" {
 		return nil, errors.New("Perform Failure")
 	}
@@ -114,6 +128,6 @@ func (c *MockController) Perform(sid string, id string, channel string, data str
 	return res, nil
 }
 
-func (c *MockController) Disconnect(sid string, id string, subscriptions []string, path string, headers *map[string]string) error {
+func (c *MockController) Disconnect(sid string, env *common.SessionEnv, id string, subscriptions []string) error {
 	return nil
 }
