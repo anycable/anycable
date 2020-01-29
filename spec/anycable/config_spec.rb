@@ -8,7 +8,6 @@ describe "AnyCable::Config" do
 
   it "loads config vars from anycable.yml", :aggregate_failures do
     expect(config.rpc_host).to eq "0.0.0.0:50123"
-    expect(config.rpc_host).not_to be_a(AnyCable::Config::DefaultHostWrapper)
     expect(config.redis_channel).to eq "__anycable__"
     expect(config.log_level).to eq :info
     expect(config.log_grpc).to eq false
