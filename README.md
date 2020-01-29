@@ -52,15 +52,15 @@ Check out our 📑 [Documentation](https://docs.anycable.io).
 
 - Install required GRPC gems:
 
-```
-gem install grpc
-gem install grpc - tools
+```sh
+$ gem install grpc
+$ gem install grpc-tools
 ```
 
 - Re-generate GRPC files (if necessary):
 
-```
-make
+```sh
+$ make
 ```
 
 ## Contributing
