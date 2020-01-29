@@ -53,8 +53,8 @@ Check out our 📑 [Documentation](https://docs.anycable.io).
 - Install required GRPC gems:
 
 ```sh
-$ gem install grpc
-$ gem install grpc-tools
+gem install grpc
+gem install grpc-tools
 ```
 
 - Re-generate GRPC files (if necessary):
@@ -75,4 +75,3 @@ The gem is available as open source under the terms of the [MIT License](http://
 ## Security Contact
 
 To report a security vulnerability, please use the [Tidelift security contact](https://tidelift.com/security). Tidelift will coordinate the fix and disclosure.
-

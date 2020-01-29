@@ -14,7 +14,7 @@ module AnyCable
     def connect(request, _unused_call)
       logger.debug("RPC Connect: #{request.inspect}")
 
-      socket = build_socket(env: rack_env(request))
+      socket = build_socket(env: rack_env(request.env))
 
       connection = factory.call(socket)
 
@@ -41,7 +41,7 @@ module AnyCable
     def disconnect(request, _unused_call)
       logger.debug("RPC Disconnect: #{request.inspect}")
 
-      socket = build_socket(env: rack_env(request))
+      socket = build_socket(env: rack_env(request.env))
 
       connection = factory.call(
         socket,
@@ -66,9 +66,7 @@ module AnyCable
     def command(message, _unused_call)
       logger.debug("RPC Command: #{message.inspect}")
 
-      # We don't have path/headers information here,
-      # but we still want `connection.env` to work
-      socket = build_socket(env: base_rack_env)
+      socket = build_socket(env: rack_env(message.env))
 
       connection = factory.call(
         socket,
@@ -100,8 +98,8 @@ module AnyCable
     private
 
     # Build Rack env from request
-    def rack_env(request)
-      uri = URI.parse(request.path)
+    def rack_env(request_env)
+      uri = URI.parse(request_env.path)
 
       env = base_rack_env
       env.merge!(
@@ -110,11 +108,11 @@ module AnyCable
         "SERVER_NAME" => uri.host,
         "SERVER_PORT" => uri.port.to_s,
         "HTTP_HOST" => uri.host,
-        "REMOTE_ADDR" => request.headers.delete("REMOTE_ADDR"),
+        "REMOTE_ADDR" => request_env.headers.delete("REMOTE_ADDR"),
         "rack.url_scheme" => uri.scheme
       )
 
-      env.merge!(build_headers(request.headers))
+      env.merge!(build_headers(request_env.headers))
     end
 
     def base_rack_env

@@ -2,7 +2,15 @@
 
 ## 🚧 1.0.0 (_coming soon_)
 
+- **RPC schema has changed**. ([@palkan][])
+
+Using `anycable-go` v1.x is required.
+
 - **Ruby 2.5+ is required**. ([@palkan][])
+
+- Added `request` support to channels. ([@palkan][])
+
+Now you can access `request` object in channels, too (e.g., to read headers/cookies/URL/etc).
 
 - Change default server address from `[::]:50051` to `127.0.0.1:50051`. ([@palkan][])
 

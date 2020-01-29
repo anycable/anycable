@@ -9,13 +9,13 @@ describe "disconnection", :with_grpc_server, :rpc_command do
   let(:url) { "http://example.io/cable_lite?token=123" }
   let(:subscriptions) { %w[a b] }
   let(:headers) { {"Cookie" => "username=jack;"} }
+  let(:env) { AnyCable::Env.new(path: url, headers: headers) }
 
   let(:request) do
     AnyCable::DisconnectRequest.new(
       identifiers: conn_id.to_json,
       subscriptions: subscriptions,
-      path: url,
-      headers: headers
+      env: env
     )
   end
 
