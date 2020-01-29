@@ -8,8 +8,6 @@ module AnyCable
   class Config < Anyway::Config
     config_name :anycable
 
-    DefaultHostWrapper = Class.new(String)
-
     attr_config(
       ### gRPC options
       rpc_host: "127.0.0.1:50051",
