@@ -14,9 +14,13 @@ enum Status {
   FAILURE = 2;
 }
 
-message ConnectionRequest {
+message Env {
   string path = 1;
   map<string,string> headers = 2;
+}
+
+message ConnectionRequest {
+  Env env = 3;
 }
 
 message ConnectionResponse {
@@ -31,6 +35,7 @@ message CommandMessage {
   string identifier = 2;
   string connection_identifiers = 3;
   string data = 4;
+  Env env = 5;
 }
 
 message CommandResponse {
@@ -45,8 +50,7 @@ message CommandResponse {
 message DisconnectRequest {
   string identifiers = 1;
   repeated string subscriptions = 2;
-  string path = 3;
-  map<string,string> headers = 4;
+  Env env = 5;
 }
 
 message DisconnectResponse {

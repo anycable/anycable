@@ -11,6 +11,10 @@ class TestPerformChannel < AnyCable::TestFactory::Channel
   def add(data)
     transmit result: (data["a"] + data["b"])
   end
+
+  def add_with_cookie(data)
+    transmit result: (data["a"] + request.cookies["c"].to_i)
+  end
 end
 
 AnyCable::TestFactory.register_channel "test_perform", TestPerformChannel
@@ -58,6 +62,17 @@ describe "client messages", :with_grpc_server, :rpc_command do
           method: "command",
           message: request.to_h
         )
+      end
+    end
+
+    context "request headers access" do
+      let(:headers) { {"cookie" => "c=3;"} }
+      let(:data) { {action: "add_with_cookie", a: 5} }
+
+      it "responds with result" do
+        expect(subject.status).to eq :SUCCESS
+        expect(subject.transmissions.size).to eq 1
+        expect(subject.transmissions.first).to include({"result" => 8}.to_json)
       end
     end
   end
