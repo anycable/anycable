@@ -5,22 +5,21 @@ require "spec_helper"
 describe "client connection", :with_grpc_server do
   include_context "rpc stub"
 
+  let(:path) { "/cable" }
+  let(:headers) { {} }
+  let(:env) { AnyCable::Env.new(path: path, headers: headers) }
+  let(:request) { AnyCable::ConnectionRequest.new(env: env) }
+
   subject { service.connect(request) }
 
   context "no cookies" do
-    let(:request) { AnyCable::ConnectionRequest.new }
-
     it "responds with exception if no cookies" do
       expect(subject.status).to eq :FAILURE
     end
   end
 
   context "when exception" do
-    let(:request) do
-      AnyCable::ConnectionRequest.new(
-        path: "http://example.io/cable?raise=sudden_connect_error"
-      )
-    end
+    let(:path) { "http://example.io/cable?raise=sudden_connect_error" }
 
     it "responds with ERROR", :aggregate_failures do
       expect(subject.status).to eq :ERROR
@@ -39,14 +38,12 @@ describe "client connection", :with_grpc_server do
   end
 
   context "with cookies and path info" do
-    let(:request) do
-      AnyCable::ConnectionRequest.new(
-        headers: {
-          "Cookie" => "username=john;"
-        },
-        path: "http://example.io/cable?token=123"
-      )
+    let(:headers) do
+      {
+        "Cookie" => "username=john;"
+      }
     end
+    let(:path) { "http://example.io/cable?token=123" }
 
     it "responds with success, correct identifiers and 'welcome' message", :aggregate_failures do
       expect(subject.status).to eq :SUCCESS
@@ -61,15 +58,13 @@ describe "client connection", :with_grpc_server do
   end
 
   context "with arbitrary headers" do
-    let(:request) do
-      AnyCable::ConnectionRequest.new(
-        headers: {
-          "cookie" => "username=john;",
-          "x-api-token" => "abc123"
-        },
-        path: "http://example.io/cable"
-      )
+    let(:headers) do
+      {
+        "cookie" => "username=john;",
+        "x-api-token" => "abc123"
+      }
     end
+    let(:path) { "http://example.io/cable" }
 
     it "responds with success, correct identifiers and 'welcome' message", :aggregate_failures do
       expect(subject.status).to eq :SUCCESS
@@ -82,15 +77,13 @@ describe "client connection", :with_grpc_server do
   end
 
   context "with remote ip from headers" do
-    let(:request) do
-      AnyCable::ConnectionRequest.new(
-        headers: {
-          "cookie" => "username=john;",
-          "REMOTE_ADDR" => "1.2.3.4"
-        },
-        path: "http://example.io/cable"
-      )
+    let(:headers) do
+      {
+        "cookie" => "username=john;",
+        "REMOTE_ADDR" => "1.2.3.4"
+      }
     end
+    let(:path) { "http://example.io/cable" }
 
     it "sets ip and cleans synthetic header", :aggregate_failures do
       identifiers = JSON.parse(subject.identifiers)
@@ -102,14 +95,12 @@ describe "client connection", :with_grpc_server do
   end
 
   describe "env building" do
-    let(:request) do
-      AnyCable::ConnectionRequest.new(
-        headers: {
-          "Cookie" => "username=john;"
-        },
-        path: "https://example.io/cable?token=123"
-      )
+    let(:headers) do
+      {
+        "Cookie" => "username=john;"
+      }
     end
+    let(:path) { "https://example.io/cable?token=123" }
 
     it "builds properly structured Rack-compatible env" do
       identifiers = JSON.parse(subject.identifiers)

@@ -110,6 +110,12 @@ module AnyCable
       def transmit(msg)
         connection.transmit(identifier: identifier, data: msg)
       end
+
+      private
+
+      def request
+        connection.request
+      end
     end
 
     class << self
