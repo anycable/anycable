@@ -60,16 +60,17 @@ gem install grpc-tools
 - Re-generate GRPC files (if necessary):
 
 ```sh
-$ make
+make
 ```
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/anycable/anycable.
+Bug reports and pull requests are welcome on GitHub at [https://github.com/anycable/anycable](https://github.com/anycable/anycable).
 
 Please, provide reproduction script (using [this template](https://github.com/anycable/anycable/blob/master/etc/bug_report_template.rb)) when submitting bugs if possible.
 
 ## License
+
 The gem is available as open source under the terms of the [MIT License](http://opensource.org/licenses/MIT).
 
 ## Security Contact
