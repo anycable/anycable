@@ -26,6 +26,7 @@ const (
 	retryUnavailableInterval = 100
 
 	metricsRPCCalls    = "rpc_call_total"
+	metricsRPCRetries  = "rpc_retries_total"
 	metricsRPCFailures = "rpc_error_total"
 )
 
@@ -41,6 +42,7 @@ type Controller struct {
 // NewController builds new Controller
 func NewController(metrics *metrics.Metrics, config *Config) *Controller {
 	metrics.RegisterCounter(metricsRPCCalls, "The total number of RPC calls")
+	metrics.RegisterCounter(metricsRPCRetries, "The total number of RPC call retries")
 	metrics.RegisterCounter(metricsRPCFailures, "The total number of failed RPC calls")
 
 	return &Controller{log: log.WithField("context", "rpc"), metrics: metrics, config: config}
@@ -69,7 +71,7 @@ func (c *Controller) Start() error {
 	}
 
 	if err == nil {
-		c.log.Infof("RPC controller initialized: %s (concurrency %d)", host, capacity)
+		c.log.Infof("RPC controller initialized: %s (concurrency: %d)", host, capacity)
 	}
 
 	c.conn = conn
@@ -91,7 +93,7 @@ func (c *Controller) Shutdown() error {
 	}
 
 	// Wait for active connections
-	_, err := retry(func() (interface{}, error) {
+	_, err := c.retry(func() (interface{}, error) {
 		busy := c.busy()
 
 		if busy > 0 {
@@ -118,7 +120,7 @@ func (c *Controller) Authenticate(sid string, path string, headers *map[string]s
 
 	c.metrics.Counter(metricsRPCCalls).Inc()
 
-	response, err := retry(op)
+	response, err := c.retry(op)
 
 	if err != nil {
 		c.metrics.Counter(metricsRPCFailures).Inc()
@@ -153,7 +155,7 @@ func (c *Controller) Subscribe(sid string, id string, channel string) (*common.C
 		return client.Command(newContext(sid), &pb.CommandMessage{Command: "subscribe", Identifier: channel, ConnectionIdentifiers: id})
 	}
 
-	response, err := retry(op)
+	response, err := c.retry(op)
 
 	return c.parseCommandResponse(response, err)
 }
@@ -169,7 +171,7 @@ func (c *Controller) Unsubscribe(sid string, id string, channel string) (*common
 		return client.Command(newContext(sid), &pb.CommandMessage{Command: "unsubscribe", Identifier: channel, ConnectionIdentifiers: id})
 	}
 
-	response, err := retry(op)
+	response, err := c.retry(op)
 
 	return c.parseCommandResponse(response, err)
 }
@@ -185,7 +187,7 @@ func (c *Controller) Perform(sid string, id string, channel string, data string)
 		return client.Command(newContext(sid), &pb.CommandMessage{Command: "message", Identifier: channel, ConnectionIdentifiers: id, Data: data})
 	}
 
-	response, err := retry(op)
+	response, err := c.retry(op)
 
 	return c.parseCommandResponse(response, err)
 }
@@ -203,7 +205,7 @@ func (c *Controller) Disconnect(sid string, id string, subscriptions []string, p
 
 	c.metrics.Counter(metricsRPCCalls).Inc()
 
-	response, err := retry(op)
+	response, err := c.retry(op)
 
 	if err != nil {
 		c.metrics.Counter(metricsRPCFailures).Inc()
@@ -263,7 +265,7 @@ func (c *Controller) busy() int {
 	return c.config.Concurrency - len(c.sem)
 }
 
-func retry(callback func() (interface{}, error)) (res interface{}, err error) {
+func (c *Controller) retry(callback func() (interface{}, error)) (res interface{}, err error) {
 	retryAge := 0
 	attempt := 0
 	wasExhausted := false
@@ -303,6 +305,8 @@ func retry(callback func() (interface{}, error)) (res interface{}, err error) {
 		delay := time.Duration(delayMS)
 
 		retryAge += delayMS
+
+		c.metrics.Counter(metricsRPCRetries).Inc()
 
 		time.Sleep(delay * time.Millisecond)
 
