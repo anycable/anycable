@@ -2,18 +2,18 @@
 
 require "spec_helper"
 
-describe "disconnection", :with_grpc_server, :rpc_command do
-  include_context "rpc stub"
+describe "disconnection" do
+  include_context "anycable:rpc:server"
+  include_context "rpc_command"
 
   let(:user) { "disco" }
   let(:url) { "http://example.io/cable_lite?token=123" }
   let(:subscriptions) { %w[a b] }
   let(:headers) { {"Cookie" => "username=jack;"} }
-  let(:env) { AnyCable::Env.new(path: url, headers: headers) }
 
   let(:request) do
     AnyCable::DisconnectRequest.new(
-      identifiers: conn_id.to_json,
+      identifiers: identifiers.to_json,
       subscriptions: subscriptions,
       env: env
     )

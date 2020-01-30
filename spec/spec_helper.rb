@@ -20,6 +20,8 @@ require "anycable"
 require "json"
 require "rack"
 
+require "anycable/rspec"
+
 Dir["#{File.dirname(__FILE__)}/support/**/*.rb"].each { |f| require f }
 
 AnyCable.connection_factory = AnyCable::TestFactory
