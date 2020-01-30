@@ -116,9 +116,9 @@ func (c *Controller) Authenticate(sid string, env *common.SessionEnv) (string, [
 
 	op := func() (interface{}, error) {
 		return client.Connect(newContext(sid), &pb.ConnectionRequest{
-			Path:    env.Path,
+			Path:    env.URL,
 			Headers: *env.Headers,
-			Env:     &pb.Env{Path: env.Path, Headers: *env.Headers},
+			Env:     buildEnv(env),
 		})
 	}
 
@@ -158,7 +158,7 @@ func (c *Controller) Subscribe(sid string, env *common.SessionEnv, id string, ch
 	op := func() (interface{}, error) {
 		return client.Command(newContext(sid), &pb.CommandMessage{
 			Command:               "subscribe",
-			Env:                   &pb.Env{Path: env.Path, Headers: *env.Headers},
+			Env:                   buildEnv(env),
 			Identifier:            channel,
 			ConnectionIdentifiers: id},
 		)
@@ -179,7 +179,7 @@ func (c *Controller) Unsubscribe(sid string, env *common.SessionEnv, id string, 
 	op := func() (interface{}, error) {
 		return client.Command(newContext(sid), &pb.CommandMessage{
 			Command:               "unsubscribe",
-			Env:                   &pb.Env{Path: env.Path, Headers: *env.Headers},
+			Env:                   buildEnv(env),
 			Identifier:            channel,
 			ConnectionIdentifiers: id,
 		})
@@ -200,7 +200,7 @@ func (c *Controller) Perform(sid string, env *common.SessionEnv, id string, chan
 	op := func() (interface{}, error) {
 		return client.Command(newContext(sid), &pb.CommandMessage{
 			Command:               "message",
-			Env:                   &pb.Env{Path: env.Path, Headers: *env.Headers},
+			Env:                   buildEnv(env),
 			Identifier:            channel,
 			ConnectionIdentifiers: id,
 			Data:                  data,
@@ -223,9 +223,9 @@ func (c *Controller) Disconnect(sid string, env *common.SessionEnv, id string, s
 		return client.Disconnect(newContext(sid), &pb.DisconnectRequest{
 			Identifiers:   id,
 			Subscriptions: subscriptions,
-			Path:          env.Path,
+			Path:          env.URL,
 			Headers:       *env.Headers,
-			Env:           &pb.Env{Path: env.Path, Headers: *env.Headers},
+			Env:           buildEnv(env),
 		})
 	}
 
@@ -343,4 +343,8 @@ func (c *Controller) retry(callback func() (interface{}, error)) (res interface{
 func newContext(sessionID string) context.Context {
 	md := metadata.Pairs("sid", sessionID)
 	return metadata.NewOutgoingContext(context.Background(), md)
+}
+
+func buildEnv(env *common.SessionEnv) *pb.Env {
+	return &pb.Env{Url: env.URL, Headers: *env.Headers}
 }

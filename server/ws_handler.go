@@ -41,7 +41,7 @@ func WebsocketHandler(app *node.Node, fetchHeaders []string, config *WSConfig) h
 			return
 		}
 
-		path := r.URL.String()
+		url := r.URL.String()
 		headers := utils.FetchHeaders(r, fetchHeaders)
 
 		uid, err := utils.FetchUID(r)
@@ -58,7 +58,7 @@ func WebsocketHandler(app *node.Node, fetchHeaders []string, config *WSConfig) h
 
 		// Separate goroutine for better GC of caller's data.
 		go func() {
-			session, err := node.NewSession(app, ws, path, headers, uid)
+			session, err := node.NewSession(app, ws, url, headers, uid)
 
 			if err != nil {
 				ctx.Debugf("Websocket session initialization failed: %v", err)

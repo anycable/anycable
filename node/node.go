@@ -279,7 +279,7 @@ func (n *Node) Disconnect(s *Session) error {
 func (n *Node) DisconnectNow(s *Session) error {
 	sessionSubscriptions := subscriptionsList(s.subscriptions)
 
-	s.Log.Debugf("Disconnect %s %s %v %v", s.Identifiers, s.env.Path, s.env.Headers, sessionSubscriptions)
+	s.Log.Debugf("Disconnect %s %s %v %v", s.Identifiers, s.env.URL, s.env.Headers, sessionSubscriptions)
 
 	err := n.controller.Disconnect(
 		s.UID,
