@@ -15,7 +15,7 @@ enum Status {
 }
 
 message Env {
-  string path = 1;
+  string url = 1;
   map<string,string> headers = 2;
 }
 

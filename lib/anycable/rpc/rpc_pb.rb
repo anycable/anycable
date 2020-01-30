@@ -8,7 +8,7 @@ require "google/protobuf"
 Google::Protobuf::DescriptorPool.generated_pool.build do
   add_file("rpc.proto", syntax: :proto3) do
     add_message "anycable.Env" do
-      optional :path, :string, 1
+      optional :url, :string, 1
       map :headers, :string, :string, 2
     end
     add_message "anycable.ConnectionRequest" do
