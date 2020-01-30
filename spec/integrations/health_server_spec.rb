@@ -3,7 +3,9 @@
 require "spec_helper"
 require "net/http"
 
-describe "health server", :with_grpc_server do
+describe "health server" do
+  include_context "anycable:rpc:server"
+
   before(:all) do
     @health_server = AnyCable::HealthServer.new(
       @server,

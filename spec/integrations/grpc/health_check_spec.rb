@@ -2,7 +2,9 @@
 
 require "spec_helper"
 
-describe "health checker", :with_grpc_server do
+describe "health checker" do
+  include_context "anycable:rpc:server"
+
   before(:all) do
     @service = Grpc::Health::Checker.rpc_stub_class
       .new(AnyCable.config.rpc_host, :this_channel_is_insecure)

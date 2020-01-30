@@ -19,10 +19,11 @@ end
 
 AnyCable::TestFactory.register_channel "test_perform", TestPerformChannel
 
-describe "client messages", :with_grpc_server, :rpc_command do
-  include_context "rpc stub"
+describe "client messages" do
+  include_context "anycable:rpc:server"
+  include_context "rpc_command"
 
-  let(:channel) { "test_perform" }
+  let(:channel_id) { "test_perform" }
 
   describe "#perform" do
     let(:command) { "message" }

@@ -1,9 +1,13 @@
 # frozen_string_literal: true
 
-shared_context "rpc stub" do
+RSpec.shared_context "anycable:rpc:stub" do
   before(:all) do
     @service = AnyCable::RPC::Stub.new(AnyCable.config.rpc_host, :this_channel_is_insecure)
   end
 
   let(:service) { @service }
+
+  let(:url) { "example.com/cable" }
+  let(:headers) { {} }
+  let(:env) { AnyCable::Env.new(url: url, headers: headers) }
 end
