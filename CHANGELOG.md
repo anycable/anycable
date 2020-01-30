@@ -2,10 +2,15 @@
 
 ## 1.0.0-dev
 
+- Added `rpc_retries_total` metrics. ([@palkan][])
+
+This metrics represents the number of times RPC requests were retried.
+The large value might indicate that the RPC server pool size doesn't correspond to the `rpc_concurrency` value.
+
 - Use single gRPC client instance instead of a pool. ([@palkan][])
 
 gRPC connection provides concurrency via H2 streams (with load balancing). Using a pool doesn't bring any performance
-improvements and sometimes 'cause unstability (e.g., ResourcesExhausted or Unavailable exceptions under the load).
+improvements and sometimes 'cause unstability (e.g., ResourceExhausted or Unavailable exceptions under the load).
 
 We still limit the number of concurrent RPC requests. Now you can configure it via `--rpc_concurrency` setting.
 
