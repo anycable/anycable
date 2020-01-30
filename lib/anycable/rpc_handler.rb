@@ -99,7 +99,7 @@ module AnyCable
 
     # Build Rack env from request
     def rack_env(request_env)
-      uri = URI.parse(request_env.path)
+      uri = URI.parse(request_env.url)
 
       env = base_rack_env
       env.merge!(
