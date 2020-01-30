@@ -2,12 +2,10 @@
 
 require "spec_helper"
 
-describe "client connection", :with_grpc_server do
-  include_context "rpc stub"
+describe "client connection" do
+  include_context "anycable:rpc:server"
+  include_context "rpc_command"
 
-  let(:path) { "/cable" }
-  let(:headers) { {} }
-  let(:env) { AnyCable::Env.new(path: path, headers: headers) }
   let(:request) { AnyCable::ConnectionRequest.new(env: env) }
 
   subject { service.connect(request) }

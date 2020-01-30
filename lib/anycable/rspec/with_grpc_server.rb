@@ -1,10 +1,11 @@
 # frozen_string_literal: true
 
-shared_context "with gRPC server", :with_grpc_server do
+RSpec.shared_context "anycable:rpc:server" do
   before(:all) do
     @server = AnyCable::Server.new(
       host: AnyCable.config.rpc_host,
-      **AnyCable.config.to_grpc_params
+      **AnyCable.config.to_grpc_params,
+      interceptors: AnyCable.middleware.to_a
     )
 
     @server.start

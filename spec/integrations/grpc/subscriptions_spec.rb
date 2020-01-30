@@ -26,10 +26,11 @@ end
 
 AnyCable::TestFactory.register_channel "test_subscriptions", TestSubscriptionsChannel
 
-describe "subscriptions", :with_grpc_server, :rpc_command do
-  include_context "rpc stub"
+describe "subscriptions" do
+  include_context "anycable:rpc:server"
+  include_context "rpc_command"
 
-  let(:channel) { "test_subscriptions" }
+  let(:channel_id) { "test_subscriptions" }
 
   describe "#subscribe" do
     let(:command) { "subscribe" }
@@ -58,7 +59,7 @@ describe "subscriptions", :with_grpc_server, :rpc_command do
     end
 
     context "unknown channel" do
-      let(:channel) { "FakeChannel" }
+      let(:channel_id) { "FakeChannel" }
 
       it "responds with error" do
         expect(subject.status).to eq :ERROR
@@ -81,10 +82,10 @@ describe "subscriptions", :with_grpc_server, :rpc_command do
 
     it "invokes #unsubscribed for channel" do
       expect { subject }
-        .to change { log.select { |entry| entry[:source] == channel }.size }
+        .to change { log.select { |entry| entry[:source] == channel_id }.size }
         .by(1)
 
-      channel_logs = log.select { |entry| entry[:source] == channel }
+      channel_logs = log.select { |entry| entry[:source] == channel_id }
       expect(channel_logs.last[:data]).to eq(user: "john", type: "unsubscribed")
     end
   end
