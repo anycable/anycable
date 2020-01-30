@@ -2,9 +2,9 @@
 package common
 
 // SessionEnv represents the underlying HTTP connection data:
-// URL path and request headers
+// URL and request headers
 type SessionEnv struct {
-	Path    string
+	URL     string
 	Headers *map[string]string
 }
 

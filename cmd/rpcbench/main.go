@@ -146,7 +146,7 @@ func parseOptions(options *Options) {
 }
 
 func (b *Benchmark) startWorker() {
-	env := &common.SessionEnv{Path: "/cable", Headers: &map[string]string{"cookie": "test_id=rpc-bench"}}
+	env := &common.SessionEnv{URL: "/cable", Headers: &map[string]string{"cookie": "test_id=rpc-bench"}}
 	uuid, err := nanoid.Nanoid()
 
 	if err != nil {

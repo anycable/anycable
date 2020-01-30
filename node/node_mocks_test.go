@@ -44,12 +44,12 @@ func NewMockSession(uid string) *Session {
 		Identifiers:   uid,
 		Log:           log.WithField("sid", uid),
 		subscriptions: make(map[string]bool),
-		env:           &common.SessionEnv{Path: "/cable-test", Headers: &map[string]string{}},
+		env:           &common.SessionEnv{URL: "/cable-test", Headers: &map[string]string{}},
 	}
 }
 
 // NewMockSession returns a new session with a specified uid, path and headers, and identifiers equal to uid
-func NewMockSessionWithEnv(uid string, path string, headers *map[string]string) *Session {
+func NewMockSessionWithEnv(uid string, url string, headers *map[string]string) *Session {
 	return &Session{
 		send:          make(chan []byte, 256),
 		closed:        true,
@@ -57,7 +57,7 @@ func NewMockSessionWithEnv(uid string, path string, headers *map[string]string) 
 		Identifiers:   uid,
 		Log:           log.WithField("sid", uid),
 		subscriptions: make(map[string]bool),
-		env:           &common.SessionEnv{Path: path, Headers: headers},
+		env:           &common.SessionEnv{URL: url, Headers: headers},
 	}
 }
 
@@ -76,7 +76,7 @@ func (c *MockController) Shutdown() error {
 // - if path is equal to "failure" then authentication failed
 // - otherwise returns value of headers['id'] as identifier
 func (c *MockController) Authenticate(sid string, env *common.SessionEnv) (string, []string, error) {
-	if env.Path == "/failure" {
+	if env.URL == "/failure" {
 		return "", []string{"unauthorized"}, errors.New("Auth Failed")
 	}
 
