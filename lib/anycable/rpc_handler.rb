@@ -98,21 +98,20 @@ module AnyCable
     private
 
     # Build Rack env from request
-    def rack_env(request_env)
-      uri = URI.parse(request_env.path)
-
+    def rack_env(rpc_env)
       env = base_rack_env
       env.merge!(
-        "PATH_INFO" => uri.path,
-        "QUERY_STRING" => uri.query,
-        "SERVER_NAME" => uri.host,
-        "SERVER_PORT" => uri.port.to_s,
-        "HTTP_HOST" => uri.host,
-        "REMOTE_ADDR" => request_env.headers.delete("REMOTE_ADDR"),
-        "rack.url_scheme" => uri.scheme
+        "PATH_INFO" => rpc_env.path,
+        "QUERY_STRING" => rpc_env.query,
+        "SERVER_NAME" => rpc_env.host,
+        "SERVER_PORT" => rpc_env.port,
+        "HTTP_HOST" => rpc_env.host,
+        "HTTP_COOKIE" => rpc_env.cookies,
+        "REMOTE_ADDR" => rpc_env.remote_addr,
+        "rack.url_scheme" => rpc_env.scheme
       )
 
-      env.merge!(build_headers(request_env.headers))
+      env.merge!(build_headers(rpc_env.headers))
     end
 
     def base_rack_env

@@ -5,10 +5,7 @@ require "spec_helper"
 describe "client connection", :with_grpc_server do
   include_context "rpc stub"
 
-  let(:path) { "/cable" }
-  let(:headers) { {} }
-  let(:env) { AnyCable::Env.new(path: path, headers: headers) }
-  let(:request) { AnyCable::ConnectionRequest.new(env: env) }
+  let(:request) { AnyCable::ConnectionRequest.new(env: env_pb) }
 
   subject { service.connect(request) }
 
@@ -19,7 +16,7 @@ describe "client connection", :with_grpc_server do
   end
 
   context "when exception" do
-    let(:path) { "http://example.io/cable?raise=sudden_connect_error" }
+    let(:url) { "http://example.io/cable?raise=sudden_connect_error" }
 
     it "responds with ERROR", :aggregate_failures do
       expect(subject.status).to eq :ERROR
@@ -43,7 +40,7 @@ describe "client connection", :with_grpc_server do
         "Cookie" => "username=john;"
       }
     end
-    let(:path) { "http://example.io/cable?token=123" }
+    let(:url) { "http://example.io/cable?token=123" }
 
     it "responds with success, correct identifiers and 'welcome' message", :aggregate_failures do
       expect(subject.status).to eq :SUCCESS
@@ -64,7 +61,7 @@ describe "client connection", :with_grpc_server do
         "x-api-token" => "abc123"
       }
     end
-    let(:path) { "http://example.io/cable" }
+    let(:url) { "http://example.io/cable" }
 
     it "responds with success, correct identifiers and 'welcome' message", :aggregate_failures do
       expect(subject.status).to eq :SUCCESS
@@ -83,7 +80,7 @@ describe "client connection", :with_grpc_server do
         "REMOTE_ADDR" => "1.2.3.4"
       }
     end
-    let(:path) { "http://example.io/cable" }
+    let(:url) { "http://example.io/cable" }
 
     it "sets ip and cleans synthetic header", :aggregate_failures do
       identifiers = JSON.parse(subject.identifiers)
@@ -100,7 +97,7 @@ describe "client connection", :with_grpc_server do
         "Cookie" => "username=john;"
       }
     end
-    let(:path) { "https://example.io/cable?token=123" }
+    let(:url) { "https://example.io/cable?token=123" }
 
     it "builds properly structured Rack-compatible env" do
       identifiers = JSON.parse(subject.identifiers)

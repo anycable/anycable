@@ -16,7 +16,14 @@ enum Status {
 
 message Env {
   string path = 1;
-  map<string,string> headers = 2;
+  string query = 2;
+  string host = 3;
+  string port = 4;
+  string scheme = 5;
+  string origin = 6;
+  string remote_addr = 7;
+  string cookies = 8;
+  map<string,string> headers = 9;
 }
 
 message ConnectionRequest {

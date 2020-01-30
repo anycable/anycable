@@ -9,7 +9,14 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
   add_file("rpc.proto", syntax: :proto3) do
     add_message "anycable.Env" do
       optional :path, :string, 1
-      map :headers, :string, :string, 2
+      optional :query, :string, 2
+      optional :host, :string, 3
+      optional :port, :string, 4
+      optional :scheme, :string, 5
+      optional :origin, :string, 6
+      optional :remote_addr, :string, 7
+      optional :cookies, :string, 8
+      map :headers, :string, :string, 9
     end
     add_message "anycable.ConnectionRequest" do
       optional :env, :message, 3, "anycable.Env"

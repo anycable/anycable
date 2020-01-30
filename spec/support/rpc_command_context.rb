@@ -7,10 +7,6 @@ shared_context "rpc command", rpc_command: true do
   let(:channel) { "" }
   let(:conn_id) { {current_user: user, url: url} }
   let(:data) { {} }
-  let(:path) { "/cable" }
-  let(:headers) { {} }
-  let(:env) { {path: path, headers: headers} }
-  let(:env_pb) { AnyCable::Env.new(**env) }
 
   let(:request) do
     AnyCable::CommandMessage.new(
