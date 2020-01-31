@@ -1,8 +1,7 @@
 # frozen_string_literal: true
 
 require "anycable/socket"
-require "anycable/rpc/rpc_pb"
-require "anycable/rpc/rpc_services_pb"
+require "anycable/rpc"
 
 # rubocop:disable Metrics/AbcSize
 # rubocop:disable Metrics/MethodLength
@@ -26,7 +25,8 @@ module AnyCable
         AnyCable::ConnectionResponse.new(
           status: AnyCable::Status::SUCCESS,
           identifiers: connection.identifiers_json,
-          transmissions: socket.transmissions
+          transmissions: socket.transmissions,
+          cstate: socket.cstate.changed_fields
         )
       end
     rescue => exp
@@ -41,7 +41,7 @@ module AnyCable
     def disconnect(request, _unused_call)
       logger.debug("RPC Disconnect: #{request.inspect}")
 
-      socket = build_socket(env: rack_env(request.env))
+      socket = build_socket(env: rack_env(request.env), cstate: request.cstate&.to_h)
 
       connection = factory.call(
         socket,
@@ -66,7 +66,7 @@ module AnyCable
     def command(message, _unused_call)
       logger.debug("RPC Command: #{message.inspect}")
 
-      socket = build_socket(env: rack_env(message.env))
+      socket = build_socket(env: rack_env(message.env), cstate: message.cstate&.to_h)
 
       connection = factory.call(
         socket,
@@ -84,7 +84,8 @@ module AnyCable
         disconnect: socket.closed?,
         stop_streams: socket.stop_streams?,
         streams: socket.streams,
-        transmissions: socket.transmissions
+        transmissions: socket.transmissions,
+        cstate: socket.cstate.changed_fields
       )
     rescue => exp
       notify_exception(exp, :command, message)

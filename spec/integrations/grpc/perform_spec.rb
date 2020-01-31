@@ -15,6 +15,18 @@ class TestPerformChannel < AnyCable::TestFactory::Channel
   def add_with_cookie(data)
     transmit result: (data["a"] + request.cookies["c"].to_i)
   end
+
+  def tick(*)
+    session["count"] ||= 0
+    session["count"] += 1
+    transmit count: session["count"]
+  end
+
+  private
+
+  def session
+    connection.request.session
+  end
 end
 
 AnyCable::TestFactory.register_channel "test_perform", TestPerformChannel
@@ -74,6 +86,43 @@ describe "client messages" do
         expect(subject.status).to eq :SUCCESS
         expect(subject.transmissions.size).to eq 1
         expect(subject.transmissions.first).to include({"result" => 8}.to_json)
+      end
+    end
+
+    context "session persistence" do
+      let(:data) { {action: "tick"} }
+
+      it "persists session after each command" do
+        first_call = service.command(request)
+
+        expect(first_call.status).to eq :SUCCESS
+        expect(first_call.transmissions.size).to eq 1
+        expect(first_call.transmissions.first).to include({"count" => 1}.to_json)
+        # the session has changed
+        expect(first_call.session).not_to be_nil
+
+        first_session = first_call.session
+
+        request.session = first_session
+
+        second_call = service.command(request)
+
+        expect(second_call.status).to eq :SUCCESS
+        expect(second_call.transmissions.size).to eq 1
+        expect(second_call.transmissions.first).to include({"count" => 2}.to_json)
+        # the session has changed
+        expect(second_call.session).not_to be_nil
+
+        expect(second_call.session).not_to eq first_session
+
+        request.data = {action: "add", a: 1, b: 2}.to_json
+
+        third_call = service.command(request)
+
+        expect(third_call.status).to eq :SUCCESS
+        # # performing a call that doesn't modify session shouldn't
+        # # return anything
+        expect(third_call.session).to be_nil
       end
     end
   end
