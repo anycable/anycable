@@ -108,7 +108,7 @@ func (c *Controller) Shutdown() error {
 }
 
 // Authenticate performs Connect RPC call
-func (c *Controller) Authenticate(sid string, env *common.SessionEnv) (string, []string, error) {
+func (c *Controller) Authenticate(sid string, env *common.SessionEnv) (*common.ConnectResult, error) {
 	<-c.sem
 	defer func() { c.sem <- struct{}{} }()
 
@@ -129,7 +129,7 @@ func (c *Controller) Authenticate(sid string, env *common.SessionEnv) (string, [
 	if err != nil {
 		c.metrics.Counter(metricsRPCFailures).Inc()
 
-		return "", nil, err
+		return nil, err
 	}
 
 	if r, ok := response.(*pb.ConnectionResponse); ok {
@@ -137,15 +137,15 @@ func (c *Controller) Authenticate(sid string, env *common.SessionEnv) (string, [
 		c.log.Debugf("Authenticate response: %v", r)
 
 		if r.Status.String() == "SUCCESS" {
-			return r.Identifiers, r.Transmissions, nil
+			return &common.ConnectResult{Identifier: r.Identifiers, Transmissions: r.Transmissions}, nil
 		}
 
-		return "", r.Transmissions, fmt.Errorf("Application error: %s", r.ErrorMsg)
+		return &common.ConnectResult{Transmissions: r.Transmissions}, fmt.Errorf("Application error: %s", r.ErrorMsg)
 	}
 
 	c.metrics.Counter(metricsRPCFailures).Inc()
 
-	return "", nil, errors.New("Failed to deserialize connection response")
+	return nil, errors.New("Failed to deserialize connection response")
 }
 
 // Subscribe performs Command RPC call with "subscribe" command

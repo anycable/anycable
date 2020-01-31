@@ -56,23 +56,23 @@ func (c *Controller) Shutdown() error {
 }
 
 // Authenticate allows everyone to connect and returns welcome message and rendom ID as identifier
-func (c *Controller) Authenticate(sid string, env *common.SessionEnv) (string, []string, error) {
+func (c *Controller) Authenticate(sid string, env *common.SessionEnv) (*common.ConnectResult, error) {
 	c.metrics.Counter(metricsCalls).Inc()
 
 	id, err := nanoid.Nanoid()
 
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 
 	identifiers := Identifiers{ID: id}
 	idstr, err := json.Marshal(&identifiers)
 
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 
-	return string(idstr), []string{welcomeMessage}, nil
+	return &common.ConnectResult{Identifier: string(idstr), Transmissions: []string{welcomeMessage}}, nil
 }
 
 // Subscribe performs Command RPC call with "subscribe" command
