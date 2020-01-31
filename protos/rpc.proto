@@ -28,6 +28,7 @@ message ConnectionResponse {
   string identifiers = 2;
   repeated string transmissions = 3;
   string error_msg = 4;
+  map<string,string> cstate = 5;
 }
 
 message CommandMessage {
@@ -36,6 +37,7 @@ message CommandMessage {
   string connection_identifiers = 3;
   string data = 4;
   Env env = 5;
+  map<string,string> cstate = 6;
 }
 
 message CommandResponse {
@@ -45,12 +47,14 @@ message CommandResponse {
   repeated string streams = 4;
   repeated string transmissions = 5;
   string error_msg = 6;
+  map<string,string> cstate = 7;
 }
 
 message DisconnectRequest {
   string identifiers = 1;
   repeated string subscriptions = 2;
   Env env = 5;
+  map<string,string> cstate = 6;
 }
 
 message DisconnectResponse {

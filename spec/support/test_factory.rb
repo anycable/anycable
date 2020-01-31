@@ -9,7 +9,16 @@ module AnyCable
         @socket = socket
         @identifiers = identifiers ? JSON.parse(identifiers) : {}
         @request = Rack::Request.new(socket.env)
+
+        if socket.session
+          @request.session.merge!(JSON.parse(socket.session))
+        end
+
         @subscriptions = subscriptions
+      end
+
+      def finalize!
+        socket.session = request.session.to_json unless request.session&.empty?
       end
 
       def handle_open
@@ -42,19 +51,22 @@ module AnyCable
 
       def handle_channel_command(identifier, command, data)
         channel = channel_for(identifier)
-        case command
-        when "subscribe"
-          channel.handle_subscribe
-          !channel.subscription_rejected?
-        when "unsubscribe"
-          channel.handle_unsubscribe
-          true
-        when "message"
-          channel.handle_action(data)
-          true
-        else
-          raise "Unknown command"
-        end
+        res =
+          case command
+          when "subscribe"
+            channel.handle_subscribe
+            !channel.subscription_rejected?
+          when "unsubscribe"
+            channel.handle_unsubscribe
+            true
+          when "message"
+            channel.handle_action(data)
+            true
+          else
+            raise "Unknown command"
+          end
+        finalize!
+        res
       end
 
       def transmit(data)
