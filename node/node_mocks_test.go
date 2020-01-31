@@ -75,12 +75,12 @@ func (c *MockController) Shutdown() error {
 // Authenticate emulates authentication process:
 // - if path is equal to "failure" then authentication failed
 // - otherwise returns value of headers['id'] as identifier
-func (c *MockController) Authenticate(sid string, env *common.SessionEnv) (string, []string, error) {
+func (c *MockController) Authenticate(sid string, env *common.SessionEnv) (*common.ConnectResult, error) {
 	if env.URL == "/failure" {
-		return "", []string{"unauthorized"}, errors.New("Auth Failed")
+		return &common.ConnectResult{Transmissions: []string{"unauthorized"}}, errors.New("Auth Failed")
 	}
 
-	return (*env.Headers)["id"], []string{"welcome"}, nil
+	return &common.ConnectResult{Identifier: (*env.Headers)["id"], Transmissions: []string{"welcome"}}, nil
 }
 
 // Subscribe emulates subscription process:

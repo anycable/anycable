@@ -34,7 +34,7 @@ const (
 // Controller is an interface describing business-logic handler (e.g. RPC)
 type Controller interface {
 	Shutdown() error
-	Authenticate(sid string, env *common.SessionEnv) (string, []string, error)
+	Authenticate(sid string, env *common.SessionEnv) (*common.ConnectResult, error)
 	Subscribe(sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error)
 	Unsubscribe(sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error)
 	Perform(sid string, env *common.SessionEnv, id string, channel string, data string) (*common.CommandResult, error)
@@ -165,18 +165,18 @@ func (n *Node) Shutdown() {
 // Authenticate calls controller to perform authentication.
 // If authentication is successful, session is registered with a hub.
 func (n *Node) Authenticate(s *Session) error {
-	id, transmissions, err := n.controller.Authenticate(s.UID, s.env)
-
-	transmit(s, transmissions)
+	result, err := n.controller.Authenticate(s.UID, s.env)
 
 	if err == nil {
-		s.Identifiers = id
+		s.Identifiers = result.Identifier
 		s.connected = true
 
 		n.hub.register <- s
 	} else {
 		n.Metrics.Counter(metricsFailedAuths).Inc()
 	}
+
+	n.handleCallReply(s, result.ToCallResult())
 
 	return err
 }
@@ -316,6 +316,10 @@ func (n *Node) handleCommandReply(s *Session, msg *common.Message, reply *common
 		}
 	}
 
+	n.handleCallReply(s, reply.ToCallResult())
+}
+
+func (n *Node) handleCallReply(s *Session, reply *common.CallResult) {
 	if reply.Broadcasts != nil {
 		for _, broadcast := range reply.Broadcasts {
 			n.Broadcast(broadcast)

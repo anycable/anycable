@@ -154,7 +154,8 @@ func (b *Benchmark) startWorker() {
 	}
 
 	// perform authenticate to warmup "session"
-	ids, _, err := b.rpc.Authenticate(uuid, env)
+	res, err := b.rpc.Authenticate(uuid, env)
+	ids := res.Identifier
 
 	if err != nil {
 		log.Errorf("Failed to authenticate: %v", err)
@@ -173,7 +174,7 @@ func (b *Benchmark) startWorker() {
 		if b.perform {
 			_, err = b.rpc.Perform(uuid, env, ids, b.channel, b.action)
 		} else {
-			_, _, err = b.rpc.Authenticate(uuid, env)
+			_, err = b.rpc.Authenticate(uuid, env)
 		}
 
 		if err != nil {
