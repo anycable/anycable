@@ -73,7 +73,7 @@ func NewSession(node *Node, ws *websocket.Conn, url string, headers map[string]s
 	session := &Session{
 		node:          node,
 		ws:            ws,
-		env:           &common.SessionEnv{URL: url, Headers: &headers},
+		env:           common.NewSessionEnv(url, &headers),
 		subscriptions: make(map[string]bool),
 		send:          make(chan []byte, 256),
 		closed:        false,

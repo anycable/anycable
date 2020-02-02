@@ -35,6 +35,7 @@ type Controller struct {
 	config  *Config
 	sem     chan (struct{})
 	conn    *grpc.ClientConn
+	client  pb.RPCClient
 	metrics *metrics.Metrics
 	log     *log.Entry
 }
@@ -65,16 +66,14 @@ func (c *Controller) Start() error {
 		grpc.WithBalancerName("round_robin"),
 	)
 
-	c.sem = make(chan struct{}, capacity)
-	for i := 0; i < capacity; i++ {
-		c.sem <- struct{}{}
-	}
+	c.initSemaphore(capacity)
 
 	if err == nil {
 		c.log.Infof("RPC controller initialized: %s (concurrency: %d)", host, capacity)
 	}
 
 	c.conn = conn
+	c.client = pb.NewRPCClient(conn)
 	return err
 }
 
@@ -112,10 +111,8 @@ func (c *Controller) Authenticate(sid string, env *common.SessionEnv) (*common.C
 	<-c.sem
 	defer func() { c.sem <- struct{}{} }()
 
-	client := pb.NewRPCClient(c.conn)
-
 	op := func() (interface{}, error) {
-		return client.Connect(newContext(sid), &pb.ConnectionRequest{
+		return c.client.Connect(newContext(sid), &pb.ConnectionRequest{
 			Path:    env.URL,
 			Headers: *env.Headers,
 			Env:     buildEnv(env),
@@ -136,11 +133,18 @@ func (c *Controller) Authenticate(sid string, env *common.SessionEnv) (*common.C
 
 		c.log.Debugf("Authenticate response: %v", r)
 
-		if r.Status.String() == "SUCCESS" {
-			return &common.ConnectResult{Identifier: r.Identifiers, Transmissions: r.Transmissions}, nil
+		reply := common.ConnectResult{Transmissions: r.Transmissions}
+
+		if r.Env != nil {
+			reply.CState = r.Env.Cstate
 		}
 
-		return &common.ConnectResult{Transmissions: r.Transmissions}, fmt.Errorf("Application error: %s", r.ErrorMsg)
+		if r.Status.String() == "SUCCESS" {
+			reply.Identifier = r.Identifiers
+			return &reply, nil
+		}
+
+		return &reply, fmt.Errorf("Application error: %s", r.ErrorMsg)
 	}
 
 	c.metrics.Counter(metricsRPCFailures).Inc()
@@ -153,10 +157,8 @@ func (c *Controller) Subscribe(sid string, env *common.SessionEnv, id string, ch
 	<-c.sem
 	defer func() { c.sem <- struct{}{} }()
 
-	client := pb.NewRPCClient(c.conn)
-
 	op := func() (interface{}, error) {
-		return client.Command(newContext(sid), &pb.CommandMessage{
+		return c.client.Command(newContext(sid), &pb.CommandMessage{
 			Command:               "subscribe",
 			Env:                   buildEnv(env),
 			Identifier:            channel,
@@ -174,10 +176,8 @@ func (c *Controller) Unsubscribe(sid string, env *common.SessionEnv, id string, 
 	<-c.sem
 	defer func() { c.sem <- struct{}{} }()
 
-	client := pb.NewRPCClient(c.conn)
-
 	op := func() (interface{}, error) {
-		return client.Command(newContext(sid), &pb.CommandMessage{
+		return c.client.Command(newContext(sid), &pb.CommandMessage{
 			Command:               "unsubscribe",
 			Env:                   buildEnv(env),
 			Identifier:            channel,
@@ -195,10 +195,8 @@ func (c *Controller) Perform(sid string, env *common.SessionEnv, id string, chan
 	<-c.sem
 	defer func() { c.sem <- struct{}{} }()
 
-	client := pb.NewRPCClient(c.conn)
-
 	op := func() (interface{}, error) {
-		return client.Command(newContext(sid), &pb.CommandMessage{
+		return c.client.Command(newContext(sid), &pb.CommandMessage{
 			Command:               "message",
 			Env:                   buildEnv(env),
 			Identifier:            channel,
@@ -217,10 +215,8 @@ func (c *Controller) Disconnect(sid string, env *common.SessionEnv, id string, s
 	<-c.sem
 	defer func() { c.sem <- struct{}{} }()
 
-	client := pb.NewRPCClient(c.conn)
-
 	op := func() (interface{}, error) {
-		return client.Disconnect(newContext(sid), &pb.DisconnectRequest{
+		return c.client.Disconnect(newContext(sid), &pb.DisconnectRequest{
 			Identifiers:   id,
 			Subscriptions: subscriptions,
 			Path:          env.URL,
@@ -270,6 +266,10 @@ func (c *Controller) parseCommandResponse(response interface{}, err error) (*com
 			StopAllStreams: r.StopStreams,
 			Streams:        r.Streams,
 			Transmissions:  r.Transmissions,
+		}
+
+		if r.Env != nil {
+			res.CState = r.Env.Cstate
 		}
 
 		if r.Status.String() == "SUCCESS" {
@@ -340,11 +340,22 @@ func (c *Controller) retry(callback func() (interface{}, error)) (res interface{
 	}
 }
 
+func (c *Controller) initSemaphore(capacity int) {
+	c.sem = make(chan struct{}, capacity)
+	for i := 0; i < capacity; i++ {
+		c.sem <- struct{}{}
+	}
+}
+
 func newContext(sessionID string) context.Context {
 	md := metadata.Pairs("sid", sessionID)
 	return metadata.NewOutgoingContext(context.Background(), md)
 }
 
 func buildEnv(env *common.SessionEnv) *pb.Env {
-	return &pb.Env{Url: env.URL, Headers: *env.Headers}
+	protoEnv := pb.Env{Url: env.URL, Headers: *env.Headers}
+	if env.ConnectionState != nil {
+		protoEnv.Cstate = *env.ConnectionState
+	}
+	return &protoEnv
 }

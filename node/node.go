@@ -320,6 +320,10 @@ func (n *Node) handleCommandReply(s *Session, msg *common.Message, reply *common
 }
 
 func (n *Node) handleCallReply(s *Session, reply *common.CallResult) {
+	if reply.CState != nil {
+		s.env.MergeConnectionState(&reply.CState)
+	}
+
 	if reply.Broadcasts != nil {
 		for _, broadcast := range reply.Broadcasts {
 			n.Broadcast(broadcast)

@@ -44,21 +44,15 @@ func NewMockSession(uid string) *Session {
 		Identifiers:   uid,
 		Log:           log.WithField("sid", uid),
 		subscriptions: make(map[string]bool),
-		env:           &common.SessionEnv{URL: "/cable-test", Headers: &map[string]string{}},
+		env:           common.NewSessionEnv("/cable-test", &map[string]string{}),
 	}
 }
 
 // NewMockSession returns a new session with a specified uid, path and headers, and identifiers equal to uid
 func NewMockSessionWithEnv(uid string, url string, headers *map[string]string) *Session {
-	return &Session{
-		send:          make(chan []byte, 256),
-		closed:        true,
-		UID:           uid,
-		Identifiers:   uid,
-		Log:           log.WithField("sid", uid),
-		subscriptions: make(map[string]bool),
-		env:           &common.SessionEnv{URL: url, Headers: headers},
-	}
+	session := NewMockSession(uid)
+	session.env = common.NewSessionEnv(url, headers)
+	return session
 }
 
 // NewMockResult builds a new result with sid as transmission
@@ -80,7 +74,13 @@ func (c *MockController) Authenticate(sid string, env *common.SessionEnv) (*comm
 		return &common.ConnectResult{Transmissions: []string{"unauthorized"}}, errors.New("Auth Failed")
 	}
 
-	return &common.ConnectResult{Identifier: (*env.Headers)["id"], Transmissions: []string{"welcome"}}, nil
+	res := common.ConnectResult{Identifier: (*env.Headers)["id"], Transmissions: []string{"welcome"}}
+
+	if (*env.Headers)["x-session-test"] != "" {
+		res.CState = map[string]string{"_s_": (*env.Headers)["x-session-test"]}
+	}
+
+	return &res, nil
 }
 
 // Subscribe emulates subscription process:
@@ -125,6 +125,11 @@ func (c *MockController) Perform(sid string, env *common.SessionEnv, id string, 
 
 	res := NewMockResult(sid)
 	res.Transmissions = []string{data}
+
+	if data == "session" {
+		res.CState = map[string]string{"_s_": "performed"}
+	}
+
 	return res, nil
 }
 

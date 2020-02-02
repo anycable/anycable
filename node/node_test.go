@@ -7,109 +7,120 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestAuthenticateSuccess(t *testing.T) {
+func TestAuthenticate(t *testing.T) {
 	node := NewMockNode()
-	session := NewMockSessionWithEnv("1", "/cable", &map[string]string{"id": "test_id"})
 
-	err := node.Authenticate(session)
+	t.Run("Successful authentication", func(t *testing.T) {
+		session := NewMockSessionWithEnv("1", "/cable", &map[string]string{"id": "test_id"})
+		err := node.Authenticate(session)
 
-	assert.Nil(t, err, "Error must be nil")
-	assert.Equal(t, true, session.connected, "Session must be marked as connected")
-	assert.Equalf(t, "test_id", session.Identifiers, "Identifiers must be equal to %s", "test_id")
+		assert.Nil(t, err, "Error must be nil")
+		assert.Equal(t, true, session.connected, "Session must be marked as connected")
+		assert.Equalf(t, "test_id", session.Identifiers, "Identifiers must be equal to %s", "test_id")
 
-	// Expected to send message to session
-	var msg []byte
+		// Expected to send message to session
+		var msg []byte
 
-	select {
-	case m := <-session.send:
-		msg = m
-	default:
-		assert.Fail(t, "Expected session to receive message but none was sent")
-	}
+		select {
+		case m := <-session.send:
+			msg = m
+		default:
+			assert.Fail(t, "Expected session to receive message but none was sent")
+		}
 
-	assert.Equalf(t, []byte("welcome"), msg, "Sent message is invalid: %s", msg)
+		assert.Equalf(t, []byte("welcome"), msg, "Sent message is invalid: %s", msg)
+	})
+
+	t.Run("Failed authentication", func(t *testing.T) {
+		session := NewMockSessionWithEnv("1", "/failure", &map[string]string{"id": "test_id"})
+
+		err := node.Authenticate(session)
+
+		assert.NotNil(t, err, "Error must not be nil")
+
+		// Expected to send message to session
+		var msg []byte
+
+		select {
+		case m := <-session.send:
+			msg = m
+		default:
+			assert.Fail(t, "Expected session to receive message but none was sent")
+		}
+
+		assert.Equalf(t, []byte("unauthorized"), msg, "Sent message is invalid: %s", msg)
+	})
+
+	t.Run("With connection state", func(t *testing.T) {
+		session := NewMockSessionWithEnv("1", "/cable", &map[string]string{"x-session-test": "my_session", "id": "session_id"})
+
+		err := node.Authenticate(session)
+
+		assert.Nil(t, err, "Error must be nil")
+		assert.Equal(t, true, session.connected, "Session must be marked as connected")
+
+		assert.Len(t, *session.env.ConnectionState, 1)
+		assert.Equal(t, "my_session", (*session.env.ConnectionState)["_s_"])
+	})
 }
 
-func TestAuthenticateFailure(t *testing.T) {
-	node := NewMockNode()
-	session := NewMockSessionWithEnv("1", "/failure", &map[string]string{"id": "test_id"})
-
-	err := node.Authenticate(session)
-
-	assert.NotNil(t, err, "Error must not be nil")
-
-	// Expected to send message to session
-	var msg []byte
-
-	select {
-	case m := <-session.send:
-		msg = m
-	default:
-		assert.Fail(t, "Expected session to receive message but none was sent")
-	}
-
-	assert.Equalf(t, []byte("unauthorized"), msg, "Sent message is invalid: %s", msg)
-}
-
-func TestSubscribeSuccess(t *testing.T) {
-	node := NewMockNode()
-	session := NewMockSession("14")
-
-	node.Subscribe(session, &common.Message{Identifier: "test_channel"})
-
-	// Adds subscription to session
-	assert.Contains(t, session.subscriptions, "test_channel", "Session subscription must be set")
-
-	// Expected to send message to session
-	var msg []byte
-
-	select {
-	case m := <-session.send:
-		msg = m
-	default:
-		assert.Fail(t, "Expected session to receive message but none was sent")
-	}
-
-	assert.Equalf(t, []byte("14"), msg, "Sent message is invalid: %s", msg)
-}
-
-func TestSubscribeWithStreamSuccess(t *testing.T) {
+func TestSubscribe(t *testing.T) {
 	node := NewMockNode()
 	session := NewMockSession("14")
 
-	node.Subscribe(session, &common.Message{Identifier: "stream"})
+	t.Run("Successful subscription", func(t *testing.T) {
+		node.Subscribe(session, &common.Message{Identifier: "test_channel"})
 
-	// Adds subscription to session
-	assert.Contains(t, session.subscriptions, "stream", "Session subsription must be set")
+		// Adds subscription to session
+		assert.Contains(t, session.subscriptions, "test_channel", "Session subscription must be set")
 
-	var subscription SubscriptionInfo
+		// Expected to send message to session
+		var msg []byte
 
-	// Expected to subscribe session to hub
-	select {
-	case sub := <-node.hub.subscribe:
-		subscription = *sub
-	default:
-		assert.Fail(t, "Expected hub to receive subscribe message but none was sent")
-	}
+		select {
+		case m := <-session.send:
+			msg = m
+		default:
+			assert.Fail(t, "Expected session to receive message but none was sent")
+		}
 
-	assert.Equalf(t, "14", subscription.session, "Session is invalid: %s", subscription.session)
-	assert.Equalf(t, "stream", subscription.identifier, "Channel is invalid: %s", subscription.identifier)
-	assert.Equalf(t, "stream", subscription.stream, "Stream is invalid: %s", subscription.stream)
+		assert.Equalf(t, []byte("14"), msg, "Sent message is invalid: %s", msg)
+	})
 
-	// Expected to send message to session
-	var msg []byte
+	t.Run("Subscription with a stream", func(t *testing.T) {
+		node.Subscribe(session, &common.Message{Identifier: "stream"})
+		// Adds subscription to session
+		assert.Contains(t, session.subscriptions, "stream", "Session subsription must be set")
 
-	select {
-	case m := <-session.send:
-		msg = m
-	default:
-		assert.Fail(t, "Expected session to receive message but none was sent")
-	}
+		var subscription SubscriptionInfo
 
-	assert.Equalf(t, []byte("14"), msg, "Sent message is invalid: %s", msg)
+		// Expected to subscribe session to hub
+		select {
+		case sub := <-node.hub.subscribe:
+			subscription = *sub
+		default:
+			assert.Fail(t, "Expected hub to receive subscribe message but none was sent")
+		}
+
+		assert.Equalf(t, "14", subscription.session, "Session is invalid: %s", subscription.session)
+		assert.Equalf(t, "stream", subscription.identifier, "Channel is invalid: %s", subscription.identifier)
+		assert.Equalf(t, "stream", subscription.stream, "Stream is invalid: %s", subscription.stream)
+
+		// Expected to send message to session
+		var msg []byte
+
+		select {
+		case m := <-session.send:
+			msg = m
+		default:
+			assert.Fail(t, "Expected session to receive message but none was sent")
+		}
+
+		assert.Equalf(t, []byte("14"), msg, "Sent message is invalid: %s", msg)
+	})
 }
 
-func TestUnsubscribeSuccess(t *testing.T) {
+func TestUnsubscribe(t *testing.T) {
 	node := NewMockNode()
 	session := NewMockSession("14")
 
@@ -146,24 +157,34 @@ func TestUnsubscribeSuccess(t *testing.T) {
 	assert.Equalf(t, []byte("14"), msg, "Sent message is invalid: %s", msg)
 }
 
-func TestPerformSuccess(t *testing.T) {
+func TestPerform(t *testing.T) {
 	node := NewMockNode()
 	session := NewMockSession("14")
 
 	session.subscriptions["test_channel"] = true
-	node.Perform(session, &common.Message{Identifier: "test_channel", Data: "action"})
 
-	// Expected to send message to session
-	var msg []byte
+	t.Run("Successful perform", func(t *testing.T) {
+		node.Perform(session, &common.Message{Identifier: "test_channel", Data: "action"})
 
-	select {
-	case m := <-session.send:
-		msg = m
-	default:
-		assert.Fail(t, "Expected session to receive message but none was sent")
-	}
+		// Expected to send message to session
+		var msg []byte
 
-	assert.Equalf(t, []byte("action"), msg, "Sent message is invalid: %s", msg)
+		select {
+		case m := <-session.send:
+			msg = m
+		default:
+			assert.Fail(t, "Expected session to receive message but none was sent")
+		}
+
+		assert.Equalf(t, []byte("action"), msg, "Sent message is invalid: %s", msg)
+	})
+
+	t.Run("With connection state", func(t *testing.T) {
+		node.Perform(session, &common.Message{Identifier: "test_channel", Data: "session"})
+
+		assert.Len(t, *session.env.ConnectionState, 1)
+		assert.Equal(t, "performed", (*session.env.ConnectionState)["_s_"])
+	})
 }
 
 func TestDisconnect(t *testing.T) {
@@ -213,47 +234,49 @@ func TestHandlePubsubCommand(t *testing.T) {
 }
 
 func TestSubscriptionsList(t *testing.T) {
-	subscriptions := map[string]bool{
-		"{\"channel\":\"SystemNotificationChannel\"}":              true,
-		"{\"channel\":\"ClassSectionTableChannel\",\"id\":288528}": true,
-		"{\"channel\":\"ScheduleChannel\",\"id\":23376}":           true,
-		"{\"channel\":\"DressageChannel\",\"id\":23376}":           true,
-		"{\"channel\":\"TimekeepingChannel\",\"id\":23376}":        true,
-		"{\"channel\":\"ClassSectionChannel\",\"id\":288528}":      true,
-	}
+	t.Run("with different channels", func(t *testing.T) {
+		subscriptions := map[string]bool{
+			"{\"channel\":\"SystemNotificationChannel\"}":              true,
+			"{\"channel\":\"ClassSectionTableChannel\",\"id\":288528}": true,
+			"{\"channel\":\"ScheduleChannel\",\"id\":23376}":           true,
+			"{\"channel\":\"DressageChannel\",\"id\":23376}":           true,
+			"{\"channel\":\"TimekeepingChannel\",\"id\":23376}":        true,
+			"{\"channel\":\"ClassSectionChannel\",\"id\":288528}":      true,
+		}
 
-	expected := []string{
-		"{\"channel\":\"SystemNotificationChannel\"}",
-		"{\"channel\":\"ClassSectionTableChannel\",\"id\":288528}",
-		"{\"channel\":\"ScheduleChannel\",\"id\":23376}",
-		"{\"channel\":\"DressageChannel\",\"id\":23376}",
-		"{\"channel\":\"TimekeepingChannel\",\"id\":23376}",
-		"{\"channel\":\"ClassSectionChannel\",\"id\":288528}",
-	}
+		expected := []string{
+			"{\"channel\":\"SystemNotificationChannel\"}",
+			"{\"channel\":\"ClassSectionTableChannel\",\"id\":288528}",
+			"{\"channel\":\"ScheduleChannel\",\"id\":23376}",
+			"{\"channel\":\"DressageChannel\",\"id\":23376}",
+			"{\"channel\":\"TimekeepingChannel\",\"id\":23376}",
+			"{\"channel\":\"ClassSectionChannel\",\"id\":288528}",
+		}
 
-	actual := subscriptionsList(subscriptions)
+		actual := subscriptionsList(subscriptions)
 
-	for _, key := range expected {
-		assert.Contains(t, actual, key)
-	}
-}
+		for _, key := range expected {
+			assert.Contains(t, actual, key)
+		}
+	})
 
-func TestSubscriptionsListWithSameChannel(t *testing.T) {
-	subscriptions := map[string]bool{
-		"{\"channel\":\"GraphqlChannel\",\"channelId\":\"165d8949069\"}": true,
-		"{\"channel\":\"GraphqlChannel\",\"channelId\":\"165d8941e62\"}": true,
-		"{\"channel\":\"GraphqlChannel\",\"channelId\":\"165d8942db1\"}": true,
-	}
+	t.Run("with the same channel", func(t *testing.T) {
+		subscriptions := map[string]bool{
+			"{\"channel\":\"GraphqlChannel\",\"channelId\":\"165d8949069\"}": true,
+			"{\"channel\":\"GraphqlChannel\",\"channelId\":\"165d8941e62\"}": true,
+			"{\"channel\":\"GraphqlChannel\",\"channelId\":\"165d8942db1\"}": true,
+		}
 
-	expected := []string{
-		"{\"channel\":\"GraphqlChannel\",\"channelId\":\"165d8949069\"}",
-		"{\"channel\":\"GraphqlChannel\",\"channelId\":\"165d8941e62\"}",
-		"{\"channel\":\"GraphqlChannel\",\"channelId\":\"165d8942db1\"}",
-	}
+		expected := []string{
+			"{\"channel\":\"GraphqlChannel\",\"channelId\":\"165d8949069\"}",
+			"{\"channel\":\"GraphqlChannel\",\"channelId\":\"165d8941e62\"}",
+			"{\"channel\":\"GraphqlChannel\",\"channelId\":\"165d8942db1\"}",
+		}
 
-	actual := subscriptionsList(subscriptions)
+		actual := subscriptionsList(subscriptions)
 
-	for _, key := range expected {
-		assert.Contains(t, actual, key)
-	}
+		for _, key := range expected {
+			assert.Contains(t, actual, key)
+		}
+	})
 }
