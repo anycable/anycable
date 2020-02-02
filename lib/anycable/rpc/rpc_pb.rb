@@ -10,6 +10,10 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
     add_message "anycable.Env" do
       optional :url, :string, 1
       map :headers, :string, :string, 2
+      map :cstate, :string, :string, 3
+    end
+    add_message "anycable.EnvResponse" do
+      map :cstate, :string, :string, 1
     end
     add_message "anycable.ConnectionRequest" do
       optional :env, :message, 3, "anycable.Env"
@@ -19,7 +23,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
       optional :identifiers, :string, 2
       repeated :transmissions, :string, 3
       optional :error_msg, :string, 4
-      map :cstate, :string, :string, 5
+      optional :env, :message, 5, "anycable.EnvResponse"
     end
     add_message "anycable.CommandMessage" do
       optional :command, :string, 1
@@ -27,7 +31,6 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
       optional :connection_identifiers, :string, 3
       optional :data, :string, 4
       optional :env, :message, 5, "anycable.Env"
-      map :cstate, :string, :string, 6
     end
     add_message "anycable.CommandResponse" do
       optional :status, :enum, 1, "anycable.Status"
@@ -36,13 +39,12 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
       repeated :streams, :string, 4
       repeated :transmissions, :string, 5
       optional :error_msg, :string, 6
-      map :cstate, :string, :string, 7
+      optional :env, :message, 7, "anycable.EnvResponse"
     end
     add_message "anycable.DisconnectRequest" do
       optional :identifiers, :string, 1
       repeated :subscriptions, :string, 2
       optional :env, :message, 5, "anycable.Env"
-      map :cstate, :string, :string, 6
     end
     add_message "anycable.DisconnectResponse" do
       optional :status, :enum, 1, "anycable.Status"
@@ -58,6 +60,7 @@ end
 
 module AnyCable
   Env = Google::Protobuf::DescriptorPool.generated_pool.lookup("anycable.Env").msgclass
+  EnvResponse = Google::Protobuf::DescriptorPool.generated_pool.lookup("anycable.EnvResponse").msgclass
   ConnectionRequest = Google::Protobuf::DescriptorPool.generated_pool.lookup("anycable.ConnectionRequest").msgclass
   ConnectionResponse = Google::Protobuf::DescriptorPool.generated_pool.lookup("anycable.ConnectionResponse").msgclass
   CommandMessage = Google::Protobuf::DescriptorPool.generated_pool.lookup("anycable.CommandMessage").msgclass
