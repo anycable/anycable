@@ -17,6 +17,11 @@ enum Status {
 message Env {
   string url = 1;
   map<string,string> headers = 2;
+  map<string,string> cstate = 3;
+}
+
+message EnvResponse {
+  map<string,string> cstate = 1;
 }
 
 message ConnectionRequest {
@@ -28,7 +33,7 @@ message ConnectionResponse {
   string identifiers = 2;
   repeated string transmissions = 3;
   string error_msg = 4;
-  map<string,string> cstate = 5;
+  EnvResponse env = 5;
 }
 
 message CommandMessage {
@@ -37,7 +42,6 @@ message CommandMessage {
   string connection_identifiers = 3;
   string data = 4;
   Env env = 5;
-  map<string,string> cstate = 6;
 }
 
 message CommandResponse {
@@ -47,14 +51,13 @@ message CommandResponse {
   repeated string streams = 4;
   repeated string transmissions = 5;
   string error_msg = 6;
-  map<string,string> cstate = 7;
+  EnvResponse env = 7;
 }
 
 message DisconnectRequest {
   string identifiers = 1;
   repeated string subscriptions = 2;
   Env env = 5;
-  map<string,string> cstate = 6;
 }
 
 message DisconnectResponse {
