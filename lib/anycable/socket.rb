@@ -34,10 +34,10 @@ module AnyCable
 
     attr_reader :transmissions, :env, :cstate
 
-    def initialize(env: nil, cstate: nil)
+    def initialize(env: nil)
       @transmissions = []
       @env = env
-      @cstate = env["anycable.cstate"] = State.new(cstate)
+      @cstate = env["anycable.cstate"] = State.new(env["anycable.raw_cstate"])
     end
 
     def transmit(websocket_message)

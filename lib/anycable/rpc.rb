@@ -25,6 +25,14 @@ module AnyCable
     def session
       cstate[SESSION_KEY]
     end
+
+    def cstate
+      env.cstate
+    end
+
+    def cstate=(val)
+      env.cstate = val
+    end
   end
 
   class ConnectionResponse

@@ -26,7 +26,7 @@ module AnyCable
           status: AnyCable::Status::SUCCESS,
           identifiers: connection.identifiers_json,
           transmissions: socket.transmissions,
-          cstate: socket.cstate.changed_fields
+          env: build_env_response(socket)
         )
       end
     rescue => exp
@@ -41,7 +41,7 @@ module AnyCable
     def disconnect(request, _unused_call)
       logger.debug("RPC Disconnect: #{request.inspect}")
 
-      socket = build_socket(env: rack_env(request.env), cstate: request.cstate&.to_h)
+      socket = build_socket(env: rack_env(request.env))
 
       connection = factory.call(
         socket,
@@ -66,7 +66,7 @@ module AnyCable
     def command(message, _unused_call)
       logger.debug("RPC Command: #{message.inspect}")
 
-      socket = build_socket(env: rack_env(message.env), cstate: message.cstate&.to_h)
+      socket = build_socket(env: rack_env(message.env))
 
       connection = factory.call(
         socket,
@@ -85,7 +85,7 @@ module AnyCable
         stop_streams: socket.stop_streams?,
         streams: socket.streams,
         transmissions: socket.transmissions,
-        cstate: socket.cstate.changed_fields
+        env: build_env_response(socket)
       )
     rescue => exp
       notify_exception(exp, :command, message)
@@ -110,7 +110,9 @@ module AnyCable
         "SERVER_PORT" => uri.port.to_s,
         "HTTP_HOST" => uri.host,
         "REMOTE_ADDR" => request_env.headers.delete("REMOTE_ADDR"),
-        "rack.url_scheme" => uri.scheme
+        "rack.url_scheme" => uri.scheme,
+        # AnyCable specific fields
+        "anycable.raw_cstate" => request_env.cstate&.to_h
       )
 
       env.merge!(build_headers(request_env.headers))
@@ -142,6 +144,12 @@ module AnyCable
         k.tr!("-", "_")
         obj["HTTP_#{k}"] = v
       end
+    end
+
+    def build_env_response(socket)
+      AnyCable::EnvResponse.new(
+        cstate: socket.cstate.changed_fields
+      )
     end
 
     def logger
