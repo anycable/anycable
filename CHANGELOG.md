@@ -22,6 +22,8 @@ Now you can access `request` object in channels, too (e.g., to read headers/cook
 
 See [#71](https://github.com/anycable/anycable/pull/71).
 
+- Relax `anyway_config` dependency to have an ability to use its next major version. ([@bibendi])
+
 ## 0.6.4 (2020-01-24)
 
 - Fix Ruby 2.7 warnings. ([@palkan])
@@ -281,3 +283,4 @@ Implement `Disconnect` handler, which invokes `Connection#disconnect` (along wit
 [@accessd]: https://github.com/accessd
 [@DarthSim]: https://github.com/DarthSim
 [@sponomarev]: https://github.com/sponomarev
+[@bibendi]: https://github.com/bibendi
