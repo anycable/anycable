@@ -287,3 +287,4 @@ Implement `Disconnect` handler, which invokes `Connection#disconnect` (along wit
 [@accessd]: https://github.com/accessd
 [@DarthSim]: https://github.com/DarthSim
 [@sponomarev]: https://github.com/sponomarev
+[@bibendi]: https://github.com/bibendi
