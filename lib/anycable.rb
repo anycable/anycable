@@ -97,6 +97,3 @@ module AnyCable
 
   self.middleware = MiddlewareChain.new
 end
-
-# Backward compatibility
-Anycable = AnyCable
