@@ -22,7 +22,7 @@ require "rack"
 
 require "anycable/rspec"
 
-Dir["#{File.dirname(__FILE__)}/support/**/*.rb"].each { |f| require f }
+Dir["#{File.dirname(__FILE__)}/support/**/*.rb"].sort.each { |f| require f }
 
 AnyCable.connection_factory = AnyCable::TestFactory
 AnyCable.logger = TestLogger.new
