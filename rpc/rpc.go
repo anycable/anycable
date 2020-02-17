@@ -20,6 +20,9 @@ import (
 )
 
 const (
+	// ProtoVersions contains a comma-seprated list of compatible RPC protos versions
+	// (we pass it as request meta to notify clients)
+	ProtoVersions = "v0,v1"
 	invokeTimeout = 3000
 
 	retryExhaustedInterval   = 10
@@ -69,7 +72,7 @@ func (c *Controller) Start() error {
 	c.initSemaphore(capacity)
 
 	if err == nil {
-		c.log.Infof("RPC controller initialized: %s (concurrency: %d)", host, capacity)
+		c.log.Infof("RPC controller initialized: %s (concurrency: %d, proto_versions: %s)", host, capacity, ProtoVersions)
 	}
 
 	c.conn = conn
@@ -312,6 +315,12 @@ func (c *Controller) retry(callback func() (interface{}, error)) (res interface{
 			return nil, err
 		}
 
+		code := st.Code()
+
+		if !(code == codes.ResourceExhausted || code == codes.Unavailable) {
+			return nil, err
+		}
+
 		c.log.WithField("code", st.Code()).Debugf("RPC failure: %v", st.Message())
 
 		interval := retryUnavailableInterval
@@ -348,7 +357,7 @@ func (c *Controller) initSemaphore(capacity int) {
 }
 
 func newContext(sessionID string) context.Context {
-	md := metadata.Pairs("sid", sessionID)
+	md := metadata.Pairs("sid", sessionID, "protov", ProtoVersions)
 	return metadata.NewOutgoingContext(context.Background(), md)
 }
 
