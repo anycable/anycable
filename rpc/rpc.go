@@ -312,7 +312,7 @@ func (c *Controller) retry(callback func() (interface{}, error)) (res interface{
 			return nil, err
 		}
 
-		log.Debugf("RPC failure %v %v", st.Message(), st.Code())
+		c.log.WithField("code", st.Code()).Debugf("RPC failure: %v", st.Message())
 
 		interval := retryUnavailableInterval
 

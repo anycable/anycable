@@ -61,7 +61,7 @@ func WebsocketHandler(app *node.Node, fetchHeaders []string, config *WSConfig) h
 			session, err := node.NewSession(app, ws, url, headers, uid)
 
 			if err != nil {
-				ctx.Debugf("Websocket session initialization failed: %v", err)
+				ctx.Errorf("Websocket session initialization failed: %v", err)
 				return
 			}
 
