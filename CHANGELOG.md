@@ -8,6 +8,12 @@ Using `anycable-go` v1.x is required.
 
 - **Ruby 2.5+ is required**. ([@palkan][])
 
+- Added RPC proto version check. ([@palkan][])
+
+Server must sent `protov` metadata with the supported versions (comma-separated list). If there is no matching version an exception is raised.
+
+Current RPC proto version is **v1**.
+
 - Added `request` support to channels. ([@palkan][])
 
 Now you can access `request` object in channels, too (e.g., to read headers/cookies/URL/etc).

@@ -5,6 +5,8 @@ require "anycable/rpc/rpc_services_pb"
 
 # Extend some PB auto-generated classes
 module AnyCable
+  # Current RPC proto version (used for compatibility checks)
+  PROTO_VERSION = "v1"
   SESSION_KEY = "_s_"
 
   # Add setters/getter for cstate field
