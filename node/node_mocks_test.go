@@ -74,6 +74,10 @@ func (c *MockController) Authenticate(sid string, env *common.SessionEnv) (*comm
 		return &common.ConnectResult{Transmissions: []string{"unauthorized"}}, errors.New("Auth Failed")
 	}
 
+	if env.URL == "/error" {
+		return nil, errors.New("Unknown")
+	}
+
 	res := common.ConnectResult{Identifier: (*env.Headers)["id"], Transmissions: []string{"welcome"}}
 
 	if (*env.Headers)["x-session-test"] != "" {
@@ -94,6 +98,10 @@ func (c *MockController) Subscribe(sid string, env *common.SessionEnv, id string
 	}
 
 	res := NewMockResult(sid)
+
+	if channel == "failure" {
+		return nil, errors.New("Subscription failed")
+	}
 
 	if channel == "disconnect" {
 		res.Disconnect = true
