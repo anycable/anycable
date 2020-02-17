@@ -95,5 +95,7 @@ module AnyCable
     attr_writer :middleware
   end
 
+  require "anycable/middlewares/check_version"
+
   self.middleware = MiddlewareChain.new
 end

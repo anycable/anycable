@@ -48,6 +48,8 @@ module AnyCable
 
       log_errors!
 
+      use_version_check! if config.version_check_enabled?
+
       @server = AnyCable::Server.new(
         host: config.rpc_host,
         **config.to_grpc_params,
@@ -124,7 +126,7 @@ module AnyCable
     end
 
     def print_versions!
-      logger.info "AnyCable version: #{AnyCable::VERSION}"
+      logger.info "AnyCable version: #{AnyCable::VERSION} (proto_version: #{AnyCable::PROTO_VERSION})"
       logger.info "gRPC version: #{GRPC::VERSION}"
     end
 
@@ -160,6 +162,14 @@ module AnyCable
 
     def configure_server!
       AnyCable.server_callbacks.each(&:call)
+    end
+
+    def use_version_check!
+      require "anycable/middlewares/check_version"
+
+      AnyCable.middleware.use(
+        AnyCable::Middlewares::CheckVersion.new(AnyCable::PROTO_VERSION)
+      )
     end
 
     def start_health_server!
