@@ -294,7 +294,7 @@ jobs:
         key: binary-for-conformance-{{ .Revision }}
     - run:
         name: Install gem anyt (conformance testing tool)
-        command: gem install anyt
+        command: gem install anyt -v '~> 0.8.0'
     - run:
         name: Wait for Redis
         command: dockerize -wait tcp://localhost:6379 -timeout 1m
