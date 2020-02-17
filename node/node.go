@@ -164,11 +164,11 @@ func (n *Node) Shutdown() {
 
 // Authenticate calls controller to perform authentication.
 // If authentication is successful, session is registered with a hub.
-func (n *Node) Authenticate(s *Session) error {
-	result, err := n.controller.Authenticate(s.UID, s.env)
+func (n *Node) Authenticate(s *Session) (err error) {
+	res, err := n.controller.Authenticate(s.UID, s.env)
 
 	if err == nil {
-		s.Identifiers = result.Identifier
+		s.Identifiers = res.Identifier
 		s.connected = true
 
 		n.hub.register <- s
@@ -176,13 +176,15 @@ func (n *Node) Authenticate(s *Session) error {
 		n.Metrics.Counter(metricsFailedAuths).Inc()
 	}
 
-	n.handleCallReply(s, result.ToCallResult())
+	if res != nil {
+		n.handleCallReply(s, res.ToCallResult())
+	}
 
-	return err
+	return
 }
 
 // Subscribe subscribes session to a channel
-func (n *Node) Subscribe(s *Session, msg *common.Message) {
+func (n *Node) Subscribe(s *Session, msg *common.Message) (err error) {
 	s.mu.Lock()
 
 	if _, ok := s.subscriptions[msg.Identifier]; ok {
@@ -205,10 +207,12 @@ func (n *Node) Subscribe(s *Session, msg *common.Message) {
 	if res != nil {
 		n.handleCommandReply(s, msg, res)
 	}
+
+	return
 }
 
 // Unsubscribe unsubscribes session from a channel
-func (n *Node) Unsubscribe(s *Session, msg *common.Message) {
+func (n *Node) Unsubscribe(s *Session, msg *common.Message) (err error) {
 	s.mu.Lock()
 
 	if _, ok := s.subscriptions[msg.Identifier]; !ok {
@@ -235,10 +239,12 @@ func (n *Node) Unsubscribe(s *Session, msg *common.Message) {
 	if res != nil {
 		n.handleCommandReply(s, msg, res)
 	}
+
+	return
 }
 
 // Perform executes client command
-func (n *Node) Perform(s *Session, msg *common.Message) {
+func (n *Node) Perform(s *Session, msg *common.Message) (err error) {
 	s.mu.Lock()
 
 	if _, ok := s.subscriptions[msg.Identifier]; !ok {
@@ -260,6 +266,8 @@ func (n *Node) Perform(s *Session, msg *common.Message) {
 	if res != nil {
 		n.handleCommandReply(s, msg, res)
 	}
+
+	return
 }
 
 // Broadcast message to stream
