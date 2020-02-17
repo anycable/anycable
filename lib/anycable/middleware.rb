@@ -7,6 +7,9 @@ module AnyCable
   # for request/response calls
   class Middleware < GRPC::Interceptor
     def request_response(request: nil, call: nil, method: nil)
+      # Call middlewares only for AnyCable service
+      return yield unless method.receiver.is_a?(AnyCable::RPCHandler)
+
       call(request, call, method) do
         yield
       end

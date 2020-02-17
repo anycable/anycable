@@ -32,8 +32,13 @@ module AnyCable
 
       ### Health check options
       http_health_port: nil,
-      http_health_path: "/health"
+      http_health_path: "/health",
+
+      ### Misc options
+      version_check_enabled: true
     )
+
+    alias version_check_enabled? version_check_enabled
 
     ignore_options :rpc_server_args
     flag_options :log_grpc, :debug
