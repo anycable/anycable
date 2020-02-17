@@ -2,6 +2,8 @@
 
 ## 1.0.0-dev
 
+- Added `protov` RPC metadata. ([@palkan][])
+
 - Added `rpc_retries_total` metrics. ([@palkan][])
 
 This metrics represents the number of times RPC requests were retried.
