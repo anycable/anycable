@@ -33,12 +33,12 @@ describe "version check spec" do
 
   it "passes with a single matching version in meta" do
     meta["protov"] = "test-v1"
-    expect(subject.status).to eq :SUCCESS
+    expect(subject).to be_success
   end
 
   it "passes with multiple versions including matching" do
     meta["protov"] = "test-v0,test-v1"
-    expect(subject.status).to eq :SUCCESS
+    expect(subject).to be_success
   end
 
   it "fails without matching version" do
