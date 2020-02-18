@@ -20,7 +20,10 @@ module AnyCable
       connection.handle_open
 
       if socket.closed?
-        AnyCable::ConnectionResponse.new(status: AnyCable::Status::FAILURE)
+        AnyCable::ConnectionResponse.new(
+          status: AnyCable::Status::FAILURE,
+          transmissions: socket.transmissions
+        )
       else
         AnyCable::ConnectionResponse.new(
           status: AnyCable::Status::SUCCESS,

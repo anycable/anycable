@@ -14,6 +14,13 @@ describe "client connection" do
     it "responds with exception if no cookies" do
       expect(subject).to be_failure
     end
+
+    it "returns disconnect message" do
+      expect(subject).to be_failure
+      expect(subject.transmissions).to eq(
+        [JSON.dump("type" => "disconnect", "reason" => "unauthorized")]
+      )
+    end
   end
 
   context "when exception" do
