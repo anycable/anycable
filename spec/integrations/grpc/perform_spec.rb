@@ -44,7 +44,7 @@ describe "client messages" do
     subject { service.command(request) }
 
     it "responds with result" do
-      expect(subject.status).to eq :SUCCESS
+      expect(subject).to be_success
       expect(subject.transmissions.size).to eq 1
       expect(subject.transmissions.first).to include({"result" => 3}.to_json)
     end
@@ -53,7 +53,7 @@ describe "client messages" do
       let(:data) { {action: "follow"} }
 
       it "responds with streams", :aggregate_failures do
-        expect(subject.status).to eq :SUCCESS
+        expect(subject).to be_success
         expect(subject.streams).to contain_exactly("user_john", "all")
         expect(subject.stop_streams).to eq false
       end
@@ -63,7 +63,7 @@ describe "client messages" do
       let(:data) { {action: "add", a: 1, b: "smth"} }
 
       it "responds with ERROR", :aggregate_failures do
-        expect(subject.status).to eq :ERROR
+        expect(subject).to be_error
         expect(subject.error_msg).to match(/can't be coerced/)
       end
 
@@ -83,7 +83,7 @@ describe "client messages" do
       let(:data) { {action: "add_with_cookie", a: 5} }
 
       it "responds with result" do
-        expect(subject.status).to eq :SUCCESS
+        expect(subject).to be_success
         expect(subject.transmissions.size).to eq 1
         expect(subject.transmissions.first).to include({"result" => 8}.to_json)
       end
@@ -95,7 +95,7 @@ describe "client messages" do
       it "persists session after each command" do
         first_call = service.command(request)
 
-        expect(first_call.status).to eq :SUCCESS
+        expect(first_call).to be_success
         expect(first_call.transmissions.size).to eq 1
         expect(first_call.transmissions.first).to include({"count" => 1}.to_json)
         # the session has changed
@@ -107,7 +107,7 @@ describe "client messages" do
 
         second_call = service.command(request)
 
-        expect(second_call.status).to eq :SUCCESS
+        expect(second_call).to be_success
         expect(second_call.transmissions.size).to eq 1
         expect(second_call.transmissions.first).to include({"count" => 2}.to_json)
         # the session has changed
@@ -119,7 +119,7 @@ describe "client messages" do
 
         third_call = service.command(request)
 
-        expect(third_call.status).to eq :SUCCESS
+        expect(third_call).to be_success
         # # performing a call that doesn't modify session shouldn't
         # # return anything
         expect(third_call.session).to be_nil

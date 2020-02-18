@@ -35,7 +35,7 @@ describe "disconnection" do
     let(:url) { "http://example.io/cable_lite?raise=sudden_disconnect_error" }
 
     it "responds with ERROR", :aggregate_failures do
-      expect(subject.status).to eq :ERROR
+      expect(subject).to be_error
       expect(subject.error_msg).to eq("sudden_disconnect_error")
     end
 
