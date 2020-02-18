@@ -42,7 +42,7 @@ describe "subscriptions" do
       let(:user) { "jack" }
 
       it "responds with error and subscription rejection", :aggregate_failures do
-        expect(subject.status).to eq :FAILURE
+        expect(subject).to be_failure
         expect(subject.streams).to eq []
         expect(subject.stop_streams).to eq false
         expect(subject.transmissions.first).to include("reject_subscription")
@@ -51,7 +51,7 @@ describe "subscriptions" do
 
     context "successful subscription" do
       it "responds with success and subscription confirmation", :aggregate_failures do
-        expect(subject.status).to eq :SUCCESS
+        expect(subject).to be_success
         expect(subject.streams).to eq ["test"]
         expect(subject.stop_streams).to eq false
         expect(subject.transmissions.first).to include("confirm_subscription")
@@ -62,7 +62,7 @@ describe "subscriptions" do
       let(:channel_id) { "FakeChannel" }
 
       it "responds with error" do
-        expect(subject.status).to eq :ERROR
+        expect(subject).to be_error
       end
     end
   end
@@ -75,7 +75,7 @@ describe "subscriptions" do
     subject { service.command(request) }
 
     it "responds with stop_all_streams" do
-      expect(subject.status).to eq :SUCCESS
+      expect(subject).to be_success
       expect(subject.stop_streams).to eq true
       expect(subject.transmissions.first).to include("confirm_unsubscribe")
     end
@@ -96,7 +96,7 @@ describe "subscriptions" do
     subject { service.command(request) }
 
     it "responds with error" do
-      expect(subject.status).to eq :ERROR
+      expect(subject).to be_error
     end
 
     it "notifies exception handler" do

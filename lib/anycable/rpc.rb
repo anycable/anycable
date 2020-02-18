@@ -37,8 +37,24 @@ module AnyCable
     end
   end
 
+  # Status predicates
+  module StatusPredicates
+    def success?
+      status == :SUCCESS
+    end
+
+    def failure?
+      status == :FAILURE
+    end
+
+    def error?
+      status == :ERROR
+    end
+  end
+
   class ConnectionResponse
     prepend WithConnectionState
+    include StatusPredicates
   end
 
   class CommandMessage
@@ -47,9 +63,14 @@ module AnyCable
 
   class CommandResponse
     prepend WithConnectionState
+    include StatusPredicates
   end
 
   class DisconnectRequest
     prepend WithConnectionState
+  end
+
+  class DisconnectResponse
+    include StatusPredicates
   end
 end

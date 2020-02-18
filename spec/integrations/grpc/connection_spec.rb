@@ -12,7 +12,7 @@ describe "client connection" do
 
   context "no cookies" do
     it "responds with exception if no cookies" do
-      expect(subject.status).to eq :FAILURE
+      expect(subject).to be_failure
     end
   end
 
@@ -20,7 +20,7 @@ describe "client connection" do
     let(:url) { "http://example.io/cable?raise=sudden_connect_error" }
 
     it "responds with ERROR", :aggregate_failures do
-      expect(subject.status).to eq :ERROR
+      expect(subject).to be_error
       expect(subject.error_msg).to eq("sudden_connect_error")
     end
 
@@ -44,7 +44,7 @@ describe "client connection" do
     let(:url) { "http://example.io/cable?token=123" }
 
     it "responds with success, correct identifiers and 'welcome' message", :aggregate_failures do
-      expect(subject.status).to eq :SUCCESS
+      expect(subject).to be_success
       identifiers = JSON.parse(subject.identifiers)
       expect(identifiers).to include(
         "current_user" => "john",
@@ -65,7 +65,7 @@ describe "client connection" do
     let(:url) { "http://example.io/cable" }
 
     it "responds with success, correct identifiers and 'welcome' message", :aggregate_failures do
-      expect(subject.status).to eq :SUCCESS
+      expect(subject).to be_success
       identifiers = JSON.parse(subject.identifiers)
       expect(identifiers).to include(
         "token" => "abc123"
