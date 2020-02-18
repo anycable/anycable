@@ -1,7 +1,6 @@
 package node
 
 import (
-	"context"
 	"encoding/json"
 	"sync"
 	"time"
@@ -37,18 +36,31 @@ var (
 	}
 )
 
+type frameType int
+
+const (
+	textFrame  frameType = 0
+	closeFrame frameType = 1
+)
+
+type sentFrame struct {
+	frameType   frameType
+	payload     []byte
+	closeCode   int
+	closeReason string
+}
+
 // Session represents active client
 type Session struct {
 	node          *Node
 	ws            *websocket.Conn
 	env           *common.SessionEnv
 	subscriptions map[string]bool
-	send          chan []byte
+	send          chan sentFrame
 	closed        bool
 	connected     bool
 	mu            sync.Mutex
 	pingTimer     *time.Timer
-	cancelSend    context.CancelFunc
 
 	UID         string
 	Identifiers string
@@ -75,7 +87,7 @@ func NewSession(node *Node, ws *websocket.Conn, url string, headers map[string]s
 		ws:            ws,
 		env:           common.NewSessionEnv(url, &headers),
 		subscriptions: make(map[string]bool),
-		send:          make(chan []byte, 256),
+		send:          make(chan sentFrame, 256),
 		closed:        false,
 		connected:     false,
 	}
@@ -92,39 +104,76 @@ func NewSession(node *Node, ws *websocket.Conn, url string, headers map[string]s
 
 	if err != nil {
 		defer session.Close("Auth Error", CloseInternalServerErr)
-		return nil, err
 	}
 
-	sendCtx, cancel := context.WithCancel(context.Background())
-
-	session.cancelSend = cancel
-
-	go session.SendMessages(sendCtx)
+	go session.SendMessages()
 
 	session.addPing()
 
-	return session, nil
+	return session, err
 }
 
 // SendMessages waits for incoming messages and send them to the client connection
-func (s *Session) SendMessages(ctx context.Context) {
+func (s *Session) SendMessages() {
 	defer s.Disconnect("Write Failed", CloseAbnormalClosure)
 	for {
 		select {
-		case <-ctx.Done():
-			return
 		case message, ok := <-s.send:
 			if !ok {
 				return
 			}
 
-			err := s.write(message, time.Now().Add(writeWait))
+			switch message.frameType {
+			case textFrame:
+				err := s.write(message.payload, time.Now().Add(writeWait))
 
-			if err != nil {
+				if err != nil {
+					return
+				}
+			case closeFrame:
+				utils.CloseWS(s.ws, message.closeCode, message.closeReason)
+				return
+			default:
+				s.Log.Errorf("Unknown frame type: %v", message)
 				return
 			}
 		}
 	}
+}
+
+// Send data to client connection
+func (s *Session) Send(msg []byte) {
+	s.sendFrame(&sentFrame{frameType: textFrame, payload: msg})
+}
+
+func (s *Session) sendClose(reason string, code int) {
+	s.sendFrame(&sentFrame{
+		frameType:   closeFrame,
+		closeReason: reason,
+		closeCode:   code,
+	})
+}
+
+func (s *Session) sendFrame(frame *sentFrame) {
+	s.mu.Lock()
+
+	if s.send == nil {
+		s.mu.Unlock()
+		return
+	}
+
+	select {
+	case s.send <- *frame:
+	default:
+		if s.send != nil {
+			close(s.send)
+			defer s.Disconnect("Write failed", CloseAbnormalClosure)
+		}
+
+		s.send = nil
+	}
+
+	s.mu.Unlock()
 }
 
 func (s *Session) write(message []byte, deadline time.Time) error {
@@ -142,29 +191,6 @@ func (s *Session) write(message []byte, deadline time.Time) error {
 	w.Write(message)
 
 	return w.Close()
-}
-
-// Send data to client connection
-func (s *Session) Send(msg []byte) {
-	s.mu.Lock()
-
-	if s.send == nil {
-		s.mu.Unlock()
-		return
-	}
-
-	select {
-	case s.send <- msg:
-	default:
-		if s.send != nil {
-			close(s.send)
-			defer s.Disconnect("Write failed", CloseAbnormalClosure)
-		}
-
-		s.send = nil
-	}
-
-	s.mu.Unlock()
 }
 
 // ReadMessages reads messages from ws connection and send them to node
@@ -208,18 +234,14 @@ func (s *Session) Close(reason string, code int) {
 		return
 	}
 
-	if s.cancelSend != nil {
-		s.cancelSend()
-	}
-
 	s.closed = true
 	s.mu.Unlock()
+
+	s.sendClose(reason, code)
 
 	if s.pingTimer != nil {
 		s.pingTimer.Stop()
 	}
-
-	utils.CloseWS(s.ws, code, reason)
 }
 
 func (s *Session) sendPing() {

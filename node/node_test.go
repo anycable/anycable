@@ -23,7 +23,7 @@ func TestAuthenticate(t *testing.T) {
 
 		select {
 		case m := <-session.send:
-			msg = m
+			msg = m.payload
 		default:
 			assert.Fail(t, "Expected session to receive message but none was sent")
 		}
@@ -43,7 +43,7 @@ func TestAuthenticate(t *testing.T) {
 
 		select {
 		case m := <-session.send:
-			msg = m
+			msg = m.payload
 		default:
 			assert.Fail(t, "Expected session to receive message but none was sent")
 		}
@@ -88,7 +88,7 @@ func TestSubscribe(t *testing.T) {
 
 		select {
 		case m := <-session.send:
-			msg = m
+			msg = m.payload
 		default:
 			assert.Fail(t, "Expected session to receive message but none was sent")
 		}
@@ -122,7 +122,7 @@ func TestSubscribe(t *testing.T) {
 
 		select {
 		case m := <-session.send:
-			msg = m
+			msg = m.payload
 		default:
 			assert.Fail(t, "Expected session to receive message but none was sent")
 		}
@@ -167,7 +167,7 @@ func TestUnsubscribe(t *testing.T) {
 
 		select {
 		case m := <-session.send:
-			msg = m
+			msg = m.payload
 		default:
 			assert.Fail(t, "Expected session to receive message but none was sent")
 		}
@@ -197,7 +197,7 @@ func TestPerform(t *testing.T) {
 
 		select {
 		case m := <-session.send:
-			msg = m
+			msg = m.payload
 		default:
 			assert.Fail(t, "Expected session to receive message but none was sent")
 		}
@@ -260,10 +260,10 @@ func TestHandlePubsubCommand(t *testing.T) {
 	expected := "{\"identifier\":\"test_channel\",\"message\":\"abc123\"}"
 
 	msg := <-session.send
-	assert.Equalf(t, expected, string(msg), "Expected to receive %s but got %s", expected, string(msg))
+	assert.Equalf(t, expected, string(msg.payload), "Expected to receive %s but got %s", expected, string(msg.payload))
 
 	msg2 := <-session2.send
-	assert.Equalf(t, expected, string(msg2), "Expected to receive %s but got %s", expected, string(msg2))
+	assert.Equalf(t, expected, string(msg2.payload), "Expected to receive %s but got %s", expected, string(msg2.payload))
 }
 
 func TestSubscriptionsList(t *testing.T) {
