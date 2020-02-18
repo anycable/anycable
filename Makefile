@@ -71,13 +71,13 @@ test:
 
 test-conformance:
 	go build -o tmp/anycable-go-test cmd/anycable-go/main.go
-	anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable"
-	anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token --ssl_key=etc/ssl/server.key --ssl_cert=etc/ssl/server.crt --port=8443" --target-url="wss://localhost:8443/cable"
+	BUNDLE_GEMFILE=.circleci/Gemfile bundle exec anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable"
+	BUNDLE_GEMFILE=.circleci/Gemfile bundle exec anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token --ssl_key=etc/ssl/server.key --ssl_cert=etc/ssl/server.crt --port=8443" --target-url="wss://localhost:8443/cable"
 
 test-ci: prepare prepare-mruby test test-conformance
 
 prepare:
-	gem install anyt
+	BUNDLE_GEMFILE=.circleci/Gemfile bundle install
 
 gen-ssl:
 	mkdir -p tmp/ssl

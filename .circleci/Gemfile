@@ -1,0 +1,6 @@
+# Gemfile for running conformance tests with Anyt
+source "https://rubygems.org"
+
+gem "anycable", github: "anycable/anycable", branch: "1.0-dev"
+gem "anycable-rails", github: "anycable/anycable-rails", branch: "1.0-dev"
+gem "anyt", github: "anycable/anyt", branch: "1.0-dev"

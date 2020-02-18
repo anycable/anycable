@@ -44,6 +44,10 @@ workflows:
         <<: *common_tags_filter
         requires:
         - build_binary_for_conformance
+    - conformance_v1:
+        <<: *common_tags_filter
+        requires:
+        - conformance
     - build_docker:
         requires:
         - test
@@ -322,6 +326,26 @@ jobs:
         command: dockerize -wait tcp://localhost:6379 -timeout 1m
     - run: anyt -c "/tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable"
     - run: anyt -c "/tmp/anycable-go-test --headers=cookie,x-api-token --ssl_key=etc/ssl/server.key --ssl_cert=etc/ssl/server.crt --port=8443" --target-url="wss://localhost:8443/cable"
+
+  conformance_v1:
+    docker:
+    - image: circleci/ruby:2.6.3-stretch
+    - image: circleci/redis:4.0.11-alpine3.8
+    environment:
+      BUNDLE_GEMFILE: ".circleci/Gemfile"
+    steps:
+    - attach_workspace:
+        at: .
+    - restore_cache:
+        key: binary-for-conformance-{{ .Revision }}
+    - run:
+        name: Install deps
+        command: bundle install
+    - run:
+        name: Wait for Redis
+        command: dockerize -wait tcp://localhost:6379 -timeout 1m
+    - run: bundle exec anyt -c "/tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable"
+    - run: bundle exec anyt -c "/tmp/anycable-go-test --headers=cookie,x-api-token --ssl_key=etc/ssl/server.key --ssl_cert=etc/ssl/server.crt --port=8443" --target-url="wss://localhost:8443/cable"
 
   build_docker:
     executor: docker
