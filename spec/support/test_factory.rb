@@ -34,6 +34,7 @@ module AnyCable
         if @identifiers["current_user"]
           transmit(type: "welcome")
         else
+          transmit(type: "disconnect", reason: "unauthorized")
           close
         end
       end

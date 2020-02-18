@@ -62,7 +62,6 @@ module AnyCable
 
     def close
       @closed = true
-      @transmissions.clear
       @streams&.clear
       @stop_all_streams = true
     end
