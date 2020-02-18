@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	// PING stores the "ping" message identifier
-	PING = "ping"
+	// serverRestartReason is the disconnect reason on shutdown
+	serverRestartReason = "server_restart"
 
 	// How often update node stats
 	statsCollectInterval = 5 * time.Second
@@ -30,6 +30,20 @@ const (
 	metricsBroadcastMsg     = "broadcast_msg_total"
 	metricsUnknownBroadcast = "failed_broadcast_msg_total"
 )
+
+type disconnectMessage struct {
+	Type      string `json:"type"`
+	Reason    string `json:"reason"`
+	Reconnect bool   `json:"reconnect"`
+}
+
+func (d *disconnectMessage) toJSON() []byte {
+	jsonStr, err := json.Marshal(&d)
+	if err != nil {
+		panic("Failed to build disconnect JSON 😲")
+	}
+	return jsonStr
+}
 
 // Controller is an interface describing business-logic handler (e.g. RPC)
 type Controller interface {
@@ -133,8 +147,10 @@ func (n *Node) Shutdown() {
 
 		if active > 0 {
 			n.log.Infof("Closing active connections: %d", active)
+			disconnectMessage := newDisconnectMessage(serverRestartReason, true)
 			// Close all registered sessions
 			for _, session := range n.hub.sessions {
+				session.Send(disconnectMessage)
 				session.Disconnect("Shutdown", CloseGoingAway)
 			}
 
@@ -392,4 +408,8 @@ func subscriptionsList(m map[string]bool) []string {
 		i++
 	}
 	return keys
+}
+
+func newDisconnectMessage(reason string, reconnect bool) []byte {
+	return (&disconnectMessage{Type: "disconnect", Reason: reason, Reconnect: reconnect}).toJSON()
 }

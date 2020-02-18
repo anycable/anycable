@@ -38,7 +38,7 @@ func NewMockNode() Node {
 // NewMockSession returns a new session with a specified uid and identifiers equal to uid
 func NewMockSession(uid string) *Session {
 	return &Session{
-		send:          make(chan []byte, 256),
+		send:          make(chan sentFrame, 256),
 		closed:        true,
 		UID:           uid,
 		Identifiers:   uid,
