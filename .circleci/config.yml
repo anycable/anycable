@@ -47,6 +47,7 @@ workflows:
         requires:
         - conformance
     - build_docker:
+        latest: true
         requires:
         - test
         - conformance
@@ -56,7 +57,9 @@ workflows:
             only: /^v.*/
           branches:
             ignore: /.*/
-    - build_docker_alpine:
+    - build_docker:
+        version: ${CIRCLE_TAG/v/''}-alpine
+        dockerfile: Dockerfile.alpine-linux-amd64
         requires:
         - test
         - conformance
@@ -66,7 +69,10 @@ workflows:
             only: /^v.*/
           branches:
             ignore: /.*/
-    - build_docker_mruby:
+    - build_docker:
+        version: ${CIRCLE_TAG/v/''}-mrb
+        mruby: true
+        dockerfile: Dockerfile.mrb-linux-amd64
         requires:
         - test
         - conformance
@@ -87,17 +93,17 @@ workflows:
             # TODO: change to master once 1.0 released
             only: "1.0-dev"
     - build_docker:
-      version: "edge-mrb"
-      mruby: true
-      dockerfile: Dockerfile.mrb-linux-amd64
-      requires:
-      - test
-      - conformance
-      - build_linux_mruby
-      filters:
-        branches:
-          # TODO: change to master once 1.0 released
-          only: "1.0-dev"
+        version: "edge-mrb"
+        mruby: true
+        dockerfile: Dockerfile.mrb-linux-amd64
+        requires:
+        - test
+        - conformance
+        - build_linux_mruby
+        filters:
+          branches:
+            # TODO: change to master once 1.0 released
+            only: "1.0-dev"
     - github_release:
         requires:
         - test
@@ -329,6 +335,7 @@ jobs:
         key: linux-mruby-{{ .Revision }}
         paths: /tmp/dist/
 
+  # Replace with conformance_v1 after v1.1 release
   conformance:
     docker:
     - image: circleci/ruby:2.5.1-stretch
@@ -401,8 +408,8 @@ jobs:
               key: linux-mruby-{{ .Revision }}
           - run:
               name: Replace with mruby binary
-              command:
-                rm .docker/anycable-go-linux-amd64
+              command: |
+                rm .docker/anycable-go-linux-amd64 && \
                 cp /tmp/dist/anycable-go-mrb-linux-amd64 .docker/anycable-go-mrb-linux-amd64
     - run:
         name: Build Docker image
@@ -424,53 +431,6 @@ jobs:
                     docker tag anycable/anycable-go:${CIRCLE_TAG/v/''} anycable/anycable-go:latest
                     docker push anycable/anycable-go:latest
                 fi
-
-  build_docker_alpine:
-    executor: docker
-    steps:
-    - setup_remote_docker:
-        version: 18.06.0-ce
-    - attach_workspace:
-        at: .
-    - restore_cache:
-        key: build-{{ .Revision }}
-    - run:
-        name: Prepare files for Docker build
-        command: |
-          cp /etc/ssl/certs/ca-certificates.crt ./.docker/ca-certificates.crt && \
-          cp /tmp/dist/anycable-go-linux-amd64 .docker/anycable-go-linux-amd64
-    - run:
-        name: Build Docker image
-        command: docker build -f .docker/Dockerfile.alpine-linux-amd64 -t anycable/anycable-go:${CIRCLE_TAG/v/''}-alpine ./
-    - run:
-        name: Login to Docker registry
-        command: docker login -u ${DOCKER_USER} -p ${DOCKER_PASS}
-    - run:
-        name: Push Docker image
-        command: docker push anycable/anycable-go:${CIRCLE_TAG/v/''}-alpine
-
-  build_docker_mruby:
-    executor: docker
-    steps:
-    - setup_remote_docker:
-        version: 18.06.0-ce
-    - attach_workspace:
-        at: .
-    - restore_cache:
-        key: linux-mruby-{{ .Revision }}
-    - run:
-        name: Prepare binary
-        command:
-          cp /tmp/dist/anycable-go-mrb-linux-amd64 .docker/anycable-go-mrb-linux-amd64
-    - run:
-        name: Build Docker image
-        command: docker build -f .docker/Dockerfile.mrb-linux-amd64 -t anycable/anycable-go:${CIRCLE_TAG/v/''}-mrb ./
-    - run:
-        name: Login to Docker registry
-        command: docker login -u ${DOCKER_USER} -p ${DOCKER_PASS}
-    - run:
-        name: Push Docker image
-        command: docker push anycable/anycable-go:${CIRCLE_TAG/v/''}-mrb
 
   github_release:
     executor: golang
