@@ -1,8 +1,3 @@
-ifdef VERSION
-else
-	VERSION := $(shell sh -c 'git describe --always --tags')
-endif
-
 OUTPUT ?= dist/anycable-go
 
 ifdef GOBIN
@@ -14,7 +9,14 @@ endif
 export GO111MODULE=on
 export GOFLAGS=-mod=vendor
 
-LD_FLAGS="-s -w -X main.version=$(VERSION)"
+ifdef VERSION
+	LD_FLAGS="-s -w -X github.com/anycable/anycable-go/utils.version=$(VERSION)"
+else
+	COMMIT := $(shell sh -c 'git log --pretty=format:"%h" -n 1 ')
+	VERSION := $(shell sh -c 'git tag -l --sort=-version:refname "v*" | head -n1')
+	LD_FLAGS="-s -w -X github.com/anycable/anycable-go/utils.sha=$(COMMIT) -X github.com/anycable/anycable-go/utils.version="
+endif
+
 GOBUILD=go build -ldflags $(LD_FLAGS) -a
 
 # Standard build
