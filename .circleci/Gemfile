@@ -1,6 +1,13 @@
 # Gemfile for running conformance tests with Anyt
 source "https://rubygems.org"
 
-gem "anycable", github: "anycable/anycable", branch: "1.0-dev"
-gem "anycable-rails", github: "anycable/anycable-rails", branch: "1.0-dev"
-gem "anyt", github: "anycable/anyt", branch: "1.0-dev"
+if File.directory?("../../anycable")
+  $stdout.puts "\n=== Using local gems for Anyt ===\n\n"
+  gem "anycable", path: "../../anycable"
+  gem "anycable-rails", path: "../../anycable-rails"
+  gem "anyt", path: "../../anyt"
+else
+  gem "anycable", github: "anycable/anycable", branch: "1.0-dev"
+  gem "anycable-rails", github: "anycable/anycable-rails", branch: "1.0-dev"
+  gem "anyt", github: "anycable/anyt", branch: "1.0-dev"
+end
