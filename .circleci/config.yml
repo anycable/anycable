@@ -86,6 +86,18 @@ workflows:
           branches:
             # TODO: change to master once 1.0 released
             only: "1.0-dev"
+    - build_docker:
+      version: "edge-mrb"
+      mruby: true
+      dockerfile: Dockerfile.mrb-linux-amd64
+      requires:
+      - test
+      - conformance
+      - build_linux_mruby
+      filters:
+        branches:
+          # TODO: change to master once 1.0 released
+          only: "1.0-dev"
     - github_release:
         requires:
         - test
