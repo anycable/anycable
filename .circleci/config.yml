@@ -178,6 +178,10 @@ jobs:
     - attach_workspace:
         at: .
     - checkout
+    - run:
+        name: Cache latest master tag
+        command: |
+          echo $(git tag --merged master -l --sort=-version:refname "v*" | head -n1) > latest-tag.log
     - persist_to_workspace:
         root: .
         paths: .
@@ -429,7 +433,7 @@ jobs:
           - run:
               name: Push the latest Docker image
               command: |
-                if [[ "${CIRCLE_TAG}" == "$(git tag -l --sort=-version:refname "v*" | head -n1)" ]]
+                if [[ "${CIRCLE_TAG}" == "$(cat latest-tag.log)" ]] && [[ "${CIRCLE_BRANCH}" == "master" ]]
                 then
                     docker tag anycable/anycable-go:${CIRCLE_TAG/v/''} anycable/anycable-go:latest
                     docker push anycable/anycable-go:latest
