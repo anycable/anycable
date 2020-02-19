@@ -2,9 +2,11 @@
 
 ## 1.0.0-dev
 
-- Added `protov` RPC metadata. ([@palkan][])
+- Send `disconnect` messages on server restart and authentication failures. ([@palkan][])
 
-- Added `rpc_retries_total` metrics. ([@palkan][])
+- Add `protov` RPC metadata. ([@palkan][])
+
+- Add `rpc_retries_total` metrics. ([@palkan][])
 
 This metrics represents the number of times RPC requests were retried.
 The large value might indicate that the RPC server pool size doesn't correspond to the `rpc_concurrency` value.
