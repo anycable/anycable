@@ -83,8 +83,9 @@ workflows:
         - conformance
         - build
         filters:
-          tags:
-            ignore: /^v.*/
+          branches:
+            # TODO: change to master once 1.0 released
+            only: "1.0-dev"
     - github_release:
         requires:
         - test
@@ -137,7 +138,7 @@ commands:
       postfix:
         type: string
     steps:
-      - run: env GOOS=<< parameters.os >> GOARCH=<< parameters.arch >> go build -ldflags "-s -w -X main.version=$(git describe --tags)" -a -o "/tmp/dist/anycable-go-<< parameters.postfix >>" cmd/anycable-go/main.go
+      - run: env GOOS=<< parameters.os >> GOARCH=<< parameters.arch >> go build -ldflags "-s -w -X github.com/anycable/anycable-go/utils.version=${CIRCLE_TAG/v/''} -X github.com/anycable/anycable-go/utils.sha=$(echo "$CIRCLE_SHA1" | cut -c -7)" -a -o "/tmp/dist/anycable-go-<< parameters.postfix >>" cmd/anycable-go/main.go
   build-mruby:
     description: Build AnyCable Go binary with mruby support
     parameters:
@@ -148,7 +149,7 @@ commands:
       postfix:
         type: string
     steps:
-      - run: env GOOS=<< parameters.os >> GOARCH=<< parameters.arch >> go build -ldflags "-s -w -X main.version=$(git describe --tags)-mrb" -tags mrb -a -o "/tmp/dist/anycable-go-<< parameters.postfix >>" cmd/anycable-go/main.go
+      - run: env GOOS=<< parameters.os >> GOARCH=<< parameters.arch >> go build -ldflags "-s -w -X github.com/anycable/anycable-go/utils.version=${CIRCLE_TAG/v/''} -X github.com/anycable/anycable-go/utils.sha=$(echo "$CIRCLE_SHA1" | cut -c -7)" -tags mrb -a -o "/tmp/dist/anycable-go-<< parameters.postfix >>" cmd/anycable-go/main.go
 
 # Jobs definitions
 jobs:
@@ -217,7 +218,7 @@ jobs:
         at: /go/src/github.com/anycable/anycable-go/
     - run:
         name: Building Linux amd64 binary
-        command: go build -ldflags "-s -w -X main.version=$(git describe --tags)" -a -o "/tmp/anycable-go-test" cmd/anycable-go/main.go
+        command: go build -ldflags "-s -w" -a -o "/tmp/anycable-go-test" cmd/anycable-go/main.go
     - save_cache:
         key: binary-for-conformance-{{ .Revision }}
         paths: /tmp/anycable-go-test

@@ -19,19 +19,9 @@ import (
 	"github.com/syossan27/tebata"
 )
 
-var (
-	version string
-)
-
-func init() {
-	if version == "" {
-		version = "0.1.0-unknown"
-	}
-}
-
 func main() {
 	if cli.ShowVersion() {
-		fmt.Println(version)
+		fmt.Println(utils.Version())
 		os.Exit(0)
 	}
 
@@ -56,7 +46,7 @@ func main() {
 		ctx.Debug("🔧 🔧 🔧 Debug mode is on 🔧 🔧 🔧")
 	}
 
-	ctx.Infof("Starting GoBenchCable %s (pid: %d, open file limit: %s)", version, os.Getpid(), utils.OpenFileLimit())
+	ctx.Infof("Starting GoBenchCable %s (pid: %d, open file limit: %s)", utils.Version(), os.Getpid(), utils.OpenFileLimit())
 
 	metrics, err := metrics.FromConfig(&config.Metrics)
 
