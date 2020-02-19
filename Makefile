@@ -19,6 +19,8 @@ endif
 
 GOBUILD=go build -ldflags $(LD_FLAGS) -a
 
+MRUBY_VERSION=1.2.0
+
 # Standard build
 default: build
 
@@ -37,7 +39,13 @@ build-gobench:
 
 prepare-mruby:
 	cd vendor/github.com/mitchellh/go-mruby && \
-	MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a
+	MRUBY_COMMIT=$(MRUBY_VERSION) MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a
+
+upgrade-mruby: clean-mruby prepare-mruby
+
+clean-mruby:
+	cd vendor/github.com/mitchellh/go-mruby && \
+	rm -rf vendor/mruby
 
 build-all-mruby:
 	env $(GOBUILD) -tags mrb -o "dist/anycable-go-$(VERSION)-mrb-macos-amd64" cmd/anycable-go/main.go
