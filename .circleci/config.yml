@@ -29,8 +29,9 @@ workflows:
         requires:
         - prepare_mruby
     - build_binary_for_conformance:
-        <<: *requires_prepared_code
         <<: *common_tags_filter
+        requires:
+          - prepare_mruby
     - build:
         <<: *requires_prepared_code
         <<: *common_tags_filter
@@ -231,12 +232,14 @@ jobs:
 
   build_binary_for_conformance:
     executor: golang
+    environment:
+      CGO_ENABLED: "1"
     steps:
     - attach_workspace:
         at: /go/src/github.com/anycable/anycable-go/
     - run:
         name: Building Linux amd64 binary
-        command: go build -ldflags "-s -w" -a -o "/tmp/anycable-go-test" cmd/anycable-go/main.go
+        command: go build -tags mrb -ldflags "-s -w" -a -o "/tmp/anycable-go-test" cmd/anycable-go/main.go
     - save_cache:
         key: binary-for-conformance-{{ .Revision }}
         paths: /tmp/anycable-go-test
