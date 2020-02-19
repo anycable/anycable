@@ -42,11 +42,11 @@ workflows:
     - conformance:
         <<: *common_tags_filter
         requires:
-        - build_binary_for_conformance
+        - conformance_v1
     - conformance_v1:
         <<: *common_tags_filter
         requires:
-        - conformance
+        - build_binary_for_conformance
     - build_docker:
         latest: true
         requires:
