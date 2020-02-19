@@ -11,8 +11,6 @@ common_tags_filter: &common_tags_filter
 
 # Workflow definition
 workflows:
-  version: 2
-
   test_and_release:
     jobs:
     - prepare_code:
@@ -78,6 +76,15 @@ workflows:
             only: /^v.*/
           branches:
             ignore: /.*/
+    - build_docker:
+        version: "edge"
+        requires:
+        - test
+        - conformance
+        - build
+        filters:
+          tags:
+            ignore: /^v.*/
     - github_release:
         requires:
         - test
@@ -348,6 +355,19 @@ jobs:
     - run: bundle exec anyt -c "/tmp/anycable-go-test --headers=cookie,x-api-token --ssl_key=etc/ssl/server.key --ssl_cert=etc/ssl/server.crt --port=8443" --target-url="wss://localhost:8443/cable"
 
   build_docker:
+    parameters:
+      dockerfile:
+        type: string
+        default: "Dockerfile.linux-amd64"
+      version:
+        type: string
+        default: ${CIRCLE_TAG/v/''}
+      mruby:
+        type: boolean
+        default: false
+      latest:
+        type: boolean
+        default: false
     executor: docker
     steps:
     - setup_remote_docker:
@@ -361,23 +381,36 @@ jobs:
         command: |
           cp /etc/ssl/certs/ca-certificates.crt ./.docker/ca-certificates.crt && \
           cp /tmp/dist/anycable-go-linux-amd64 .docker/anycable-go-linux-amd64
+    - when:
+        condition: <<parameters.mruby>>
+        steps:
+          - restore_cache:
+              key: linux-mruby-{{ .Revision }}
+          - run:
+              name: Replace with mruby binary
+              command:
+                rm .docker/anycable-go-linux-amd64
+                cp /tmp/dist/anycable-go-mrb-linux-amd64 .docker/anycable-go-mrb-linux-amd64
     - run:
         name: Build Docker image
-        command: docker build -f .docker/Dockerfile.linux-amd64 -t anycable/anycable-go:${CIRCLE_TAG/v/''} ./
+        command: docker build -f .docker/<<parameters.dockerfile>> -t anycable/anycable-go:<<parameters.version>> ./
     - run:
         name: Login to Docker registry
         command: docker login -u ${DOCKER_USER} -p ${DOCKER_PASS}
     - run:
         name: Push Docker image
-        command: docker push anycable/anycable-go:${CIRCLE_TAG/v/''}
-    - run:
-        name: Push the latest Docker image
-        command: |
-          if [[ "${CIRCLE_TAG}" == "$(git tag -l --sort=-version:refname "v*" | head -n1)" ]]
-          then
-              docker tag anycable/anycable-go:${CIRCLE_TAG/v/''} anycable/anycable-go:latest
-              docker push anycable/anycable-go:latest
-          fi
+        command: docker push anycable/anycable-go:<<parameters.version>>
+    - when:
+        condition: <<parameters.latest>>
+        steps:
+          - run:
+              name: Push the latest Docker image
+              command: |
+                if [[ "${CIRCLE_TAG}" == "$(git tag -l --sort=-version:refname "v*" | head -n1)" ]]
+                then
+                    docker tag anycable/anycable-go:${CIRCLE_TAG/v/''} anycable/anycable-go:latest
+                    docker push anycable/anycable-go:latest
+                fi
 
   build_docker_alpine:
     executor: docker
