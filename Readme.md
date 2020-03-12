@@ -89,3 +89,7 @@ Please, provide reproduction script (using [this template](https://github.com/an
 ## License
 
 The library is available as open source under the terms of the [MIT License](http://opensource.org/licenses/MIT).
+
+## Security Contact
+
+To report a security vulnerability, please contact us at `anycable@evilmartians.com`. We will coordinate the fix and disclosure.
