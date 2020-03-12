@@ -75,4 +75,4 @@ The gem is available as open source under the terms of the [MIT License](http://
 
 ## Security Contact
 
-To report a security vulnerability, please use the [Tidelift security contact](https://tidelift.com/security). Tidelift will coordinate the fix and disclosure.
+To report a security vulnerability, please contact us at `anycable@evilmartians.com`. We will coordinate the fix and disclosure.
