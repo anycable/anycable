@@ -8,6 +8,10 @@ module AnyCable
       def initialize(socket, identifiers: nil, subscriptions: nil)
         @socket = socket
         @identifiers = identifiers ? JSON.parse(identifiers) : {}
+
+        # Verify that required request properties are set
+        Rack::Lint.new(proc { [200, {}, []] }).call(socket.env) if socket.env["QUERY_STRING"] == "rack=lint"
+
         @request = Rack::Request.new(socket.env)
 
         if socket.session
