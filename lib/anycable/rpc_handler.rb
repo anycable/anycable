@@ -106,17 +106,17 @@ module AnyCable
       uri = URI.parse(request_env.url)
 
       env = base_rack_env
-      env.merge!(
+      env.merge!({
         "PATH_INFO" => uri.path,
         "QUERY_STRING" => uri.query,
         "SERVER_NAME" => uri.host,
-        "SERVER_PORT" => uri.port.to_s,
+        "SERVER_PORT" => uri.port,
         "HTTP_HOST" => uri.host,
         "REMOTE_ADDR" => request_env.headers.delete("REMOTE_ADDR"),
-        "rack.url_scheme" => uri.scheme,
+        "rack.url_scheme" => uri.scheme&.sub(/^ws/, "http"),
         # AnyCable specific fields
         "anycable.raw_cstate" => request_env.cstate&.to_h
-      )
+      }.delete_if { |_k, v| v.nil? })
 
       env.merge!(build_headers(request_env.headers))
     end
@@ -125,6 +125,7 @@ module AnyCable
       # Minimum required variables according to Rack Spec
       # (not all of them though, just those enough for Action Cable to work)
       # See https://rubydoc.info/github/rack/rack/master/file/SPEC
+      # and https://github.com/rack/rack/blob/master/lib/rack/lint.rb
       {
         "REQUEST_METHOD" => "GET",
         "SCRIPT_NAME" => "",
@@ -133,7 +134,13 @@ module AnyCable
         "SERVER_NAME" => "",
         "SERVER_PORT" => "80",
         "rack.url_scheme" => "http",
-        "rack.input" => ""
+        "rack.input" => StringIO.new("", "r").tap { |io| io.set_encoding(Encoding::ASCII_8BIT) },
+        "rack.version" => Rack::VERSION,
+        "rack.errors" => StringIO.new("").tap { |io| io.set_encoding(Encoding::ASCII_8BIT) },
+        "rack.multithread" => true,
+        "rack.multiprocess" => false,
+        "rack.run_once" => false,
+        "rack.hijack?" => false
       }
     end
 
