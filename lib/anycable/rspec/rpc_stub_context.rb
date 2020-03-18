@@ -7,7 +7,7 @@ RSpec.shared_context "anycable:rpc:stub" do
 
   let(:service) { @service }
 
-  let(:url) { "example.com/cable" }
+  let(:url) { "ws://example.anycable.com/cable" }
   let(:headers) { {} }
   let(:env) { AnyCable::Env.new(url: url, headers: headers) }
 end
