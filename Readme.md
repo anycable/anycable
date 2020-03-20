@@ -2,7 +2,7 @@
 [![CircleCI](https://img.shields.io/circleci/project/github/anycable/anycable-go.svg?label=CircleCI)](https://circleci.com/gh/anycable/anycable-go)
 [![Docker](https://img.shields.io/docker/pulls/anycable/anycable-go.svg)](https://hub.docker.com/r/anycable/anycable-go/)
 [![Gitter](https://img.shields.io/badge/gitter-join%20chat%20%E2%86%92-brightgreen.svg)](https://gitter.im/anycable/anycable-go)
-[![Documentation](https://img.shields.io/badge/docs-link-brightgreen.svg)](https://docs.anycable.io/#go_getting_started)
+[![Documentation](https://img.shields.io/badge/docs-link-brightgreen.svg)](https://docs.anycable.io/#/anycable-go/getting_started)
 
 # AnyCable-Go WebSocket Server
 
