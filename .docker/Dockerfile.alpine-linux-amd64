@@ -1,5 +1,5 @@
 # https://blog.codeship.com/building-minimal-docker-containers-for-go-applications
-FROM alpine:edge
+FROM alpine:latest
 
 RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
 ADD .docker/passwd.nobody /etc/passwd

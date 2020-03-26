@@ -2,6 +2,8 @@
 
 ## master
 
+- Change alpine version from edge to latest ([@ericmatte][])
+
 ## 0.6.4 (2019-09-16)
 
 - Add ENV support to mruby scripts. ([@dmcrorieGIT][])
