@@ -2,6 +2,8 @@
 
 ## master
 
+## 0.6.5 (2020-03-29)
+
 - Change alpine version from edge to latest ([@ericmatte][])
 
 ## 0.6.4 (2019-09-16)
@@ -252,3 +254,4 @@ No more race conditions.
 [@shedimon]: https://github.com/shedimon
 [@sponomarev]: https://github.com/sponomarev
 [@dmcrorieGIT]: https://github.com/dmcrorieGIT
+[@ericmatte]: https://github.com/ericmatte
