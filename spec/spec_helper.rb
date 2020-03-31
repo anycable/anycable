@@ -65,7 +65,7 @@ RSpec.configure do |config|
   Kernel.srand config.seed
 
   config.after(:each) do
-    Anyway.env.clear if defined?(Anyway)
+    Anyway.env.clear if defined?(Anyway::Config)
     AnyCable.logger.reset if AnyCable.logger.respond_to?(:reset)
     TestExHandler.flush!
   end

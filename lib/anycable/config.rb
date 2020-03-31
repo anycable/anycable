@@ -43,19 +43,33 @@ module AnyCable
     ignore_options :rpc_server_args
     flag_options :log_grpc, :debug
 
-    def log_level
-      debug ? :debug : @log_level
-    end
+    # Support both anyway_config 1.4 and 2.0.
+    # DEPRECATE: Drop <2.0 support in 1.1
+    if respond_to?(:on_load)
+      on_load { self.debug = debug != false }
 
-    def log_grpc
-      debug || @log_grpc
-    end
+      def log_level
+        debug? ? :debug : super
+      end
 
-    def debug
-      @debug != false
-    end
+      def log_grpc
+        debug? || super
+      end
+    else
+      def log_level
+        debug ? :debug : @log_level
+      end
 
-    alias debug? debug
+      def log_grpc
+        debug || @log_grpc
+      end
+
+      def debug
+        @debug != false
+      end
+
+      alias debug? debug
+    end
 
     def http_health_port_provided?
       !http_health_port.nil? && http_health_port != ""
