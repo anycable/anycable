@@ -1,0 +1,31 @@
+inherit_from: ".rubocop.yml"
+
+require:
+  - rubocop-md
+
+
+AllCops:
+  Include:
+    - '**/*.md'
+
+Lint/Void:
+  Exclude:
+    - '**/*.md'
+
+Lint/DuplicateMethods:
+  Exclude:
+    - '**/*.md'
+
+# See https://github.com/rubocop-hq/rubocop/issues/4222
+Lint/AmbiguousBlockAssociation:
+  Exclude:
+    - '**/*.md'
+
+
+Naming/FileName:
+  Exclude:
+   - '**/*.md'
+
+Layout/InitialIndentation:
+  Exclude:
+    - 'CHANGELOG.md'

@@ -39,7 +39,7 @@ Recreating a request object in your custom connection factory using `Rack::Reque
 `ActionDispatch::Request` (already implemented in [anycable-rails](https://github.com/anycable/anycable-rails))
 gives you an access to `request.ip` with the properly set IP address.
 
-- Align socket env to be more compatibile with Rack Spec ([@sponomarev][])
+- Align socket env to be more compatible with Rack Spec ([@sponomarev][])
 
 Provide as much env details as possible to be able to reconstruct the full
 request object in a custom connection factory.
@@ -77,7 +77,7 @@ in future versions.
 
 Server is fully managed by the binary itself.
 
-```
+```sh
 # Start anycable daemon
 $ bundle exec anycabled start
 
@@ -135,7 +135,7 @@ You can omit it if you want to load an app form `./config/environment.rb` (e.g. 
 AnyCable CLI also allows you to run a separate command (process) from within a RPC server:
 
 ```sh
-$ bundle exec anycable --server-command "anycable-go -p 3334"
+bundle exec anycable --server-command "anycable-go -p 3334"
 ```
 
 #### Configuration
@@ -150,6 +150,7 @@ AnyCable.configure do |config|
   # etc
 end
 ```
+
 - `REDIS_URL` env is used by default if present (and no `ANYCABLE_REDIS_URL` specified)
 - Make HTTP health check url configurable
 - Add ability to pass Redis Sentinel config as array of string.
@@ -190,7 +191,6 @@ end
 
 - `AnyCable::Server.start` is deprecated
 
-
 ## 0.5.2 (2018-09-06)
 
 - [#48](https://github.com/anycable/anycable/pull/48) Add HTTP health server ([@DarthSim][])
@@ -211,9 +211,9 @@ Previously we hardcoded only "Cookie" header. Now we add all passed headers by W
 
 Now RPC responses has 3 statuses:
 
-  - `SUCCESS` – successful request, operation succeed
-  - `FAILURE` – successful request, operation failed (e.g. authentication failed)
-  - `ERROR` – request failed (exception raised).
+1) `SUCCESS` – successful request, operation succeed
+2) `FAILURE` – successful request, operation failed (e.g. authentication failed)
+3) `ERROR` – request failed (exception raised).
 
 We provide `error_msg` only when request status is `ERROR`.
 
@@ -258,7 +258,7 @@ Add `Socket#subscribe`, `unsubscribe` and `unsubscribe_from_all` methods.
 
 - Make commands handling more abstract. ([@palkan][])
 
-We now do not explicitly call channels action but use the only one entrypoing for all commands:
+We now do not explicitly call channels action but use the only one entrypoint for all commands:
 
 ```ruby
 connection.handle_channel_command(identifier, command, data)
@@ -274,7 +274,7 @@ Replace `Subscribe`, `Unsubscribe` and `Perform` methods with `Command` method.
 
 - Extract Rails functionality to separate gem. ([@palkan][])
 
-All Rails specifics now live here https://github.com/anycable/anycable-rails.
+All Rails specifics now live here [https://github.com/anycable/anycable-rails](https://github.com/anycable/anycable-rails).
 
 ## 0.3.0 (2016-12-28)
 
