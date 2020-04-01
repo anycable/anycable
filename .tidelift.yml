@@ -1,6 +1,0 @@
-ci:
-  type:
-    development:
-      tests:
-        unlicensed: skip
-        outdated: skip
