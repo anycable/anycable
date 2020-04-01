@@ -1,0 +1,72 @@
+name: Lint Docs
+
+on:
+  push:
+    branches:
+    - master
+    paths:
+    - "*.md"
+    - "**/*.md"
+  pull_request:
+    paths:
+    - "*.md"
+    - "**/*.md"
+
+jobs:
+  markdownlint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: 2.7
+    - name: Run Markdown linter
+      run: |
+        gem install mdl
+        mdl *.md
+  rubocop:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: 2.7
+    - name: Lint Markdown files with RuboCop
+      run: |
+        gem install bundler
+        bundle install --gemfile gemfiles/rubocop.gemfile --jobs 4 --retry 3
+        bundle exec --gemfile gemfiles/rubocop.gemfile rubocop -c .rubocop-md.yml
+  forspell:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install Hunspell
+      run: |
+        sudo apt-get install hunspell
+    - uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: 2.7
+    - name: Cache installed gems
+      uses: actions/cache@v1
+      with:
+        path: /home/runner/.rubies/ruby-2.7.0/lib/ruby/gems/2.7.0
+        key: gems-cache-${{ runner.os }}
+    - name: Install Forspell
+      run: gem install forspell
+    - name: Run Forspell
+      run: forspell *.md
+  liche:
+    runs-on: ubuntu-latest
+    env:
+      GO111MODULE: on
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Go
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.13.x
+    - name: Run liche
+      run: |
+        export PATH=$PATH:$(go env GOPATH)/bin
+        go get -u github.com/raviqqe/liche
+        liche README.md CHANGELOG.md
