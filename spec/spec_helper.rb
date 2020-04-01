@@ -5,13 +5,6 @@ begin
 rescue LoadError
 end
 
-if ENV["COVER"]
-  require "simplecov"
-  SimpleCov.root File.join(File.dirname(__FILE__), "..")
-  SimpleCov.add_filter "/spec/"
-  SimpleCov.start
-end
-
 PROJECT_ROOT = File.expand_path("../", __dir__)
 
 ENV["ANYCABLE_CONF"] = File.join(File.dirname(__FILE__), "support/anycable.yml")

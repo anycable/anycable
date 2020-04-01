@@ -1,0 +1,48 @@
+name: Build
+
+on:
+  push:
+    branches:
+    - master
+  pull_request:
+
+jobs:
+  rspec:
+    runs-on: ubuntu-latest
+    env:
+      BUNDLE_JOBS: 4
+      BUNDLE_RETRY: 3
+      VERIFY_RESERVED: 1
+      BUNDLE_FORCE_RUBY_PLATFORM: 1
+      CI: true
+    strategy:
+      fail-fast: false
+      matrix:
+        ruby: ["2.5", "2.6", "2.7"]
+        anyway_config: ["~> 1.4.0", "2.0.0.rc1"]
+        exclude:
+        - ruby: "2.5.x"
+          anyway_config: "~> 1.4.0"
+        - ruby: "2.7.x"
+          anyway_config: "2.0.0.rc1"
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/cache@v1
+      with:
+        path: /home/runner/bundle
+        key: bundle-${{ matrix.ruby }}-${{ matrix.anyway_config }}-${{ hashFiles('**/*.gemspec') }}-${{ hashFiles('**/Gemfile') }}
+        restore-keys: |
+          bundle-${{ matrix.ruby }}-
+    - uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: ${{ matrix.ruby }}
+    - name: Bundle install
+      env:
+        ANYWAY_CONFIG_VERSION: ${{ matrix.anyway_config }}
+      run: |
+        bundle config path /home/runner/bundle
+        bundle install
+        bundle update
+    - name: Run RSpec
+      run: |
+        bundle exec rspec
