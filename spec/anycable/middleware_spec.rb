@@ -20,7 +20,7 @@ describe AnyCable::Middleware do
       middleware.request_response(
         request: "test request",
         call: "success",
-        method: method,
+        method: method
       ) { :ok }
     ).to eq(:ok)
 
@@ -28,7 +28,7 @@ describe AnyCable::Middleware do
       middleware.request_response(
         request: "test request",
         call: "fail",
-        method: method,
+        method: method
       )
     ).to eq :error
   end
@@ -41,7 +41,7 @@ describe AnyCable::Middleware do
         middleware.request_response(
           request: "test request",
           call: "fail",
-          method: method,
+          method: method
         ) { :ok }
       ).to eq :ok
     end
