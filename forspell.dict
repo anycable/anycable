@@ -1,0 +1,19 @@
+# Format: one word per line. Empty lines and #-comments are supported too.
+# If you want to add word with its forms, you can write 'word: example' (without quotes) on the line,
+# where 'example' is existing word with the same possible forms (endings) as your word.
+# Example: deduplicate: duplicate
+anycable-go
+anycable-rails
+Dementyev
+Erlycable
+erlycable
+gifs
+Hanami
+proto
+websocket
+Plezi
+Golang
+Ansible
+Mem
+entrypoint
+psrecord
