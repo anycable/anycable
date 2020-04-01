@@ -12,7 +12,6 @@ jobs:
     env:
       BUNDLE_JOBS: 4
       BUNDLE_RETRY: 3
-      VERIFY_RESERVED: 1
       BUNDLE_FORCE_RUBY_PLATFORM: 1
       CI: true
     strategy:
