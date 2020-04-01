@@ -1,6 +1,5 @@
 require:
   - standard/cop/semantic_blocks
-  - rubocop-md
 
 inherit_gem:
   standard: config/base.yml
@@ -27,25 +26,11 @@ Style/TrailingCommaInArrayLiteral:
 Style/TrailingCommaInHashLiteral:
   EnforcedStyleForMultiline: no_comma
 
-Lint/Void:
-  Exclude:
-    - '**/*.md'
-
 # See https://github.com/rubocop-hq/rubocop/issues/4222
 Lint/AmbiguousBlockAssociation:
   Exclude:
     - 'spec/**/*'
-    - '**/*.md'
-
-Lint/DuplicateMethods:
-  Exclude:
-    - '**/*.md'
 
 Naming/FileName:
   Exclude:
    - 'lib/anycable-rails.rb'
-   - '**/*.md'
-
-Layout/InitialIndentation:
-  Exclude:
-    - 'CHANGELOG.md'
