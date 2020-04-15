@@ -59,6 +59,11 @@ func init() {
 	fs.StringVar(&defaults.RedisURL, "redis_url", redisDefault, "")
 	fs.StringVar(&defaults.RedisChannel, "redis_channel", "__anycable__", "")
 
+	fs.BoolVar(&defaults.RedisSentinelEnabled, "redis_sentinel_enabled", false, "")
+	fs.StringVar(&defaults.RedisSentinels, "redis_sentinels", "", "")
+	fs.StringVar(&defaults.RedisPassword, "redis_password", "", "")
+	fs.StringVar(&defaults.RedisMasterName, "redis_master_name", "mymaster", "")
+
 	fs.StringVar(&defaults.RPCHost, "rpc_host", "localhost:50051", "")
 	fs.StringVar(&headers, "headers", "cookie", "")
 	fs.IntVar(&defaults.DisconnectRate, "disconnect_rate", 100, "")
@@ -109,32 +114,37 @@ USAGE
   anycable-go [options]
 
 OPTIONS
-  --host                   Server host, default: 0.0.0.0 (deprecated, will be changed to "localhost"), env: ANYCABLE_HOST
-  --port                   Server port, default: 8080, env: ANYCABLE_PORT, PORT
-  --path                   WebSocket endpoint path, default: /cable, env: ANYCABLE_PATH
-  --health-path            HTTP health endpoint path, default: /health, env: ANYCABLE_HEALTH_PATH
+  --host                     Server host, default: 0.0.0.0 (deprecated, will be changed to "localhost"), env: ANYCABLE_HOST
+  --port                     Server port, default: 8080, env: ANYCABLE_PORT, PORT
+  --path                     WebSocket endpoint path, default: /cable, env: ANYCABLE_PATH
+  --health-path              HTTP health endpoint path, default: /health, env: ANYCABLE_HEALTH_PATH
 
-  --ssl_cert               SSL certificate path, env: ANYCABLE_SSL_CERT
-  --ssl_key                SSL private key path, env: ANYCABLE_SSL_KEY
+  --ssl_cert                 SSL certificate path, env: ANYCABLE_SSL_CERT
+  --ssl_key                  SSL private key path, env: ANYCABLE_SSL_KEY
 
-  --redis_url              Redis url, default: redis://localhost:6379/5, env: ANYCABLE_REDIS_URL, REDIS_URL
-  --redis_channel          Redis channel for broadcasts, default: __anycable__, env: ANYCABLE_REDIS_CHANNEL
+  --redis_url                Redis url, default: redis://localhost:6379/5, env: ANYCABLE_REDIS_URL, REDIS_URL
+  --redis_channel            Redis channel for broadcasts, default: __anycable__, env: ANYCABLE_REDIS_CHANNEL
 
-  --rpc_host               RPC service address, default: localhost:50051, env: ANYCABLE_RPC_HOST
-  --headers                List of headers to proxy to RPC, default: cookie, env: ANYCABLE_HEADERS
-  --disconnect_rate        Max number of Disconnect calls per second, default: 100, env: ANYCABLE_DISCONNECT_RATE
-  --max_message_size       Maximum size of a message in bytes, default: 65536, env: ANYCABLE_MAX_MESSAGE_SIZE
+  --redis_sentinel_enabled   Enable redis sentinel support, default: false, env: ANYCABLE_REDIS_SENTINEL_ENABLED
+  --redis_sentinels			 Comma separated list of sentinel hosts, env: ANYCABLE_REDIS_SENTINELS
+  --redis_password			 Redis password (only used if redis_sentinel_enabled is true), env: ANYCABLE_REDIS_PASSWORD
+  --redis_master_name        Redis sentinel master name, default: mymaster, env: ANYCABLE_REDIS_MASTER_NAME
 
-  --log_level              Set logging level (debug/info/warn/error/fatal), default: info, env: ANYCABLE_LOG_LEVEL
-  --log_format             Set logging format (text, json), default: text, env: ANYCABLE_LOG_FORMAT
-  --debug                  Enable debug mode (more verbose logging), default: false, env: ANYCABLE_DEBUG
+  --rpc_host                 RPC service address, default: localhost:50051, env: ANYCABLE_RPC_HOST
+  --headers                  List of headers to proxy to RPC, default: cookie, env: ANYCABLE_HEADERS
+  --disconnect_rate          Max number of Disconnect calls per second, default: 100, env: ANYCABLE_DISCONNECT_RATE
+  --max_message_size         Maximum size of a message in bytes, default: 65536, env: ANYCABLE_MAX_MESSAGE_SIZE
 
-  --metrics_log            Enable metrics logging (with info level), default: false, env: ANYCABLE_METRICS_LOG
-  --metrics_log_interval   Specify how often flush metrics logs (in seconds), default: 15, env: ANYCABLE_METRICS_LOG_INTERVAL
-  --metrics_log_formatter  Specify the path to custom Ruby formatter script (only supported on MacOS and Linux), default: "" (none), env: ANYCABLE_METRICS_LOG_FORMATTER
-  --metrics_http           Enable HTTP metrics endpoint at the specified path, default: "" (disabled), env: ANYCABLE_METRICS_HTTP
-  --metrics_host           Server host for metrics endpoint, default: the same as for main server, env: ANYCABLE_METRICS_HOST
-  --metrics_port           Server port for metrics endpoint, default: the same as for main server, env: ANYCABLE_METRICS_PORT
+  --log_level                Set logging level (debug/info/warn/error/fatal), default: info, env: ANYCABLE_LOG_LEVEL
+  --log_format               Set logging format (text, json), default: text, env: ANYCABLE_LOG_FORMAT
+  --debug                    Enable debug mode (more verbose logging), default: false, env: ANYCABLE_DEBUG
+
+  --metrics_log              Enable metrics logging (with info level), default: false, env: ANYCABLE_METRICS_LOG
+  --metrics_log_interval     Specify how often flush metrics logs (in seconds), default: 15, env: ANYCABLE_METRICS_LOG_INTERVAL
+  --metrics_log_formatter    Specify the path to custom Ruby formatter script (only supported on MacOS and Linux), default: "" (none), env: ANYCABLE_METRICS_LOG_FORMATTER
+  --metrics_http             Enable HTTP metrics endpoint at the specified path, default: "" (disabled), env: ANYCABLE_METRICS_HTTP
+  --metrics_host             Server host for metrics endpoint, default: the same as for main server, env: ANYCABLE_METRICS_HOST
+  --metrics_port             Server port for metrics endpoint, default: the same as for main server, env: ANYCABLE_METRICS_PORT
 
   -h                       This help screen
   -v                       Show version

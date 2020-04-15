@@ -95,7 +95,15 @@ func main() {
 
 	node := node.NewNode(&config, controller, metrics)
 
-	subscriber := pubsub.NewRedisSubscriber(node, config.RedisURL, config.RedisChannel)
+	subscriber := pubsub.NewRedisSubscriber(
+		node,
+		config.RedisURL,
+		config.RedisSentinelEnabled,
+		config.RedisSentinels,
+		config.RedisMasterName,
+		config.RedisPassword,
+		config.RedisChannel,
+	)
 
 	go func() {
 		if err := subscriber.Start(); err != nil {

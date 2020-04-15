@@ -13,25 +13,29 @@ func (opts *SSLOptions) Available() bool {
 
 // Config contains main application configuration
 type Config struct {
-	RPCHost             string
-	RedisURL            string
-	RedisChannel        string
-	Host                string
-	Port                int
-	Path                string
-	HealthPath          string
-	Headers             []string
-	SSL                 SSLOptions
-	MaxMessageSize      int64
-	DisconnectRate      int
-	LogLevel            string
-	LogFormat           string
-	MetricsLog          bool
-	MetricsLogInterval  int
-	MetricsLogFormatter string
-	MetricsHTTP         string
-	MetricsHost         string
-	MetricsPort         int
+	RPCHost              string
+	RedisURL             string
+	RedisChannel         string
+	RedisSentinels       string
+	RedisSentinelEnabled bool
+	RedisPassword        string
+	RedisMasterName      string
+	Host                 string
+	Port                 int
+	Path                 string
+	HealthPath           string
+	Headers              []string
+	SSL                  SSLOptions
+	MaxMessageSize       int64
+	DisconnectRate       int
+	LogLevel             string
+	LogFormat            string
+	MetricsLog           bool
+	MetricsLogInterval   int
+	MetricsLogFormatter  string
+	MetricsHTTP          string
+	MetricsHost          string
+	MetricsPort          int
 }
 
 // New returns a new empty config
