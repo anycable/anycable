@@ -1,3 +1,3 @@
-go 1.12.1
+go 1.14
 
 module github.com/matoous/go-nanoid

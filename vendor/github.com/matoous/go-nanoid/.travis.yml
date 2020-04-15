@@ -1,8 +1,0 @@
-language: go
-
-go:
-  - 2.11
-  - 2.12
-  - release
-
-script: go test -v -bench=.
