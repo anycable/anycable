@@ -2,6 +2,8 @@
 
 ## master
 
+- Added redis sentinel support([@rolandg][])
+
 ## 0.6.5 (2020-03-29)
 
 - Change alpine version from edge to latest ([@ericmatte][])
