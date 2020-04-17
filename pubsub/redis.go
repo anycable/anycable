@@ -80,6 +80,9 @@ func (s *RedisSubscriber) listen() error {
 	var err error
 
 	if s.sentinelsEnabled {
+
+		s.log.Debugf("Redis sentinel enabled")
+		s.log.Debugf("Redis sentinel parameters:  sentinels: %s,  masterName: %s", s.sentinels, s.masterName)
 		sentinels := strings.Split(s.sentinels, ",")
 		sntnl := &sentinel.Sentinel{
 			Addrs:      sentinels,
@@ -95,8 +98,10 @@ func (s *RedisSubscriber) listen() error {
 					redis.DialReadTimeout(timeout),
 				)
 				if err != nil {
+					s.log.Debugf("Failed to connect to sentinel %s", addr)
 					return nil, err
 				}
+				s.log.Debugf("Successfully connected to sentinel %s", addr)
 				return c, nil
 			},
 		}
@@ -111,13 +116,17 @@ func (s *RedisSubscriber) listen() error {
 			Dial: func() (redis.Conn, error) {
 				masterAddr, err := sntnl.MasterAddr()
 				if err != nil {
+					s.log.Debugf("Failed to get master address from sentinel.")
 					return nil, err
 				}
+				s.log.Debugf("Got master address from sentinel: %s", masterAddr)
 				c, err := redis.Dial("tcp", masterAddr, redis.DialPassword(s.password))
 
 				if err != nil {
+					s.log.Debugf("Failed to connect to redis master %s", masterAddr)
 					return nil, err
 				}
+				s.log.Debugf("Successfully connected to redis master %s", masterAddr)
 				return c, nil
 			},
 			TestOnBorrow: func(c redis.Conn, t time.Time) error {

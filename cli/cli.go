@@ -126,8 +126,8 @@ OPTIONS
   --redis_channel            Redis channel for broadcasts, default: __anycable__, env: ANYCABLE_REDIS_CHANNEL
 
   --redis_sentinel_enabled   Enable redis sentinel support, default: false, env: ANYCABLE_REDIS_SENTINEL_ENABLED
-  --redis_sentinels			 Comma separated list of sentinel hosts, env: ANYCABLE_REDIS_SENTINELS
-  --redis_password			 Redis password (only used if redis_sentinel_enabled is true), env: ANYCABLE_REDIS_PASSWORD
+  --redis_sentinels          Comma separated list of sentinel hosts, format: 'hostname:port,..', env: ANYCABLE_REDIS_SENTINELS
+  --redis_password           Redis password (only used if redis_sentinel_enabled is true), env: ANYCABLE_REDIS_PASSWORD
   --redis_master_name        Redis sentinel master name, default: mymaster, env: ANYCABLE_REDIS_MASTER_NAME
 
   --rpc_host                 RPC service address, default: localhost:50051, env: ANYCABLE_RPC_HOST
