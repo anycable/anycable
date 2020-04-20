@@ -98,10 +98,7 @@ func main() {
 	subscriber := pubsub.NewRedisSubscriber(
 		node,
 		config.RedisURL,
-		config.RedisSentinelEnabled,
 		config.RedisSentinels,
-		config.RedisMasterName,
-		config.RedisPassword,
 		config.RedisChannel,
 	)
 

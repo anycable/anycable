@@ -21,24 +21,18 @@ const (
 type RedisSubscriber struct {
 	node             *node.Node
 	url              string
-	sentinelsEnabled bool
 	sentinels        string
-	password         string
-	masterName       string
 	channel          string
 	reconnectAttempt int
 	log              *log.Entry
 }
 
 // NewRedisSubscriber returns new RedisSubscriber struct
-func NewRedisSubscriber(node *node.Node, url string, sentinelsEnabled bool, sentinels string, masterName string, password string, channel string) RedisSubscriber {
+func NewRedisSubscriber(node *node.Node, url string, sentinels string, channel string) RedisSubscriber {
 	return RedisSubscriber{
 		node:             node,
 		url:              url,
-		sentinelsEnabled: sentinelsEnabled,
 		sentinels:        sentinels,
-		password:         password,
-		masterName:       masterName,
 		channel:          channel,
 		reconnectAttempt: 0,
 		log:              log.WithFields(log.Fields{"context": "pubsub"}),
@@ -48,13 +42,64 @@ func NewRedisSubscriber(node *node.Node, url string, sentinelsEnabled bool, sent
 // Start connects to Redis and subscribes to the pubsub channel
 func (s *RedisSubscriber) Start() error {
 	// Check that URL is correct first
-	_, err := url.Parse(s.url)
+	redisUrl, err := url.Parse(s.url)
 
 	if err != nil {
 		return err
 	}
 
+	var sntnl *sentinel.Sentinel
+	var password string
+	if s.sentinels != "" {
+
+		masterName := redisUrl.Hostname()
+		password, _ = redisUrl.User.Password()
+
+		s.log.Debugf("Redis sentinel enabled")
+		s.log.Debugf("Redis sentinel parameters:  sentinels: %s,  masterName: %s", s.sentinels, masterName)
+		sentinels := strings.Split(s.sentinels, ",")
+		sntnl = &sentinel.Sentinel{
+			Addrs:      sentinels,
+			MasterName: masterName,
+			Dial: func(addr string) (redis.Conn, error) {
+				timeout := 500 * time.Millisecond
+
+				c, err := redis.Dial(
+					"tcp",
+					addr,
+					redis.DialConnectTimeout(timeout),
+					redis.DialReadTimeout(timeout),
+					redis.DialReadTimeout(timeout),
+				)
+				if err != nil {
+					s.log.Debugf("Failed to connect to sentinel %s", addr)
+					return nil, err
+				}
+				s.log.Debugf("Successfully connected to sentinel %s", addr)
+				return c, nil
+			},
+		}
+
+		defer sntnl.Close()
+	}
+
 	for {
+
+		if s.sentinels != "" {
+			masterAddress, err := sntnl.MasterAddr()
+
+			if err != nil {
+				s.log.Debugf("Failed to get master address from sentinel.")
+				return err
+			}
+			s.log.Debugf("Got master address from sentinel: %s", masterAddress)
+
+			if password == "" {
+				s.url = "redis://" + masterAddress
+			} else {
+				s.url = "redis://:" + password + "@" + masterAddress
+			}
+		}
 		if err := s.listen(); err != nil {
 			s.log.Warnf("Redis connection failed: %v", err)
 		}
@@ -79,75 +124,10 @@ func (s *RedisSubscriber) listen() error {
 	var c redis.Conn
 	var err error
 
-	if s.sentinelsEnabled {
+	c, err = redis.DialURL(s.url)
 
-		s.log.Debugf("Redis sentinel enabled")
-		s.log.Debugf("Redis sentinel parameters:  sentinels: %s,  masterName: %s", s.sentinels, s.masterName)
-		sentinels := strings.Split(s.sentinels, ",")
-		sntnl := &sentinel.Sentinel{
-			Addrs:      sentinels,
-			MasterName: s.masterName,
-			Dial: func(addr string) (redis.Conn, error) {
-				timeout := 500 * time.Millisecond
-
-				c, err := redis.Dial(
-					"tcp",
-					addr,
-					redis.DialConnectTimeout(timeout),
-					redis.DialReadTimeout(timeout),
-					redis.DialReadTimeout(timeout),
-				)
-				if err != nil {
-					s.log.Debugf("Failed to connect to sentinel %s", addr)
-					return nil, err
-				}
-				s.log.Debugf("Successfully connected to sentinel %s", addr)
-				return c, nil
-			},
-		}
-
-		defer sntnl.Close()
-
-		pool := &redis.Pool{
-			MaxIdle:     3,
-			MaxActive:   64,
-			Wait:        true,
-			IdleTimeout: 240 * time.Second,
-			Dial: func() (redis.Conn, error) {
-				masterAddr, err := sntnl.MasterAddr()
-				if err != nil {
-					s.log.Debugf("Failed to get master address from sentinel.")
-					return nil, err
-				}
-				s.log.Debugf("Got master address from sentinel: %s", masterAddr)
-				c, err := redis.Dial("tcp", masterAddr, redis.DialPassword(s.password))
-
-				if err != nil {
-					s.log.Debugf("Failed to connect to redis master %s", masterAddr)
-					return nil, err
-				}
-				s.log.Debugf("Successfully connected to redis master %s", masterAddr)
-				return c, nil
-			},
-			TestOnBorrow: func(c redis.Conn, t time.Time) error {
-				if !sentinel.TestRole(c, "master") {
-					return errors.New("Role check failed")
-				} else {
-					return nil
-				}
-			},
-		}
-
-		defer pool.Close()
-
-		c = pool.Get()
-
-	} else {
-		c, err = redis.DialURL(s.url)
-
-		if err != nil {
-			return err
-		}
+	if err != nil {
+		return err
 	}
 
 	defer c.Close()

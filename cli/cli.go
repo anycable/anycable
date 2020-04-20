@@ -57,12 +57,8 @@ func init() {
 	fs.StringVar(&defaults.SSL.KeyPath, "ssl_key", "", "")
 
 	fs.StringVar(&defaults.RedisURL, "redis_url", redisDefault, "")
-	fs.StringVar(&defaults.RedisChannel, "redis_channel", "__anycable__", "")
-
-	fs.BoolVar(&defaults.RedisSentinelEnabled, "redis_sentinel_enabled", false, "")
 	fs.StringVar(&defaults.RedisSentinels, "redis_sentinels", "", "")
-	fs.StringVar(&defaults.RedisPassword, "redis_password", "", "")
-	fs.StringVar(&defaults.RedisMasterName, "redis_master_name", "mymaster", "")
+	fs.StringVar(&defaults.RedisChannel, "redis_channel", "__anycable__", "")
 
 	fs.StringVar(&defaults.RPCHost, "rpc_host", "localhost:50051", "")
 	fs.StringVar(&headers, "headers", "cookie", "")
@@ -123,12 +119,8 @@ OPTIONS
   --ssl_key                  SSL private key path, env: ANYCABLE_SSL_KEY
 
   --redis_url                Redis url, default: redis://localhost:6379/5, env: ANYCABLE_REDIS_URL, REDIS_URL
+  --redis_sentinels          Comma separated list of sentinel hosts. format: 'hostname:port,..', env: ANYCABLE_REDIS_SENTINELS
   --redis_channel            Redis channel for broadcasts, default: __anycable__, env: ANYCABLE_REDIS_CHANNEL
-
-  --redis_sentinel_enabled   Enable redis sentinel support, default: false, env: ANYCABLE_REDIS_SENTINEL_ENABLED
-  --redis_sentinels          Comma separated list of sentinel hosts, format: 'hostname:port,..', env: ANYCABLE_REDIS_SENTINELS
-  --redis_password           Redis password (only used if redis_sentinel_enabled is true), env: ANYCABLE_REDIS_PASSWORD
-  --redis_master_name        Redis sentinel master name, default: mymaster, env: ANYCABLE_REDIS_MASTER_NAME
 
   --rpc_host                 RPC service address, default: localhost:50051, env: ANYCABLE_RPC_HOST
   --headers                  List of headers to proxy to RPC, default: cookie, env: ANYCABLE_HEADERS
