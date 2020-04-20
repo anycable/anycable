@@ -9,7 +9,6 @@ import (
 	"syscall"
 
 	"github.com/anycable/anycable-go/cli"
-	"github.com/anycable/anycable-go/config"
 	"github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/mrb"
 	"github.com/anycable/anycable-go/node"
@@ -22,19 +21,9 @@ import (
 	"github.com/syossan27/tebata"
 )
 
-var (
-	version string
-)
-
-func init() {
-	if version == "" {
-		version = "0.6.5-unknown"
-	}
-}
-
 func main() {
 	if cli.ShowVersion() {
-		fmt.Println(version)
+		fmt.Println(utils.Version())
 		os.Exit(0)
 	}
 
@@ -70,37 +59,25 @@ func main() {
 		}
 	}
 
-	ctx.Infof("Starting AnyCable %s%s (pid: %d, open file limit: %s)", version, mrubySupport, os.Getpid(), utils.OpenFileLimit())
+	ctx.Infof("Starting AnyCable %s%s (pid: %d, open file limit: %s)", utils.Version(), mrubySupport, os.Getpid(), utils.OpenFileLimit())
 
-	var metricsPrinter metrics.Printer
+	metrics, err := metrics.FromConfig(&config.Metrics)
 
-	if config.MetricsLogEnabled() {
-		if config.MetricsLogFormatterEnabled() {
-			customPrinter, err := metrics.NewCustomPrinter(config.MetricsLogFormatter)
-
-			if err == nil {
-				metricsPrinter = customPrinter
-			} else {
-				log.Errorf("!!! Failed to initialize custom log printer !!!\n%v", err)
-				os.Exit(1)
-			}
-		} else {
-			metricsPrinter = metrics.NewBasePrinter()
-		}
+	if err != nil {
+		log.Errorf("!!! Failed to initialize custom log printer !!!\n%v", err)
+		os.Exit(1)
 	}
 
-	metrics := metrics.NewMetrics(metricsPrinter, config.MetricsLogInterval)
+	controller := rpc.NewController(metrics, &config.RPC)
 
-	controller := rpc.NewController(&config, metrics)
+	appNode := node.NewNode(controller, metrics)
 
-	node := node.NewNode(&config, controller, metrics)
+	disconnector := node.NewDisconnectQueue(appNode, &config.DisconnectQueue)
+	go disconnector.Run()
 
-	subscriber := pubsub.NewRedisSubscriber(
-		node,
-		config.RedisURL,
-		config.RedisSentinels,
-		config.RedisChannel,
-	)
+	appNode.SetDisconnector(disconnector)
+
+	subscriber := pubsub.NewRedisSubscriber(appNode, config.RedisURL, config.RedisSentinels, config.RedisChannel)
 
 	go func() {
 		if err := subscriber.Start(); err != nil {
@@ -116,8 +93,9 @@ func main() {
 		}
 	}()
 
-	wsServer := buildServer(node, config.Host, strconv.Itoa(config.Port), &config.SSL)
-	wsServer.Mux.Handle(config.Path, http.HandlerFunc(wsServer.WebsocketHandler))
+	wsServer := buildServer(config.Host, strconv.Itoa(config.Port), &config.SSL)
+	wsServer.Mux.Handle(config.Path, server.WebsocketHandler(appNode, config.Headers, &config.WS))
+
 	ctx.Infof("Handle WebSocket connections at %s", config.Path)
 
 	wsServer.Mux.Handle(config.HealthPath, http.HandlerFunc(wsServer.HealthHandler))
@@ -141,24 +119,24 @@ func main() {
 	})
 	t.Reserve(metrics.Shutdown)
 	t.Reserve(wsServer.Stop)
-	t.Reserve(node.Shutdown)
+	t.Reserve(appNode.Shutdown)
 
-	if config.MetricsHTTPEnabled() {
+	if config.Metrics.HTTPEnabled() {
 		metricsServer := wsServer
 
-		if config.MetricsPort != config.Port {
-			port := strconv.Itoa(config.MetricsPort)
+		if config.Metrics.Port != config.Port {
+			port := strconv.Itoa(config.Metrics.Port)
 			host := config.Host
-			if config.MetricsHost != "" {
-				host = config.MetricsHost
+			if config.Metrics.Host != "" {
+				host = config.Metrics.Host
 			}
-			metricsServer = buildServer(node, host, port, &config.SSL)
-			ctx.Infof("Serve metrics at %s:%s%s", config.Host, port, config.MetricsHTTP)
+			metricsServer = buildServer(host, port, &config.SSL)
+			ctx.Infof("Serve metrics at %s:%s%s", config.Host, port, config.Metrics.HTTP)
 		} else {
-			ctx.Infof("Serve metrics at %s", config.MetricsHTTP)
+			ctx.Infof("Serve metrics at %s", config.Metrics.HTTP)
 		}
 
-		metricsServer.Mux.Handle(config.MetricsHTTP, http.HandlerFunc(metrics.PrometheusHandler))
+		metricsServer.Mux.Handle(config.Metrics.HTTP, http.HandlerFunc(metrics.PrometheusHandler))
 
 		if metricsServer != wsServer {
 			go runServer(metricsServer)
@@ -172,8 +150,8 @@ func main() {
 	select {}
 }
 
-func buildServer(node *node.Node, host string, port string, ssl *config.SSLOptions) *server.HTTPServer {
-	s, err := server.NewServer(node, host, port, ssl)
+func buildServer(host string, port string, ssl *server.SSLConfig) *server.HTTPServer {
+	s, err := server.NewServer(host, port, ssl)
 
 	if err != nil {
 		fmt.Printf("!!! Failed to initialize HTTP server at %s:%s !!!\n%v", err, host, port)

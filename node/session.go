@@ -1,12 +1,11 @@
 package node
 
 import (
-	"context"
 	"encoding/json"
-	"net/http"
 	"sync"
 	"time"
 
+	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/utils"
 	"github.com/apex/log"
 	"github.com/gorilla/websocket"
@@ -19,10 +18,10 @@ const (
 	// CloseInternalServerErr indicates closure because of internal error
 	CloseInternalServerErr = websocket.CloseInternalServerErr
 
-	// CloseAbnormalClosure indicates ubnormal close
+	// CloseAbnormalClosure indicates abnormal close
 	CloseAbnormalClosure = websocket.CloseAbnormalClosure
 
-	// CloseGoingAway indicates ubnormal close
+	// CloseGoingAway indicates closing because of server shuts down or client disconnects
 	CloseGoingAway = websocket.CloseGoingAway
 
 	writeWait    = 10 * time.Second
@@ -37,19 +36,31 @@ var (
 	}
 )
 
+type frameType int
+
+const (
+	textFrame  frameType = 0
+	closeFrame frameType = 1
+)
+
+type sentFrame struct {
+	frameType   frameType
+	payload     []byte
+	closeCode   int
+	closeReason string
+}
+
 // Session represents active client
 type Session struct {
 	node          *Node
 	ws            *websocket.Conn
-	path          string
-	headers       map[string]string
+	env           *common.SessionEnv
 	subscriptions map[string]bool
-	send          chan []byte
+	send          chan sentFrame
 	closed        bool
 	connected     bool
 	mu            sync.Mutex
 	pingTimer     *time.Timer
-	cancelSend    context.CancelFunc
 
 	UID         string
 	Identifiers string
@@ -70,25 +81,15 @@ func (p *pingMessage) toJSON() []byte {
 }
 
 // NewSession build a new Session struct from ws connetion and http request
-func NewSession(node *Node, ws *websocket.Conn, request *http.Request) (*Session, error) {
-	path := request.URL.String()
-	headers := utils.FetchHeaders(request, node.Config.Headers)
-
+func NewSession(node *Node, ws *websocket.Conn, url string, headers map[string]string, uid string) (*Session, error) {
 	session := &Session{
 		node:          node,
 		ws:            ws,
-		path:          path,
-		headers:       headers,
+		env:           common.NewSessionEnv(url, &headers),
 		subscriptions: make(map[string]bool),
-		send:          make(chan []byte, 256),
+		send:          make(chan sentFrame, 256),
 		closed:        false,
 		connected:     false,
-	}
-
-	uid, err := utils.FetchUID(request)
-	if err != nil {
-		defer session.Close("UID Retrieval Error", CloseInternalServerErr)
-		return nil, err
 	}
 
 	session.UID = uid
@@ -99,43 +100,80 @@ func NewSession(node *Node, ws *websocket.Conn, request *http.Request) (*Session
 
 	session.Log = ctx
 
-	err = node.Authenticate(session, path, &headers)
+	err := node.Authenticate(session)
 
 	if err != nil {
 		defer session.Close("Auth Error", CloseInternalServerErr)
-		return nil, err
 	}
 
-	sendCtx, cancel := context.WithCancel(context.Background())
-
-	session.cancelSend = cancel
-
-	go session.SendMessages(sendCtx)
+	go session.SendMessages()
 
 	session.addPing()
 
-	return session, nil
+	return session, err
 }
 
 // SendMessages waits for incoming messages and send them to the client connection
-func (s *Session) SendMessages(ctx context.Context) {
+func (s *Session) SendMessages() {
 	defer s.Disconnect("Write Failed", CloseAbnormalClosure)
 	for {
 		select {
-		case <-ctx.Done():
-			return
 		case message, ok := <-s.send:
 			if !ok {
 				return
 			}
 
-			err := s.write(message, time.Now().Add(writeWait))
+			switch message.frameType {
+			case textFrame:
+				err := s.write(message.payload, time.Now().Add(writeWait))
 
-			if err != nil {
+				if err != nil {
+					return
+				}
+			case closeFrame:
+				utils.CloseWS(s.ws, message.closeCode, message.closeReason)
+				return
+			default:
+				s.Log.Errorf("Unknown frame type: %v", message)
 				return
 			}
 		}
 	}
+}
+
+// Send data to client connection
+func (s *Session) Send(msg []byte) {
+	s.sendFrame(&sentFrame{frameType: textFrame, payload: msg})
+}
+
+func (s *Session) sendClose(reason string, code int) {
+	s.sendFrame(&sentFrame{
+		frameType:   closeFrame,
+		closeReason: reason,
+		closeCode:   code,
+	})
+}
+
+func (s *Session) sendFrame(frame *sentFrame) {
+	s.mu.Lock()
+
+	if s.send == nil {
+		s.mu.Unlock()
+		return
+	}
+
+	select {
+	case s.send <- *frame:
+	default:
+		if s.send != nil {
+			close(s.send)
+			defer s.Disconnect("Write failed", CloseAbnormalClosure)
+		}
+
+		s.send = nil
+	}
+
+	s.mu.Unlock()
 }
 
 func (s *Session) write(message []byte, deadline time.Time) error {
@@ -155,33 +193,8 @@ func (s *Session) write(message []byte, deadline time.Time) error {
 	return w.Close()
 }
 
-// Send data to client connection
-func (s *Session) Send(msg []byte) {
-	s.mu.Lock()
-
-	if s.send == nil {
-		s.mu.Unlock()
-		return
-	}
-
-	select {
-	case s.send <- msg:
-	default:
-		if s.send != nil {
-			close(s.send)
-			defer s.Disconnect("Write failed", CloseAbnormalClosure)
-		}
-
-		s.send = nil
-	}
-
-	s.mu.Unlock()
-}
-
 // ReadMessages reads messages from ws connection and send them to node
 func (s *Session) ReadMessages() {
-	s.ws.SetReadLimit(s.node.Config.MaxMessageSize)
-
 	for {
 		_, message, err := s.ws.ReadMessage()
 
@@ -221,22 +234,14 @@ func (s *Session) Close(reason string, code int) {
 		return
 	}
 
-	if s.cancelSend != nil {
-		s.cancelSend()
-	}
-
 	s.closed = true
 	s.mu.Unlock()
+
+	s.sendClose(reason, code)
 
 	if s.pingTimer != nil {
 		s.pingTimer.Stop()
 	}
-
-	// TODO: make deadline and status code configurable
-	deadline := time.Now().Add(time.Second)
-	msg := websocket.FormatCloseMessage(code, reason)
-	s.ws.WriteControl(websocket.CloseMessage, msg, deadline)
-	s.ws.Close()
 }
 
 func (s *Session) sendPing() {

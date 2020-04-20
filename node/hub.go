@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"sync"
 
+	"github.com/anycable/anycable-go/common"
 	"github.com/apex/log"
 )
 
@@ -44,7 +45,7 @@ type Hub struct {
 	sessionsStreams map[string]map[string][]string
 
 	// Messages for specified stream
-	broadcast chan *StreamMessage
+	broadcast chan *common.StreamMessage
 
 	// Register requests from the sessions
 	register chan *Session
@@ -71,7 +72,7 @@ type Hub struct {
 // NewHub builds new hub instance
 func NewHub() *Hub {
 	return &Hub{
-		broadcast:       make(chan *StreamMessage, 256),
+		broadcast:       make(chan *common.StreamMessage, 256),
 		register:        make(chan *Session, 128),
 		unregister:      make(chan *Session, 2048),
 		subscribe:       make(chan *SubscriptionInfo, 128),

@@ -8,6 +8,15 @@
 
 WebSocket server for [AnyCable](https://github.com/anycable/anycable).
 
+**Important** This is a readme for the upcoming v1.0 release.
+
+## Versioning
+
+**Important** Use the same major version of AnyCable-Go as your AnyCable gem.
+AnyCable-Go uses the same major version number (and minor version as well for 0.x series) as other libraries to indicate the compatibility.
+
+**NOTE**: AnyCable-Go v1.0 is backward-compatible with v0.6.x series (to allow incremental upgrades). The next minor relase (v1.1) will drop 0.6.x support.
+
 ## Installation
 
 The easiest way to install AnyCable-Go is to [download](https://github.com/anycable/anycable-go/releases) a pre-compiled binary.
@@ -15,7 +24,8 @@ The easiest way to install AnyCable-Go is to [download](https://github.com/anyca
 MacOS users could install it with [Homebrew](https://brew.sh/)
 
 ```shell
-brew install anycable-go
+# NOTE: while v1.0 hasn't been released, you should use --HEAD option
+brew install --HEAD anycable-go
 ```
 
 Arch Linux users can install [anycable-go package from AUR](https://aur.archlinux.org/packages/anycable-go/).
@@ -34,7 +44,7 @@ go get -d -u -f github.com/anycable/anycable-go/cmd/anycable-go && (cd $GOPATH/s
 
 ## Upgrade
 
-For instructions on how to upgrade to a newer version see [upgrade notes](https://docs.anycable.io/#upgrade_to_0_6_0?id=anycable-go).
+For instructions on how to upgrade to a newer version see [upgrade notes](https://docs.anycable.io/#upgrade_to_1_0_0?id=anycable-go).
 
 ### Heroku
 
@@ -47,7 +57,7 @@ Run server:
 ```shell
 $ anycable-go
 
-=> INFO 2018-03-05T08:44:57.684Z context=main Starting AnyCable 0.6.0
+=> INFO 2020-02-05T08:44:57.684Z context=main Starting AnyCable 1.0.0
 ```
 
 You can also provide configuration parameters through the corresponding environment variables (i.e. `ANYCABLE_RPC_HOST`, `ANYCABLE_REDIS_URL`, etc).
@@ -76,29 +86,16 @@ make
 
 See available images [here](https://hub.docker.com/r/anycable/anycable-go/).
 
-## ActionCable Compatibility
-
-Feature                  | Status
--------------------------|--------
-Connection Identifiers   | +
-Connection Request (cookies, params) | +
-Disconnect Handling | +
-Subscribe to channels | +
-Parameterized subscriptions | +
-Unsubscribe from channels | +
-Performing Channel Actions | +
-Streaming | +
-Usage of the same stream name for different channels | +
-Broadcasting | +
-Remote disconnect | - (WIP)
-[Custom stream callbacks](http://edgeapi.rubyonrails.org/classes/ActionCable/Channel/Streams.html) | -
-[Subscription Instance Variables](http://edgeapi.rubyonrails.org/classes/ActionCable/Channel/Streams.html) | -
-
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/anycable/anycable-go.
+Bug reports and pull requests are welcome on GitHub at [https://github.com/anycable/anycable-go](https://github.com/anycable/anycable-go).
 
 Please, provide reproduction script (using [this template](https://github.com/anycable/anycable/blob/master/etc/bug_report_template.rb)) when submitting bugs if possible.
 
 ## License
+
 The library is available as open source under the terms of the [MIT License](http://opensource.org/licenses/MIT).
+
+## Security Contact
+
+To report a security vulnerability, please contact us at `anycable@evilmartians.com`. We will coordinate the fix and disclosure.

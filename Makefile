@@ -1,8 +1,3 @@
-ifdef VERSION
-else
-	VERSION := $(shell sh -c 'git describe --always --tags')
-endif
-
 OUTPUT ?= dist/anycable-go
 
 ifdef GOBIN
@@ -14,8 +9,17 @@ endif
 export GO111MODULE=on
 export GOFLAGS=-mod=vendor
 
-LD_FLAGS="-s -w -X main.version=$(VERSION)"
+ifdef VERSION
+	LD_FLAGS="-s -w -X github.com/anycable/anycable-go/utils.version=$(VERSION)"
+else
+	COMMIT := $(shell sh -c 'git log --pretty=format:"%h" -n 1 ')
+	VERSION := $(shell sh -c 'git tag -l --sort=-version:refname "v*" | head -n1')
+	LD_FLAGS="-s -w -X github.com/anycable/anycable-go/utils.sha=$(COMMIT) -X github.com/anycable/anycable-go/utils.version="
+endif
+
 GOBUILD=go build -ldflags $(LD_FLAGS) -a
+
+MRUBY_VERSION=1.2.0
 
 # Standard build
 default: build
@@ -35,7 +39,13 @@ build-gobench:
 
 prepare-mruby:
 	cd vendor/github.com/mitchellh/go-mruby && \
-	MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a
+	MRUBY_COMMIT=$(MRUBY_VERSION) MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a
+
+upgrade-mruby: clean-mruby prepare-mruby
+
+clean-mruby:
+	cd vendor/github.com/mitchellh/go-mruby && \
+	rm -rf vendor/mruby
 
 build-all-mruby:
 	env $(GOBUILD) -tags mrb -o "dist/anycable-go-$(VERSION)-mrb-macos-amd64" cmd/anycable-go/main.go
@@ -70,14 +80,14 @@ test:
 	go test -tags mrb ./...
 
 test-conformance:
-	go build -o tmp/anycable-go-test cmd/anycable-go/main.go
-	anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable"
-	anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token --ssl_key=etc/ssl/server.key --ssl_cert=etc/ssl/server.crt --port=8443" --target-url="wss://localhost:8443/cable"
+	go build -tags mrb -o tmp/anycable-go-test cmd/anycable-go/main.go
+	BUNDLE_GEMFILE=.circleci/Gemfile bundle exec anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable"
+	BUNDLE_GEMFILE=.circleci/Gemfile bundle exec anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token --ssl_key=etc/ssl/server.key --ssl_cert=etc/ssl/server.crt --port=8443" --target-url="wss://localhost:8443/cable"
 
 test-ci: prepare prepare-mruby test test-conformance
 
 prepare:
-	gem install anyt
+	BUNDLE_GEMFILE=.circleci/Gemfile bundle install
 
 gen-ssl:
 	mkdir -p tmp/ssl

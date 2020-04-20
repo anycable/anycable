@@ -5,9 +5,8 @@ package gobench
 import (
 	"encoding/json"
 
-	"github.com/anycable/anycable-go/config"
+	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/metrics"
-	"github.com/anycable/anycable-go/node"
 	"github.com/apex/log"
 
 	nanoid "github.com/matoous/go-nanoid"
@@ -40,7 +39,7 @@ type Controller struct {
 }
 
 // NewController builds new Controller from config
-func NewController(config *config.Config, metrics *metrics.Metrics) *Controller {
+func NewController(metrics *metrics.Metrics) *Controller {
 	metrics.RegisterCounter(metricsCalls, "The total number of Go channels calls")
 
 	return &Controller{log: log.WithField("context", "gobench"), metrics: metrics}
@@ -57,29 +56,29 @@ func (c *Controller) Shutdown() error {
 }
 
 // Authenticate allows everyone to connect and returns welcome message and rendom ID as identifier
-func (c *Controller) Authenticate(sid string, path string, headers *map[string]string) (string, []string, error) {
+func (c *Controller) Authenticate(sid string, env *common.SessionEnv) (*common.ConnectResult, error) {
 	c.metrics.Counter(metricsCalls).Inc()
 
 	id, err := nanoid.Nanoid()
 
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 
 	identifiers := Identifiers{ID: id}
 	idstr, err := json.Marshal(&identifiers)
 
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 
-	return string(idstr), []string{welcomeMessage}, nil
+	return &common.ConnectResult{Identifier: string(idstr), Transmissions: []string{welcomeMessage}}, nil
 }
 
 // Subscribe performs Command RPC call with "subscribe" command
-func (c *Controller) Subscribe(sid string, id string, channel string) (*node.CommandResult, error) {
+func (c *Controller) Subscribe(sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error) {
 	c.metrics.Counter(metricsCalls).Inc()
-	res := &node.CommandResult{
+	res := &common.CommandResult{
 		Disconnect:     false,
 		StopAllStreams: false,
 		Streams:        []string{"all"},
@@ -89,9 +88,9 @@ func (c *Controller) Subscribe(sid string, id string, channel string) (*node.Com
 }
 
 // Unsubscribe performs Command RPC call with "unsubscribe" command
-func (c *Controller) Unsubscribe(sid string, id string, channel string) (*node.CommandResult, error) {
+func (c *Controller) Unsubscribe(sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error) {
 	c.metrics.Counter(metricsCalls).Inc()
-	res := &node.CommandResult{
+	res := &common.CommandResult{
 		Disconnect:     false,
 		StopAllStreams: true,
 		Streams:        nil,
@@ -101,7 +100,7 @@ func (c *Controller) Unsubscribe(sid string, id string, channel string) (*node.C
 }
 
 // Perform performs Command RPC call with "perform" command
-func (c *Controller) Perform(sid string, id string, channel string, data string) (res *node.CommandResult, err error) {
+func (c *Controller) Perform(sid string, env *common.SessionEnv, id string, channel string, data string) (res *common.CommandResult, err error) {
 	c.metrics.Counter(metricsCalls).Inc()
 
 	var payload map[string]interface{}
@@ -112,7 +111,7 @@ func (c *Controller) Perform(sid string, id string, channel string, data string)
 
 	switch action := payload["action"].(string); action {
 	case "echo":
-		res = &node.CommandResult{
+		res = &common.CommandResult{
 			Disconnect:     false,
 			StopAllStreams: false,
 			Streams:        nil,
@@ -125,7 +124,7 @@ func (c *Controller) Perform(sid string, id string, channel string, data string)
 			return nil, err
 		}
 
-		broadcast := node.StreamMessage{
+		broadcast := common.StreamMessage{
 			Stream: "all",
 			Data:   string(broadcastMsg),
 		}
@@ -143,15 +142,15 @@ func (c *Controller) Perform(sid string, id string, channel string, data string)
 			return nil, err
 		}
 
-		res = &node.CommandResult{
+		res = &common.CommandResult{
 			Disconnect:     false,
 			StopAllStreams: false,
 			Streams:        nil,
 			Transmissions:  []string{string(response)},
-			Broadcasts:     []*node.StreamMessage{&broadcast},
+			Broadcasts:     []*common.StreamMessage{&broadcast},
 		}
 	default:
-		res = &node.CommandResult{
+		res = &common.CommandResult{
 			Disconnect:     false,
 			StopAllStreams: false,
 			Streams:        nil,
@@ -163,7 +162,7 @@ func (c *Controller) Perform(sid string, id string, channel string, data string)
 }
 
 // Disconnect performs disconnect RPC call
-func (c *Controller) Disconnect(sid string, id string, subscriptions []string, path string, headers *map[string]string) error {
+func (c *Controller) Disconnect(sid string, env *common.SessionEnv, id string, subscriptions []string) error {
 	c.metrics.Counter(metricsCalls).Inc()
 	return nil
 }

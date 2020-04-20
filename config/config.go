@@ -1,58 +1,39 @@
 package config
 
-// SSLOptions contains SSL parameters
-type SSLOptions struct {
-	CertPath string
-	KeyPath  string
-}
-
-// Available returns true iff certificate and private keys are set
-func (opts *SSLOptions) Available() bool {
-	return opts.CertPath != "" && opts.KeyPath != ""
-}
+import (
+	"github.com/anycable/anycable-go/metrics"
+	"github.com/anycable/anycable-go/node"
+	"github.com/anycable/anycable-go/rpc"
+	"github.com/anycable/anycable-go/server"
+)
 
 // Config contains main application configuration
 type Config struct {
-	RPCHost             string
-	RedisURL            string
-	RedisChannel        string
-	RedisSentinels      string
-	Host                string
-	Port                int
-	Path                string
-	HealthPath          string
-	Headers             []string
-	SSL                 SSLOptions
-	MaxMessageSize      int64
-	DisconnectRate      int
-	LogLevel            string
-	LogFormat           string
-	MetricsLog          bool
-	MetricsLogInterval  int
-	MetricsLogFormatter string
-	MetricsHTTP         string
-	MetricsHost         string
-	MetricsPort         int
+	RPC             rpc.Config
+	RedisURL        string
+	RedisChannel    string
+	RedisSentinels  string
+	Host            string
+	Port            int
+	Path            string
+	HealthPath      string
+	Headers         []string
+	SSL             server.SSLConfig
+	WS              server.WSConfig
+	MaxMessageSize  int64
+	DisconnectQueue node.DisconnectQueueConfig
+	LogLevel        string
+	LogFormat       string
+	Metrics         metrics.Config
 }
 
 // New returns a new empty config
 func New() Config {
 	config := Config{}
-	config.SSL = SSLOptions{}
+	config.SSL = server.NewSSLConfig()
+	config.WS = server.NewWSConfig()
+	config.Metrics = metrics.NewConfig()
+	config.RPC = rpc.NewConfig()
+	config.DisconnectQueue = node.NewDisconnectQueueConfig()
 	return config
-}
-
-// MetricsLogEnabled returns true iff MetricsLog is true
-func (c *Config) MetricsLogEnabled() bool {
-	return c.MetricsLog || c.MetricsLogFormatterEnabled()
-}
-
-// MetricsHTTPEnabled returns true iff MetricsHTTP is not empty
-func (c *Config) MetricsHTTPEnabled() bool {
-	return c.MetricsHTTP != ""
-}
-
-// MetricsLogFormatterEnabled returns true iff MetricsLogFormatter is not empty
-func (c *Config) MetricsLogFormatterEnabled() bool {
-	return c.MetricsLogFormatter != ""
 }

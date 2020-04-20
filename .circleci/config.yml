@@ -11,8 +11,6 @@ common_tags_filter: &common_tags_filter
 
 # Workflow definition
 workflows:
-  version: 2
-
   test_and_release:
     jobs:
     - prepare_code:
@@ -26,9 +24,14 @@ workflows:
         <<: *common_tags_filter
         requires:
         - prepare_mruby
-    - build_binary_for_conformance:
-        <<: *requires_prepared_code
+    - benchmark:
         <<: *common_tags_filter
+        requires:
+        - prepare_mruby
+    - build_binary_for_conformance:
+        <<: *common_tags_filter
+        requires:
+          - prepare_mruby
     - build:
         <<: *requires_prepared_code
         <<: *common_tags_filter
@@ -39,8 +42,13 @@ workflows:
     - conformance:
         <<: *common_tags_filter
         requires:
+        - conformance_v1
+    - conformance_v1:
+        <<: *common_tags_filter
+        requires:
         - build_binary_for_conformance
     - build_docker:
+        latest: true
         requires:
         - test
         - conformance
@@ -50,7 +58,9 @@ workflows:
             only: /^v.*/
           branches:
             ignore: /.*/
-    - build_docker_alpine:
+    - build_docker:
+        version: ${CIRCLE_TAG/v/''}-alpine
+        dockerfile: Dockerfile.alpine-linux-amd64
         requires:
         - test
         - conformance
@@ -60,7 +70,10 @@ workflows:
             only: /^v.*/
           branches:
             ignore: /.*/
-    - build_docker_mruby:
+    - build_docker:
+        version: ${CIRCLE_TAG/v/''}-mrb
+        mruby: true
+        dockerfile: Dockerfile.mrb-linux-amd64
         requires:
         - test
         - conformance
@@ -70,6 +83,28 @@ workflows:
             only: /^v.*/
           branches:
             ignore: /.*/
+    - build_docker:
+        version: "edge"
+        requires:
+        - test
+        - conformance
+        - build
+        filters:
+          branches:
+            # TODO: change to master once 1.0 released
+            only: "1.0-dev"
+    - build_docker:
+        version: "edge-mrb"
+        mruby: true
+        dockerfile: Dockerfile.mrb-linux-amd64
+        requires:
+        - test
+        - conformance
+        - build_linux_mruby
+        filters:
+          branches:
+            # TODO: change to master once 1.0 released
+            only: "1.0-dev"
     - github_release:
         requires:
         - test
@@ -122,7 +157,7 @@ commands:
       postfix:
         type: string
     steps:
-      - run: env GOOS=<< parameters.os >> GOARCH=<< parameters.arch >> go build -ldflags "-s -w -X main.version=$(git describe --tags)" -a -o "/tmp/dist/anycable-go-$(git describe --tags)-<< parameters.postfix >>" cmd/anycable-go/main.go
+      - run: env GOOS=<< parameters.os >> GOARCH=<< parameters.arch >> go build -ldflags "-s -w -X github.com/anycable/anycable-go/utils.version=${CIRCLE_TAG/v/''} -X github.com/anycable/anycable-go/utils.sha=$(echo "$CIRCLE_SHA1" | cut -c -7)" -a -o "/tmp/dist/anycable-go-<< parameters.postfix >>" cmd/anycable-go/main.go
   build-mruby:
     description: Build AnyCable Go binary with mruby support
     parameters:
@@ -133,7 +168,7 @@ commands:
       postfix:
         type: string
     steps:
-      - run: env GOOS=<< parameters.os >> GOARCH=<< parameters.arch >> go build -ldflags "-s -w -X main.version=$(git describe --tags)-mrb" -tags mrb -a -o "/tmp/dist/anycable-go-$(git describe --tags)-<< parameters.postfix >>" cmd/anycable-go/main.go
+      - run: env GOOS=<< parameters.os >> GOARCH=<< parameters.arch >> go build -ldflags "-s -w -X github.com/anycable/anycable-go/utils.version=${CIRCLE_TAG/v/''} -X github.com/anycable/anycable-go/utils.sha=$(echo "$CIRCLE_SHA1" | cut -c -7)" -tags mrb -a -o "/tmp/dist/anycable-go-<< parameters.postfix >>" cmd/anycable-go/main.go
 
 # Jobs definitions
 jobs:
@@ -143,6 +178,10 @@ jobs:
     - attach_workspace:
         at: .
     - checkout
+    - run:
+        name: Cache latest master tag
+        command: |
+          echo $(git tag --merged master -l --sort=-version:refname "v*" | head -n1) > latest-tag.log
     - persist_to_workspace:
         root: .
         paths: .
@@ -177,14 +216,34 @@ jobs:
     - run: make vet
     - run: make fmt
 
+  benchmark:
+    executor: golang
+    environment:
+      CGO_ENABLED: "1"
+    steps:
+    - attach_workspace:
+        at: /go/src/github.com/anycable/anycable-go/
+    - run: env GO111MODULE=off go get github.com/anycable/websocket-bench
+    - run: make build-gobench
+    - run:
+        command: dist/gobench-cable
+        background: true
+    - run:
+        name: Wait for gobench cable
+        command: dockerize -wait tcp://localhost:8080 -timeout 5s
+    - run:
+        command: websocket-bench broadcast --concurrent 40 --sample-size 100 --step-size 200 --payload-padding 200 --total-steps 5 ws://localhost:8080/cable --server-type=actioncable
+
   build_binary_for_conformance:
     executor: golang
+    environment:
+      CGO_ENABLED: "1"
     steps:
     - attach_workspace:
         at: /go/src/github.com/anycable/anycable-go/
     - run:
         name: Building Linux amd64 binary
-        command: go build -ldflags "-s -w -X main.version=$(git describe --tags)" -a -o "/tmp/anycable-go-test" cmd/anycable-go/main.go
+        command: go build -tags mrb -ldflags "-s -w" -a -o "/tmp/anycable-go-test" cmd/anycable-go/main.go
     - save_cache:
         key: binary-for-conformance-{{ .Revision }}
         paths: /tmp/anycable-go-test
@@ -283,6 +342,7 @@ jobs:
         key: linux-mruby-{{ .Revision }}
         paths: /tmp/dist/
 
+  # Replace with conformance_v1 after v1.1 release
   conformance:
     docker:
     - image: circleci/ruby:2.5.1-stretch
@@ -301,7 +361,40 @@ jobs:
     - run: anyt -c "/tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable"
     - run: anyt -c "/tmp/anycable-go-test --headers=cookie,x-api-token --ssl_key=etc/ssl/server.key --ssl_cert=etc/ssl/server.crt --port=8443" --target-url="wss://localhost:8443/cable"
 
+  conformance_v1:
+    docker:
+    - image: circleci/ruby:2.6.3-stretch
+    - image: circleci/redis:4.0.11-alpine3.8
+    environment:
+      BUNDLE_GEMFILE: ".circleci/Gemfile"
+    steps:
+    - attach_workspace:
+        at: .
+    - restore_cache:
+        key: binary-for-conformance-{{ .Revision }}
+    - run:
+        name: Install deps
+        command: bundle install
+    - run:
+        name: Wait for Redis
+        command: dockerize -wait tcp://localhost:6379 -timeout 1m
+    - run: bundle exec anyt -c "/tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable"
+    - run: bundle exec anyt -c "/tmp/anycable-go-test --headers=cookie,x-api-token --ssl_key=etc/ssl/server.key --ssl_cert=etc/ssl/server.crt --port=8443" --target-url="wss://localhost:8443/cable"
+
   build_docker:
+    parameters:
+      dockerfile:
+        type: string
+        default: "Dockerfile.linux-amd64"
+      version:
+        type: string
+        default: ${CIRCLE_TAG/v/''}
+      mruby:
+        type: boolean
+        default: false
+      latest:
+        type: boolean
+        default: false
     executor: docker
     steps:
     - setup_remote_docker:
@@ -314,63 +407,37 @@ jobs:
         name: Prepare files for Docker build
         command: |
           cp /etc/ssl/certs/ca-certificates.crt ./.docker/ca-certificates.crt && \
-          cp /tmp/dist/anycable-go-*-linux-amd64 .docker/anycable-go-linux-amd64
+          cp /tmp/dist/anycable-go-linux-amd64 .docker/anycable-go-linux-amd64
+    - when:
+        condition: <<parameters.mruby>>
+        steps:
+          - restore_cache:
+              key: linux-mruby-{{ .Revision }}
+          - run:
+              name: Replace with mruby binary
+              command: |
+                rm .docker/anycable-go-linux-amd64 && \
+                cp /tmp/dist/anycable-go-mrb-linux-amd64 .docker/anycable-go-mrb-linux-amd64
     - run:
         name: Build Docker image
-        command: docker build -f .docker/Dockerfile.linux-amd64 -t anycable/anycable-go:${CIRCLE_TAG} ./
+        command: docker build -f .docker/<<parameters.dockerfile>> -t anycable/anycable-go:<<parameters.version>> ./
     - run:
         name: Login to Docker registry
         command: docker login -u ${DOCKER_USER} -p ${DOCKER_PASS}
     - run:
         name: Push Docker image
-        command: docker push anycable/anycable-go:${CIRCLE_TAG}
-
-  build_docker_alpine:
-    executor: docker
-    steps:
-    - setup_remote_docker:
-        version: 18.06.0-ce
-    - attach_workspace:
-        at: .
-    - restore_cache:
-        key: build-{{ .Revision }}
-    - run:
-        name: Prepare files for Docker build
-        command: |
-          cp /etc/ssl/certs/ca-certificates.crt ./.docker/ca-certificates.crt && \
-          cp /tmp/dist/anycable-go-*-linux-amd64 .docker/anycable-go-linux-amd64
-    - run:
-        name: Build Docker image
-        command: docker build -f .docker/Dockerfile.alpine-linux-amd64 -t anycable/anycable-go:${CIRCLE_TAG}-alpine ./
-    - run:
-        name: Login to Docker registry
-        command: docker login -u ${DOCKER_USER} -p ${DOCKER_PASS}
-    - run:
-        name: Push Docker image
-        command: docker push anycable/anycable-go:${CIRCLE_TAG}-alpine
-
-  build_docker_mruby:
-    executor: docker
-    steps:
-    - setup_remote_docker:
-        version: 18.06.0-ce
-    - attach_workspace:
-        at: .
-    - restore_cache:
-        key: linux-mruby-{{ .Revision }}
-    - run:
-        name: Prepare binary
-        command:
-          cp /tmp/dist/anycable-go-*-mrb-linux-amd64 .docker/anycable-go-mrb-linux-amd64
-    - run:
-        name: Build Docker image
-        command: docker build -f .docker/Dockerfile.mrb-linux-amd64 -t anycable/anycable-go:${CIRCLE_TAG}-mrb ./
-    - run:
-        name: Login to Docker registry
-        command: docker login -u ${DOCKER_USER} -p ${DOCKER_PASS}
-    - run:
-        name: Push Docker image
-        command: docker push anycable/anycable-go:${CIRCLE_TAG}-mrb
+        command: docker push anycable/anycable-go:<<parameters.version>>
+    - when:
+        condition: <<parameters.latest>>
+        steps:
+          - run:
+              name: Push the latest Docker image
+              command: |
+                if [[ "${CIRCLE_TAG}" == "$(cat latest-tag.log)" ]] && [[ "${CIRCLE_BRANCH}" == "master" ]]
+                then
+                    docker tag anycable/anycable-go:${CIRCLE_TAG/v/''} anycable/anycable-go:latest
+                    docker push anycable/anycable-go:latest
+                fi
 
   github_release:
     executor: golang

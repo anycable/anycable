@@ -9,15 +9,11 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/anycable/anycable-go/node"
 	"github.com/apex/log"
-
-	"github.com/anycable/anycable-go/config"
 )
 
 // HTTPServer is wrapper over http.Server
 type HTTPServer struct {
-	node     *node.Node
 	server   *http.Server
 	addr     string
 	secured  bool
@@ -29,7 +25,7 @@ type HTTPServer struct {
 }
 
 // NewServer builds HTTPServer from config params
-func NewServer(node *node.Node, host string, port string, ssl *config.SSLOptions) (*HTTPServer, error) {
+func NewServer(host string, port string, ssl *SSLConfig) (*HTTPServer, error) {
 	mux := http.NewServeMux()
 	addr := net.JoinHostPort(host, port)
 
@@ -48,7 +44,6 @@ func NewServer(node *node.Node, host string, port string, ssl *config.SSLOptions
 	}
 
 	return &HTTPServer{
-		node:     node,
 		server:   server,
 		addr:     addr,
 		Mux:      mux,
