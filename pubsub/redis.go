@@ -50,12 +50,12 @@ func (s *RedisSubscriber) Start() error {
 
 	var sntnl *sentinel.Sentinel
 	var password string
-	if s.sentinels != "" {
 
+	if s.sentinels != "" {
 		masterName := redisUrl.Hostname()
 		password, _ = redisUrl.User.Password()
 
-		s.log.Debugf("Redis sentinel enabled")
+		s.log.Debug("Redis sentinel enabled")
 		s.log.Debugf("Redis sentinel parameters:  sentinels: %s,  masterName: %s", s.sentinels, masterName)
 		sentinels := strings.Split(s.sentinels, ",")
 		sntnl = &sentinel.Sentinel{
@@ -81,6 +81,21 @@ func (s *RedisSubscriber) Start() error {
 		}
 
 		defer sntnl.Close()
+
+		// Periodically discover new Sentinels.
+		go func() {
+			err := sntnl.Discover()
+			if err != nil {
+				s.log.Warn("Failed to discover sentinels")
+			}
+			for {
+				<-time.After(30 * time.Second)
+				err := sntnl.Discover()
+				if err != nil {
+					s.log.Warn("Failed to discover sentinels")
+				}
+			}
+		}()
 	}
 
 	for {
@@ -89,7 +104,7 @@ func (s *RedisSubscriber) Start() error {
 			masterAddress, err := sntnl.MasterAddr()
 
 			if err != nil {
-				s.log.Debugf("Failed to get master address from sentinel.")
+				s.log.Warn("Failed to get master address from sentinel.")
 				return err
 			}
 			s.log.Debugf("Got master address from sentinel: %s", masterAddress)
