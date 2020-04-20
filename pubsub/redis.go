@@ -126,6 +126,12 @@ func (s *RedisSubscriber) listen() error {
 
 	c, err = redis.DialURL(s.url)
 
+	if s.sentinels != "" {
+		if !sentinel.TestRole(c, "master") {
+			return errors.New("Failed master role check")
+		}
+	}
+
 	if err != nil {
 		return err
 	}
