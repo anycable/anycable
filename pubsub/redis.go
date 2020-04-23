@@ -146,10 +146,7 @@ func (s *RedisSubscriber) Start() error {
 
 func (s *RedisSubscriber) listen() error {
 
-	var c redis.Conn
-	var err error
-
-	c, err = redis.DialURL(s.url)
+	c, err := redis.DialURL(s.url)
 
 	if err != nil {
 		return err
