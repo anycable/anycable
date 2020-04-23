@@ -1,6 +1,7 @@
 package pubsub
 
 import (
+	"context"
 	"errors"
 	"github.com/FZambia/sentinel"
 	"math/rand"
@@ -40,8 +41,9 @@ func NewRedisSubscriber(node *node.Node, url string, sentinels string, channel s
 }
 
 // Start connects to Redis and subscribes to the pubsub channel
+// if sentinels is set it gets the the master address first
 func (s *RedisSubscriber) Start() error {
-	// Check that URL is correct first
+	// parse URL and check if it is correct
 	redisUrl, err := url.Parse(s.url)
 
 	if err != nil {
@@ -83,16 +85,24 @@ func (s *RedisSubscriber) Start() error {
 		defer sntnl.Close()
 
 		// Periodically discover new Sentinels.
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
 		go func() {
 			err := sntnl.Discover()
 			if err != nil {
 				s.log.Warn("Failed to discover sentinels")
 			}
 			for {
-				<-time.After(30 * time.Second)
-				err := sntnl.Discover()
-				if err != nil {
-					s.log.Warn("Failed to discover sentinels")
+				select {
+				case <-ctx.Done():
+					return
+
+				case <-time.After(30 * time.Second):
+					err := sntnl.Discover()
+					if err != nil {
+						s.log.Warn("Failed to discover sentinels")
+					}
 				}
 			}
 		}()
