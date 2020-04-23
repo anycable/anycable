@@ -120,9 +120,9 @@ func (s *RedisSubscriber) Start() error {
 			s.log.Debugf("Got master address from sentinel: %s", masterAddress)
 
 			if password == "" {
-				s.url = "redis://" + masterAddress
+				s.url = redisUrl.Scheme + "://" + masterAddress
 			} else {
-				s.url = "redis://:" + password + "@" + masterAddress
+				s.url = redisUrl.Scheme + "://:" + password + "@" + masterAddress
 			}
 		}
 		if err := s.listen(); err != nil {
