@@ -2,7 +2,7 @@
 
 module AnyCable
   module Middlewares
-    # Checks that RPC client version is compatibly with
+    # Checks that RPC client version is compatible with
     # the current RPC proto version
     class CheckVersion < Middleware
       attr_reader :version

@@ -9,7 +9,7 @@
 <img align="right" height="150" width="129"
      title="AnyCable logo" src="https://docs.anycable.io/assets/images/logo.svg">
 
-AnyCable allows you to use any WebSocket server (written in any language) as a replacement for your Ruby server (such as Faye, ActionCable, etc).
+AnyCable allows you to use any WebSocket server (written in any language) as a replacement for your Ruby server (such as Faye, Action Cable, etc).
 
 AnyCable uses the same protocol as ActionCable, so you can use its [JavaScript client](https://www.npmjs.com/package/actioncable) without any monkey-patching.
 
@@ -45,12 +45,9 @@ Check out our 📑 [Documentation](https://docs.anycable.io).
 
 - RailsClub Moscow 2016 [slides](https://speakerdeck.com/palkan/railsclub-moscow-2016-anycable) and [video](https://www.youtube.com/watch?v=-k7GQKuBevY&list=PLiWUIs1hSNeOXZhotgDX7Y7qBsr24cu7o&index=4) (RU)
 
-## Compatible WebSocket servers
+## Building
 
-- [AnyCable Go](https://github.com/anycable/anycable-go)
-- [ErlyCable](https://github.com/anycable/erlycable)
-
-## Build
+### Generating gRPC files from `.proto`
 
 - Install required GRPC gems:
 
