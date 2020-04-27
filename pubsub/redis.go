@@ -51,11 +51,9 @@ func (s *RedisSubscriber) Start() error {
 	}
 
 	var sntnl *sentinel.Sentinel
-	var password string
 
 	if s.sentinels != "" {
 		masterName := redisUrl.Hostname()
-		password, _ = redisUrl.User.Password()
 
 		s.log.Debug("Redis sentinel enabled")
 		s.log.Debugf("Redis sentinel parameters:  sentinels: %s,  masterName: %s", s.sentinels, masterName)
@@ -119,12 +117,10 @@ func (s *RedisSubscriber) Start() error {
 			}
 			s.log.Debugf("Got master address from sentinel: %s", masterAddress)
 
-			if password == "" {
-				s.url = redisUrl.Scheme + "://" + masterAddress
-			} else {
-				s.url = redisUrl.Scheme + "://:" + password + "@" + masterAddress
-			}
+			redisUrl.Host = masterAddress
+			s.url = redisUrl.String()
 		}
+
 		if err := s.listen(); err != nil {
 			s.log.Warnf("Redis connection failed: %v", err)
 		}
