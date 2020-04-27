@@ -77,7 +77,7 @@ func main() {
 
 	appNode.SetDisconnector(disconnector)
 
-	subscriber := pubsub.NewRedisSubscriber(appNode, config.RedisURL, config.RedisSentinels, config.RedisChannel)
+	subscriber := pubsub.NewRedisSubscriber(appNode, config.RedisURL, config.RedisSentinels, config.RedisSentinelDiscoveryInterval, config.RedisChannel)
 
 	go func() {
 		if err := subscriber.Start(); err != nil {

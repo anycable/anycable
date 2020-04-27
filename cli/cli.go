@@ -54,6 +54,7 @@ func init() {
 
 	fs.StringVar(&defaults.RedisURL, "redis_url", redisDefault, "")
 	fs.StringVar(&defaults.RedisSentinels, "redis_sentinels", "", "")
+	fs.IntVar(&defaults.RedisSentinelDiscoveryInterval, "redis_sentinel_discovery_interval", 30, "")
 	fs.StringVar(&defaults.RedisChannel, "redis_channel", "__anycable__", "")
 
 	fs.StringVar(&defaults.RPC.Host, "rpc_host", "localhost:50051", "")
@@ -113,40 +114,41 @@ USAGE
   anycable-go [options]
 
 OPTIONS
-  --host                     Server host, default: localhost, env: ANYCABLE_HOST
-  --port                     Server port, default: 8080, env: ANYCABLE_PORT, PORT
-  --path                     WebSocket endpoint path, default: /cable, env: ANYCABLE_PATH
-  --health-path              HTTP health endpoint path, default: /health, env: ANYCABLE_HEALTH_PATH
+  --host                                 Server host, default: localhost, env: ANYCABLE_HOST
+  --port                                 Server port, default: 8080, env: ANYCABLE_PORT, PORT
+  --path                                 WebSocket endpoint path, default: /cable, env: ANYCABLE_PATH
+  --health-path                          HTTP health endpoint path, default: /health, env: ANYCABLE_HEALTH_PATH
 
-  --ssl_cert                 SSL certificate path, env: ANYCABLE_SSL_CERT
-  --ssl_key                  SSL private key path, env: ANYCABLE_SSL_KEY
+  --ssl_cert                             SSL certificate path, env: ANYCABLE_SSL_CERT
+  --ssl_key                              SSL private key path, env: ANYCABLE_SSL_KEY
 
-  --redis_url                Redis url, default: redis://localhost:6379/5, env: ANYCABLE_REDIS_URL, REDIS_URL
-  --redis_sentinels          Comma separated list of sentinel hosts. format: 'hostname:port,..', env: ANYCABLE_REDIS_SENTINELS
-  --redis_channel            Redis channel for broadcasts, default: __anycable__, env: ANYCABLE_REDIS_CHANNEL
+  --redis_url                            Redis url, default: redis://localhost:6379/5, env: ANYCABLE_REDIS_URL, REDIS_URL
+  --redis_sentinels                      Comma separated list of sentinel hosts. format: 'hostname:port,..', env: ANYCABLE_REDIS_SENTINELS
+  --redis_sentinel_discovery_interval    Interval to rediscover sentinels in seconds. default: 30, env: ANYCABLE_REDIS_SENTINEL_DISCOVERY_INTERVAL
+  --redis_channel                        Redis channel for broadcasts, default: __anycable__, env: ANYCABLE_REDIS_CHANNEL
 
-  --rpc_host                 RPC service address, default: localhost:50051, env: ANYCABLE_RPC_HOST
-  --rpc_concurrency          Max number of concurrent RPC request; should be slightly less than the RPC server concurrency, default: 28, env: ANYCABLE_RPC_CONCURRENCY
-  --headers                  List of headers to proxy to RPC, default: cookie, env: ANYCABLE_HEADERS
+  --rpc_host                             RPC service address, default: localhost:50051, env: ANYCABLE_RPC_HOST
+  --rpc_concurrency                      Max number of concurrent RPC request; should be slightly less than the RPC server concurrency, default: 28, env: ANYCABLE_RPC_CONCURRENCY
+  --headers                              List of headers to proxy to RPC, default: cookie, env: ANYCABLE_HEADERS
 
-  --disconnect_rate          Max number of Disconnect calls per second, default: 100, env: ANYCABLE_DISCONNECT_RATE
-  --disconnect_timeout       Graceful shutdown timeouts (in seconds), default: 5, env: ANYCABLE_DISCONNECT_TIMEOUT
+  --disconnect_rate                      Max number of Disconnect calls per second, default: 100, env: ANYCABLE_DISCONNECT_RATE
+  --disconnect_timeout                   Graceful shutdown timeouts (in seconds), default: 5, env: ANYCABLE_DISCONNECT_TIMEOUT
 
-  --log_level                Set logging level (debug/info/warn/error/fatal), default: info, env: ANYCABLE_LOG_LEVEL
-  --log_format               Set logging format (text, json), default: text, env: ANYCABLE_LOG_FORMAT
-  --debug                    Enable debug mode (more verbose logging), default: false, env: ANYCABLE_DEBUG
+  --log_level                            Set logging level (debug/info/warn/error/fatal), default: info, env: ANYCABLE_LOG_LEVEL
+  --log_format                           Set logging format (text, json), default: text, env: ANYCABLE_LOG_FORMAT
+  --debug                                Enable debug mode (more verbose logging), default: false, env: ANYCABLE_DEBUG
 
-  --metrics_log              Enable metrics logging (with info level), default: false, env: ANYCABLE_METRICS_LOG
-  --metrics_log_interval     Specify how often flush metrics logs (in seconds), default: 15, env: ANYCABLE_METRICS_LOG_INTERVAL
-  --metrics_log_formatter    Specify the path to custom Ruby formatter script (only supported on MacOS and Linux), default: "" (none), env: ANYCABLE_METRICS_LOG_FORMATTER
-  --metrics_http             Enable HTTP metrics endpoint at the specified path, default: "" (disabled), env: ANYCABLE_METRICS_HTTP
-  --metrics_host             Server host for metrics endpoint, default: the same as for main server, env: ANYCABLE_METRICS_HOST
-  --metrics_port             Server port for metrics endpoint, default: the same as for main server, env: ANYCABLE_METRICS_PORT
+  --metrics_log                          Enable metrics logging (with info level), default: false, env: ANYCABLE_METRICS_LOG
+  --metrics_log_interval                 Specify how often flush metrics logs (in seconds), default: 15, env: ANYCABLE_METRICS_LOG_INTERVAL
+  --metrics_log_formatter                Specify the path to custom Ruby formatter script (only supported on MacOS and Linux), default: "" (none), env: ANYCABLE_METRICS_LOG_FORMATTER
+  --metrics_http                         Enable HTTP metrics endpoint at the specified path, default: "" (disabled), env: ANYCABLE_METRICS_HTTP
+  --metrics_host                         Server host for metrics endpoint, default: the same as for main server, env: ANYCABLE_METRICS_HOST
+  --metrics_port                         Server port for metrics endpoint, default: the same as for main server, env: ANYCABLE_METRICS_PORT
 
-  --read_buffer_size         WebSocket connection read buffer size, default: 1024, env: ANYCABLE_READ_BUFFER_SIZE
-  --write_buffer_size        WebSocket connection write buffer size, default: 1024, env: ANYCABLE_WRITE_BUFFER_SIZE
-  --max_message_size         Maximum size of a message in bytes, default: 65536, env: ANYCABLE_MAX_MESSAGE_SIZE
-  --enable_ws_compression    Enable experimental WebSocket per message compression, default: false, env: ANYCABLE_ENABLE_WS_COMPRESSION
+  --read_buffer_size                     WebSocket connection read buffer size, default: 1024, env: ANYCABLE_READ_BUFFER_SIZE
+  --write_buffer_size                    WebSocket connection write buffer size, default: 1024, env: ANYCABLE_WRITE_BUFFER_SIZE
+  --max_message_size                     Maximum size of a message in bytes, default: 65536, env: ANYCABLE_MAX_MESSAGE_SIZE
+  --enable_ws_compression                Enable experimental WebSocket per message compression, default: false, env: ANYCABLE_ENABLE_WS_COMPRESSION
 
   -h                       This help screen
   -v                       Show version

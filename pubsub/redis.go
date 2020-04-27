@@ -20,23 +20,25 @@ const (
 
 // RedisSubscriber contains information about Redis pubsub connection
 type RedisSubscriber struct {
-	node             *node.Node
-	url              string
-	sentinels        string
-	channel          string
-	reconnectAttempt int
-	log              *log.Entry
+	node                      *node.Node
+	url                       string
+	sentinels                 string
+	sentinelDiscoveryInterval int
+	channel                   string
+	reconnectAttempt          int
+	log                       *log.Entry
 }
 
 // NewRedisSubscriber returns new RedisSubscriber struct
-func NewRedisSubscriber(node *node.Node, url string, sentinels string, channel string) RedisSubscriber {
+func NewRedisSubscriber(node *node.Node, url string, sentinels string, sentinelDiscoveryInterval int, channel string) RedisSubscriber {
 	return RedisSubscriber{
-		node:             node,
-		url:              url,
-		sentinels:        sentinels,
-		channel:          channel,
-		reconnectAttempt: 0,
-		log:              log.WithFields(log.Fields{"context": "pubsub"}),
+		node:                      node,
+		url:                       url,
+		sentinels:                 sentinels,
+		sentinelDiscoveryInterval: sentinelDiscoveryInterval,
+		channel:                   channel,
+		reconnectAttempt:          0,
+		log:                       log.WithFields(log.Fields{"context": "pubsub"}),
 	}
 }
 
