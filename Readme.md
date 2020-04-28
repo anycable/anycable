@@ -8,7 +8,7 @@
 
 WebSocket server for [AnyCable](https://github.com/anycable/anycable).
 
-**Important** This is a readme for the upcoming v1.0 release.
+**Important** This is a readme for the upcoming v1.0 release. For v0.6.x see the readme from the [0-6-stable](https://github.com/anycable/anycable-go/tree/0-6-stable) branch.
 
 ## Versioning
 
