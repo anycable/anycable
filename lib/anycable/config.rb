@@ -96,13 +96,13 @@ module AnyCable
     SENTINEL_RXP = /^([\w\-_]*)\:(\d+)$/.freeze
 
     def parse_sentinel(sentinel)
-      return sentinel if sentinel.is_a?(Hash)
+      return sentinel.transform_keys!(&:to_sym) if sentinel.is_a?(Hash)
 
       matches = sentinel.match(SENTINEL_RXP)
 
       raise ArgumentError, "Invalid Sentinel value: #{sentinel}" if matches.nil?
 
-      { "host" => matches[1], "port" => matches[2].to_i }
+      { host: matches[1], port: matches[2].to_i }
     end
   end
 end

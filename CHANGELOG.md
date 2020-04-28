@@ -2,6 +2,8 @@
 
 ## master
 
+- Fix building Redis Sentintel config. ([@palkan][])
+
 ## 0.6.5 (2020-04-01)
 
 - Relax `anyway_config` dependency. ([@palkan][])
