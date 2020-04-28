@@ -8,10 +8,10 @@ var (
 func init() {
 	if version == "" {
 		version = "1.0.0.preview1"
+	}
 
-		if sha != "" {
-			version = version + "-" + sha
-		}
+	if sha != "" {
+		version = version + "-" + sha
 	}
 }
 
