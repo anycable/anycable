@@ -95,6 +95,20 @@ module AnyCable
 
     SENTINEL_RXP = /^([\w\-_]*)\:(\d+)$/.freeze
 
+    unless {}.respond_to?(:transform_keys!)
+      using(Module.new do
+        refine Hash do
+          def transform_keys!
+            h = {}
+            each do |key, value|
+              h[yield key] = value
+            end
+            replace(h)
+          end
+        end
+      end)
+    end
+
     def parse_sentinel(sentinel)
       return sentinel.transform_keys!(&:to_sym) if sentinel.is_a?(Hash)
 
