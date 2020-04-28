@@ -22,7 +22,7 @@ Now you can access `request` object in channels, too (e.g., to read headers/cook
 
 See [#71](https://github.com/anycable/anycable/pull/71).
 
-- Fix building Redis Sentintel config. ([@palkan][])
+- Fix building Redis Sentinel config. ([@palkan][])
 
 ## 0.6.5 (2020-04-01)
 
