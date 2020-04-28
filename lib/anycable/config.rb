@@ -91,12 +91,11 @@ module AnyCable
       {url: redis_url}.tap do |params|
         next if redis_sentinels.nil?
 
-        raise ArgumentError, "redis_sentinels must be an array; got #{redis_sentinels}" unless
-          redis_sentinels.is_a?(Array)
+        sentinels = Array(redis_sentinels)
 
-        next if redis_sentinels.empty?
+        next if sentinels.empty?
 
-        params[:sentinels] = redis_sentinels.map(&method(:parse_sentinel))
+        params[:sentinels] = sentinels.map(&method(:parse_sentinel))
       end
     end
 

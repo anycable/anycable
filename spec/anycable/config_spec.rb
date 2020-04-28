@@ -45,7 +45,7 @@ describe "AnyCable::Config" do
       end
     end
 
-    context "when REDIS_SENTINEL_HOSTS" do
+    context "with ANYCABLE_REDIS_SENTINELS" do
       around { |ex| with_env("ANYCABLE_REDIS_SENTINELS" => "redis-1-1:26379,redis-1-2:26380", &ex) }
 
       subject(:config) { described_class.new }
@@ -54,6 +54,19 @@ describe "AnyCable::Config" do
         expect(subject.to_redis_params).to eq(
           url: "redis://localhost:6379/2",
           sentinels: [{host: "redis-1-1", port: 26_379}, {host: "redis-1-2", port: 26_380}]
+        )
+      end
+    end
+
+    context "when ANYCABLE_REDIS_SENTINELS contains only one sentinel" do
+      around { |ex| with_env("ANYCABLE_REDIS_SENTINELS" => "redis-1-1:26379", &ex) }
+
+      subject(:config) { described_class.new }
+
+      specify do
+        expect(subject.to_redis_params).to eq(
+          url: "redis://localhost:6379/2",
+          sentinels: [{host: "redis-1-1", port: 26_379}]
         )
       end
     end
