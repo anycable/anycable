@@ -2,6 +2,8 @@
 
 ## 🚧 1.0.0 (_coming soon_)
 
+- Add `:http` broadcasting adapter. ([@palkan][])
+
 - **RPC schema has changed**. ([@palkan][])
 
 Using `anycable-go` v1.x is required.
