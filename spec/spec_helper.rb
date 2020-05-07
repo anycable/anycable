@@ -15,6 +15,9 @@ require "rack"
 
 require "anycable/rspec"
 
+require "webmock/rspec"
+WebMock.disable_net_connect!(allow_localhost: true)
+
 Dir["#{File.dirname(__FILE__)}/support/**/*.rb"].sort.each { |f| require f }
 
 AnyCable.connection_factory = AnyCable::TestFactory

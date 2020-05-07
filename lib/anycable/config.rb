@@ -24,6 +24,10 @@ module AnyCable
       redis_sentinels: nil,
       redis_channel: "__anycable__",
 
+      ### HTTP broadcasting options
+      http_broadcast_url: "http://localhost:8090/_broadcast",
+      http_broadcast_secret: nil,
+
       ### Logging options
       log_file: nil,
       log_level: :info,
