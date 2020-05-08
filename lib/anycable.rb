@@ -67,7 +67,7 @@ module AnyCable
     end
 
     def broadcast_adapter
-      self.broadcast_adapter = :redis unless instance_variable_defined?(:@broadcast_adapter)
+      self.broadcast_adapter = AnyCable.config.broadcast_adapter.to_sym unless instance_variable_defined?(:@broadcast_adapter)
       @broadcast_adapter
     end
 

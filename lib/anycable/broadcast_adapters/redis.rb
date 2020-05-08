@@ -19,7 +19,7 @@ module AnyCable
     # You can override these params:
     #
     #   AnyCable.broadcast_adapter = :redis, url: "redis://my_redis", channel: "_any_cable_"
-    class Redis
+    class Redis < Base
       attr_reader :redis_conn, :channel
 
       def initialize(
@@ -36,6 +36,10 @@ module AnyCable
           channel,
           {stream: stream, data: payload}.to_json
         )
+      end
+
+      def announce!
+        logger.info "Broadcasting Redis channel: #{channel}"
       end
     end
   end

@@ -18,7 +18,7 @@ module AnyCable
     # You can override these params:
     #
     #   AnyCable.broadcast_adapter = :http, url: "http://ws.example.com/_any_cable_"
-    class Http
+    class Http < Base
       # Taken from: https://github.com/influxdata/influxdb-ruby/blob/886058079c66d4fd019ad74ca11342fddb0b753d/lib/influxdb/errors.rb#L18
       RECOVERABLE_EXCEPTIONS = [
         Errno::ECONNABORTED,
@@ -40,13 +40,15 @@ module AnyCable
       MAX_ATTEMPTS = 3
       DELAY = 2
 
-      attr_reader :url, :headers
+      attr_reader :url, :headers, :authorized
+      alias authorized? authorized
 
       def initialize(url: AnyCable.config.http_broadcast_url, secret: AnyCable.config.http_broadcast_secret)
         @url = url
-        @headers = {}.tap do |headers|
-          next unless secret
+        @headers = {}
+        if secret
           headers["Authorization"] = "Bearer #{secret}"
+          @authorized = true
         end
 
         @uri = URI.parse(url)
@@ -64,7 +66,11 @@ module AnyCable
         queue << :stop
         thread.join if thread&.alive?
       rescue Exception => e # rubocop:disable Lint/RescueException
-        AnyCable.logger.error "Broadcasting thread exited with exception: #{e.message}"
+        logger.error "Broadcasting thread exited with exception: #{e.message}"
+      end
+
+      def announce!
+        logger.info "Broadcasting HTTP url: #{url}#{authorized? ? " (with authorization)" : ""}"
       end
 
       private
@@ -96,7 +102,7 @@ module AnyCable
         return unless response
         return if Net::HTTPCreated === response
 
-        AnyCable.logger.debug "Broadcast request responded with unexpected status: #{response.code}"
+        logger.debug "Broadcast request responded with unexpected status: #{response.code}"
       end
 
       def build_http
@@ -109,7 +115,7 @@ module AnyCable
           yield http
         rescue Timeout::Error, *RECOVERABLE_EXCEPTIONS => e
           retry_count += 1
-          return AnyCable.logger.error("Broadcast request failed: #{e.message}") if MAX_ATTEMPTS < retry_count
+          return logger.error("Broadcast request failed: #{e.message}") if MAX_ATTEMPTS < retry_count
 
           sleep((DELAY**retry_count) * retry_count)
           retry

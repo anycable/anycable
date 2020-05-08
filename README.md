@@ -21,7 +21,7 @@ AnyCable uses the same protocol as ActionCable, so you can use its [JavaScript c
 ## Requirements
 
 - Ruby >= 2.5
-- Redis (for broadcasting, [discuss other options](https://github.com/anycable/anycable/issues/2) with us!)
+- Redis (for broadcasting **in production**, [discuss other options](https://github.com/anycable/anycable/issues/2) with us!)
 
 ## Usage
 

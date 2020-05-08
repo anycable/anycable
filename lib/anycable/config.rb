@@ -19,6 +19,9 @@ module AnyCable
       # See https://github.com/grpc/grpc/blob/f526602bff029b8db50a8d57134d72da33d8a752/include/grpc/impl/codegen/grpc_types.h#L292-L315
       rpc_server_args: {},
 
+      ## PubSub
+      broadcast_adapter: :redis,
+
       ### Redis options
       redis_url: ENV.fetch("REDIS_URL", "redis://localhost:6379/5"),
       redis_sentinels: nil,

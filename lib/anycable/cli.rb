@@ -183,7 +183,7 @@ module AnyCable
     end
 
     def start_pubsub!
-      logger.info "Broadcasting Redis channel: #{config.redis_channel}"
+      AnyCable.broadcast_adapter.announce!
     end
 
     # rubocop: disable Metrics/MethodLength, Metrics/AbcSize
@@ -313,15 +313,22 @@ module AnyCable
             -r, --require=path                Location of application file to require, default: "config/environment.rb"
             --server-command=command          Command to run WebSocket server
             --rpc-host=host                   Local address to run gRPC server on, default: "[::]:50051"
-            --redis-url=url                   Redis URL for pub/sub, default: REDIS_URL or "redis://localhost:6379/5"
-            --redis-channel=name              Redis channel for broadcasting, default: "__anycable__"
-            --redis-sentinels=<...hosts>      Redis Sentinel followers addresses (as a comma-separated list), default: nil
+            --broadcast-adapter=type          Pub/sub adapter type for broadcasts, default: redis
             --log-level=level                 Logging level, default: "info"
             --log-file=path                   Path to log file, default: <none> (log to STDOUT)
             --log-grpc                        Enable gRPC logging (disabled by default)
             --debug                           Turn on verbose logging ("debug" level and gRPC logging on)
             -v, --version                     Print version and exit
             -h, --help                        Show this help
+
+        REDIS PUB/SUB OPTIONS
+            --redis-url=url                   Redis URL for pub/sub, default: REDIS_URL or "redis://localhost:6379/5"
+            --redis-channel=name              Redis channel for broadcasting, default: "__anycable__"
+            --redis-sentinels=<...hosts>      Redis Sentinel followers addresses (as a comma-separated list), default: nil
+
+        HTTP PUB/SUB OPTIONS
+            --http-broadcast-url              HTTP pub/sub endpoint URL, default: "http://localhost:8090/_broadcast"
+            --http-broadcast-secret           HTTP pub/sub authorization secret, default: <none> (disabled)
 
         HTTP HEALTH CHECKER OPTIONS
             --http-health-port=port           Port to run HTTP health server on, default: <none> (disabled)
