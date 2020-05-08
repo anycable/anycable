@@ -45,11 +45,41 @@ module AnyCable
       def initialize(url: AnyCable.config.http_broadcast_url)
         @url = url
         @uri = URI.parse(url)
+        @queue = Queue.new
       end
 
       def broadcast(stream, payload)
-        payload = {stream: stream, data: payload}.to_json
+        ensure_thread_is_alive
+        queue << {stream: stream, data: payload}.to_json
+      end
 
+      # Wait for background thread to process all the messages
+      # and stop it
+      def shutdown
+        queue << :stop
+        thread.join if thread&.alive?
+      rescue Exception => e # rubocop:disable Lint/RescueException
+        AnyCable.logger.error "Broadcasting thread exited with exception: #{e.message}"
+      end
+
+      private
+
+      attr_reader :uri, :queue, :thread
+
+      def ensure_thread_is_alive
+        return if thread&.alive?
+
+        @thread = Thread.new do
+          loop do
+            msg = queue.pop
+            break if msg == :stop
+
+            handle_response perform_request(msg)
+          end
+        end
+      end
+
+      def perform_request(payload)
         build_http do |http|
           req = Net::HTTP::Post.new(url, {"Content-Type" => "application/json"})
           req.body = payload
@@ -57,9 +87,12 @@ module AnyCable
         end
       end
 
-      private
+      def handle_response(response)
+        return unless response
+        return if Net::HTTPCreated === response
 
-      attr_reader :uri
+        AnyCable.logger.debug "Broadcast request responded with unexpected status: #{response.code}"
+      end
 
       def build_http
         retry_count = 0
@@ -69,9 +102,9 @@ module AnyCable
           http.open_timeout = OPEN_TIMEOUT
           http.read_timeout = READ_TIMEOUT
           yield http
-        rescue Timeout::Error, *RECOVERABLE_EXCEPTIONS
+        rescue Timeout::Error, *RECOVERABLE_EXCEPTIONS => e
           retry_count += 1
-          raise if MAX_ATTEMPTS < retry_count
+          return AnyCable.logger.error("Broadcast request failed: #{e.message}") if MAX_ATTEMPTS < retry_count
 
           sleep((DELAY**retry_count) * retry_count)
           retry
