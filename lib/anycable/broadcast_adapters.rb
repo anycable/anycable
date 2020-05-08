@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "anycable/broadcast_adapters/base"
+
 module AnyCable
   module BroadcastAdapters # :nodoc:
     module_function

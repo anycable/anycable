@@ -23,6 +23,11 @@ describe "CLI options", :cli do
     specify "--help" do
       run_cli("--help") do |cli|
         expect(cli).to have_output_line("$ anycable [options]")
+        expect(cli).to have_output_line("BASIC OPTIONS")
+        expect(cli).to have_output_line("REDIS PUB/SUB OPTIONS")
+        expect(cli).to have_output_line("HTTP PUB/SUB OPTIONS")
+        expect(cli).to have_output_line("HTTP HEALTH CHECKER OPTIONS")
+        expect(cli).to have_output_line("GRPC OPTIONS")
         expect(cli).to have_stopped
         expect(cli).to have_exit_status(0)
       end
@@ -51,6 +56,18 @@ describe "CLI options", :cli do
         expect(cli).to have_output_line("Broadcasting Redis channel: _test_cable_")
         # GRPC logging
         expect(cli).to have_output_line("handling /anycable.RPC/Connect with")
+      end
+    end
+
+    specify "http broadcast options" do
+      run_cli(
+        "--rpc-host 0.0.0.0:50053 -r ../spec/dummies/app.rb " \
+        "--broadcast-adapter=http " \
+        "--http-broadcast-url=http://my-ws.com/_broadcast/me " \
+        "--http-broadcast-secret=test"
+      ) do |cli|
+        expect(cli).to have_output_line("RPC server is listening on 0.0.0.0:50053")
+        expect(cli).to have_output_line("Broadcasting HTTP url: http://my-ws.com/_broadcast/me (with authorization)")
       end
     end
   end

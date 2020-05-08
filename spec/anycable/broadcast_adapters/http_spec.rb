@@ -74,8 +74,7 @@ describe AnyCable::BroadcastAdapters::Http do
           .with(
             body: {stream: "notification", data: "hello!"}.to_json,
             headers: {"Authorization" => "Bearer any-secret"}
-          )
-        ).to have_been_made.once
+          )).to have_been_made.once
       end
     end
 
