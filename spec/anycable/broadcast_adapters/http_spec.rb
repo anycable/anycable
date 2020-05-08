@@ -7,6 +7,7 @@ require "anycable/broadcast_adapters/http"
 describe AnyCable::BroadcastAdapters::Http do
   before do
     config.http_broadcast_url = "http://ws.example.com/_broadcast"
+    config.http_broadcast_secret = "my-secret"
   end
 
   after { AnyCable.config.reload }
@@ -16,11 +17,13 @@ describe AnyCable::BroadcastAdapters::Http do
   it "uses config options by default" do
     adapter = described_class.new
     expect(adapter.url).to eq "http://ws.example.com/_broadcast"
+    expect(adapter.headers).to eq("Authorization" => "Bearer my-secret")
   end
 
   it "uses override config params" do
-    adapter = described_class.new(url: "http://example.com/ws/_broadcast")
+    adapter = described_class.new(url: "http://example.com/ws/_broadcast", secret: "tshhh")
     expect(adapter.url).to eq "http://example.com/ws/_broadcast"
+    expect(adapter.headers).to eq("Authorization" => "Bearer tshhh")
   end
 
   describe "#broadcast" do
@@ -54,6 +57,26 @@ describe AnyCable::BroadcastAdapters::Http do
         .to have_been_made.once
 
       expect(AnyCable.logger).to have_received(:debug).with(/Broadcast request responded with unexpected status: 403/)
+    end
+
+    context "with authorization" do
+      let(:adapter) { described_class.new(url: "http://ws.example.com:8090/_broadcast", secret: "any-secret") }
+
+      it "adds Authorization header" do
+        stub_request(:post, "http://ws.example.com:8090/_broadcast").to_return(status: 201)
+
+        subject.broadcast("notification", "hello!")
+
+        # make sure thread has processed messages
+        subject.shutdown
+
+        expect(a_request(:post, "http://ws.example.com:8090/_broadcast")
+          .with(
+            body: {stream: "notification", data: "hello!"}.to_json,
+            headers: {"Authorization" => "Bearer any-secret"}
+          )
+        ).to have_been_made.once
+      end
     end
 
     context "retries" do

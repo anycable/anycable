@@ -40,10 +40,15 @@ module AnyCable
       MAX_ATTEMPTS = 3
       DELAY = 2
 
-      attr_reader :url
+      attr_reader :url, :headers
 
-      def initialize(url: AnyCable.config.http_broadcast_url)
+      def initialize(url: AnyCable.config.http_broadcast_url, secret: AnyCable.config.http_broadcast_secret)
         @url = url
+        @headers = {}.tap do |headers|
+          next unless secret
+          headers["Authorization"] = "Bearer #{secret}"
+        end
+
         @uri = URI.parse(url)
         @queue = Queue.new
       end
@@ -81,7 +86,7 @@ module AnyCable
 
       def perform_request(payload)
         build_http do |http|
-          req = Net::HTTP::Post.new(url, {"Content-Type" => "application/json"})
+          req = Net::HTTP::Post.new(url, {"Content-Type" => "application/json"}.merge(headers))
           req.body = payload
           http.request(req)
         end
