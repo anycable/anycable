@@ -2,12 +2,14 @@ package gonanoid
 
 import (
 	"crypto/rand"
+	"errors"
+	"fmt"
 	"math"
 )
 
 const (
 	defaultAlphabet = "_-0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" // len=64
-	defaultSize     = 22
+	defaultSize     = 21
 	defaultMaskSize = 5
 )
 
@@ -44,6 +46,13 @@ func getMask(alphabet string, masks []uint) int {
 
 // Generate is a low-level function to change alphabet and ID size.
 func Generate(alphabet string, size int) (string, error) {
+	if len(alphabet) == 0 || len(alphabet) > 255 {
+		return "", fmt.Errorf("alphabet must not empty and contain no more than 255 chars. Current len is %d", len(alphabet))
+	}
+	if size <= 0 {
+		return "", fmt.Errorf("size must be positive integer")
+	}
+
 	masks := initMasks(size)
 	mask := getMask(alphabet, masks)
 	ceilArg := 1.6 * float64(mask*size) / float64(len(alphabet))
@@ -72,10 +81,16 @@ func Generate(alphabet string, size int) (string, error) {
 // Nanoid generates secure URL-friendly unique ID.
 func Nanoid(param ...int) (string, error) {
 	var size int
-	if len(param) == 0 {
+	switch {
+	case len(param) == 0:
 		size = defaultSize
-	} else {
+	case len(param) == 1:
 		size = param[0]
+		if size < 0 {
+			return "", errors.New("negative id length")
+		}
+	default:
+		return "", errors.New("unexpected parameter")
 	}
 	bytes := make([]byte, size)
 	_, err := BytesGenerator(bytes)
@@ -87,4 +102,10 @@ func Nanoid(param ...int) (string, error) {
 		id[i] = defaultAlphabet[bytes[i]&63]
 	}
 	return string(id[:size]), nil
+}
+
+// ID provides more golang idiomatic interface for generating IDs.
+// Calling ID is shorter yet still clear `gonanoid.ID(20)` and it requires the lengths parameter by default.
+func ID(l int) (string, error) {
+	return Nanoid(l)
 }

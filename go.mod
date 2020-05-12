@@ -4,6 +4,7 @@ go 1.12
 
 require (
 	cloud.google.com/go v0.43.0 // indirect
+	github.com/FZambia/sentinel v1.1.0
 	github.com/apex/log v1.1.0
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/golang-collections/go-datastructures v0.0.0-20150211160725-59788d5eb259
@@ -14,7 +15,7 @@ require (
 	github.com/gorilla/websocket v1.4.0
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
 	github.com/kr/pty v1.1.8 // indirect
-	github.com/matoous/go-nanoid v0.0.0-20190328184752-9a3b39ac0296
+	github.com/matoous/go-nanoid v1.3.0
 	github.com/mattn/go-isatty v0.0.7
 	github.com/mitchellh/go-mruby v0.0.0-20181003231329-cd6a04a6ea57
 	github.com/namsral/flag v1.7.4-pre

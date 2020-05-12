@@ -1,9 +1,12 @@
 package pubsub
 
 import (
+	"context"
 	"errors"
+	"github.com/FZambia/sentinel"
 	"math/rand"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/anycable/anycable-go/node"
@@ -17,34 +20,109 @@ const (
 
 // RedisSubscriber contains information about Redis pubsub connection
 type RedisSubscriber struct {
-	node             *node.Node
-	url              string
-	channel          string
-	reconnectAttempt int
-	log              *log.Entry
+	node                      *node.Node
+	url                       string
+	sentinels                 string
+	sentinelDiscoveryInterval int
+	channel                   string
+	reconnectAttempt          int
+	log                       *log.Entry
 }
 
 // NewRedisSubscriber returns new RedisSubscriber struct
-func NewRedisSubscriber(node *node.Node, url string, channel string) RedisSubscriber {
+func NewRedisSubscriber(node *node.Node, url string, sentinels string, sentinelDiscoveryInterval int, channel string) RedisSubscriber {
 	return RedisSubscriber{
-		node:             node,
-		url:              url,
-		channel:          channel,
-		reconnectAttempt: 0,
-		log:              log.WithFields(log.Fields{"context": "pubsub"}),
+		node:                      node,
+		url:                       url,
+		sentinels:                 sentinels,
+		sentinelDiscoveryInterval: sentinelDiscoveryInterval,
+		channel:                   channel,
+		reconnectAttempt:          0,
+		log:                       log.WithFields(log.Fields{"context": "pubsub"}),
 	}
 }
 
 // Start connects to Redis and subscribes to the pubsub channel
+// if sentinels is set it gets the the master address first
 func (s *RedisSubscriber) Start() error {
-	// Check that URL is correct first
-	_, err := url.Parse(s.url)
+	// parse URL and check if it is correct
+	redisUrl, err := url.Parse(s.url)
 
 	if err != nil {
 		return err
 	}
 
+	var sntnl *sentinel.Sentinel
+
+	if s.sentinels != "" {
+		masterName := redisUrl.Hostname()
+
+		s.log.Debug("Redis sentinel enabled")
+		s.log.Debugf("Redis sentinel parameters:  sentinels: %s,  masterName: %s", s.sentinels, masterName)
+		sentinels := strings.Split(s.sentinels, ",")
+		sntnl = &sentinel.Sentinel{
+			Addrs:      sentinels,
+			MasterName: masterName,
+			Dial: func(addr string) (redis.Conn, error) {
+				timeout := 500 * time.Millisecond
+
+				c, err := redis.Dial(
+					"tcp",
+					addr,
+					redis.DialConnectTimeout(timeout),
+					redis.DialReadTimeout(timeout),
+					redis.DialReadTimeout(timeout),
+				)
+				if err != nil {
+					s.log.Debugf("Failed to connect to sentinel %s", addr)
+					return nil, err
+				}
+				s.log.Debugf("Successfully connected to sentinel %s", addr)
+				return c, nil
+			},
+		}
+
+		defer sntnl.Close()
+
+		// Periodically discover new Sentinels.
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		go func() {
+			err := sntnl.Discover()
+			if err != nil {
+				s.log.Warn("Failed to discover sentinels")
+			}
+			for {
+				select {
+				case <-ctx.Done():
+					return
+
+				case <-time.After(30 * time.Second):
+					err := sntnl.Discover()
+					if err != nil {
+						s.log.Warn("Failed to discover sentinels")
+					}
+				}
+			}
+		}()
+	}
+
 	for {
+
+		if s.sentinels != "" {
+			masterAddress, err := sntnl.MasterAddr()
+
+			if err != nil {
+				s.log.Warn("Failed to get master address from sentinel.")
+				return err
+			}
+			s.log.Debugf("Got master address from sentinel: %s", masterAddress)
+
+			redisUrl.Host = masterAddress
+			s.url = redisUrl.String()
+		}
+
 		if err := s.listen(); err != nil {
 			s.log.Warnf("Redis connection failed: %v", err)
 		}
@@ -65,10 +143,17 @@ func (s *RedisSubscriber) Start() error {
 }
 
 func (s *RedisSubscriber) listen() error {
+
 	c, err := redis.DialURL(s.url)
 
 	if err != nil {
 		return err
+	}
+
+	if s.sentinels != "" {
+		if !sentinel.TestRole(c, "master") {
+			return errors.New("Failed master role check")
+		}
 	}
 
 	defer c.Close()

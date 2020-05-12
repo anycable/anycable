@@ -1,3 +1,5 @@
+# github.com/FZambia/sentinel v1.1.0
+github.com/FZambia/sentinel
 # github.com/apex/log v1.1.0
 github.com/apex/log
 github.com/apex/log/handlers/json
@@ -16,7 +18,7 @@ github.com/gomodule/redigo/redis
 github.com/gomodule/redigo/internal
 # github.com/gorilla/websocket v1.4.0
 github.com/gorilla/websocket
-# github.com/matoous/go-nanoid v0.0.0-20190328184752-9a3b39ac0296
+# github.com/matoous/go-nanoid v1.3.0
 github.com/matoous/go-nanoid
 # github.com/mattn/go-isatty v0.0.7
 github.com/mattn/go-isatty

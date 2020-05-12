@@ -35,6 +35,8 @@ Disabled by default due to the experimental status in [Gorilla](https://github.c
 
 Now you can specify only the part of the version, e.g. `anycable-go:1.0` instead of the full `anycable-go:v1.0.0`.
 
+- Added Redis Sentinel support([@rolandg][])
+
 ## 0.6.5 (2020-03-29)
 
 - Change alpine version from edge to latest ([@ericmatte][])

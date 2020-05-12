@@ -9,21 +9,23 @@ import (
 
 // Config contains main application configuration
 type Config struct {
-	RPC             rpc.Config
-	RedisURL        string
-	RedisChannel    string
-	Host            string
-	Port            int
-	Path            string
-	HealthPath      string
-	Headers         []string
-	SSL             server.SSLConfig
-	WS              server.WSConfig
-	MaxMessageSize  int64
-	DisconnectQueue node.DisconnectQueueConfig
-	LogLevel        string
-	LogFormat       string
-	Metrics         metrics.Config
+	RPC                            rpc.Config
+	RedisURL                       string
+	RedisChannel                   string
+	RedisSentinels                 string
+	RedisSentinelDiscoveryInterval int
+	Host                           string
+	Port                           int
+	Path                           string
+	HealthPath                     string
+	Headers                        []string
+	SSL                            server.SSLConfig
+	WS                             server.WSConfig
+	MaxMessageSize                 int64
+	DisconnectQueue                node.DisconnectQueueConfig
+	LogLevel                       string
+	LogFormat                      string
+	Metrics                        metrics.Config
 }
 
 // New returns a new empty config
