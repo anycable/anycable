@@ -91,8 +91,7 @@ workflows:
         - build
         filters:
           branches:
-            # TODO: change to master once 1.0 released
-            only: "1.0-dev"
+            only: "master"
     - build_docker:
         version: "edge-mrb"
         mruby: true
@@ -103,8 +102,7 @@ workflows:
         - build_linux_mruby
         filters:
           branches:
-            # TODO: change to master once 1.0 released
-            only: "1.0-dev"
+            only: "master"
     - github_release:
         requires:
         - test
