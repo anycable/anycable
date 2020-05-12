@@ -1,68 +1,104 @@
+# cloud.google.com/go v0.43.0
+## explicit
 # github.com/FZambia/sentinel v1.1.0
+## explicit
 github.com/FZambia/sentinel
 # github.com/apex/log v1.1.0
+## explicit
 github.com/apex/log
 github.com/apex/log/handlers/json
 # github.com/davecgh/go-spew v1.1.1
+## explicit
 github.com/davecgh/go-spew/spew
 # github.com/golang-collections/go-datastructures v0.0.0-20150211160725-59788d5eb259
+## explicit
 github.com/golang-collections/go-datastructures/queue
 # github.com/golang/protobuf v1.3.2
+## explicit
 github.com/golang/protobuf/proto
 github.com/golang/protobuf/ptypes
 github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes/duration
 github.com/golang/protobuf/ptypes/timestamp
 # github.com/gomodule/redigo v2.0.0+incompatible
-github.com/gomodule/redigo/redis
+## explicit
 github.com/gomodule/redigo/internal
-# github.com/gorilla/websocket v1.4.0
+github.com/gomodule/redigo/redis
+# github.com/google/go-cmp v0.3.1
+## explicit
+# github.com/google/pprof v0.0.0-20190723021845-34ac40c74b70
+## explicit
+# github.com/gorilla/websocket v1.4.2
+## explicit
 github.com/gorilla/websocket
+# github.com/hashicorp/golang-lru v0.5.3
+## explicit
+# github.com/kr/pty v1.1.8
+## explicit
 # github.com/matoous/go-nanoid v1.3.0
+## explicit
 github.com/matoous/go-nanoid
 # github.com/mattn/go-isatty v0.0.7
+## explicit
 github.com/mattn/go-isatty
 # github.com/mitchellh/go-mruby v0.0.0-20181003231329-cd6a04a6ea57
+## explicit
 github.com/mitchellh/go-mruby
 # github.com/namsral/flag v1.7.4-pre
+## explicit
 github.com/namsral/flag
 # github.com/pkg/errors v0.8.1
+## explicit
 github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
+# github.com/processout/grpc-go-pool v1.2.1
+## explicit
 # github.com/stretchr/objx v0.1.0
 github.com/stretchr/objx
 # github.com/stretchr/testify v1.4.0
-github.com/stretchr/testify/mock
+## explicit
 github.com/stretchr/testify/assert
+github.com/stretchr/testify/mock
 # github.com/syossan27/tebata v0.0.0-20180602121909-b283fe4bc5ba
+## explicit
 github.com/syossan27/tebata
+# golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
+## explicit
+# golang.org/x/mobile v0.0.0-20190806162312-597adff16ade
+## explicit
 # golang.org/x/net v0.0.0-20190724013045-ca1201d0de80
-golang.org/x/net/trace
-golang.org/x/net/internal/timeseries
+## explicit
+golang.org/x/net/http/httpguts
 golang.org/x/net/http2
 golang.org/x/net/http2/hpack
-golang.org/x/net/http/httpguts
 golang.org/x/net/idna
+golang.org/x/net/internal/timeseries
+golang.org/x/net/trace
 # golang.org/x/sys v0.0.0-20190804053845-51ab0e2deafa
+## explicit
 golang.org/x/sys/unix
 # golang.org/x/text v0.3.2
 golang.org/x/text/secure/bidirule
+golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
-golang.org/x/text/transform
+# golang.org/x/tools v0.0.0-20190808195139-e713427fea3f
+## explicit
 # google.golang.org/genproto v0.0.0-20190801165951-fa694d86fc64
+## explicit
 google.golang.org/genproto/googleapis/rpc/status
 # google.golang.org/grpc v1.22.1
+## explicit
 google.golang.org/grpc
-google.golang.org/grpc/codes
-google.golang.org/grpc/keepalive
-google.golang.org/grpc/status
-google.golang.org/grpc/metadata
 google.golang.org/grpc/balancer
+google.golang.org/grpc/balancer/base
 google.golang.org/grpc/balancer/roundrobin
+google.golang.org/grpc/binarylog/grpc_binarylog_v1
+google.golang.org/grpc/codes
 google.golang.org/grpc/connectivity
 google.golang.org/grpc/credentials
+google.golang.org/grpc/credentials/internal
 google.golang.org/grpc/encoding
 google.golang.org/grpc/encoding/proto
 google.golang.org/grpc/grpclog
@@ -74,7 +110,10 @@ google.golang.org/grpc/internal/channelz
 google.golang.org/grpc/internal/envconfig
 google.golang.org/grpc/internal/grpcrand
 google.golang.org/grpc/internal/grpcsync
+google.golang.org/grpc/internal/syscall
 google.golang.org/grpc/internal/transport
+google.golang.org/grpc/keepalive
+google.golang.org/grpc/metadata
 google.golang.org/grpc/naming
 google.golang.org/grpc/peer
 google.golang.org/grpc/resolver
@@ -82,10 +121,9 @@ google.golang.org/grpc/resolver/dns
 google.golang.org/grpc/resolver/passthrough
 google.golang.org/grpc/serviceconfig
 google.golang.org/grpc/stats
+google.golang.org/grpc/status
 google.golang.org/grpc/tap
-google.golang.org/grpc/balancer/base
-google.golang.org/grpc/credentials/internal
-google.golang.org/grpc/binarylog/grpc_binarylog_v1
-google.golang.org/grpc/internal/syscall
 # gopkg.in/yaml.v2 v2.2.2
 gopkg.in/yaml.v2
+# honnef.co/go/tools v0.0.1-2019.2.2
+## explicit

@@ -1,6 +1,6 @@
 module github.com/anycable/anycable-go
 
-go 1.12
+go 1.14
 
 require (
 	cloud.google.com/go v0.43.0 // indirect
@@ -12,7 +12,7 @@ require (
 	github.com/gomodule/redigo v2.0.0+incompatible
 	github.com/google/go-cmp v0.3.1 // indirect
 	github.com/google/pprof v0.0.0-20190723021845-34ac40c74b70 // indirect
-	github.com/gorilla/websocket v1.4.0
+	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
 	github.com/kr/pty v1.1.8 // indirect
 	github.com/matoous/go-nanoid v1.3.0
