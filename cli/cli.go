@@ -52,10 +52,11 @@ func init() {
 	fs.StringVar(&defaults.SSL.CertPath, "ssl_cert", "", "")
 	fs.StringVar(&defaults.SSL.KeyPath, "ssl_key", "", "")
 
-	fs.StringVar(&defaults.RedisURL, "redis_url", redisDefault, "")
-	fs.StringVar(&defaults.RedisSentinels, "redis_sentinels", "", "")
-	fs.IntVar(&defaults.RedisSentinelDiscoveryInterval, "redis_sentinel_discovery_interval", 30, "")
-	fs.StringVar(&defaults.RedisChannel, "redis_channel", "__anycable__", "")
+	fs.StringVar(&defaults.Redis.URL, "redis_url", redisDefault, "")
+	fs.StringVar(&defaults.Redis.Channel, "redis_channel", "__anycable__", "")
+	fs.StringVar(&defaults.Redis.Sentinels, "redis_sentinels", "", "")
+	fs.IntVar(&defaults.Redis.SentinelDiscoveryInterval, "redis_sentinel_discovery_interval", 30, "")
+	fs.IntVar(&defaults.Redis.KeepalivePingInterval, "redis_keepalive_interval", 30, "")
 
 	fs.StringVar(&defaults.RPC.Host, "rpc_host", "localhost:50051", "")
 	fs.IntVar(&defaults.RPC.Concurrency, "rpc_concurrency", 28, "")
@@ -123,9 +124,10 @@ OPTIONS
   --ssl_key                              SSL private key path, env: ANYCABLE_SSL_KEY
 
   --redis_url                            Redis url, default: redis://localhost:6379/5, env: ANYCABLE_REDIS_URL, REDIS_URL
-  --redis_sentinels                      Comma separated list of sentinel hosts. format: 'hostname:port,..', env: ANYCABLE_REDIS_SENTINELS
-  --redis_sentinel_discovery_interval    Interval to rediscover sentinels in seconds. default: 30, env: ANYCABLE_REDIS_SENTINEL_DISCOVERY_INTERVAL
   --redis_channel                        Redis channel for broadcasts, default: __anycable__, env: ANYCABLE_REDIS_CHANNEL
+  --redis_sentinels                      Comma separated list of sentinel hosts, format: 'hostname:port,..', env: ANYCABLE_REDIS_SENTINELS
+  --redis_sentinel_discovery_interval    Interval to rediscover sentinels in seconds, default: 30, env: ANYCABLE_REDIS_SENTINEL_DISCOVERY_INTERVAL
+  --redis_keeepalive_interval            Interval to periodically ping Redis to make sure it's alive, default: 30, env: ANYCABLE_REDIS_KEEPALIVE_INTERVAL
 
   --rpc_host                             RPC service address, default: localhost:50051, env: ANYCABLE_RPC_HOST
   --rpc_concurrency                      Max number of concurrent RPC request; should be slightly less than the RPC server concurrency, default: 28, env: ANYCABLE_RPC_CONCURRENCY

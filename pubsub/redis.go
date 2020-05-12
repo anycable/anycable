@@ -3,11 +3,12 @@ package pubsub
 import (
 	"context"
 	"errors"
-	"github.com/FZambia/sentinel"
 	"math/rand"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/FZambia/sentinel"
 
 	"github.com/anycable/anycable-go/node"
 	"github.com/apex/log"
@@ -15,28 +16,50 @@ import (
 )
 
 const (
-	maxReconnectAttempts = 5
+	maxReconnectAttempts     = 5
+	defaultKeepaliveInterval = 30
 )
+
+// RedisConfig contains Redis pubsub adapter configuration
+type RedisConfig struct {
+	// Redis instance URL or master name in case of sentinels usage
+	URL string
+	// Redis channel to subscribe to
+	Channel string
+	// List of Redis Sentinel addresses
+	Sentinels string
+	// Redis Sentinel discovery interval (seconds)
+	SentinelDiscoveryInterval int
+	// Redis keepalive ping interval (seconds)
+	KeepalivePingInterval int
+}
+
+// NewRedisConfig builds a new config for Redis pubsub
+func NewRedisConfig() RedisConfig {
+	return RedisConfig{KeepalivePingInterval: defaultKeepaliveInterval}
+}
 
 // RedisSubscriber contains information about Redis pubsub connection
 type RedisSubscriber struct {
 	node                      *node.Node
 	url                       string
 	sentinels                 string
-	sentinelDiscoveryInterval int
+	sentinelDiscoveryInterval time.Duration
+	pingInterval              time.Duration
 	channel                   string
 	reconnectAttempt          int
 	log                       *log.Entry
 }
 
 // NewRedisSubscriber returns new RedisSubscriber struct
-func NewRedisSubscriber(node *node.Node, url string, sentinels string, sentinelDiscoveryInterval int, channel string) RedisSubscriber {
+func NewRedisSubscriber(node *node.Node, config *RedisConfig) RedisSubscriber {
 	return RedisSubscriber{
 		node:                      node,
-		url:                       url,
-		sentinels:                 sentinels,
-		sentinelDiscoveryInterval: sentinelDiscoveryInterval,
-		channel:                   channel,
+		url:                       config.URL,
+		sentinels:                 config.Sentinels,
+		sentinelDiscoveryInterval: time.Duration(config.SentinelDiscoveryInterval),
+		channel:                   config.Channel,
+		pingInterval:              time.Duration(config.KeepalivePingInterval),
 		reconnectAttempt:          0,
 		log:                       log.WithFields(log.Fields{"context": "pubsub"}),
 	}
@@ -46,7 +69,7 @@ func NewRedisSubscriber(node *node.Node, url string, sentinels string, sentinelD
 // if sentinels is set it gets the the master address first
 func (s *RedisSubscriber) Start() error {
 	// parse URL and check if it is correct
-	redisUrl, err := url.Parse(s.url)
+	redisURL, err := url.Parse(s.url)
 
 	if err != nil {
 		return err
@@ -55,7 +78,7 @@ func (s *RedisSubscriber) Start() error {
 	var sntnl *sentinel.Sentinel
 
 	if s.sentinels != "" {
-		masterName := redisUrl.Hostname()
+		masterName := redisURL.Hostname()
 
 		s.log.Debug("Redis sentinel enabled")
 		s.log.Debugf("Redis sentinel parameters:  sentinels: %s,  masterName: %s", s.sentinels, masterName)
@@ -98,7 +121,7 @@ func (s *RedisSubscriber) Start() error {
 				case <-ctx.Done():
 					return
 
-				case <-time.After(30 * time.Second):
+				case <-time.After(s.sentinelDiscoveryInterval * time.Second):
 					err := sntnl.Discover()
 					if err != nil {
 						s.log.Warn("Failed to discover sentinels")
@@ -119,8 +142,8 @@ func (s *RedisSubscriber) Start() error {
 			}
 			s.log.Debugf("Got master address from sentinel: %s", masterAddress)
 
-			redisUrl.Host = masterAddress
-			s.url = redisUrl.String()
+			redisURL.Host = masterAddress
+			s.url = redisURL.String()
 		}
 
 		if err := s.listen(); err != nil {
@@ -184,7 +207,7 @@ func (s *RedisSubscriber) listen() error {
 		}
 	}()
 
-	ticker := time.NewTicker(time.Minute)
+	ticker := time.NewTicker(s.pingInterval * time.Second)
 	defer ticker.Stop()
 
 loop:
