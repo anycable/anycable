@@ -2,7 +2,7 @@
 [![Gem Version](https://badge.fury.io/rb/anycable.svg)](https://rubygems.org/gems/anycable)
 [![Build](https://github.com/anycable/anycable/workflows/Build/badge.svg)](https://github.com/anycable/anycable/actions)
 [![Gitter](https://img.shields.io/badge/gitter-join%20chat%20%E2%86%92-brightgreen.svg)](https://gitter.im/anycable/Lobby)
-[![Documentation](https://img.shields.io/badge/docs-link-brightgreen.svg)](https://docs.anycable.io)
+[![Documentation](https://img.shields.io/badge/docs-link-brightgreen.svg)](https://docs.anycable.io/v1)
 
 # AnyCable
 
@@ -12,6 +12,8 @@
 AnyCable allows you to use any WebSocket server (written in any language) as a replacement for your Ruby server (such as Faye, Action Cable, etc).
 
 AnyCable uses the same protocol as ActionCable, so you can use its [JavaScript client](https://www.npmjs.com/package/actioncable) without any monkey-patching.
+
+**Important** This is a readme for the upcoming v1.0 release. For v0.6.x see the readme from the [0-6-stable](https://github.com/anycable/anycable/tree/0-6-stable) branch.
 
 <a href="https://evilmartians.com/">
 <img src="https://evilmartians.com/badges/sponsored-by-evil-martians.svg" alt="Sponsored by Evil Martians" width="236" height="54"></a>
@@ -23,7 +25,7 @@ AnyCable uses the same protocol as ActionCable, so you can use its [JavaScript c
 
 ## Usage
 
-Check out our 📑 [Documentation](https://docs.anycable.io).
+Check out our 📑 [Documentation](https://docs.anycable.io/v1).
 
 ## Links
 
