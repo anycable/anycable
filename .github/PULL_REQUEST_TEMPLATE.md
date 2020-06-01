@@ -10,9 +10,8 @@
   Fixes #xxx
 -->
 
-
 <!--
-  Otherwise, describe the changes: 
+  Otherwise, describe the changes:
 
 ### What is the purpose of this pull request?
 
@@ -20,12 +19,10 @@
 
 ### Is there anything you'd like reviewers to focus on?
 
--->
+### Checklist
 
-<!--
-    Please ensure your PR is ready:
+- [ ] I've added tests for this change
+- [ ] I've added a Changelog entry
+- [ ] I've updated [documentation](https://github.com/anycable/docs.anycable.io/)—Link to PR
 
-    - Include tests for this change (if appropriate)
-    - Add Changelog entry
-    - Update documentation for this change (if appropriate)
 -->
