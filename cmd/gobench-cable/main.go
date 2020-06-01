@@ -58,6 +58,7 @@ func main() {
 	controller := gobench.NewController(metrics)
 
 	appNode := node.NewNode(controller, metrics)
+	appNode.Start()
 
 	// There could be different disconnectors in the future
 	disconnector := node.NewDisconnectQueue(appNode, &config.DisconnectQueue)

@@ -71,6 +71,7 @@ func main() {
 	controller := rpc.NewController(metrics, &config.RPC)
 
 	appNode := node.NewNode(controller, metrics)
+	appNode.Start()
 
 	disconnector := node.NewDisconnectQueue(appNode, &config.DisconnectQueue)
 	go disconnector.Run()

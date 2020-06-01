@@ -53,6 +53,11 @@ type Disconnector interface {
 	Size() int
 }
 
+// AppNode describes a basic node interface
+type AppNode interface {
+	HandlePubSub(msg []byte)
+}
+
 // Node represents the whole application
 type Node struct {
 	Metrics *metrics.Metrics
@@ -75,12 +80,15 @@ func NewNode(controller Controller, metrics *metrics.Metrics) *Node {
 
 	node.hub = NewHub()
 
-	go node.hub.Run()
-
 	node.registerMetrics()
-	go node.collectStats()
 
 	return node
+}
+
+// Start runs all the required goroutines
+func (n *Node) Start() {
+	go n.hub.Run()
+	go n.collectStats()
 }
 
 // SetDisconnector set disconnector for the node
