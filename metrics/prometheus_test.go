@@ -1,6 +1,8 @@
 package metrics
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -50,4 +52,30 @@ anycable_go_tests 123
 anycable_go_any_tests 0
 `,
 	)
+}
+
+func TestPrometheusHandler(t *testing.T) {
+	m := NewMetrics(nil, 10)
+
+	m.RegisterCounter("test_total", "Total number of smth")
+	m.RegisterCounter("any_total", "Total number of anything")
+
+	m.Counter("test_total").Add(3)
+
+	req, err := http.NewRequest("GET", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(m.PrometheusHandler)
+
+	handler.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+
+	body := rr.Body.String()
+
+	assert.Contains(t, body, "anycable_go_test_total 3")
+	assert.Contains(t, body, "anycable_go_any_total 0")
 }

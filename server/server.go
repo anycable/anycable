@@ -18,10 +18,32 @@ type HTTPServer struct {
 	addr     string
 	secured  bool
 	shutdown bool
+	started  bool
 	mu       sync.Mutex
 	log      *log.Entry
 
 	Mux *http.ServeMux
+}
+
+var (
+	allServers map[string]*HTTPServer = make(map[string]*HTTPServer)
+	// Host is a default bind address for HTTP servers
+	Host string = "localhost"
+	// SSL is a default configuration for HTTP servers
+	SSL *SSLConfig
+)
+
+// ForPort creates new or returns the existing server for the specified port
+func ForPort(port string) (*HTTPServer, error) {
+	if _, ok := allServers[port]; !ok {
+		server, err := NewServer(Host, port, SSL)
+		if err != nil {
+			return nil, err
+		}
+		allServers[port] = server
+	}
+
+	return allServers[port], nil
 }
 
 // NewServer builds HTTPServer from config params
@@ -31,7 +53,7 @@ func NewServer(host string, port string, ssl *SSLConfig) (*HTTPServer, error) {
 
 	server := &http.Server{Addr: addr, Handler: mux}
 
-	secured := ssl.Available()
+	secured := (ssl != nil) && ssl.Available()
 
 	if secured {
 		cer, err := tls.LoadX509KeyPair(ssl.CertPath, ssl.KeyPath)
@@ -49,12 +71,19 @@ func NewServer(host string, port string, ssl *SSLConfig) (*HTTPServer, error) {
 		Mux:      mux,
 		secured:  secured,
 		shutdown: false,
+		started:  false,
 		log:      log.WithField("context", "http"),
 	}, nil
 }
 
 // Start server
 func (s *HTTPServer) Start() error {
+	if s.Running() {
+		return nil
+	}
+
+	s.started = true
+
 	if s.secured {
 		s.log.Infof("Starting HTTPS server at %v", s.addr)
 		return s.server.ListenAndServeTLS("", "")
@@ -62,6 +91,11 @@ func (s *HTTPServer) Start() error {
 
 	s.log.Infof("Starting HTTP server at %v", s.addr)
 	return s.server.ListenAndServe()
+}
+
+// Running returns true if server has been started
+func (s *HTTPServer) Running() bool {
+	return s.started
 }
 
 // Stop shuts down server gracefully.

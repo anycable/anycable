@@ -6,7 +6,7 @@ import "net/http"
 var healthMsg = []byte("Ah, ha, ha, ha, stayin' alive, stayin' alive.")
 
 // HealthHandler always reponds with 200 status
-func (s *HTTPServer) HealthHandler(w http.ResponseWriter, _ *http.Request) {
+func HealthHandler(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write(healthMsg)
 }

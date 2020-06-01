@@ -1,9 +1,13 @@
 package metrics
 
 import (
+	"fmt"
+	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
+	"github.com/anycable/anycable-go/server"
 	"github.com/apex/log"
 )
 
@@ -16,6 +20,8 @@ type Printer interface {
 type Metrics struct {
 	mu             sync.RWMutex
 	printer        Printer
+	server         *server.HTTPServer
+	httpPath       string
 	rotateInterval time.Duration
 	counters       map[string]*Counter
 	gauges         map[string]*Gauge
@@ -63,7 +69,19 @@ func FromConfig(config *Config) (*Metrics, error) {
 		}
 	}
 
-	return NewMetrics(metricsPrinter, config.LogInterval), nil
+	instance := NewMetrics(metricsPrinter, config.LogInterval)
+
+	if config.HTTPEnabled() {
+		server, err := server.ForPort(strconv.Itoa(config.Port))
+		if err != nil {
+			return nil, err
+		}
+		instance.server = server
+		instance.httpPath = config.HTTP
+		instance.server.Mux.Handle(instance.httpPath, http.HandlerFunc(instance.PrometheusHandler))
+	}
+
+	return instance, nil
 }
 
 // NewMetrics build new metrics struct
@@ -81,15 +99,25 @@ func NewMetrics(printer Printer, logIntervalSeconds int) *Metrics {
 }
 
 // Run periodically updates counters delta (and logs metrics if necessary)
-func (m *Metrics) Run() {
+func (m *Metrics) Run() error {
 	if m.printer != nil {
 		m.log.Infof("Log metrics every %s", m.rotateInterval)
+	}
+
+	if m.server != nil {
+		m.log.Infof("Serve metrics at %s%s", m.server.Address(), m.httpPath)
+
+		if err := m.server.Start(); err != nil {
+			if !m.server.Stopped() {
+				return fmt.Errorf("HTTP server at %s stopped: %v", err, m.server.Address())
+			}
+		}
 	}
 
 	for {
 		select {
 		case <-m.shutdownCh:
-			return
+			return nil
 		case <-time.After(m.rotateInterval):
 			m.rotate()
 
@@ -113,6 +141,10 @@ func (m *Metrics) Shutdown() {
 
 	close(m.shutdownCh)
 	m.shutdownCh = nil
+
+	if m.server != nil {
+		m.server.Stop()
+	}
 }
 
 // RegisterCounter adds new counter to the registry

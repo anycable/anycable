@@ -93,17 +93,37 @@ func main() {
 		}
 	}()
 
-	wsServer := buildServer(config.Host, strconv.Itoa(config.Port), &config.SSL)
-	wsServer.Mux.Handle(config.Path, server.WebsocketHandler(appNode, config.Headers, &config.WS))
+	server.SSL = &config.SSL
+	server.Host = config.Host
+
+	wsServer, err := server.ForPort(strconv.Itoa(config.Port))
+	if err != nil {
+		fmt.Printf("!!! Failed to initialize WebSocket server at %s:%s !!!\n%v", err, config.Host, config.Port)
+		os.Exit(1)
+	}
+
+	wsServer.Mux.Handle(config.Path, node.WebsocketHandler(appNode, config.Headers, &config.WS))
 
 	ctx.Infof("Handle WebSocket connections at %s", config.Path)
 
-	wsServer.Mux.Handle(config.HealthPath, http.HandlerFunc(wsServer.HealthHandler))
+	wsServer.Mux.Handle(config.HealthPath, http.HandlerFunc(server.HealthHandler))
 	ctx.Infof("Handle health connections at %s", config.HealthPath)
 
-	go runServer(wsServer)
+	go func() {
+		if err = wsServer.Start(); err != nil {
+			if !wsServer.Stopped() {
+				log.Errorf("WebSocket server at %s stopped: %v", err, wsServer.Address())
+				os.Exit(1)
+			}
+		}
+	}()
 
-	go metrics.Run()
+	go func() {
+		if err := metrics.Run(); err != nil {
+			ctx.Errorf("!!! Metrics module failed to start !!!\n%v", err)
+			os.Exit(1)
+		}
+	}()
 
 	t := tebata.New(syscall.SIGINT, syscall.SIGTERM)
 
@@ -121,51 +141,8 @@ func main() {
 	t.Reserve(wsServer.Stop)
 	t.Reserve(appNode.Shutdown)
 
-	if config.Metrics.HTTPEnabled() {
-		metricsServer := wsServer
-
-		if config.Metrics.Port != config.Port {
-			port := strconv.Itoa(config.Metrics.Port)
-			host := config.Host
-			if config.Metrics.Host != "" {
-				host = config.Metrics.Host
-			}
-			metricsServer = buildServer(host, port, &config.SSL)
-			ctx.Infof("Serve metrics at %s:%s%s", config.Host, port, config.Metrics.HTTP)
-		} else {
-			ctx.Infof("Serve metrics at %s", config.Metrics.HTTP)
-		}
-
-		metricsServer.Mux.Handle(config.Metrics.HTTP, http.HandlerFunc(metrics.PrometheusHandler))
-
-		if metricsServer != wsServer {
-			go runServer(metricsServer)
-			t.Reserve(metricsServer.Stop)
-		}
-	}
-
 	t.Reserve(os.Exit, 0)
 
 	// Hang forever unless Exit is called
 	select {}
-}
-
-func buildServer(host string, port string, ssl *server.SSLConfig) *server.HTTPServer {
-	s, err := server.NewServer(host, port, ssl)
-
-	if err != nil {
-		fmt.Printf("!!! Failed to initialize HTTP server at %s:%s !!!\n%v", err, host, port)
-		os.Exit(1)
-	}
-
-	return s
-}
-
-func runServer(s *server.HTTPServer) {
-	if err := s.Start(); err != nil {
-		if !s.Stopped() {
-			log.Errorf("HTTP server at %s stopped: %v", err, s.Address())
-			os.Exit(1)
-		}
-	}
 }

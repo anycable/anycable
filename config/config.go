@@ -18,7 +18,7 @@ type Config struct {
 	HealthPath      string
 	Headers         []string
 	SSL             server.SSLConfig
-	WS              server.WSConfig
+	WS              node.WSConfig
 	MaxMessageSize  int64
 	DisconnectQueue node.DisconnectQueueConfig
 	LogLevel        string
@@ -30,7 +30,7 @@ type Config struct {
 func New() Config {
 	config := Config{}
 	config.SSL = server.NewSSLConfig()
-	config.WS = server.NewWSConfig()
+	config.WS = node.NewWSConfig()
 	config.Metrics = metrics.NewConfig()
 	config.RPC = rpc.NewConfig()
 	config.Redis = pubsub.NewRedisConfig()

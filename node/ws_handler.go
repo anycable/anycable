@@ -1,9 +1,8 @@
-package server
+package node
 
 import (
 	"net/http"
 
-	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/utils"
 	"github.com/apex/log"
 	"github.com/gorilla/websocket"
@@ -23,7 +22,7 @@ func NewWSConfig() WSConfig {
 }
 
 // WebsocketHandler generate a new http handler for WebSocket connections
-func WebsocketHandler(app *node.Node, fetchHeaders []string, config *WSConfig) http.Handler {
+func WebsocketHandler(app *Node, fetchHeaders []string, config *WSConfig) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := log.WithField("context", "ws")
 
@@ -58,7 +57,7 @@ func WebsocketHandler(app *node.Node, fetchHeaders []string, config *WSConfig) h
 
 		// Separate goroutine for better GC of caller's data.
 		go func() {
-			session, err := node.NewSession(app, ws, url, headers, uid)
+			session, err := NewSession(app, ws, url, headers, uid)
 
 			if err != nil {
 				ctx.Errorf("Websocket session initialization failed: %v", err)
