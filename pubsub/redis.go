@@ -41,7 +41,7 @@ func NewRedisConfig() RedisConfig {
 
 // RedisSubscriber contains information about Redis pubsub connection
 type RedisSubscriber struct {
-	node                      *node.Node
+	node                      node.AppNode
 	url                       string
 	sentinels                 string
 	sentinelDiscoveryInterval time.Duration
@@ -52,8 +52,8 @@ type RedisSubscriber struct {
 }
 
 // NewRedisSubscriber returns new RedisSubscriber struct
-func NewRedisSubscriber(node *node.Node, config *RedisConfig) RedisSubscriber {
-	return RedisSubscriber{
+func NewRedisSubscriber(node node.AppNode, config *RedisConfig) *RedisSubscriber {
+	return &RedisSubscriber{
 		node:                      node,
 		url:                       config.URL,
 		sentinels:                 config.Sentinels,
@@ -165,6 +165,10 @@ func (s *RedisSubscriber) Start() error {
 	}
 }
 
+// Shutdown is no-op for Redis
+func (s *RedisSubscriber) Shutdown() {
+}
+
 func (s *RedisSubscriber) listen() error {
 
 	c, err := redis.DialURL(s.url)
@@ -196,7 +200,7 @@ func (s *RedisSubscriber) listen() error {
 			switch v := psc.Receive().(type) {
 			case redis.Message:
 				s.log.Debugf("Incoming pubsub message from Redis: %s", v.Data)
-				s.node.HandlePubsub(v.Data)
+				s.node.HandlePubSub(v.Data)
 			case redis.Subscription:
 				s.log.Infof("Subscribed to Redis channel: %s\n", v.Channel)
 			case error:

@@ -2,6 +2,8 @@
 
 ## 1.0.0-dev
 
+- Added HTTP broadcasting adapter. ([@palkan][])
+
 - Added Redis Sentinel support. ([@rolandg][])
 
 - Send `disconnect` messages on server restart and authentication failures. ([@palkan][])

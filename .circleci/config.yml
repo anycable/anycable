@@ -376,8 +376,18 @@ jobs:
     - run:
         name: Wait for Redis
         command: dockerize -wait tcp://localhost:6379 -timeout 1m
-    - run: bundle exec anyt -c "/tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable"
-    - run: bundle exec anyt -c "/tmp/anycable-go-test --headers=cookie,x-api-token --ssl_key=etc/ssl/server.key --ssl_cert=etc/ssl/server.crt --port=8443" --target-url="wss://localhost:8443/cable"
+    - run:
+        name: Default (Redis) pubsub test
+        command: bundle exec anyt -c "/tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable"
+    - run:
+        name: SSL test
+        command: bundle exec anyt -c "/tmp/anycable-go-test --headers=cookie,x-api-token --ssl_key=etc/ssl/server.key --ssl_cert=etc/ssl/server.crt --port=8443" --target-url="wss://localhost:8443/cable"
+    - run:
+        environment:
+          ANYCABLE_BROADCAST_ADAPTER: http
+          ANYCABLE_HTTP_BROADCAST_SECRET: any_secret
+        name: HTTP broadcast test
+        command: bundle exec anyt -c "/tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable"
 
   build_docker:
     parameters:

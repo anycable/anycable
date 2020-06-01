@@ -14,7 +14,9 @@ import (
 
 // HTTPServer is wrapper over http.Server
 type HTTPServer struct {
-	server   *http.Server
+	server *http.Server
+	// Server name used in logs
+	Title    string
 	addr     string
 	secured  bool
 	shutdown bool
@@ -66,6 +68,7 @@ func NewServer(host string, port string, ssl *SSLConfig) (*HTTPServer, error) {
 	}
 
 	return &HTTPServer{
+		Title:    "HTTP server",
 		server:   server,
 		addr:     addr,
 		Mux:      mux,
@@ -85,11 +88,11 @@ func (s *HTTPServer) Start() error {
 	s.started = true
 
 	if s.secured {
-		s.log.Infof("Starting HTTPS server at %v", s.addr)
+		s.log.Infof("Starting %s with SSL enabled at %v", s.Title, s.addr)
 		return s.server.ListenAndServeTLS("", "")
 	}
 
-	s.log.Infof("Starting HTTP server at %v", s.addr)
+	s.log.Infof("Starting %s at %v", s.Title, s.addr)
 	return s.server.ListenAndServe()
 }
 

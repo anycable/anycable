@@ -77,6 +77,7 @@ func FromConfig(config *Config) (*Metrics, error) {
 			return nil, err
 		}
 		instance.server = server
+		instance.server.Title = "Metrics HTTP server"
 		instance.httpPath = config.HTTP
 		instance.server.Mux.Handle(instance.httpPath, http.HandlerFunc(instance.PrometheusHandler))
 	}
@@ -109,7 +110,7 @@ func (m *Metrics) Run() error {
 
 		if err := m.server.Start(); err != nil {
 			if !m.server.Stopped() {
-				return fmt.Errorf("HTTP server at %s stopped: %v", err, m.server.Address())
+				return fmt.Errorf("Metrics HTTP server at %s stopped: %v", err, m.server.Address())
 			}
 		}
 	}

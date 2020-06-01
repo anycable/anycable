@@ -78,7 +78,12 @@ func main() {
 
 	appNode.SetDisconnector(disconnector)
 
-	subscriber := pubsub.NewRedisSubscriber(appNode, &config.Redis)
+	subscriber, err := pubsub.NewSubscriber(appNode, config.BroadcastAdapter, &config.Redis, &config.HTTPPubSub)
+
+	if err != nil {
+		ctx.Errorf("Couldn't configure pub/sub: %v", err)
+		os.Exit(1)
+	}
 
 	go func() {
 		if err := subscriber.Start(); err != nil {
@@ -139,6 +144,7 @@ func main() {
 		}()
 	})
 	t.Reserve(metrics.Shutdown)
+	t.Reserve(subscriber.Shutdown)
 	t.Reserve(wsServer.Stop)
 	t.Reserve(appNode.Shutdown)
 

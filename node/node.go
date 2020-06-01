@@ -122,8 +122,8 @@ func (n *Node) HandleCommand(s *Session, raw []byte) {
 	}
 }
 
-// HandlePubsub parses incoming pubsub message and broadcast it
-func (n *Node) HandlePubsub(raw []byte) {
+// HandlePubSub parses incoming pubsub message and broadcast it
+func (n *Node) HandlePubSub(raw []byte) {
 	msg := &common.StreamMessage{}
 
 	if err := json.Unmarshal(raw, &msg); err != nil {

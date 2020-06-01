@@ -10,20 +10,22 @@ import (
 
 // Config contains main application configuration
 type Config struct {
-	RPC             rpc.Config
-	Redis           pubsub.RedisConfig
-	Host            string
-	Port            int
-	Path            string
-	HealthPath      string
-	Headers         []string
-	SSL             server.SSLConfig
-	WS              node.WSConfig
-	MaxMessageSize  int64
-	DisconnectQueue node.DisconnectQueueConfig
-	LogLevel        string
-	LogFormat       string
-	Metrics         metrics.Config
+	RPC              rpc.Config
+	Redis            pubsub.RedisConfig
+	HTTPPubSub       pubsub.HTTPConfig
+	Host             string
+	Port             int
+	BroadcastAdapter string
+	Path             string
+	HealthPath       string
+	Headers          []string
+	SSL              server.SSLConfig
+	WS               node.WSConfig
+	MaxMessageSize   int64
+	DisconnectQueue  node.DisconnectQueueConfig
+	LogLevel         string
+	LogFormat        string
+	Metrics          metrics.Config
 }
 
 // New returns a new empty config
@@ -34,6 +36,7 @@ func New() Config {
 	config.Metrics = metrics.NewConfig()
 	config.RPC = rpc.NewConfig()
 	config.Redis = pubsub.NewRedisConfig()
+	config.HTTPPubSub = pubsub.NewHTTPConfig()
 	config.DisconnectQueue = node.NewDisconnectQueueConfig()
 	return config
 }
