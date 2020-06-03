@@ -17,6 +17,7 @@ env:
   global:
     - GO111MODULE=on
     - GOFLAGS=-mod=vendor
+    - BUNDLE_GEMFILE=.circleci/Gemfile
 
 matrix:
   allow_failures:
@@ -27,5 +28,5 @@ services:
   - redis-server
 before_install:
   - rvm use 2.5 --install --binary --fuzzy
-  - gem install anyt
+  - bundle install
 script: make test-ci
