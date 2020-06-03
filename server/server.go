@@ -14,9 +14,7 @@ import (
 
 // HTTPServer is wrapper over http.Server
 type HTTPServer struct {
-	server *http.Server
-	// Server name used in logs
-	Title    string
+	server   *http.Server
 	addr     string
 	secured  bool
 	shutdown bool
@@ -68,7 +66,6 @@ func NewServer(host string, port string, ssl *SSLConfig) (*HTTPServer, error) {
 	}
 
 	return &HTTPServer{
-		Title:    "HTTP server",
 		server:   server,
 		addr:     addr,
 		Mux:      mux,
@@ -81,19 +78,35 @@ func NewServer(host string, port string, ssl *SSLConfig) (*HTTPServer, error) {
 
 // Start server
 func (s *HTTPServer) Start() error {
+	s.mu.Lock()
 	if s.Running() {
+		s.mu.Unlock()
 		return nil
 	}
 
 	s.started = true
+	s.mu.Unlock()
 
 	if s.secured {
-		s.log.Infof("Starting %s with SSL enabled at %v", s.Title, s.addr)
 		return s.server.ListenAndServeTLS("", "")
 	}
 
-	s.log.Infof("Starting %s at %v", s.Title, s.addr)
 	return s.server.ListenAndServe()
+}
+
+// StartAndAnnounce prints server info and start server
+func (s *HTTPServer) StartAndAnnounce(name string) error {
+	s.mu.Lock()
+	if s.Running() {
+		s.mu.Unlock()
+		s.log.Debugf("%s is mounted at %s", name, s.Address())
+		return nil
+	}
+
+	s.log.Debugf("Starting %s at %s", name, s.Address())
+	s.mu.Unlock()
+
+	return s.Start()
 }
 
 // Running returns true if server has been started
@@ -105,6 +118,7 @@ func (s *HTTPServer) Running() bool {
 func (s *HTTPServer) Stop() error {
 	s.mu.Lock()
 	if s.shutdown {
+		s.mu.Unlock()
 		return nil
 	}
 	s.shutdown = true
@@ -121,7 +135,15 @@ func (s *HTTPServer) Stopped() bool {
 	return val
 }
 
-// Address returns server host:port
+// Address returns server scheme://host:port
 func (s *HTTPServer) Address() string {
-	return s.addr
+	var scheme string
+
+	if s.secured {
+		scheme = "https://"
+	} else {
+		scheme = "http://"
+	}
+
+	return fmt.Sprintf("%s%s", scheme, s.addr)
 }

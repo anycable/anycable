@@ -62,14 +62,13 @@ func (s *HTTPSubscriber) Start() error {
 	}
 
 	s.server = server
-	s.server.Title = "Pub/Sub HTTP server"
 	s.server.Mux.Handle(s.path, http.HandlerFunc(s.Handler))
 
 	s.log.Infof("Accept broadcast requests at %s%s", s.server.Address(), s.path)
 
-	if err := s.server.Start(); err != nil {
+	if err := s.server.StartAndAnnounce("Pub/sub server"); err != nil {
 		if !s.server.Stopped() {
-			return fmt.Errorf("Pub/Sub HTTP server at %s stopped: %v", err, s.server.Address())
+			return fmt.Errorf("Pub/Sub HTTP server at %s stopped: %v", s.server.Address(), err)
 		}
 	}
 	return nil

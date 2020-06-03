@@ -83,13 +83,13 @@ func main() {
 	}
 
 	wsServer.Mux.Handle(config.Path, node.WebsocketHandler(appNode, config.Headers, &config.WS))
-	ctx.Infof("Handle WebSocket connections at %s", config.Path)
+	ctx.Infof("Handle WebSocket connections at %s%s", wsServer.Address(), config.Path)
 
 	wsServer.Mux.Handle(config.HealthPath, http.HandlerFunc(server.HealthHandler))
-	ctx.Infof("Handle health connections at %s", config.HealthPath)
+	ctx.Infof("Handle health connections at %s%s", wsServer.Address(), config.HealthPath)
 
 	go func() {
-		if err = wsServer.Start(); err != nil {
+		if err = wsServer.StartAndAnnounce("WebSocket server"); err != nil {
 			if !wsServer.Stopped() {
 				log.Errorf("WebSocket server at %s stopped: %v", err, wsServer.Address())
 				os.Exit(1)

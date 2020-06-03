@@ -2,6 +2,7 @@ package node
 
 import (
 	"net/http"
+	"path"
 
 	"github.com/anycable/anycable-go/utils"
 	"github.com/apex/log"
@@ -41,6 +42,11 @@ func WebsocketHandler(app *Node, fetchHeaders []string, config *WSConfig) http.H
 		}
 
 		url := r.URL.String()
+
+		if !r.URL.IsAbs() {
+			url = path.Join(r.Host, url)
+		}
+
 		headers := utils.FetchHeaders(r, fetchHeaders)
 
 		uid, err := utils.FetchUID(r)
