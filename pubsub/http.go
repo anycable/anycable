@@ -66,7 +66,7 @@ func (s *HTTPSubscriber) Start() error {
 
 	s.log.Infof("Accept broadcast requests at %s%s", s.server.Address(), s.path)
 
-	if err := s.server.StartAndAnnounce("Pub/sub server"); err != nil {
+	if err := s.server.StartAndAnnounce("Pub/Sub HTTP server"); err != nil {
 		if !s.server.Stopped() {
 			return fmt.Errorf("Pub/Sub HTTP server at %s stopped: %v", s.server.Address(), err)
 		}

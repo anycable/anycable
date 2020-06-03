@@ -94,7 +94,7 @@ func (s *HTTPServer) Start() error {
 	return s.server.ListenAndServe()
 }
 
-// StartAndAnnounce prints server info and start server
+// StartAndAnnounce prints server info and starts server
 func (s *HTTPServer) StartAndAnnounce(name string) error {
 	s.mu.Lock()
 	if s.Running() {
