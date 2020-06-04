@@ -1,0 +1,31 @@
+name: Test
+
+on:
+  push:
+    branches:
+    - master
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        go-version: [1.11.x, 1.12.x, 1.13.x, 1.14.x]
+        platform: [ubuntu-latest]
+    runs-on: ${{ matrix.platform }}
+    env:
+      GO111MODULE: on
+      GOFLAGS: "-mod=vendor"
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-go@v2
+      with:
+        go-version: ${{ matrix.go-version }}
+    - name: Install system deps
+      run: |
+        sudo apt-get update
+        sudo apt-get install bison
+    - name: Build mruby
+      run: make prepare-mruby
+    - name: Run tests
+      run: go test -tags mrb ./...
