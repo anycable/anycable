@@ -102,7 +102,7 @@ module AnyCable
         return unless response
         return if Net::HTTPCreated === response
 
-        logger.debug "Broadcast request responded with unexpected status: #{response.code}"
+        logger.error "Broadcast request responded with unexpected status: #{response.code}"
       end
 
       def build_http
@@ -112,6 +112,7 @@ module AnyCable
           http = Net::HTTP.new(uri.host, uri.port)
           http.open_timeout = OPEN_TIMEOUT
           http.read_timeout = READ_TIMEOUT
+          http.use_ssl = url.match?(/^https/)
           yield http
         rescue Timeout::Error, *RECOVERABLE_EXCEPTIONS => e
           retry_count += 1

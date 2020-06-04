@@ -44,7 +44,7 @@ describe AnyCable::BroadcastAdapters::Http do
     end
 
     it "print debug message if response is not 201" do
-      allow(AnyCable.logger).to receive(:debug)
+      allow(AnyCable.logger).to receive(:error)
       stub_request(:post, "http://ws.example.com:8090/_broadcast").to_return(status: 403)
 
       subject.broadcast("notification", "hello!")
@@ -56,7 +56,7 @@ describe AnyCable::BroadcastAdapters::Http do
         .with(body: {stream: "notification", data: "hello!"}.to_json))
         .to have_been_made.once
 
-      expect(AnyCable.logger).to have_received(:debug).with(/Broadcast request responded with unexpected status: 403/)
+      expect(AnyCable.logger).to have_received(:error).with(/Broadcast request responded with unexpected status: 403/)
     end
 
     context "with authorization" do
