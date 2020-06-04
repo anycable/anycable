@@ -113,6 +113,7 @@ module AnyCable
           http.open_timeout = OPEN_TIMEOUT
           http.read_timeout = READ_TIMEOUT
           http.use_ssl = url.match?(/^https/)
+          http.verify_mode = OpenSSL::SSL::VERIFY_NONE
           yield http
         rescue Timeout::Error, *RECOVERABLE_EXCEPTIONS => e
           retry_count += 1
