@@ -206,7 +206,6 @@ func (s *RedisSubscriber) listen() error {
 			case error:
 				s.log.Errorf("Redis subscription error: %v", v)
 				done <- v
-				break
 			}
 		}
 	}()
@@ -227,7 +226,7 @@ loop:
 		}
 	}
 
-	psc.Unsubscribe()
+	psc.Unsubscribe() //nolint:errcheck
 	return <-done
 }
 

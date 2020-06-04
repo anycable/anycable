@@ -2,6 +2,7 @@ package node
 
 import (
 	"encoding/json"
+	"fmt"
 	"runtime"
 	"time"
 
@@ -98,27 +99,27 @@ func (n *Node) SetDisconnector(d Disconnector) {
 
 // HandleCommand parses incoming message from client and
 // execute the command (if recognized)
-func (n *Node) HandleCommand(s *Session, raw []byte) {
+func (n *Node) HandleCommand(s *Session, raw []byte) error {
 	msg := &common.Message{}
 
 	n.Metrics.Counter(metricsReceivedMsg).Inc()
 
 	if err := json.Unmarshal(raw, &msg); err != nil {
 		n.Metrics.Counter(metricsUnknownReceived).Inc()
-		s.Log.Warnf("Failed to parse incoming message '%s' with error: %v", raw, err)
-	} else {
-		s.Log.Debugf("Incoming message: %s", msg)
-		switch msg.Command {
-		case "subscribe":
-			n.Subscribe(s, msg)
-		case "unsubscribe":
-			n.Unsubscribe(s, msg)
-		case "message":
-			n.Perform(s, msg)
-		default:
-			n.Metrics.Counter(metricsUnknownReceived).Inc()
-			s.Log.Warnf("Unknown command: %s", msg.Command)
-		}
+		return err
+	}
+
+	s.Log.Debugf("Incoming message: %s", msg)
+	switch msg.Command {
+	case "subscribe":
+		return n.Subscribe(s, msg)
+	case "unsubscribe":
+		return n.Unsubscribe(s, msg)
+	case "message":
+		return n.Perform(s, msg)
+	default:
+		n.Metrics.Counter(metricsUnknownReceived).Inc()
+		return fmt.Errorf("Unknown command: %s", msg.Command)
 	}
 }
 

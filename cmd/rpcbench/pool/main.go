@@ -106,7 +106,12 @@ func main() {
 
 		b.pool = &p
 	} else {
-		conn, err := grpc.Dial(options.host, grpc.WithInsecure(), grpc.WithKeepaliveParams(kacp), grpc.WithBalancerName("round_robin"))
+		conn, err := grpc.Dial(
+			options.host,
+			grpc.WithInsecure(),
+			grpc.WithKeepaliveParams(kacp),
+			grpc.WithBalancerName("round_robin"), // nolint:staticcheck
+		)
 
 		if err != nil {
 			log.Errorf("!!! Failed to intialize RPC connection !!!\n%v", err)
@@ -125,7 +130,9 @@ func main() {
 	b.buffer = queue.NewRingBuffer(uint64(options.total))
 
 	for i := 0; i < options.total; i++ {
-		b.buffer.Put(nil)
+		if err = b.buffer.Put(nil); err != nil {
+			panic(err)
+		}
 	}
 
 	for i := 0; i < options.concurrency; i++ {
@@ -187,7 +194,7 @@ func (b *Benchmark) startWorker() {
 		if err != nil {
 			b.errChan <- err
 		} else {
-			b.resChan <- time.Now().Sub(start)
+			b.resChan <- time.Since(start)
 		}
 	}
 }

@@ -190,7 +190,7 @@ func TestPerform(t *testing.T) {
 	session.subscriptions["test_channel"] = true
 
 	t.Run("Successful perform", func(t *testing.T) {
-		node.Perform(session, &common.Message{Identifier: "test_channel", Data: "action"})
+		assert.Nil(t, node.Perform(session, &common.Message{Identifier: "test_channel", Data: "action"}))
 
 		// Expected to send message to session
 		var msg []byte
@@ -206,7 +206,7 @@ func TestPerform(t *testing.T) {
 	})
 
 	t.Run("With connection state", func(t *testing.T) {
-		node.Perform(session, &common.Message{Identifier: "test_channel", Data: "session"})
+		assert.Nil(t, node.Perform(session, &common.Message{Identifier: "test_channel", Data: "session"}))
 
 		assert.Len(t, *session.env.ConnectionState, 1)
 		assert.Equal(t, "performed", (*session.env.ConnectionState)["_s_"])
@@ -224,7 +224,7 @@ func TestDisconnect(t *testing.T) {
 	node := NewMockNode()
 	session := NewMockSession("14")
 
-	node.Disconnect(session)
+	assert.Nil(t, node.Disconnect(session))
 
 	// Expected to unregister session
 	select {

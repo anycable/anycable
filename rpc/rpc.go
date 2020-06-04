@@ -66,7 +66,7 @@ func (c *Controller) Start() error {
 		host,
 		grpc.WithInsecure(),
 		grpc.WithKeepaliveParams(kacp),
-		grpc.WithBalancerName("round_robin"),
+		grpc.WithBalancerName("round_robin"), // nolint:staticcheck
 	)
 
 	c.initSemaphore(capacity)

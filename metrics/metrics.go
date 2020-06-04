@@ -143,7 +143,7 @@ func (m *Metrics) Shutdown() {
 	m.shutdownCh = nil
 
 	if m.server != nil {
-		m.server.Stop()
+		m.server.Stop() //nolint:errcheck
 	}
 }
 

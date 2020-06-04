@@ -48,10 +48,12 @@ func TestUnsubscribeRaceConditions(t *testing.T) {
 
 func TestBuildMessageJSON(t *testing.T) {
 	expected := []byte("{\"identifier\":\"chat\",\"message\":{\"text\":\"hello!\"}}")
-	assert.Equal(t, expected, buildMessage("{\"text\":\"hello!\"}", "chat"))
+	actual := buildMessage("{\"text\":\"hello!\"}", "chat")
+	assert.Equal(t, expected, actual)
 }
 
 func TestBuildMessageString(t *testing.T) {
 	expected := []byte("{\"identifier\":\"chat\",\"message\":\"plain string\"}")
-	assert.Equal(t, expected, buildMessage("\"plain string\"", "chat"))
+	actual := buildMessage("\"plain string\"", "chat")
+	assert.Equal(t, expected, actual)
 }

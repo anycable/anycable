@@ -1,6 +1,7 @@
 package node
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/anycable/anycable-go/utils"
@@ -41,6 +42,15 @@ func WebsocketHandler(app *Node, fetchHeaders []string, config *WSConfig) http.H
 		}
 
 		url := r.URL.String()
+
+		if !r.URL.IsAbs() {
+			// See https://github.com/golang/go/issues/28940#issuecomment-441749380
+			scheme := "http://"
+			if r.TLS != nil {
+				scheme = "https://"
+			}
+			url = fmt.Sprintf("%s%s%s", scheme, r.Host, url)
+		}
 
 		headers := utils.FetchHeaders(r, fetchHeaders)
 

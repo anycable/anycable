@@ -116,27 +116,20 @@ func NewSession(node *Node, ws *websocket.Conn, url string, headers map[string]s
 // SendMessages waits for incoming messages and send them to the client connection
 func (s *Session) SendMessages() {
 	defer s.Disconnect("Write Failed", CloseAbnormalClosure)
-	for {
-		select {
-		case message, ok := <-s.send:
-			if !ok {
+	for message := range s.send {
+		switch message.frameType {
+		case textFrame:
+			err := s.write(message.payload, time.Now().Add(writeWait))
+
+			if err != nil {
 				return
 			}
-
-			switch message.frameType {
-			case textFrame:
-				err := s.write(message.payload, time.Now().Add(writeWait))
-
-				if err != nil {
-					return
-				}
-			case closeFrame:
-				utils.CloseWS(s.ws, message.closeCode, message.closeReason)
-				return
-			default:
-				s.Log.Errorf("Unknown frame type: %v", message)
-				return
-			}
+		case closeFrame:
+			utils.CloseWS(s.ws, message.closeCode, message.closeReason)
+			return
+		default:
+			s.Log.Errorf("Unknown frame type: %v", message)
+			return
 		}
 	}
 }
@@ -180,7 +173,9 @@ func (s *Session) write(message []byte, deadline time.Time) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.ws.SetWriteDeadline(deadline)
+	if err := s.ws.SetWriteDeadline(deadline); err != nil {
+		return err
+	}
 
 	w, err := s.ws.NextWriter(websocket.TextMessage)
 
@@ -188,7 +183,9 @@ func (s *Session) write(message []byte, deadline time.Time) error {
 		return err
 	}
 
-	w.Write(message)
+	if _, err = w.Write(message); err != nil {
+		return err
+	}
 
 	return w.Close()
 }
@@ -209,7 +206,9 @@ func (s *Session) ReadMessages() {
 			break
 		}
 
-		s.node.HandleCommand(s, message)
+		if err := s.node.HandleCommand(s, message); err != nil {
+			s.Log.Warnf("Failed to handle incoming message '%s' with error: %v", message, err)
+		}
 	}
 }
 
@@ -217,7 +216,7 @@ func (s *Session) ReadMessages() {
 func (s *Session) Disconnect(reason string, code int) {
 	s.mu.Lock()
 	if s.connected {
-		defer s.node.Disconnect(s)
+		defer s.node.Disconnect(s) // nolint:errcheck
 	}
 	s.connected = false
 	s.mu.Unlock()

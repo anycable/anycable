@@ -10,6 +10,6 @@ import (
 func CloseWS(ws *websocket.Conn, code int, reason string) {
 	deadline := time.Now().Add(time.Second)
 	msg := websocket.FormatCloseMessage(code, reason)
-	ws.WriteControl(websocket.CloseMessage, msg, deadline)
+	ws.WriteControl(websocket.CloseMessage, msg, deadline) //nolint:errcheck
 	ws.Close()
 }

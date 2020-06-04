@@ -74,7 +74,7 @@ func main() {
 	appNode.Start()
 
 	disconnector := node.NewDisconnectQueue(appNode, &config.DisconnectQueue)
-	go disconnector.Run()
+	go disconnector.Run() // nolint:errcheck
 
 	appNode.SetDisconnector(disconnector)
 
@@ -133,7 +133,7 @@ func main() {
 
 	t := tebata.New(syscall.SIGINT, syscall.SIGTERM)
 
-	t.Reserve(func() {
+	t.Reserve(func() { // nolint:errcheck
 		ctx.Infof("Shutting down... (hit Ctrl-C to stop immediately)")
 		go func() {
 			termSig := make(chan os.Signal, 1)
@@ -143,12 +143,12 @@ func main() {
 			os.Exit(0)
 		}()
 	})
-	t.Reserve(metrics.Shutdown)
-	t.Reserve(subscriber.Shutdown)
-	t.Reserve(wsServer.Stop)
-	t.Reserve(appNode.Shutdown)
+	t.Reserve(metrics.Shutdown)    // nolint:errcheck
+	t.Reserve(subscriber.Shutdown) // nolint:errcheck
+	t.Reserve(wsServer.Stop)       // nolint:errcheck
+	t.Reserve(appNode.Shutdown)    // nolint:errcheck
 
-	t.Reserve(os.Exit, 0)
+	t.Reserve(os.Exit, 0) // nolint:errcheck
 
 	// Hang forever unless Exit is called
 	select {}

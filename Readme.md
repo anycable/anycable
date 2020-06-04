@@ -71,7 +71,6 @@ For more information about available options run `anycable-go -h`.
 To enable redis sentinel support set `--redis-sentinels` to a comma separated list of sentinels (format: `<host>:<port>,...`)
 and set the `--redis-url` like that: `redis://[:<redis_password>@]<redis_master_name>`
 
-
 ## Build
 
 ```shell
@@ -80,6 +79,25 @@ make prepare-mruby
 
 # then build the Go binary (will be available in dist/anycable-go)
 make
+```
+
+You can run tests with the following commands:
+
+```sh
+# Run Golang unit tests
+make test
+
+# run once
+make prepare
+
+# Run integrations tests
+make test-conformance
+```
+
+We use [golangci-lint](https://golangci-lint.run) to lint Go source code:
+
+```sh
+golangci-lint run
 ```
 
 ## Docker

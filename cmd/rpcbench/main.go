@@ -102,7 +102,9 @@ func main() {
 	b.buffer = queue.NewRingBuffer(uint64(options.total))
 
 	for i := 0; i < options.total; i++ {
-		b.buffer.Put(nil)
+		if err = b.buffer.Put(nil); err != nil {
+			panic(err)
+		}
 	}
 
 	for i := 0; i < options.concurrency; i++ {
@@ -180,7 +182,7 @@ func (b *Benchmark) startWorker() {
 		if err != nil {
 			b.errChan <- err
 		} else {
-			b.resChan <- time.Now().Sub(start)
+			b.resChan <- time.Since(start)
 		}
 	}
 }

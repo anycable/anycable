@@ -77,7 +77,7 @@ func (s *HTTPSubscriber) Start() error {
 // Shutdown stops the HTTP server
 func (s *HTTPSubscriber) Shutdown() {
 	if s.server != nil {
-		s.server.Stop()
+		s.server.Stop() //nolint:errcheck
 	}
 }
 

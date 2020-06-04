@@ -91,7 +91,9 @@ func init() {
 	fs.BoolVar(&showHelp, "h", false, "")
 	fs.BoolVar(&showVersion, "v", false, "")
 
-	fs.Parse(os.Args[1:])
+	if err := fs.Parse(os.Args[1:]); err != nil {
+		panic(err)
+	}
 }
 
 // Config returns CLI configuration

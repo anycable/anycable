@@ -68,7 +68,7 @@ func (d *DisconnectQueue) Run() error {
 		select {
 		case session := <-d.disconnect:
 			<-throttle.C
-			d.node.DisconnectNow(session)
+			d.node.DisconnectNow(session) //nolint:errcheck
 		case <-d.shutdown:
 			return nil
 		}

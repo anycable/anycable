@@ -8,5 +8,5 @@ var healthMsg = []byte("Ah, ha, ha, ha, stayin' alive, stayin' alive.")
 // HealthHandler always reponds with 200 status
 func HealthHandler(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	w.Write(healthMsg)
+	w.Write(healthMsg) //nolint:errcheck
 }
