@@ -23,7 +23,7 @@ module AnyCable
   class Server
     attr_reader :grpc_server, :host
 
-    def initialize(host:, logger: AnyCable.logger, **options)
+    def initialize(host:, logger: nil, **options)
       @logger = logger
       @host = host
       @grpc_server = build_server(options)
@@ -70,7 +70,11 @@ module AnyCable
 
     private
 
-    attr_reader :logger, :start_thread
+    attr_reader :start_thread
+
+    def logger
+      @logger ||= AnyCable.logger
+    end
 
     def build_server(options)
       GRPC::RpcServer.new(**options).tap do |server|

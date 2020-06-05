@@ -20,7 +20,7 @@ module AnyCable
 
     attr_reader :grpc_server, :port, :path, :server
 
-    def initialize(grpc_server, port:, path: "/health", logger: AnyCable.logger)
+    def initialize(grpc_server, port:, logger: nil, path: "/health")
       @grpc_server = grpc_server
       @port = port
       @path = path
@@ -48,7 +48,9 @@ module AnyCable
 
     private
 
-    attr_reader :logger
+    def logger
+      @logger ||= AnyCable.logger
+    end
 
     def build_server
       require "webrick"
