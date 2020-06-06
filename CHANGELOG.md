@@ -2,9 +2,13 @@
 
 ## 1.0.0-dev
 
-- Added HTTP broadcasting adapter. ([@palkan][])
+- Add support for remote commands. ([@palkan][])
 
-- Added Redis Sentinel support. ([@rolandg][])
+Handle remote commands sent via Pub/Sub. Currently, only remote disconnect is supported.
+
+- Add HTTP broadcasting adapter. ([@palkan][])
+
+- Add Redis Sentinel support. ([@rolandg][])
 
 - Send `disconnect` messages on server restart and authentication failures. ([@palkan][])
 

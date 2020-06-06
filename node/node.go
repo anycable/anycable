@@ -13,7 +13,8 @@ import (
 
 const (
 	// serverRestartReason is the disconnect reason on shutdown
-	serverRestartReason = "server_restart"
+	serverRestartReason    = "server_restart"
+	remoteDisconnectReason = "remote"
 
 	// How often update node stats
 	statsCollectInterval = 5 * time.Second
@@ -125,13 +126,19 @@ func (n *Node) HandleCommand(s *Session, raw []byte) error {
 
 // HandlePubSub parses incoming pubsub message and broadcast it
 func (n *Node) HandlePubSub(raw []byte) {
-	msg := &common.StreamMessage{}
+	msg, err := common.PubSubMessageFromJSON(raw)
 
-	if err := json.Unmarshal(raw, &msg); err != nil {
+	if err != nil {
 		n.Metrics.Counter(metricsUnknownBroadcast).Inc()
 		n.log.Warnf("Failed to parse pubsub message '%s' with error: %v", raw, err)
-	} else {
-		n.Broadcast(msg)
+		return
+	}
+
+	switch v := msg.(type) {
+	case common.StreamMessage:
+		n.Broadcast(&v)
+	case common.RemoteDisconnectMessage:
+		n.RemoteDisconnect(&v)
 	}
 }
 
@@ -316,6 +323,13 @@ func (n *Node) DisconnectNow(s *Session) error {
 	}
 
 	return err
+}
+
+// RemoteDisconnect find a session by identifier and closes it
+func (n *Node) RemoteDisconnect(msg *common.RemoteDisconnectMessage) {
+	n.Metrics.Counter(metricsBroadcastMsg).Inc()
+	n.log.Debugf("Incoming pubsub command: %v", msg)
+	n.hub.disconnect <- msg
 }
 
 func transmit(s *Session, transmissions []string) {

@@ -47,6 +47,9 @@ type Hub struct {
 	// Messages for specified stream
 	broadcast chan *common.StreamMessage
 
+	// Remote disconnect commands
+	disconnect chan *common.RemoteDisconnectMessage
+
 	// Register requests from the sessions
 	register chan *Session
 
@@ -73,6 +76,7 @@ type Hub struct {
 func NewHub() *Hub {
 	return &Hub{
 		broadcast:       make(chan *common.StreamMessage, 256),
+		disconnect:      make(chan *common.RemoteDisconnectMessage, 128),
 		register:        make(chan *Session, 128),
 		unregister:      make(chan *Session, 2048),
 		subscribe:       make(chan *SubscriptionInfo, 128),
@@ -105,6 +109,9 @@ func (h *Hub) Run() {
 
 		case message := <-h.broadcast:
 			h.broadcastToStream(message.Stream, message.Data)
+
+		case command := <-h.disconnect:
+			h.disconnectSessions(command.Identifier, command.Reconnect)
 
 		case <-h.shutdown:
 			h.done.Done()
@@ -248,6 +255,24 @@ func (h *Hub) broadcastToStream(stream string, data string) {
 		}
 
 		session.Send(bdata)
+	}
+}
+
+func (h *Hub) disconnectSessions(identifier string, reconnect bool) {
+	ids, ok := h.identifiers[identifier]
+
+	if !ok {
+		h.log.Debugf("Can not disconnect sessions: unknown identifier %s", identifier)
+		return
+	}
+
+	disconnectMessage := newDisconnectMessage(remoteDisconnectReason, reconnect)
+
+	for id := range ids {
+		if ses, ok := h.sessions[id]; ok {
+			ses.Send(disconnectMessage)
+			ses.Disconnect("Closed remotely", CloseNormalClosure)
+		}
 	}
 }
 

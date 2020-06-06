@@ -2,6 +2,7 @@ package node
 
 import (
 	"testing"
+	"time"
 
 	"github.com/anycable/anycable-go/common"
 	"github.com/stretchr/testify/assert"
@@ -240,7 +241,7 @@ func TestDisconnect(t *testing.T) {
 	assert.Equal(t, session, task, "Expected to disconnect session")
 }
 
-func TestHandlePubsubCommand(t *testing.T) {
+func TestHandlePubSub(t *testing.T) {
 	node := NewMockNode()
 
 	go node.hub.Run()
@@ -264,6 +265,32 @@ func TestHandlePubsubCommand(t *testing.T) {
 
 	msg2 := <-session2.send
 	assert.Equalf(t, expected, string(msg2.payload), "Expected to receive %s but got %s", expected, string(msg2.payload))
+}
+
+func TestHandlePubSubWithCommand(t *testing.T) {
+	node := NewMockNode()
+
+	go node.hub.Run()
+	defer node.hub.Shutdown()
+
+	session := NewMockSession("14")
+	node.hub.addSession(session)
+
+	node.HandlePubSub([]byte("{\"command\":\"disconnect\",\"payload\":{\"identifier\":\"14\",\"reconnect\":false}}"))
+
+	expected := string(newDisconnectMessage("remote", false))
+
+	timer := time.After(1 * time.Second)
+	for {
+		select {
+		case <-timer:
+			t.Fatalf("Session hasn't received any messages")
+		case msg := <-session.send:
+			assert.Equalf(t, expected, string(msg.payload), "Expected to receive %s but got %s", expected, string(msg.payload))
+			assert.True(t, session.closed)
+			return
+		}
+	}
 }
 
 func TestSubscriptionsList(t *testing.T) {

@@ -1,6 +1,11 @@
 // Package common contains struts and interfaces shared between multiple components
 package common
 
+import (
+	"encoding/json"
+	"fmt"
+)
+
 // SessionEnv represents the underlying HTTP connection data:
 // URL and request headers
 type SessionEnv struct {
@@ -89,4 +94,45 @@ type Message struct {
 type StreamMessage struct {
 	Stream string `json:"stream"`
 	Data   string `json:"data"`
+}
+
+// RemoteCommandMessage represents a pub/sub message with a remote command (e.g., disconnect)
+type RemoteCommandMessage struct {
+	Command string          `json:"command,omitempty"`
+	Payload json.RawMessage `json:"payload,omitempty"`
+}
+
+// RemoteDisconnectMessage contains information required to disconnect a session
+type RemoteDisconnectMessage struct {
+	Identifier string `json:"identifier"`
+	Reconnect  bool   `json:"reconnect"`
+}
+
+// PubSubMessageFromJSON takes raw JSON byte array and return the corresponding struct
+func PubSubMessageFromJSON(raw []byte) (interface{}, error) {
+	smsg := StreamMessage{}
+
+	if err := json.Unmarshal(raw, &smsg); err == nil {
+		if smsg.Stream != "" {
+			return smsg, nil
+		}
+	}
+
+	rmsg := RemoteCommandMessage{}
+
+	if err := json.Unmarshal(raw, &rmsg); err != nil {
+		return nil, err
+	}
+
+	if rmsg.Command == "disconnect" {
+		dmsg := RemoteDisconnectMessage{}
+
+		if err := json.Unmarshal(rmsg.Payload, &dmsg); err != nil {
+			return nil, err
+		}
+
+		return dmsg, nil
+	}
+
+	return nil, fmt.Errorf("Unknown message: %s", raw)
 }
