@@ -16,10 +16,11 @@
 
 - [ ] Change A
 
-## Checklist
+### Checklist
 
 - [ ] I've added tests for this change
 - [ ] I've added a Changelog entry
+- [ ] I've updated [documentation](https://github.com/anycable/docs.anycable.io/)—Link to PR/commit
 
 <!--
 
