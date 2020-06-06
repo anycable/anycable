@@ -31,11 +31,8 @@ module AnyCable
         @channel = channel
       end
 
-      def broadcast(stream, payload)
-        redis_conn.publish(
-          channel,
-          {stream: stream, data: payload}.to_json
-        )
+      def raw_broadcast(payload)
+        redis_conn.publish(channel, payload)
       end
 
       def announce!

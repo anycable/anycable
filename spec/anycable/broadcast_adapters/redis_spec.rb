@@ -34,7 +34,7 @@ describe AnyCable::BroadcastAdapters::Redis do
   end
 
   describe "#broadcast" do
-    it "publish data to channel" do
+    it "publish stream data to channel" do
       allow(redis_conn).to receive(:publish)
 
       adapter = described_class.new
@@ -43,6 +43,20 @@ describe AnyCable::BroadcastAdapters::Redis do
       expect(redis_conn).to have_received(:publish).with(
         "_test_",
         {stream: "notification", data: "hello!"}.to_json
+      )
+    end
+  end
+
+  describe "#broadcast_command" do
+    it "publish command data to channel" do
+      allow(redis_conn).to receive(:publish)
+
+      adapter = described_class.new
+      adapter.broadcast_command("disconnect", identifier: "42")
+
+      expect(redis_conn).to have_received(:publish).with(
+        "_test_",
+        {command: "disconnect", payload: {identifier: "42"}}.to_json
       )
     end
   end

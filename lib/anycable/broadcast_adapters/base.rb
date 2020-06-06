@@ -3,8 +3,16 @@
 module AnyCable
   module BroadcastAdapters
     class Base
-      def broadcast(_stream, _payload)
+      def raw_broadcast(_data)
         raise NotImplementedError
+      end
+
+      def broadcast(stream, payload)
+        raw_broadcast({stream: stream, data: payload}.to_json)
+      end
+
+      def broadcast_command(command, **payload)
+        raw_broadcast({command: command, payload: payload}.to_json)
       end
 
       def announce!

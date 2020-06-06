@@ -55,9 +55,9 @@ module AnyCable
         @queue = Queue.new
       end
 
-      def broadcast(stream, payload)
+      def raw_broadcast(payload)
         ensure_thread_is_alive
-        queue << {stream: stream, data: payload}.to_json
+        queue << payload
       end
 
       # Wait for background thread to process all the messages
