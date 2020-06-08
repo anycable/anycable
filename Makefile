@@ -110,4 +110,7 @@ vet:
 fmt:
 	go fmt ./...
 
+lint:
+	golangci-lint run
+
 .PHONY: tmp/anycable-go-test
