@@ -52,6 +52,7 @@ message CommandResponse {
   repeated string transmissions = 5;
   string error_msg = 6;
   EnvResponse env = 7;
+  repeated string stopped_streams = 8;
 }
 
 message DisconnectRequest {

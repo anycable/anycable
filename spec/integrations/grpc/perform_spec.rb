@@ -8,6 +8,10 @@ class TestPerformChannel < AnyCable::TestFactory::Channel
     stream_from "all"
   end
 
+  def unfollow(*)
+    stop_stream_from "all"
+  end
+
   def add(data)
     transmit result: (data["a"] + data["b"])
   end
@@ -75,6 +79,16 @@ describe "client messages" do
           method: "command",
           message: request.to_h
         )
+      end
+    end
+
+    context "stop streams" do
+      let(:data) { {action: "unfollow"} }
+
+      it "responds with stopped streams", :aggregate_failures do
+        expect(subject).to be_success
+        expect(subject.stopped_streams).to contain_exactly("all")
+        expect(subject.stop_streams).to eq false
       end
     end
 

@@ -86,7 +86,8 @@ module AnyCable
         status: result ? AnyCable::Status::SUCCESS : AnyCable::Status::FAILURE,
         disconnect: socket.closed?,
         stop_streams: socket.stop_streams?,
-        streams: socket.streams,
+        streams: socket.streams[:start],
+        stopped_streams: socket.streams[:stop],
         transmissions: socket.transmissions,
         env: build_env_response(socket)
       )

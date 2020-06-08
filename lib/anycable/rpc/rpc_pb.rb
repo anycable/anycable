@@ -40,6 +40,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
       repeated :transmissions, :string, 5
       optional :error_msg, :string, 6
       optional :env, :message, 7, "anycable.EnvResponse"
+      repeated :stopped_streams, :string, 8
     end
     add_message "anycable.DisconnectRequest" do
       optional :identifiers, :string, 1

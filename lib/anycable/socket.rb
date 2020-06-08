@@ -45,11 +45,11 @@ module AnyCable
     end
 
     def subscribe(_channel, broadcasting)
-      streams << broadcasting
+      streams[:start] << broadcasting
     end
 
-    def unsubscribe(_channel, _broadcasting)
-      raise NotImplementedError
+    def unsubscribe(_channel, broadcasting)
+      streams[:stop] << broadcasting
     end
 
     def unsubscribe_from_all(_channel)
@@ -57,7 +57,7 @@ module AnyCable
     end
 
     def streams
-      @streams ||= []
+      @streams ||= {start: [], stop: []}
     end
 
     def close

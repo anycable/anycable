@@ -2,6 +2,10 @@
 
 ## 🚧 1.0.0 (_coming soon_)
 
+- Add `CommandResponse#stopped_streams` to support unsubscribing from particular broadcastings. ([@palkan])
+
+`Socket#unsubscribe` is now implemented as well.
+
 - Add `AnyCalbe.broadcast_adapter#broadcast_command` method. ([@palkan][])
 
 It could be used to send commands to WS server (e.g., remote disconnect).
