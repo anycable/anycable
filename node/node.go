@@ -345,6 +345,10 @@ func (n *Node) handleCommandReply(s *Session, msg *common.Message, reply *common
 
 	if reply.StopAllStreams {
 		n.hub.unsubscribe <- &SubscriptionInfo{session: s.UID, identifier: msg.Identifier}
+	} else if reply.StoppedStreams != nil {
+		for _, stream := range reply.StoppedStreams {
+			n.hub.unsubscribe <- &SubscriptionInfo{session: s.UID, stream: stream, identifier: msg.Identifier}
+		}
 	}
 
 	if reply.Streams != nil {

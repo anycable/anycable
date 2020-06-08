@@ -219,6 +219,25 @@ func TestPerform(t *testing.T) {
 		err := node.Perform(session, &common.Message{Identifier: "failure", Data: "test"})
 		assert.NotNil(t, err, "Error must not be nil")
 	})
+
+	t.Run("With stopped streams", func(t *testing.T) {
+		assert.Nil(t, node.Perform(session, &common.Message{Identifier: "test_channel", Data: "stop_stream"}))
+
+		var subscription SubscriptionInfo
+
+		// Expected to subscribe session to hub
+		select {
+		case sub := <-node.hub.unsubscribe:
+			subscription = *sub
+		default:
+			assert.Fail(t, "Expected hub to receive unsubscribe message but none was sent")
+			return
+		}
+
+		assert.Equalf(t, "14", subscription.session, "Session is invalid: %s", subscription.session)
+		assert.Equalf(t, "test_channel", subscription.identifier, "Channel is invalid: %s", subscription.identifier)
+		assert.Equalf(t, "stop_stream", subscription.stream, "Stream is invalid: %s", subscription.stream)
+	})
 }
 
 func TestDisconnect(t *testing.T) {

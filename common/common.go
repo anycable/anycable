@@ -69,6 +69,7 @@ type CommandResult struct {
 	StopAllStreams bool
 	Disconnect     bool
 	Streams        []string
+	StoppedStreams []string
 	Transmissions  []string
 	Broadcasts     []*StreamMessage
 	CState         map[string]string

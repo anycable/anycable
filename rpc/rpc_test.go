@@ -112,6 +112,43 @@ func TestPerform(t *testing.T) {
 		assert.Equal(t, map[string]string{"_s_": "sentCount=1"}, res.CState)
 		assert.True(t, res.StopAllStreams)
 		assert.Equal(t, []string{"chat_42"}, res.Streams)
+		assert.Nil(t, res.StoppedStreams)
+		assert.Empty(t, res.Broadcasts)
+	})
+
+	t.Run("With stopped streams", func(t *testing.T) {
+		url := "/cable-test"
+		headers := map[string]string{"cookie": "token=secret;"}
+		cstate := map[string]string{"_s_": "id=42"}
+
+		client.On("Command", mock.Anything,
+			&pb.CommandMessage{
+				Command:               "message",
+				ConnectionIdentifiers: "ids",
+				Identifier:            "test_channel",
+				Data:                  "stop_stream",
+				Env:                   &pb.Env{Url: url, Headers: headers, Cstate: cstate},
+			}).Return(
+			&pb.CommandResponse{
+				Status:         pb.Status_SUCCESS,
+				StoppedStreams: []string{"chat_42"},
+				StopStreams:    false,
+				Env:            &pb.EnvResponse{Cstate: map[string]string{"_s_": "sentCount=1"}},
+				Transmissions:  []string{"message_sent"},
+			}, nil)
+
+		res, err := controller.Perform(
+			"42",
+			&common.SessionEnv{URL: url, Headers: &headers, ConnectionState: &cstate},
+			"ids", "test_channel", "stop_stream",
+		)
+
+		assert.Nil(t, err)
+		assert.Equal(t, []string{"message_sent"}, res.Transmissions)
+		assert.Equal(t, map[string]string{"_s_": "sentCount=1"}, res.CState)
+		assert.False(t, res.StopAllStreams)
+		assert.Equal(t, []string{"chat_42"}, res.StoppedStreams)
+		assert.Nil(t, res.Streams)
 		assert.Empty(t, res.Broadcasts)
 	})
 }

@@ -268,6 +268,7 @@ func (c *Controller) parseCommandResponse(response interface{}, err error) (*com
 			Disconnect:     r.Disconnect,
 			StopAllStreams: r.StopStreams,
 			Streams:        r.Streams,
+			StoppedStreams: r.StoppedStreams,
 			Transmissions:  r.Transmissions,
 		}
 

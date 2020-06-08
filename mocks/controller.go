@@ -88,6 +88,10 @@ func (c *MockController) Perform(sid string, env *common.SessionEnv, id string, 
 		res.CState = map[string]string{"_s_": "performed"}
 	}
 
+	if data == "stop_stream" {
+		res.StoppedStreams = []string{data}
+	}
+
 	return res, nil
 }
 

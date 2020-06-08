@@ -105,7 +105,11 @@ func (h *Hub) Run() {
 			h.subscribeSession(subinfo.session, subinfo.stream, subinfo.identifier)
 
 		case subinfo := <-h.unsubscribe:
-			h.unsubscribeSessionFromChannel(subinfo.session, subinfo.identifier)
+			if subinfo.stream == "" {
+				h.unsubscribeSessionFromChannel(subinfo.session, subinfo.identifier)
+			} else {
+				h.unsubscribeSession(subinfo.session, subinfo.stream, subinfo.identifier)
+			}
 
 		case message := <-h.broadcast:
 			h.broadcastToStream(message.Stream, message.Data)
@@ -224,6 +228,24 @@ func (h *Hub) subscribeSession(sid string, stream string, identifier string) {
 		"channel": identifier,
 		"stream":  stream,
 	}).Debug("Subscribed")
+}
+
+func (h *Hub) unsubscribeSession(sid string, stream string, identifier string) {
+	if _, ok := h.streams[stream]; !ok {
+		return
+	}
+
+	if _, ok := h.streams[stream][sid]; !ok {
+		return
+	}
+
+	delete(h.streams[stream], sid)
+
+	h.log.WithFields(log.Fields{
+		"sid":     sid,
+		"channel": identifier,
+		"stream":  stream,
+	}).Debug("Unsubscribed")
 }
 
 func (h *Hub) broadcastToStream(stream string, data string) {

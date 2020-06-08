@@ -2,6 +2,8 @@
 
 ## 1.0.0-dev
 
+- Add stopped streams support. ([@palkan][])
+
 - Add support for remote commands. ([@palkan][])
 
 Handle remote commands sent via Pub/Sub. Currently, only remote disconnect is supported.
