@@ -2,6 +2,10 @@
 
 ## 🚧 1.0.0 (_coming soon_)
 
+- Add `Env#istate` and `EnvResponse#istate` to store channel state. ([@palkan][])
+
+That would allow to mimic instance variables usage in Action Cable channels.
+
 - Add `CommandResponse#stopped_streams` to support unsubscribing from particular broadcastings. ([@palkan])
 
 `Socket#unsubscribe` is now implemented as well.

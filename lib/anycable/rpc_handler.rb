@@ -116,7 +116,8 @@ module AnyCable
         "REMOTE_ADDR" => request_env.headers.delete("REMOTE_ADDR"),
         "rack.url_scheme" => uri.scheme&.sub(/^ws/, "http"),
         # AnyCable specific fields
-        "anycable.raw_cstate" => request_env.cstate&.to_h
+        "anycable.raw_cstate" => request_env.cstate&.to_h,
+        "anycable.raw_istate" => request_env.istate&.to_h
       }.delete_if { |_k, v| v.nil? })
 
       env.merge!(build_headers(request_env.headers))
@@ -159,7 +160,8 @@ module AnyCable
 
     def build_env_response(socket)
       AnyCable::EnvResponse.new(
-        cstate: socket.cstate.changed_fields
+        cstate: socket.cstate.changed_fields,
+        istate: socket.istate.changed_fields
       )
     end
 

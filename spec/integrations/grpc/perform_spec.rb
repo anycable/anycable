@@ -26,6 +26,12 @@ class TestPerformChannel < AnyCable::TestFactory::Channel
     transmit count: session["count"]
   end
 
+  def itick(*)
+    state["counter"] ||= ""
+    state["counter"] += "a"
+    transmit count: state["counter"]
+  end
+
   private
 
   def session
@@ -137,6 +143,43 @@ describe "client messages" do
         # # performing a call that doesn't modify session shouldn't
         # # return anything
         expect(third_call.session).to be_nil
+      end
+    end
+
+    context "channel state" do
+      let(:data) { {action: "itick"} }
+
+      it "persists session after each command" do
+        first_call = service.command(request)
+
+        expect(first_call).to be_success
+        expect(first_call.transmissions.size).to eq 1
+        expect(first_call.transmissions.first).to include({"count" => "a"}.to_json)
+        # the istate has changed
+        expect(first_call.istate.to_h).not_to be_empty
+
+        first_istate = first_call.istate
+
+        request.istate = first_istate
+
+        second_call = service.command(request)
+
+        expect(second_call).to be_success
+        expect(second_call.transmissions.size).to eq 1
+        expect(second_call.transmissions.first).to include({"count" => "aa"}.to_json)
+        # the istate has changed
+        expect(second_call.istate.to_h).not_to be_empty
+
+        expect(second_call.istate).not_to eq first_istate
+
+        request.data = {action: "add", a: 1, b: 2}.to_json
+
+        third_call = service.command(request)
+
+        expect(third_call).to be_success
+        # erforming a call that doesn't modify instance vars
+        # return nothing
+        expect(third_call.istate.to_h).to be_empty
       end
     end
   end

@@ -134,6 +134,10 @@ module AnyCable
 
       private
 
+      def state
+        connection.socket.istate
+      end
+
       def request
         connection.request
       end

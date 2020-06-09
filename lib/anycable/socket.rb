@@ -17,6 +17,8 @@ module AnyCable
         source&.[](key)
       end
 
+      alias [] read
+
       def write(key, val)
         return if source&.[](key) == val
 
@@ -26,18 +28,21 @@ module AnyCable
         source[key] = val
       end
 
+      alias []= write
+
       def changed_fields
         return unless source && dirty_keys
         source.slice(*dirty_keys)
       end
     end
 
-    attr_reader :transmissions, :env, :cstate
+    attr_reader :transmissions, :env, :cstate, :istate
 
     def initialize(env: nil)
       @transmissions = []
       @env = env
       @cstate = env["anycable.cstate"] = State.new(env["anycable.raw_cstate"])
+      @istate = env["anycable.istate"] = State.new(env["anycable.raw_istate"])
     end
 
     def transmit(websocket_message)

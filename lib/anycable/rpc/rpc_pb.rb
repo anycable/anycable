@@ -11,9 +11,11 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
       optional :url, :string, 1
       map :headers, :string, :string, 2
       map :cstate, :string, :string, 3
+      map :istate, :string, :string, 4
     end
     add_message "anycable.EnvResponse" do
       map :cstate, :string, :string, 1
+      map :istate, :string, :string, 2
     end
     add_message "anycable.ConnectionRequest" do
       optional :env, :message, 3, "anycable.Env"

@@ -35,6 +35,14 @@ module AnyCable
     def cstate=(val)
       env.cstate = val
     end
+
+    def istate
+      env.istate
+    end
+
+    def istate=(val)
+      env.istate = val
+    end
   end
 
   # Status predicates
