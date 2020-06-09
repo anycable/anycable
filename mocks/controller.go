@@ -92,6 +92,10 @@ func (c *MockController) Perform(sid string, env *common.SessionEnv, id string, 
 		res.StoppedStreams = []string{data}
 	}
 
+	if data == "channel_state" {
+		res.IState = map[string]string{"_c_": "performed"}
+	}
+
 	return res, nil
 }
 

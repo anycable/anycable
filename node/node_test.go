@@ -238,6 +238,16 @@ func TestPerform(t *testing.T) {
 		assert.Equalf(t, "test_channel", subscription.identifier, "Channel is invalid: %s", subscription.identifier)
 		assert.Equalf(t, "stop_stream", subscription.stream, "Stream is invalid: %s", subscription.stream)
 	})
+
+	t.Run("With channel state", func(t *testing.T) {
+		assert.Len(t, *session.env.ChannelStates, 0)
+
+		assert.Nil(t, node.Perform(session, &common.Message{Identifier: "test_channel", Data: "channel_state"}))
+
+		assert.Len(t, *session.env.ChannelStates, 1)
+		assert.Len(t, (*session.env.ChannelStates)["test_channel"], 1)
+		assert.Equal(t, "performed", (*session.env.ChannelStates)["test_channel"]["_c_"])
+	})
 }
 
 func TestDisconnect(t *testing.T) {

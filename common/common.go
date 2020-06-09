@@ -12,19 +12,22 @@ type SessionEnv struct {
 	URL             string
 	Headers         *map[string]string
 	ConnectionState *map[string]string
+	ChannelStates   *map[string]map[string]string
 }
 
 // NewSessionEnv builds a new SessionEnv
 func NewSessionEnv(url string, headers *map[string]string) *SessionEnv {
 	state := make(map[string]string)
+	channels := make(map[string]map[string]string)
 	return &SessionEnv{
 		URL:             url,
 		Headers:         headers,
 		ConnectionState: &state,
+		ChannelStates:   &channels,
 	}
 }
 
-// MergeConnectionState is update the current ConnectionState from the given map.
+// MergeConnectionState updates the current ConnectionState from the given map.
 // If the value is an empty string then remove the key,
 // otherswise add or rewrite.
 func (st *SessionEnv) MergeConnectionState(other *map[string]string) {
@@ -37,11 +40,29 @@ func (st *SessionEnv) MergeConnectionState(other *map[string]string) {
 	}
 }
 
+// MergeChannelState updates the current ChannelStates for the given identifier.
+// If the value is an empty string then remove the key,
+// otherswise add or rewrite.
+func (st *SessionEnv) MergeChannelState(id string, other *map[string]string) {
+	if _, ok := (*st.ChannelStates)[id]; !ok {
+		(*st.ChannelStates)[id] = make(map[string]string)
+	}
+
+	for k, v := range *other {
+		if v == "" {
+			delete((*st.ChannelStates)[id], k)
+		} else {
+			(*st.ChannelStates)[id][k] = v
+		}
+	}
+}
+
 // CallResult contains shared RPC result fields
 type CallResult struct {
 	Transmissions []string
 	Broadcasts    []*StreamMessage
 	CState        map[string]string
+	IState        map[string]string
 }
 
 // ConnectResult is a result of initializing a connection (calling a Connect method)
@@ -50,6 +71,7 @@ type ConnectResult struct {
 	Transmissions []string
 	Broadcasts    []*StreamMessage
 	CState        map[string]string
+	IState        map[string]string
 }
 
 // ToCallResult returns the corresponding CallResult
@@ -57,6 +79,9 @@ func (c *ConnectResult) ToCallResult() *CallResult {
 	res := CallResult{Transmissions: c.Transmissions, Broadcasts: c.Broadcasts}
 	if c.CState != nil {
 		res.CState = c.CState
+	}
+	if c.IState != nil {
+		res.IState = c.IState
 	}
 	return &res
 }
@@ -73,6 +98,7 @@ type CommandResult struct {
 	Transmissions  []string
 	Broadcasts     []*StreamMessage
 	CState         map[string]string
+	IState         map[string]string
 }
 
 // ToCallResult returns the corresponding CallResult
@@ -80,6 +106,9 @@ func (c *CommandResult) ToCallResult() *CallResult {
 	res := CallResult{Transmissions: c.Transmissions, Broadcasts: c.Broadcasts}
 	if c.CState != nil {
 		res.CState = c.CState
+	}
+	if c.IState != nil {
+		res.IState = c.IState
 	}
 	return &res
 }

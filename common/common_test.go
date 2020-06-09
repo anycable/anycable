@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSessionStateMergeConnectionState(t *testing.T) {
+func TestEnvMergeConnectionState(t *testing.T) {
 	env := NewSessionEnv("", nil)
 	(*env.ConnectionState)["a"] = "old"
 
@@ -16,6 +16,26 @@ func TestSessionStateMergeConnectionState(t *testing.T) {
 		assert.Len(t, *env.ConnectionState, 2)
 		assert.Equal(t, "new", (*env.ConnectionState)["a"])
 		assert.Equal(t, "super new", (*env.ConnectionState)["b"])
+	})
+}
+
+func TestEnvMergeChannelState(t *testing.T) {
+	env := NewSessionEnv("", nil)
+	(*env.ChannelStates)["id"] = map[string]string{"a": "old"}
+
+	t.Run("when adding and rewriting", func(t *testing.T) {
+		env.MergeChannelState("id", &map[string]string{"a": "new", "b": "super new"})
+
+		assert.Len(t, (*env.ChannelStates)["id"], 2)
+		assert.Equal(t, "new", (*env.ChannelStates)["id"]["a"])
+		assert.Equal(t, "super new", (*env.ChannelStates)["id"]["b"])
+	})
+
+	t.Run("when new channel", func(t *testing.T) {
+		env.MergeChannelState("id2", &map[string]string{"a": "new"})
+
+		assert.Len(t, (*env.ChannelStates)["id2"], 1)
+		assert.Equal(t, "new", (*env.ChannelStates)["id2"]["a"])
 	})
 }
 

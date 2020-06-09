@@ -2,6 +2,8 @@
 
 ## 1.0.0-dev
 
+- Add channel state support. ([@palkan][])
+
 - Add stopped streams support. ([@palkan][])
 
 - Add support for remote commands. ([@palkan][])

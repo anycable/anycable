@@ -357,6 +357,10 @@ func (n *Node) handleCommandReply(s *Session, msg *common.Message, reply *common
 		}
 	}
 
+	if reply.IState != nil {
+		s.env.MergeChannelState(msg.Identifier, &reply.IState)
+	}
+
 	n.handleCallReply(s, reply.ToCallResult())
 }
 

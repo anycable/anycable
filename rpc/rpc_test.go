@@ -151,6 +151,45 @@ func TestPerform(t *testing.T) {
 		assert.Nil(t, res.Streams)
 		assert.Empty(t, res.Broadcasts)
 	})
+
+	t.Run("With channel state", func(t *testing.T) {
+		url := "/cable-test"
+		headers := map[string]string{"cookie": "token=secret;"}
+		istate := map[string]string{"room": "room:1"}
+
+		channels := make(map[string]map[string]string)
+		channels["test_channel"] = istate
+
+		client.On("Command", mock.Anything,
+			&pb.CommandMessage{
+				Command:               "message",
+				ConnectionIdentifiers: "ids",
+				Identifier:            "test_channel",
+				Data:                  "channel_state",
+				Env:                   &pb.Env{Url: url, Headers: headers, Istate: istate},
+			}).Return(
+			&pb.CommandResponse{
+				Status:         pb.Status_SUCCESS,
+				StoppedStreams: []string{"chat_42"},
+				StopStreams:    false,
+				Env:            &pb.EnvResponse{Istate: map[string]string{"count": "1"}},
+				Transmissions:  []string{"message_sent"},
+			}, nil)
+
+		res, err := controller.Perform(
+			"42",
+			&common.SessionEnv{URL: url, Headers: &headers, ChannelStates: &channels},
+			"ids", "test_channel", "channel_state",
+		)
+
+		assert.Nil(t, err)
+		assert.Equal(t, []string{"message_sent"}, res.Transmissions)
+		assert.Equal(t, map[string]string{"count": "1"}, res.IState)
+		assert.False(t, res.StopAllStreams)
+		assert.Equal(t, []string{"chat_42"}, res.StoppedStreams)
+		assert.Nil(t, res.Streams)
+		assert.Empty(t, res.Broadcasts)
+	})
 }
 
 func TestDisconnect(t *testing.T) {

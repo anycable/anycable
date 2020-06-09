@@ -163,7 +163,7 @@ func (c *Controller) Subscribe(sid string, env *common.SessionEnv, id string, ch
 	op := func() (interface{}, error) {
 		return c.client.Command(newContext(sid), &pb.CommandMessage{
 			Command:               "subscribe",
-			Env:                   buildEnv(env),
+			Env:                   buildChannelEnv(channel, env),
 			Identifier:            channel,
 			ConnectionIdentifiers: id},
 		)
@@ -182,7 +182,7 @@ func (c *Controller) Unsubscribe(sid string, env *common.SessionEnv, id string, 
 	op := func() (interface{}, error) {
 		return c.client.Command(newContext(sid), &pb.CommandMessage{
 			Command:               "unsubscribe",
-			Env:                   buildEnv(env),
+			Env:                   buildChannelEnv(channel, env),
 			Identifier:            channel,
 			ConnectionIdentifiers: id,
 		})
@@ -201,7 +201,7 @@ func (c *Controller) Perform(sid string, env *common.SessionEnv, id string, chan
 	op := func() (interface{}, error) {
 		return c.client.Command(newContext(sid), &pb.CommandMessage{
 			Command:               "message",
-			Env:                   buildEnv(env),
+			Env:                   buildChannelEnv(channel, env),
 			Identifier:            channel,
 			ConnectionIdentifiers: id,
 			Data:                  data,
@@ -274,6 +274,7 @@ func (c *Controller) parseCommandResponse(response interface{}, err error) (*com
 
 		if r.Env != nil {
 			res.CState = r.Env.Cstate
+			res.IState = r.Env.Istate
 		}
 
 		if r.Status.String() == "SUCCESS" {
@@ -366,6 +367,19 @@ func buildEnv(env *common.SessionEnv) *pb.Env {
 	protoEnv := pb.Env{Url: env.URL, Headers: *env.Headers}
 	if env.ConnectionState != nil {
 		protoEnv.Cstate = *env.ConnectionState
+	}
+	return &protoEnv
+}
+
+func buildChannelEnv(id string, env *common.SessionEnv) *pb.Env {
+	protoEnv := *buildEnv(env)
+
+	if env.ChannelStates == nil {
+		return &protoEnv
+	}
+
+	if _, ok := (*env.ChannelStates)[id]; ok {
+		protoEnv.Istate = (*env.ChannelStates)[id]
 	}
 	return &protoEnv
 }
