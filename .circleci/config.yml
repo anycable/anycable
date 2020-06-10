@@ -119,7 +119,7 @@ workflows:
 executors:
   golang:
     docker:
-      - image: circleci/golang:1.12.4-stretch
+      - image: circleci/golang:1.14-stretch
     working_directory: /go/src/github.com/anycable/anycable-go/
     environment:
       CGO_ENABLED: "0"
