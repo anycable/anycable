@@ -48,7 +48,7 @@ workflows:
         requires:
         - build_binary_for_conformance
     - build_docker:
-        latest: true
+        name: build_docker_main
         requires:
         - test
         - conformance
@@ -59,6 +59,7 @@ workflows:
           branches:
             ignore: /.*/
     - build_docker:
+        name: build_docker_alpine
         version: ${CIRCLE_TAG/v/''}-alpine
         dockerfile: Dockerfile.alpine-linux-amd64
         requires:
@@ -71,6 +72,7 @@ workflows:
           branches:
             ignore: /.*/
     - build_docker:
+        name: build_docker_mrb
         version: ${CIRCLE_TAG/v/''}-mrb
         mruby: true
         dockerfile: Dockerfile.mrb-linux-amd64
@@ -84,6 +86,7 @@ workflows:
           branches:
             ignore: /.*/
     - build_docker:
+        name: build_docker_edge
         version: "edge"
         requires:
         - test
@@ -93,6 +96,7 @@ workflows:
           branches:
             only: "master"
     - build_docker:
+        name: build_docker_edge_mrb
         version: "edge-mrb"
         mruby: true
         dockerfile: Dockerfile.mrb-linux-amd64
@@ -103,6 +107,16 @@ workflows:
         filters:
           branches:
             only: "master"
+    - push_latest_docker:
+        requires:
+        - build_docker_main
+        - build_docker_alpine
+        - build_docker_mrb
+        filters:
+          tags:
+            only: /^v[0-9]+\.[0-9]+\.[0-9]+$/
+          branches:
+            ignore: /.*/
     - github_release:
         requires:
         - test
@@ -400,9 +414,6 @@ jobs:
       mruby:
         type: boolean
         default: false
-      latest:
-        type: boolean
-        default: false
     executor: docker
     steps:
     - setup_remote_docker:
@@ -435,18 +446,30 @@ jobs:
     - run:
         name: Push Docker image
         command: docker push anycable/anycable-go:<<parameters.version>>
-    - when:
-        condition: <<parameters.latest>>
-        steps:
-          - run:
-              name: Push the latest Docker image
-              command: |
-                if [[ "${CIRCLE_TAG}" == "$(cat latest-tag.log)" ]] && [[ "${CIRCLE_BRANCH}" == "master" ]]
-                then
-                    docker tag anycable/anycable-go:${CIRCLE_TAG/v/''} anycable/anycable-go:latest
-                    docker push anycable/anycable-go:latest
-                fi
 
+  push_latest_docker:
+    executor: docker
+    steps:
+    - setup_remote_docker:
+        version: 18.06.0-ce
+    - run:
+        name: Login to Docker registry
+        command: docker login -u ${DOCKER_USER} -p ${DOCKER_PASS}
+    - run:
+        name: Pull base Docker images
+        command: |
+          docker pull anycable/anycable-go:${CIRCLE_TAG/v/''}
+          docker pull anycable/anycable-go:${CIRCLE_TAG/v/''}-mrb
+          docker pull anycable/anycable-go:${CIRCLE_TAG/v/''}-alpine
+    - run:
+        name: Pushs latest Docker image
+        command: |
+            docker tag anycable/anycable-go:${CIRCLE_TAG/v/''} anycable/anycable-go:latest
+            docker push anycable/anycable-go:latest
+            docker tag anycable/anycable-go:${CIRCLE_TAG/v/''}-mrb anycable/anycable-go:latest-mrb
+            docker push anycable/anycable-go:latest-mrb
+            docker tag anycable/anycable-go:${CIRCLE_TAG/v/''}-alpine anycable/anycable-go:latest-alpine
+            docker push anycable/anycable-go:latest-alpine
   github_release:
     executor: golang
     working_directory: /tmp/dist/
