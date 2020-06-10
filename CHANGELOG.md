@@ -1,6 +1,6 @@
 # Change log
 
-## 🚧 1.0.0 (_coming soon_)
+## 1.0.0.rc1 (2020-06-10)
 
 - Add `Env#istate` and `EnvResponse#istate` to store channel state. ([@palkan][])
 
@@ -10,7 +10,7 @@ That would allow to mimic instance variables usage in Action Cable channels.
 
 `Socket#unsubscribe` is now implemented as well.
 
-- Add `AnyCalbe.broadcast_adapter#broadcast_command` method. ([@palkan][])
+- Add `AnyCable.broadcast_adapter#broadcast_command` method. ([@palkan][])
 
 It could be used to send commands to WS server (e.g., remote disconnect).
 
