@@ -2,6 +2,10 @@
 
 ## 1.0.0-dev
 
+- Add `--disable_disconnect` option. ([@palkan][])
+
+Allows you to avoid calling `Disconnect` RPC method completely if you don't need it.
+
 - Add channel state support. ([@palkan][])
 
 - Add stopped streams support. ([@palkan][])

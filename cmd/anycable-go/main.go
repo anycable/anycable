@@ -73,9 +73,15 @@ func main() {
 	appNode := node.NewNode(controller, metrics)
 	appNode.Start()
 
-	disconnector := node.NewDisconnectQueue(appNode, &config.DisconnectQueue)
-	go disconnector.Run() // nolint:errcheck
+	var disconnector node.Disconnector
 
+	if config.DisconnectorDisabled {
+		disconnector = node.NewNoopDisconnector()
+	} else {
+		disconnector = node.NewDisconnectQueue(appNode, &config.DisconnectQueue)
+	}
+
+	go disconnector.Run() // nolint:errcheck
 	appNode.SetDisconnector(disconnector)
 
 	subscriber, err := pubsub.NewSubscriber(appNode, config.BroadcastAdapter, &config.Redis, &config.HTTPPubSub)

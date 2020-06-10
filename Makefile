@@ -89,7 +89,6 @@ test-conformance-ssl: tmp/anycable-go-test
 	BUNDLE_GEMFILE=.circleci/Gemfile bundle exec anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token --ssl_key=etc/ssl/server.key --ssl_cert=etc/ssl/server.crt --port=8443" --target-url="wss://localhost:8443/cable"
 
 test-conformance-http: tmp/anycable-go-test
-	go build -tags mrb -o tmp/anycable-go-test cmd/anycable-go/main.go
 	BUNDLE_GEMFILE=.circleci/Gemfile ANYCABLE_BROADCAST_ADAPTER=http ANYCABLE_HTTP_BROADCAST_SECRET=any_secret bundle exec anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable"
 
 test-conformance-all: test-conformance test-conformance-ssl test-conformance-http

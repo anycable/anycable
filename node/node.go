@@ -47,14 +47,6 @@ func (d *disconnectMessage) toJSON() []byte {
 	return jsonStr
 }
 
-// Disconnector is an interface for disconnect queue implementation
-type Disconnector interface {
-	Run() error
-	Shutdown() error
-	Enqueue(*Session) error
-	Size() int
-}
-
 // AppNode describes a basic node interface
 type AppNode interface {
 	HandlePubSub(msg []byte)

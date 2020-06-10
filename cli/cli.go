@@ -75,6 +75,7 @@ func init() {
 
 	fs.IntVar(&defaults.DisconnectQueue.Rate, "disconnect_rate", 100, "")
 	fs.IntVar(&defaults.DisconnectQueue.ShutdownTimeout, "disconnect_timeout", 5, "")
+	fs.BoolVar(&defaults.DisconnectorDisabled, "disable_disconnect", false, "")
 
 	fs.StringVar(&defaults.LogLevel, "log_level", "info", "")
 	fs.StringVar(&defaults.LogFormat, "log_format", "text", "")
@@ -149,6 +150,7 @@ OPTIONS
 
   --disconnect_rate                      Max number of Disconnect calls per second, default: 100, env: ANYCABLE_DISCONNECT_RATE
   --disconnect_timeout                   Graceful shutdown timeouts (in seconds), default: 5, env: ANYCABLE_DISCONNECT_TIMEOUT
+  --disable_disconnect                   Disable calling Disconnect callback, default: false, env: ANYCABLE_DISABLE_DISCONNECT
 
   --log_level                            Set logging level (debug/info/warn/error/fatal), default: info, env: ANYCABLE_LOG_LEVEL
   --log_format                           Set logging format (text, json), default: text, env: ANYCABLE_LOG_FORMAT
