@@ -79,11 +79,11 @@ module CLITesting
     end
   end
 
-  def run_cli(opt_string = "", chdir: nil)
+  def run_command(command, chdir: nil)
     rspex = nil
 
     PTY.spawn(
-      "bundle exec anycable #{opt_string}",
+      command,
       chdir: chdir || File.join(PROJECT_ROOT, "bin")
     ) do |stdout, stderr, pid|
       yield CLIControl.new(stdout, stderr, pid)
@@ -96,6 +96,14 @@ module CLITesting
     # no-op
   ensure
     raise rspex unless rspex.nil?
+  end
+
+  def run_cli(opt_string = "", **opts, &block)
+    run_command "bundle exec anycable #{opt_string}", **opts, &block
+  end
+
+  def run_ruby(opt_string = "", **opts, &block)
+    run_command "bundle exec ruby #{opt_string}", **opts, &block
   end
 end
 

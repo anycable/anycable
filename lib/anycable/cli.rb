@@ -20,17 +20,22 @@ module AnyCable
     # Wait for external process termination (s)
     WAIT_PROCESS = 2
 
-    attr_reader :server, :health_server
+    attr_reader :server, :health_server, :embedded
+    alias embedded? embedded
+
+    def initialize(embedded: false)
+      @embedded = embedded
+    end
 
     # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
-    def run(args = {})
+    def run(args = [])
       @at_stop = []
 
       extra_options = parse_cli_options!(args)
 
       # Boot app first, 'cause it might change
       # configuration, loggin settings, etc.
-      boot_app!
+      boot_app! unless embedded?
 
       parse_gem_options!(extra_options)
 
@@ -66,6 +71,8 @@ module AnyCable
 
       run_custom_server_command! unless server_command.nil?
 
+      return if embedded?
+
       begin
         wait_till_terminated
       rescue Interrupt => e
@@ -81,7 +88,7 @@ module AnyCable
 
     def shutdown
       at_stop.each(&:call)
-      server.stop
+      server&.stop
     end
 
     private
