@@ -1,5 +1,9 @@
 # Change log
 
+## 1.0.0.rc2 (2020-06-24)
+
+- Add `embedded` option to CLI runner. ([@palkan][])
+
 ## 1.0.0.rc1 (2020-06-10)
 
 - Add `Env#istate` and `EnvResponse#istate` to store channel state. ([@palkan][])
