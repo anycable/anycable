@@ -24,8 +24,7 @@ The easiest way to install AnyCable-Go is to [download](https://github.com/anyca
 MacOS users could install it with [Homebrew](https://brew.sh/)
 
 ```shell
-# NOTE: while v1.0 hasn't been released, you should use --HEAD option
-brew install --HEAD anycable-go
+brew install anycable-go
 ```
 
 Arch Linux users can install [anycable-go package from AUR](https://aur.archlinux.org/packages/anycable-go/).
