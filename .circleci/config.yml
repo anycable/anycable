@@ -462,13 +462,25 @@ jobs:
           docker pull anycable/anycable-go:${CIRCLE_TAG/v/''}-mrb
           docker pull anycable/anycable-go:${CIRCLE_TAG/v/''}-alpine
     - run:
-        name: Pushs latest Docker image
+        name: Pushs latest Docker images
         command: |
             docker tag anycable/anycable-go:${CIRCLE_TAG/v/''} anycable/anycable-go:latest
+            docker tag anycable/anycable-go:${CIRCLE_TAG/v/''} anycable/anycable-go:$(echo "$CIRCLE_TAG" | sed -E 's/^v([0-9]+)\.([0-9]+)\.([0-9]+)$/{\1}/')
+            docker tag anycable/anycable-go:${CIRCLE_TAG/v/''} anycable/anycable-go:$(echo "$CIRCLE_TAG" | sed -E 's/^v([0-9]+)\.([0-9]+)\.([0-9]+)$/{\1}.{\2}/')
+            docker push anycable/anycable-go:$(echo "$CIRCLE_TAG" | sed -E 's/^v([0-9]+)\.([0-9]+)\.([0-9]+)$/{\1}/')
+            docker push anycable/anycable-go:$(echo "$CIRCLE_TAG" | sed -E 's/^v([0-9]+)\.([0-9]+)\.([0-9]+)$/{\1}.{\2}/')
             docker push anycable/anycable-go:latest
             docker tag anycable/anycable-go:${CIRCLE_TAG/v/''}-mrb anycable/anycable-go:latest-mrb
+            docker tag anycable/anycable-go:${CIRCLE_TAG/v/''}-mrb anycable/anycable-go:$(echo "$CIRCLE_TAG" | sed -E 's/^v([0-9]+)\.([0-9]+)\.([0-9]+)$/{\1}/')-mrb
+            docker tag anycable/anycable-go:${CIRCLE_TAG/v/''}-mrb anycable/anycable-go:$(echo "$CIRCLE_TAG" | sed -E 's/^v([0-9]+)\.([0-9]+)\.([0-9]+)$/{\1}.{\2}/')-mrb
+            docker push anycable/anycable-go:$(echo "$CIRCLE_TAG" | sed -E 's/^v([0-9]+)\.([0-9]+)\.([0-9]+)$/{\1}/')-mrb
+            docker push anycable/anycable-go:$(echo "$CIRCLE_TAG" | sed -E 's/^v([0-9]+)\.([0-9]+)\.([0-9]+)$/{\1}.{\2}/')-mrb
             docker push anycable/anycable-go:latest-mrb
             docker tag anycable/anycable-go:${CIRCLE_TAG/v/''}-alpine anycable/anycable-go:latest-alpine
+            docker tag anycable/anycable-go:${CIRCLE_TAG/v/''}-alpine anycable/anycable-go:$(echo "$CIRCLE_TAG" | sed -E 's/^v([0-9]+)\.([0-9]+)\.([0-9]+)$/{\1}/')-alpine
+            docker tag anycable/anycable-go:${CIRCLE_TAG/v/''}-alpine anycable/anycable-go:$(echo "$CIRCLE_TAG" | sed -E 's/^v([0-9]+)\.([0-9]+)\.([0-9]+)$/{\1}.{\2}/')-alpine
+            docker push anycable/anycable-go:$(echo "$CIRCLE_TAG" | sed -E 's/^v([0-9]+)\.([0-9]+)\.([0-9]+)$/{\1}/')-alpine
+            docker push anycable/anycable-go:$(echo "$CIRCLE_TAG" | sed -E 's/^v([0-9]+)\.([0-9]+)\.([0-9]+)$/{\1}.{\2}/')-alpine
             docker push anycable/anycable-go:latest-alpine
   github_release:
     executor: golang
