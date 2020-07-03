@@ -3,6 +3,7 @@ package pubsub
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math/rand"
 	"net/url"
 	"strings"
@@ -89,12 +90,27 @@ func (s *RedisSubscriber) Start() error {
 			Dial: func(addr string) (redis.Conn, error) {
 				timeout := 500 * time.Millisecond
 
-				c, err := redis.Dial(
-					"tcp",
-					addr,
+				sentinelHost := addr
+				dialOptions := []redis.DialOption{
 					redis.DialConnectTimeout(timeout),
 					redis.DialReadTimeout(timeout),
 					redis.DialReadTimeout(timeout),
+				}
+
+				sentinelURI, err := url.Parse(fmt.Sprintf("redis://%s", addr))
+
+				if err == nil {
+					sentinelHost = sentinelURI.Host
+					password, hasPassword := sentinelURI.User.Password()
+					if hasPassword {
+						dialOptions = append(dialOptions, redis.DialPassword(password))
+					}
+				}
+
+				c, err := redis.Dial(
+					"tcp",
+					sentinelHost,
+					dialOptions...,
 				)
 				if err != nil {
 					s.log.Debugf("Failed to connect to sentinel %s", addr)
