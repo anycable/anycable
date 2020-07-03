@@ -1,5 +1,9 @@
 # Change log
 
+- Fix setting `--metrics_host`. ([@palkan][])
+
+See [#107](https://github.com/anycable/anycable-go/issues/107).
+
 ## 1.0.0 (2020-06-24)
 
 - Add `--disable_disconnect` option. ([@palkan][])

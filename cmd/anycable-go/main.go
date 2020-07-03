@@ -34,6 +34,10 @@ func main() {
 
 	config := cli.Config()
 
+	// Set global HTTP params as early as possible to make sure all servers use them
+	server.SSL = &config.SSL
+	server.Host = config.Host
+
 	// init logging
 	err := utils.InitLogger(config.LogFormat, config.LogLevel)
 
@@ -104,9 +108,6 @@ func main() {
 			os.Exit(1)
 		}
 	}()
-
-	server.SSL = &config.SSL
-	server.Host = config.Host
 
 	wsServer, err := server.ForPort(strconv.Itoa(config.Port))
 	if err != nil {

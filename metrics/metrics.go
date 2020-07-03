@@ -72,11 +72,20 @@ func FromConfig(config *Config) (*Metrics, error) {
 	instance := NewMetrics(metricsPrinter, config.LogInterval)
 
 	if config.HTTPEnabled() {
-		server, err := server.ForPort(strconv.Itoa(config.Port))
-		if err != nil {
-			return nil, err
+		if config.Host != "" && config.Host != server.Host {
+			srv, err := server.NewServer(config.Host, strconv.Itoa(config.Port), server.SSL)
+			if err != nil {
+				return nil, err
+			}
+			instance.server = srv
+		} else {
+			srv, err := server.ForPort(strconv.Itoa(config.Port))
+			if err != nil {
+				return nil, err
+			}
+			instance.server = srv
 		}
-		instance.server = server
+
 		instance.httpPath = config.HTTP
 		instance.server.Mux.Handle(instance.httpPath, http.HandlerFunc(instance.PrometheusHandler))
 	}
