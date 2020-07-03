@@ -11,32 +11,26 @@ require "bundler/inline"
 gemfile(true) do
   source "https://rubygems.org"
 
-  gem "anyt"
+  # For AnyCable <1.0, use ~> 0.8
+  gem "anyt", ">= 1.0.0"
 end
+
+# Use HTTP adapter by default
+ENV["ANYCABLE_BROADCAST_ADAPTER"] = "http"
 
 require "anyt"
 require "anyt/cli"
-require "anycable-rails"
-
-# WebSocket server url
-ENV["ANYT_TARGET_URL"] ||= "ws://localhost:8080/cable"
-
-# Command to launch WebSocket server.
-# Comment this line if you want to run WebSocket server manually
-ENV["ANYT_COMMAND"] ||= "anycable-go"
-
-ActionCable.server.config.logger = Rails.logger = AnyCable.logger
 
 # Test scenario
 feature "issue_xyz" do
   # This block defines an anonymous channel to test against
   channel do
-    # def subscribed
-    #  stream_from "a"
-    # end
+    def subscribed
+      stream_from "a"
+    end
     #
     # def perform(data)
-    #  # ...
+    #  ...
     # end
   end
 
@@ -62,15 +56,25 @@ feature "issue_xyz" do
     Should work
   ) do
     # ...
+    ActionCable.server.broadcast "a", "test"
+
+    msg = {
+      "identifier" => {channel: channel}.to_json,
+      "message" => "test"
+    }
+
+    assert_equal msg, client.receive
   end
 end
 
-# Required setup/teardown
-begin
-  Anyt::RPC.start
-  Anyt::Command.run if Anyt.config.command
-  Anyt::Tests.run
-ensure
-  Anyt::Command.stop if Anyt.config.command
-  Anyt::RPC.stop
-end
+ARGV.clear
+
+# WebSocket server url
+ARGV << "--target-url=ws://localhost:8080/cable"
+# Command to launch WebSocket server.
+# Comment this line if you want to run WebSocket server manually
+ARGV << "--command=anycable-go"
+# Run only the scenarios specified in this file
+ARGV << "--only=bug_report_template"
+
+Anyt::Cli.run
