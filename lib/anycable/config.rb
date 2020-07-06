@@ -3,6 +3,8 @@
 require "anyway_config"
 require "grpc"
 
+require "uri"
+
 module AnyCable
   # AnyCable configuration.
   class Config < Anyway::Config
@@ -116,16 +118,14 @@ module AnyCable
 
     private
 
-    SENTINEL_RXP = /^([\w\-_]*)\:(\d+)$/.freeze
-
     def parse_sentinel(sentinel)
       return sentinel.transform_keys!(&:to_sym) if sentinel.is_a?(Hash)
 
-      matches = sentinel.match(SENTINEL_RXP)
+      uri = URI.parse("redis://#{sentinel}")
 
-      raise ArgumentError, "Invalid Sentinel value: #{sentinel}" if matches.nil?
-
-      {host: matches[1], port: matches[2].to_i}
+      {host: uri.host, port: uri.port}.tap do |opts|
+        opts[:password] = uri.password if uri.password
+      end
     end
   end
 end

@@ -3,7 +3,11 @@
 require "spec_helper"
 
 describe "AnyCable::Config" do
-  let(:described_class) { AnyCable::Config }
+  let(:described_class) do
+    require "anycable/config"
+    AnyCable::Config
+  end
+
   subject(:config) { AnyCable.config }
 
   it "loads config vars from anycable.yml", :aggregate_failures do
@@ -28,7 +32,7 @@ describe "AnyCable::Config" do
     let(:sentinel_config) do
       [
         {"host" => "redis-1-1", "port" => 26_379},
-        {"host" => "redis-1-2", "port" => 26_380}
+        {"host" => "redis-1-2", "port" => 26_380, "password" => "secret"}
       ]
     end
 
@@ -40,20 +44,20 @@ describe "AnyCable::Config" do
       specify do
         expect(subject.to_redis_params).to eq(
           url: "redis://localhost:6379/2",
-          sentinels: [{host: "redis-1-1", port: 26_379}, {host: "redis-1-2", port: 26_380}]
+          sentinels: [{host: "redis-1-1", port: 26_379}, {host: "redis-1-2", port: 26_380, password: "secret"}]
         )
       end
     end
 
     context "with ANYCABLE_REDIS_SENTINELS" do
-      around { |ex| with_env("ANYCABLE_REDIS_SENTINELS" => "redis-1-1:26379,redis-1-2:26380", &ex) }
+      around { |ex| with_env("ANYCABLE_REDIS_SENTINELS" => "redis-1-1:26379,:secret@redis-1-2:26380", &ex) }
 
       subject(:config) { described_class.new }
 
       specify do
         expect(subject.to_redis_params).to eq(
           url: "redis://localhost:6379/2",
-          sentinels: [{host: "redis-1-1", port: 26_379}, {host: "redis-1-2", port: 26_380}]
+          sentinels: [{host: "redis-1-1", port: 26_379}, {host: "redis-1-2", port: 26_380, password: "secret"}]
         )
       end
     end

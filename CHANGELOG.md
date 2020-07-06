@@ -2,6 +2,10 @@
 
 ## master
 
+- Support providing passwords for Redis Sentinels. ([@palkan][])
+
+Use the following format: `ANYCABLE_REDIS_SENTINELS=:password1@my.redis.sentinel.first:26380,:password2@my.redis.sentinel.second:26380`.
+
 ## 1.0.0 (2020-07-01)
 
 - Add `embedded` option to CLI runner. ([@palkan][])

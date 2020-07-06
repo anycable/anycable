@@ -9,6 +9,7 @@ RSpec.shared_context "anycable:rpc:server" do
     )
 
     @server.start
+    sleep 0.1
   end
 
   after(:all) { @server.stop }
