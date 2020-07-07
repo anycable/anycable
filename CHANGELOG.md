@@ -2,6 +2,8 @@
 
 ## master
 
+## 1.0.1 (2020-07-07)
+
 - Support providing passwords for Redis Sentinels. ([@palkan][])
 
 Use the following format: `ANYCABLE_REDIS_SENTINELS=:password1@my.redis.sentinel.first:26380,:password2@my.redis.sentinel.second:26380`.
