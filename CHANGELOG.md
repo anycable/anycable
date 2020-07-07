@@ -1,5 +1,7 @@
 # Change log
 
+- Fix subscribing to the same stream from different channels. ([@palkan][])
+
 - Fix setting `--metrics_host`. ([@palkan][])
 
 See [#107](https://github.com/anycable/anycable-go/issues/107).

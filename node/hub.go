@@ -38,10 +38,12 @@ type Hub struct {
 	// Identifiers to session
 	identifiers map[string]map[string]bool
 
-	// Maps streams to sessions
-	streams map[string]map[string]string
+	// Maps streams to sessions with identifiers
+	// stream -> sid -> identifier -> true
+	streams map[string]map[string]map[string]bool
 
 	// Maps sessions to identifiers to streams
+	// sid -> identifier -> [stream]
 	sessionsStreams map[string]map[string][]string
 
 	// Messages for specified stream
@@ -83,7 +85,7 @@ func NewHub() *Hub {
 		unsubscribe:     make(chan *SubscriptionInfo, 128),
 		sessions:        make(map[string]*Session),
 		identifiers:     make(map[string]map[string]bool),
-		streams:         make(map[string]map[string]string),
+		streams:         make(map[string]map[string]map[string]bool),
 		sessionsStreams: make(map[string]map[string][]string),
 		shutdown:        make(chan struct{}),
 		log:             log.WithFields(log.Fields{"context": "hub"}),
@@ -194,7 +196,11 @@ func (h *Hub) unsubscribeSessionFromChannel(sid string, identifier string) {
 	}
 
 	for _, stream := range h.sessionsStreams[sid][identifier] {
-		delete(h.streams[stream], sid)
+		delete(h.streams[stream][sid], identifier)
+
+		if len(h.streams[stream][sid]) == 0 {
+			delete(h.streams[stream], sid)
+		}
 
 		if len(h.streams[stream]) == 0 {
 			delete(h.streams, stream)
@@ -209,10 +215,14 @@ func (h *Hub) unsubscribeSessionFromChannel(sid string, identifier string) {
 
 func (h *Hub) subscribeSession(sid string, stream string, identifier string) {
 	if _, ok := h.streams[stream]; !ok {
-		h.streams[stream] = make(map[string]string)
+		h.streams[stream] = make(map[string]map[string]bool)
 	}
 
-	h.streams[stream][sid] = identifier
+	if _, ok := h.streams[stream][sid]; !ok {
+		h.streams[stream][sid] = make(map[string]bool)
+	}
+
+	h.streams[stream][sid][identifier] = true
 
 	if _, ok := h.sessionsStreams[sid]; !ok {
 		h.sessionsStreams[sid] = make(map[string][]string)
@@ -239,7 +249,11 @@ func (h *Hub) unsubscribeSession(sid string, stream string, identifier string) {
 		return
 	}
 
-	delete(h.streams[stream], sid)
+	if _, ok := h.streams[stream][sid][identifier]; !ok {
+		return
+	}
+
+	delete(h.streams[stream][sid], identifier)
 
 	h.log.WithFields(log.Fields{
 		"sid":     sid,
@@ -260,23 +274,25 @@ func (h *Hub) broadcastToStream(stream string, data string) {
 
 	buf := make(map[string][]byte)
 
-	for sid, id := range h.streams[stream] {
+	var bdata []byte
+
+	for sid, ids := range h.streams[stream] {
 		session, ok := h.sessions[sid]
 
 		if !ok {
 			continue
 		}
 
-		var bdata []byte
+		for id := range ids {
+			if msg, ok := buf[id]; ok {
+				bdata = msg
+			} else {
+				bdata = buildMessage(data, id)
+				buf[id] = bdata
+			}
 
-		if msg, ok := buf[id]; ok {
-			bdata = msg
-		} else {
-			bdata = buildMessage(data, id)
-			buf[id] = bdata
+			session.Send(bdata)
 		}
-
-		session.Send(bdata)
 	}
 }
 
