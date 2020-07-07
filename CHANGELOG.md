@@ -1,6 +1,14 @@
 # Change log
 
+## master
+
+## 1.0.1 (2020-07-07)
+
 - Fix subscribing to the same stream from different channels. ([@palkan][])
+
+- Support providing passwords for Redis Sentinels. ([@palkan][])
+
+Use the following format: `ANYCABLE_REDIS_SENTINELS=:password1@my.redis.sentinel.first:26380,:password2@my.redis.sentinel.second:26380`.
 
 - Fix setting `--metrics_host`. ([@palkan][])
 
