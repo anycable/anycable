@@ -281,7 +281,7 @@ jobs:
     - build-mruby:
         os: darwin
         arch: amd64
-        postfix: mrb-dawrin-amd64
+        postfix: mrb-darwin-amd64
     - save_cache:
         key: darwin-mruby-{{ .Revision }}
         paths: /tmp/dist/
