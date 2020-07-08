@@ -310,11 +310,11 @@ jobs:
     - build:
         os: windows
         arch: "386"
-        postfix: win-386
+        postfix: win-386.exe
     - build:
         os: windows
         arch: amd64
-        postfix: win-amd64
+        postfix: win-amd64.exe
     - build:
         os: darwin
         arch: "386"
