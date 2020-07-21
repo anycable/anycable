@@ -5,12 +5,10 @@ on:
     branches:
     - master
     paths:
-    - "README.md"
-    - "CHANGELOG.md"
+    - "**/*.md"
   pull_request:
     paths:
-    - "README.md"
-    - "CHANGELOG.md"
+    - "**/*.md"
 
 jobs:
   markdownlint:
@@ -23,7 +21,8 @@ jobs:
     - name: Run Markdown linter
       run: |
         gem install mdl
-        mdl CHANGELOG.md README.md
+        mdl CHANGELOG.md README.md docs
+
   rubocop:
     runs-on: ubuntu-latest
     steps:
@@ -36,6 +35,7 @@ jobs:
         gem install bundler
         bundle install --gemfile gemfiles/rubocop.gemfile --jobs 4 --retry 3
         bundle exec --gemfile gemfiles/rubocop.gemfile rubocop -c .rubocop-md.yml
+
   forspell:
     runs-on: ubuntu-latest
     steps:
@@ -55,6 +55,7 @@ jobs:
       run: gem install forspell
     - name: Run Forspell
       run: forspell **/*.md *.md
+
   liche:
     runs-on: ubuntu-latest
     env:
@@ -69,4 +70,4 @@ jobs:
       run: |
         export PATH=$PATH:$(go env GOPATH)/bin
         go get -u github.com/raviqqe/liche
-        liche README.md CHANGELOG.md
+        liche -c 2 -r docs/* -x "(rails/|anycable-go/|deployment/|architecture.md)" -v README.md CHANGELOG.md
