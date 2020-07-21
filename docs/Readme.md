@@ -1,5 +1,7 @@
 # AnyCable-Go
 
+**NOTE:** For better experience, go to the [official documentation website](https://docs.anycable.io).
+
 * [Getting Started](getting_started.md)
 * [Configuration](configuration.md)
 * [Instrumentation](instrumentation.md)
