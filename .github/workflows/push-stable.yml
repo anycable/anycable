@@ -1,3 +1,5 @@
+name: Push Stable
+
 on:
   push:
     tags:
