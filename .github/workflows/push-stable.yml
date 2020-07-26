@@ -1,0 +1,19 @@
+name: Push Stable
+
+on:
+  push:
+    tags:
+      - v1.0.*
+
+jobs:
+  push-1-0-stable:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        persist-credentials: false
+        fetch-depth: 0
+    - uses: ad-m/github-push-action@v0.6.0
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: 1-0-stable
