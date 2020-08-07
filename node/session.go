@@ -1,7 +1,6 @@
 package node
 
 import (
-	"encoding/json"
 	"sync"
 	"time"
 
@@ -65,19 +64,6 @@ type Session struct {
 	UID         string
 	Identifiers string
 	Log         *log.Entry
-}
-
-type pingMessage struct {
-	Type    string      `json:"type"`
-	Message interface{} `json:"message"`
-}
-
-func (p *pingMessage) toJSON() []byte {
-	jsonStr, err := json.Marshal(&p)
-	if err != nil {
-		panic("Failed to build ping JSON 😲")
-	}
-	return jsonStr
 }
 
 // NewSession build a new Session struct from ws connetion and http request
@@ -266,5 +252,5 @@ func (s *Session) addPing() {
 }
 
 func newPingMessage() []byte {
-	return (&pingMessage{Type: "ping", Message: time.Now().Unix()}).toJSON()
+	return (&common.PingMessage{Type: "ping", Message: time.Now().Unix()}).ToJSON()
 }
