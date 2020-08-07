@@ -33,20 +33,6 @@ const (
 	metricsUnknownBroadcast = "failed_broadcast_msg_total"
 )
 
-type disconnectMessage struct {
-	Type      string `json:"type"`
-	Reason    string `json:"reason"`
-	Reconnect bool   `json:"reconnect"`
-}
-
-func (d *disconnectMessage) toJSON() []byte {
-	jsonStr, err := json.Marshal(&d)
-	if err != nil {
-		panic("Failed to build disconnect JSON 😲")
-	}
-	return jsonStr
-}
-
 // AppNode describes a basic node interface
 type AppNode interface {
 	HandlePubSub(msg []byte)
@@ -424,5 +410,5 @@ func subscriptionsList(m map[string]bool) []string {
 }
 
 func newDisconnectMessage(reason string, reconnect bool) []byte {
-	return (&disconnectMessage{Type: "disconnect", Reason: reason, Reconnect: reconnect}).toJSON()
+	return (&common.DisconnectMessage{Type: "disconnect", Reason: reason, Reconnect: reconnect}).ToJSON()
 }

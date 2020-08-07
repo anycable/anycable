@@ -152,6 +152,21 @@ func (p *PingMessage) ToJSON() []byte {
 	return jsonStr
 }
 
+// DisconnectMessage represents a server disconnect message
+type DisconnectMessage struct {
+	Type      string `json:"type"`
+	Reason    string `json:"reason"`
+	Reconnect bool   `json:"reconnect"`
+}
+
+func (d *DisconnectMessage) ToJSON() []byte {
+	jsonStr, err := json.Marshal(&d)
+	if err != nil {
+		panic("Failed to build disconnect JSON 😲")
+	}
+	return jsonStr
+}
+
 // PubSubMessageFromJSON takes raw JSON byte array and return the corresponding struct
 func PubSubMessageFromJSON(raw []byte) (interface{}, error) {
 	smsg := StreamMessage{}
