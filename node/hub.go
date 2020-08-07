@@ -15,21 +15,6 @@ type SubscriptionInfo struct {
 	identifier string
 }
 
-// Reply represents outgoing client message
-type Reply struct {
-	Type       string      `json:"type,omitempty"`
-	Identifier string      `json:"identifier"`
-	Message    interface{} `json:"message"`
-}
-
-func (r *Reply) toJSON() []byte {
-	jsonStr, err := json.Marshal(&r)
-	if err != nil {
-		panic("Failed to build JSON")
-	}
-	return jsonStr
-}
-
 // Hub stores all the sessions and the corresponding subscriptions info
 type Hub struct {
 	// Registered sessions
@@ -320,5 +305,5 @@ func buildMessage(data string, identifier string) []byte {
 	// We ignore JSON deserialization failures and consider the message to be a string
 	json.Unmarshal([]byte(data), &msg) // nolint:errcheck
 
-	return (&Reply{Identifier: identifier, Message: msg}).toJSON()
+	return (&common.Reply{Identifier: identifier, Message: msg}).ToJSON()
 }

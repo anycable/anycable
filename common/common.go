@@ -167,6 +167,21 @@ func (d *DisconnectMessage) ToJSON() []byte {
 	return jsonStr
 }
 
+// Reply represents an outgoing client message
+type Reply struct {
+	Type       string      `json:"type,omitempty"`
+	Identifier string      `json:"identifier"`
+	Message    interface{} `json:"message"`
+}
+
+func (r *Reply) ToJSON() []byte {
+	jsonStr, err := json.Marshal(&r)
+	if err != nil {
+		panic("Failed to build JSON")
+	}
+	return jsonStr
+}
+
 // PubSubMessageFromJSON takes raw JSON byte array and return the corresponding struct
 func PubSubMessageFromJSON(raw []byte) (interface{}, error) {
 	smsg := StreamMessage{}
