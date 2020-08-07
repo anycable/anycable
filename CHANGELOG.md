@@ -2,6 +2,8 @@
 
 ## master
 
+- moved pingMessage (session), disconnectMessage (node) and Reply (hub) structs into common package
+
 ## 1.0.1 (2020-07-07)
 
 - Fix subscribing to the same stream from different channels. ([@palkan][])
