@@ -2,6 +2,8 @@
 
 ## master
 
+- re-added git ref version to `LD_FLAGS` in Makefile
+
 ## 1.0.1 (2020-07-07)
 
 - Fix subscribing to the same stream from different channels. ([@palkan][])
