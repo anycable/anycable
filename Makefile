@@ -14,7 +14,7 @@ ifdef VERSION
 else
 	COMMIT := $(shell sh -c 'git log --pretty=format:"%h" -n 1 ')
 	VERSION := $(shell sh -c 'git tag -l --sort=-version:refname "v*" | head -n1')
-	LD_FLAGS="-s -w -X github.com/anycable/anycable-go/utils.sha=$(COMMIT) -X github.com/anycable/anycable-go/utils.version="
+	LD_FLAGS="-s -w -X github.com/anycable/anycable-go/utils.sha=$(COMMIT) -X github.com/anycable/anycable-go/utils.version=$(VERSION)"
 endif
 
 GOBUILD=go build -ldflags $(LD_FLAGS) -a

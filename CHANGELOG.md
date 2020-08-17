@@ -3,6 +3,7 @@
 ## master
 
 - moved pingMessage (session), disconnectMessage (node) and Reply (hub) structs into common package
+- re-added git ref version to `LD_FLAGS` in Makefile
 
 ## 1.0.1 (2020-07-07)
 
