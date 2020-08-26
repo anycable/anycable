@@ -28,6 +28,16 @@ jobs:
       run: make prepare-mruby
     - name: Run tests
       run: go test -tags mrb ./...
+    - name: Build
+      if: matrix['go-version'] == '1.15.x' && (contains(github.ref, 'master') || contains(github.event.pull_request.body, '[Build]'))
+      run: |
+        make build
+    - name: Upload linux build
+      if: matrix['go-version'] == '1.15.x' && (contains(github.ref, 'master') || contains(github.event.pull_request.body, '[Build]'))
+      uses: actions/upload-artifact@v1
+      with:
+        name: anycable-go-Linux-x86_64
+        path: dist/anycable-go
 
   test-macos:
     strategy:
@@ -49,6 +59,16 @@ jobs:
       run: make prepare-mruby
     - name: Run tests
       run: go test -tags mrb ./...
+    - name: Build
+      if: matrix['go-version'] == '1.15.x' && (contains(github.ref, 'master') || contains(github.event.pull_request.body, '[Build]'))
+      run: |
+        make build
+    - name: Upload linux build
+      if: matrix['go-version'] == '1.15.x' && (contains(github.ref, 'master') || contains(github.event.pull_request.body, '[Build]'))
+      uses: actions/upload-artifact@v1
+      with:
+        name: anycable-go-Darwin-x86_64
+        path: dist/anycable-go
 
   test-conformance:
     needs: [test, test-macos]
