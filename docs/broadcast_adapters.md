@@ -1,6 +1,6 @@
 # Broadcast Adapters
 
-Broadcast adapter is used to proxy messaged published by your application to WebSocket server which in its turn broadcast messages to clients (see [architecture](../architecture.md)).
+Broadcast adapter is used to proxy messaged published by your application to WebSocket server which in its turn broadcast messages to clients (see [architecture](https://docs.anycable.io/#/v1/architecture)).
 
 That is, when you call `ActionCable.server.broadcast`, AnyCable first pushes the message to WebSocket server via broadcast adapter, and the actual _broadcasting_ is happening within a WS server.
 
