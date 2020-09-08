@@ -201,6 +201,10 @@ func TestDisconnect(t *testing.T) {
 		url := "/cable-test"
 		headers := map[string]string{"cookie": "token=secret;"}
 		cstate := map[string]string{"_s_": "id=42"}
+		istate := map[string]string{"test_channel": "{\"room\":\"room:1\"}"}
+
+		channels := make(map[string]map[string]string)
+		channels["test_channel"] = map[string]string{"room": "room:1"}
 
 		client.On("Disconnect", mock.Anything,
 			&pb.DisconnectRequest{
@@ -208,7 +212,7 @@ func TestDisconnect(t *testing.T) {
 				Subscriptions: []string{"chat_42"},
 				Path:          url,
 				Headers:       headers,
-				Env:           &pb.Env{Url: url, Headers: headers, Cstate: cstate},
+				Env:           &pb.Env{Url: url, Headers: headers, Cstate: cstate, Istate: istate},
 			}).Return(
 			&pb.DisconnectResponse{
 				Status: pb.Status_SUCCESS,
@@ -216,7 +220,7 @@ func TestDisconnect(t *testing.T) {
 
 		err := controller.Disconnect(
 			"42",
-			&common.SessionEnv{URL: url, Headers: &headers, ConnectionState: &cstate},
+			&common.SessionEnv{URL: url, Headers: &headers, ConnectionState: &cstate, ChannelStates: &channels},
 			"ids",
 			[]string{"chat_42"},
 		)

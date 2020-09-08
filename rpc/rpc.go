@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -224,7 +225,7 @@ func (c *Controller) Disconnect(sid string, env *common.SessionEnv, id string, s
 			Subscriptions: subscriptions,
 			Path:          env.URL,
 			Headers:       *env.Headers,
-			Env:           buildEnv(env),
+			Env:           buildDisconnectEnv(env),
 		})
 	}
 
@@ -368,6 +369,26 @@ func buildEnv(env *common.SessionEnv) *pb.Env {
 	if env.ConnectionState != nil {
 		protoEnv.Cstate = *env.ConnectionState
 	}
+	return &protoEnv
+}
+
+func buildDisconnectEnv(env *common.SessionEnv) *pb.Env {
+	protoEnv := *buildEnv(env)
+
+	if env.ChannelStates == nil {
+		return &protoEnv
+	}
+
+	states := make(map[string]string)
+
+	for id, state := range *env.ChannelStates {
+		encodedState, _ := json.Marshal(state)
+
+		states[id] = string(encodedState)
+	}
+
+	protoEnv.Istate = states
+
 	return &protoEnv
 }
 

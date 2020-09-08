@@ -2,8 +2,11 @@
 
 ## master
 
-- moved pingMessage (session), disconnectMessage (node) and Reply (hub) structs into common package
-- re-added git ref version to `LD_FLAGS` in Makefile
+- Add channel states to `disconnect` requests. ([@palkan][])
+
+- Moved pingMessage (session), disconnectMessage (node) and Reply (hub) structs into common package. ([@gr8bit][])
+
+- Re-added git ref version to `LD_FLAGS` in Makefile. ([@gr8bit][])
 
 ## 1.0.1 (2020-07-07)
 
@@ -74,3 +77,4 @@ See [Changelog](https://github.com/anycable/anycable-go/blob/0-6-stable/CHANGELO
 [@sponomarev]: https://github.com/sponomarev
 [@bibendi]: https://github.com/bibendi
 [@rolandg]: https://github.com/rolandg
+[@gr8bit]: https://github.com/gr8bit
