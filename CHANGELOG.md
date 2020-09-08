@@ -2,6 +2,8 @@
 
 ## master
 
+## 1.0.2 (2020-09-08)
+
 - Add channel states to `disconnect` requests. ([@palkan][])
 
 - Moved pingMessage (session), disconnectMessage (node) and Reply (hub) structs into common package. ([@gr8bit][])

@@ -7,7 +7,7 @@ var (
 
 func init() {
 	if version == "" {
-		version = "1.0.1"
+		version = "1.0.2"
 	}
 
 	if sha != "" {
