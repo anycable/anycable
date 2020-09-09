@@ -164,7 +164,7 @@ func (m *Metrics) RegisterCounter(name string, desc string) {
 	m.counters[name] = NewCounter(name, desc)
 }
 
-// RegisterGauge adds new counter to the registry
+// RegisterGauge adds new gauge to the registry
 func (m *Metrics) RegisterGauge(name string, desc string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

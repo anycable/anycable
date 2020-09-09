@@ -51,6 +51,10 @@ anycable_go_rpc_error_total 0
 # TYPE anycable_go_rpc_retries_total counter
 anycable_go_rpc_retries_total 0
 
+# HELP anycable_go_rpc_pending_num The number of pending RPC calls
+# TYPE anycable_go_rpc_pending_num gauge
+anycable_go_rpc_pending_num 0
+
 # HELP anycable_go_failed_auths_total The total number of failed authentication attempts
 # TYPE anycable_go_failed_auths_total counter
 anycable_go_failed_auths_total 0

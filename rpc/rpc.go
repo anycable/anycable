@@ -32,6 +32,7 @@ const (
 	metricsRPCCalls    = "rpc_call_total"
 	metricsRPCRetries  = "rpc_retries_total"
 	metricsRPCFailures = "rpc_error_total"
+	metricsRPCPending  = "rpc_pending_num"
 )
 
 // Controller implements node.Controller interface for gRPC
@@ -49,6 +50,7 @@ func NewController(metrics *metrics.Metrics, config *Config) *Controller {
 	metrics.RegisterCounter(metricsRPCCalls, "The total number of RPC calls")
 	metrics.RegisterCounter(metricsRPCRetries, "The total number of RPC call retries")
 	metrics.RegisterCounter(metricsRPCFailures, "The total number of failed RPC calls")
+	metrics.RegisterGauge(metricsRPCPending, "The number of pending RPC calls")
 
 	return &Controller{log: log.WithField("context", "rpc"), metrics: metrics, config: config}
 }
@@ -112,8 +114,10 @@ func (c *Controller) Shutdown() error {
 
 // Authenticate performs Connect RPC call
 func (c *Controller) Authenticate(sid string, env *common.SessionEnv) (*common.ConnectResult, error) {
+	c.metrics.Gauge(metricsRPCPending).Inc()
 	<-c.sem
 	defer func() { c.sem <- struct{}{} }()
+	c.metrics.Gauge(metricsRPCPending).Dec()
 
 	op := func() (interface{}, error) {
 		return c.client.Connect(newContext(sid), &pb.ConnectionRequest{
@@ -158,8 +162,10 @@ func (c *Controller) Authenticate(sid string, env *common.SessionEnv) (*common.C
 
 // Subscribe performs Command RPC call with "subscribe" command
 func (c *Controller) Subscribe(sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error) {
+	c.metrics.Gauge(metricsRPCPending).Inc()
 	<-c.sem
 	defer func() { c.sem <- struct{}{} }()
+	c.metrics.Gauge(metricsRPCPending).Dec()
 
 	op := func() (interface{}, error) {
 		return c.client.Command(newContext(sid), &pb.CommandMessage{
@@ -177,8 +183,10 @@ func (c *Controller) Subscribe(sid string, env *common.SessionEnv, id string, ch
 
 // Unsubscribe performs Command RPC call with "unsubscribe" command
 func (c *Controller) Unsubscribe(sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error) {
+	c.metrics.Gauge(metricsRPCPending).Inc()
 	<-c.sem
 	defer func() { c.sem <- struct{}{} }()
+	c.metrics.Gauge(metricsRPCPending).Dec()
 
 	op := func() (interface{}, error) {
 		return c.client.Command(newContext(sid), &pb.CommandMessage{
@@ -196,8 +204,10 @@ func (c *Controller) Unsubscribe(sid string, env *common.SessionEnv, id string, 
 
 // Perform performs Command RPC call with "perform" command
 func (c *Controller) Perform(sid string, env *common.SessionEnv, id string, channel string, data string) (*common.CommandResult, error) {
+	c.metrics.Gauge(metricsRPCPending).Inc()
 	<-c.sem
 	defer func() { c.sem <- struct{}{} }()
+	c.metrics.Gauge(metricsRPCPending).Dec()
 
 	op := func() (interface{}, error) {
 		return c.client.Command(newContext(sid), &pb.CommandMessage{
@@ -216,8 +226,10 @@ func (c *Controller) Perform(sid string, env *common.SessionEnv, id string, chan
 
 // Disconnect performs disconnect RPC call
 func (c *Controller) Disconnect(sid string, env *common.SessionEnv, id string, subscriptions []string) error {
+	c.metrics.Gauge(metricsRPCPending).Inc()
 	<-c.sem
 	defer func() { c.sem <- struct{}{} }()
+	c.metrics.Gauge(metricsRPCPending).Dec()
 
 	op := func() (interface{}, error) {
 		return c.client.Disconnect(newContext(sid), &pb.DisconnectRequest{

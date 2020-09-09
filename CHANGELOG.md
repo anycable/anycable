@@ -2,6 +2,8 @@
 
 ## master
 
+- Added `rpc_pending_num` metric. ([@palkan][])
+
 ## 1.0.2 (2020-09-08)
 
 - Add channel states to `disconnect` requests. ([@palkan][])

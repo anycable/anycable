@@ -31,6 +31,16 @@ func (g *Gauge) Set(value int) {
 	atomic.StoreInt64(&g.value, int64(value))
 }
 
+// Inc increment the current value by 1
+func (g *Gauge) Inc() int64 {
+	return atomic.AddInt64(&g.value, 1)
+}
+
+// Dec decrement the current value by 1
+func (g *Gauge) Dec() int64 {
+	return atomic.AddInt64(&g.value, -1)
+}
+
 // Set64 sets gauge value as int64
 func (g *Gauge) Set64(value int64) {
 	atomic.StoreInt64(&g.value, value)
