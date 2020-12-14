@@ -1,6 +1,6 @@
 <!--
-  This template is for bug reports. If you are reporting a bug, please continue on. If you are here for another reason, 
-  feel free to skip the rest of this template.
+  This template is for bug reports. If you are reporting a bug, please continue on.
+  If you are here for another reason, please, go to discussions: https://github.com/anycable/anycable/discussions
 -->
 
 ### Tell us about your environment
