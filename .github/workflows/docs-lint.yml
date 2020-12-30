@@ -54,7 +54,7 @@ jobs:
     - name: Install Forspell
       run: gem install forspell
     - name: Run Forspell
-      run: forspell **/*.md *.md
+      run: forspell **/*.md *.md -e BACKERS.md
 
   liche:
     runs-on: ubuntu-latest
