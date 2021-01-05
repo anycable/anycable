@@ -2,7 +2,7 @@
 
 ## master
 
-## 1.0.2
+## 1.0.2 (2021-01-05)
 
 - Handle TLS Redis connections by using VERIFY_NONE mode. ([@palkan][])
 
