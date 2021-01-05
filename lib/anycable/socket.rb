@@ -17,7 +17,7 @@ module AnyCable
         source&.[](key)
       end
 
-      alias [] read
+      alias_method :[], :read
 
       def write(key, val)
         return if source&.[](key) == val
@@ -28,7 +28,7 @@ module AnyCable
         source[key] = val
       end
 
-      alias []= write
+      alias_method :[]=, :write
 
       def changed_fields
         return unless source && dirty_keys

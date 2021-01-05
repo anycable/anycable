@@ -41,7 +41,7 @@ module AnyCable
       DELAY = 2
 
       attr_reader :url, :headers, :authorized
-      alias authorized? authorized
+      alias_method :authorized?, :authorized
 
       def initialize(url: AnyCable.config.http_broadcast_url, secret: AnyCable.config.http_broadcast_secret)
         @url = url

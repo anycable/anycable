@@ -35,7 +35,7 @@ describe AnyCable do
 
   describe "#broadcast_adapter=" do
     before(:all) do
-      class AnyCable::BroadcastAdapters::MyCustomAdapter
+      class AnyCable::BroadcastAdapters::MyCustomAdapter # rubocop:disable Lint/ConstantDefinitionInBlock
         attr_reader :options
         def initialize(**options)
           @options = options

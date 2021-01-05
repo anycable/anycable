@@ -21,7 +21,7 @@ module AnyCable
     WAIT_PROCESS = 2
 
     attr_reader :server, :health_server, :embedded
-    alias embedded? embedded
+    alias_method :embedded?, :embedded
 
     def initialize(embedded: false)
       @embedded = embedded

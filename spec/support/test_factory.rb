@@ -22,7 +22,7 @@ module AnyCable
       end
 
       def finalize!
-        socket.session = request.session.to_json unless request.session&.empty?
+        socket.session = request.session.to_json unless request.session && request.session.empty?
       end
 
       def handle_open

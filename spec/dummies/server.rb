@@ -5,7 +5,7 @@ require "logger"
 
 WEBrick::HTTPServer.new(
   Port: 9021,
-  Logger: Logger.new(STDOUT),
+  Logger: Logger.new($stdout),
   AccessLog: []
 ).tap do |server|
   server.mount_proc "/" do |_, res|

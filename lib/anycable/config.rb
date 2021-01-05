@@ -47,7 +47,7 @@ module AnyCable
       version_check_enabled: true
     )
 
-    alias version_check_enabled? version_check_enabled
+    alias_method :version_check_enabled?, :version_check_enabled
 
     ignore_options :rpc_server_args
     flag_options :log_grpc, :debug
@@ -77,7 +77,7 @@ module AnyCable
         @debug != false
       end
 
-      alias debug? debug
+      alias_method :debug?, :debug
     end
 
     def http_health_port_provided?

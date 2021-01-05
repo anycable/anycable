@@ -31,7 +31,7 @@ module AnyCable
     def logger
       return @logger if instance_variable_defined?(:@logger)
 
-      log_output = AnyCable.config.log_file || STDOUT
+      log_output = AnyCable.config.log_file || $stdout
       @logger = Logger.new(log_output).tap do |logger|
         logger.level = AnyCable.config.log_level
       end

@@ -7,7 +7,7 @@ module AnyCable
         handlers << procify(block)
       end
 
-      alias << add_handler
+      alias_method :<<, :add_handler
 
       def notify(exp, method_name, message)
         handlers.each do |handler|
