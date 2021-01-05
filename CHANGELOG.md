@@ -2,6 +2,8 @@
 
 ## master
 
+- Handle TLS Redis connections by using VERIFY_NONE mode. ([@palkan][])
+
 - Added `rpc_pending_num` metric. ([@palkan][])
 
 ## 1.0.2 (2020-09-08)

@@ -95,6 +95,7 @@ func (s *RedisSubscriber) Start() error {
 					redis.DialConnectTimeout(timeout),
 					redis.DialReadTimeout(timeout),
 					redis.DialReadTimeout(timeout),
+					redis.DialTLSSkipVerify(true),
 				}
 
 				sentinelURI, err := url.Parse(fmt.Sprintf("redis://%s", addr))
@@ -186,8 +187,10 @@ func (s *RedisSubscriber) Shutdown() {
 }
 
 func (s *RedisSubscriber) listen() error {
-
-	c, err := redis.DialURL(s.url)
+	dialOptions := []redis.DialOption{
+		redis.DialTLSSkipVerify(true),
+	}
+	c, err := redis.DialURL(s.url, dialOptions...)
 
 	if err != nil {
 		return err
