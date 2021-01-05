@@ -86,17 +86,25 @@ describe "AnyCable::Config" do
         )
       end
     end
+
+    context "with TLS" do
+      subject(:config) { described_class.new }
+
+      around { |ex| with_env("ANYCABLE_REDIS_URL" => "rediss://localhost:6379/3", "ANYCABLE_REDIS_SENTINELS" => "", &ex) }
+
+      specify do
+        expect(subject.to_redis_params).to eq(
+          url: "rediss://localhost:6379/3",
+          ssl_params: {verify_mode: OpenSSL::SSL::VERIFY_NONE}
+        )
+      end
+    end
   end
 
   describe "defaults" do
     subject(:config) { described_class.new }
 
-    # Initialize config with plain defaults
-    around do |ex|
-      old_conf, ENV["ANYCABLE_CONF"] = ENV["ANYCABLE_CONF"], nil
-      ex.run
-      ENV["ANYCABLE_CONF"] = old_conf
-    end
+    around { |ex| with_env("ANYCABLE_CONF" => nil, &ex) }
 
     describe "#rpc_host" do
       specify { expect(config.rpc_host).to eq("127.0.0.1:50051") }

@@ -2,6 +2,8 @@
 
 ## master
 
+- Handle TLS Redis connections by using VERIFY_NONE mode. ([@palkan][])
+
 ## 1.0.1 (2020-07-07)
 
 - Support providing passwords for Redis Sentinels. ([@palkan][])

@@ -98,13 +98,17 @@ module AnyCable
     # Build Redis parameters
     def to_redis_params
       {url: redis_url}.tap do |params|
-        next if redis_sentinels.nil?
+        next if redis_sentinels.nil? || redis_sentinels.empty?
 
         sentinels = Array(redis_sentinels)
 
         next if sentinels.empty?
 
         params[:sentinels] = sentinels.map(&method(:parse_sentinel))
+      end.tap do |params|
+        next unless redis_url.match?(/rediss:\/\//)
+
+        params[:ssl_params] = {verify_mode: OpenSSL::SSL::VERIFY_NONE}
       end
     end
 
