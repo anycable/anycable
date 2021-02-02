@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -10,6 +9,7 @@ import (
 
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/metrics"
+	"github.com/anycable/anycable-go/protocol"
 	"github.com/apex/log"
 
 	pb "github.com/anycable/anycable-go/protos"
@@ -120,11 +120,10 @@ func (c *Controller) Authenticate(sid string, env *common.SessionEnv) (*common.C
 	c.metrics.Gauge(metricsRPCPending).Dec()
 
 	op := func() (interface{}, error) {
-		return c.client.Connect(newContext(sid), &pb.ConnectionRequest{
-			Path:    env.URL,
-			Headers: *env.Headers,
-			Env:     buildEnv(env),
-		})
+		return c.client.Connect(
+			newContext(sid),
+			protocol.NewConnectMessage(env),
+		)
 	}
 
 	c.metrics.Counter(metricsRPCCalls).Inc()
@@ -141,18 +140,9 @@ func (c *Controller) Authenticate(sid string, env *common.SessionEnv) (*common.C
 
 		c.log.Debugf("Authenticate response: %v", r)
 
-		reply := common.ConnectResult{Transmissions: r.Transmissions}
+		reply, err := protocol.ParseConnectResponse(r)
 
-		if r.Env != nil {
-			reply.CState = r.Env.Cstate
-		}
-
-		if r.Status.String() == "SUCCESS" {
-			reply.Identifier = r.Identifiers
-			return &reply, nil
-		}
-
-		return &reply, fmt.Errorf("Application error: %s", r.ErrorMsg)
+		return reply, err
 	}
 
 	c.metrics.Counter(metricsRPCFailures).Inc()
@@ -168,11 +158,9 @@ func (c *Controller) Subscribe(sid string, env *common.SessionEnv, id string, ch
 	c.metrics.Gauge(metricsRPCPending).Dec()
 
 	op := func() (interface{}, error) {
-		return c.client.Command(newContext(sid), &pb.CommandMessage{
-			Command:               "subscribe",
-			Env:                   buildChannelEnv(channel, env),
-			Identifier:            channel,
-			ConnectionIdentifiers: id},
+		return c.client.Command(
+			newContext(sid),
+			protocol.NewCommandMessage(env, "subscribe", channel, id, ""),
 		)
 	}
 
@@ -189,12 +177,10 @@ func (c *Controller) Unsubscribe(sid string, env *common.SessionEnv, id string, 
 	c.metrics.Gauge(metricsRPCPending).Dec()
 
 	op := func() (interface{}, error) {
-		return c.client.Command(newContext(sid), &pb.CommandMessage{
-			Command:               "unsubscribe",
-			Env:                   buildChannelEnv(channel, env),
-			Identifier:            channel,
-			ConnectionIdentifiers: id,
-		})
+		return c.client.Command(
+			newContext(sid),
+			protocol.NewCommandMessage(env, "unsubscribe", channel, id, ""),
+		)
 	}
 
 	response, err := c.retry(op)
@@ -210,13 +196,10 @@ func (c *Controller) Perform(sid string, env *common.SessionEnv, id string, chan
 	c.metrics.Gauge(metricsRPCPending).Dec()
 
 	op := func() (interface{}, error) {
-		return c.client.Command(newContext(sid), &pb.CommandMessage{
-			Command:               "message",
-			Env:                   buildChannelEnv(channel, env),
-			Identifier:            channel,
-			ConnectionIdentifiers: id,
-			Data:                  data,
-		})
+		return c.client.Command(
+			newContext(sid),
+			protocol.NewCommandMessage(env, "message", channel, id, data),
+		)
 	}
 
 	response, err := c.retry(op)
@@ -232,13 +215,10 @@ func (c *Controller) Disconnect(sid string, env *common.SessionEnv, id string, s
 	c.metrics.Gauge(metricsRPCPending).Dec()
 
 	op := func() (interface{}, error) {
-		return c.client.Disconnect(newContext(sid), &pb.DisconnectRequest{
-			Identifiers:   id,
-			Subscriptions: subscriptions,
-			Path:          env.URL,
-			Headers:       *env.Headers,
-			Env:           buildDisconnectEnv(env),
-		})
+		return c.client.Disconnect(
+			newContext(sid),
+			protocol.NewDisconnectMessage(env, id, subscriptions),
+		)
 	}
 
 	c.metrics.Counter(metricsRPCCalls).Inc()
@@ -253,13 +233,13 @@ func (c *Controller) Disconnect(sid string, env *common.SessionEnv, id string, s
 	if r, ok := response.(*pb.DisconnectResponse); ok {
 		c.log.Debugf("Disconnect response: %v", r)
 
-		if r.Status.String() == "SUCCESS" {
-			return nil
+		err = protocol.ParseDisconnectResponse(r)
+
+		if err != nil {
+			c.metrics.Counter(metricsRPCFailures).Inc()
 		}
 
-		c.metrics.Counter(metricsRPCFailures).Inc()
-
-		return fmt.Errorf("Application error: %s", r.ErrorMsg)
+		return err
 	}
 
 	return errors.New("Failed to deserialize disconnect response")
@@ -277,24 +257,9 @@ func (c *Controller) parseCommandResponse(response interface{}, err error) (*com
 	if r, ok := response.(*pb.CommandResponse); ok {
 		c.log.Debugf("Command response: %v", r)
 
-		res := &common.CommandResult{
-			Disconnect:     r.Disconnect,
-			StopAllStreams: r.StopStreams,
-			Streams:        r.Streams,
-			StoppedStreams: r.StoppedStreams,
-			Transmissions:  r.Transmissions,
-		}
+		res, err := protocol.ParseCommandResponse(r)
 
-		if r.Env != nil {
-			res.CState = r.Env.Cstate
-			res.IState = r.Env.Istate
-		}
-
-		if r.Status.String() == "SUCCESS" {
-			return res, nil
-		}
-
-		return res, fmt.Errorf("Application error: %s", r.ErrorMsg)
+		return res, err
 	}
 
 	c.metrics.Counter(metricsRPCFailures).Inc()
@@ -374,45 +339,4 @@ func (c *Controller) initSemaphore(capacity int) {
 func newContext(sessionID string) context.Context {
 	md := metadata.Pairs("sid", sessionID, "protov", ProtoVersions)
 	return metadata.NewOutgoingContext(context.Background(), md)
-}
-
-func buildEnv(env *common.SessionEnv) *pb.Env {
-	protoEnv := pb.Env{Url: env.URL, Headers: *env.Headers}
-	if env.ConnectionState != nil {
-		protoEnv.Cstate = *env.ConnectionState
-	}
-	return &protoEnv
-}
-
-func buildDisconnectEnv(env *common.SessionEnv) *pb.Env {
-	protoEnv := *buildEnv(env)
-
-	if env.ChannelStates == nil {
-		return &protoEnv
-	}
-
-	states := make(map[string]string)
-
-	for id, state := range *env.ChannelStates {
-		encodedState, _ := json.Marshal(state)
-
-		states[id] = string(encodedState)
-	}
-
-	protoEnv.Istate = states
-
-	return &protoEnv
-}
-
-func buildChannelEnv(id string, env *common.SessionEnv) *pb.Env {
-	protoEnv := *buildEnv(env)
-
-	if env.ChannelStates == nil {
-		return &protoEnv
-	}
-
-	if _, ok := (*env.ChannelStates)[id]; ok {
-		protoEnv.Istate = (*env.ChannelStates)[id]
-	}
-	return &protoEnv
 }

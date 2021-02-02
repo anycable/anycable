@@ -192,6 +192,78 @@ func TestPerform(t *testing.T) {
 	})
 }
 
+func TestSubscribe(t *testing.T) {
+	controller := NewTestController()
+	client := mocks.RPCClient{}
+	controller.client = &client
+
+	t.Run("Success", func(t *testing.T) {
+		url := "/cable-test"
+		headers := map[string]string{"cookie": "token=secret;"}
+		cstate := map[string]string{"_s_": "id=42"}
+
+		client.On("Command", mock.Anything,
+			&pb.CommandMessage{
+				Command:               "subscribe",
+				ConnectionIdentifiers: "ids",
+				Identifier:            "test_channel",
+				Env:                   &pb.Env{Url: url, Headers: headers, Cstate: cstate},
+			}).Return(
+			&pb.CommandResponse{
+				Status:        pb.Status_SUCCESS,
+				Streams:       []string{"chat_42"},
+				Env:           &pb.EnvResponse{Cstate: map[string]string{"_s_": "sentCount=1"}},
+				Transmissions: []string{"confirmed"},
+			}, nil)
+
+		res, err := controller.Subscribe(
+			"42",
+			&common.SessionEnv{URL: url, Headers: &headers, ConnectionState: &cstate},
+			"ids", "test_channel",
+		)
+
+		assert.Nil(t, err)
+		assert.Equal(t, []string{"confirmed"}, res.Transmissions)
+		assert.Equal(t, map[string]string{"_s_": "sentCount=1"}, res.CState)
+		assert.False(t, res.StopAllStreams)
+		assert.Equal(t, []string{"chat_42"}, res.Streams)
+		assert.Nil(t, res.StoppedStreams)
+		assert.Empty(t, res.Broadcasts)
+	})
+
+	t.Run("Failure", func(t *testing.T) {
+		url := "/cable-test"
+		headers := map[string]string{"cookie": "token=secret;"}
+		cstate := map[string]string{"_s_": "id=42"}
+
+		client.On("Command", mock.Anything,
+			&pb.CommandMessage{
+				Command:               "subscribe",
+				ConnectionIdentifiers: "ids",
+				Identifier:            "fail_channel",
+				Env:                   &pb.Env{Url: url, Headers: headers, Cstate: cstate},
+			}).Return(
+			&pb.CommandResponse{
+				Status:        pb.Status_FAILURE,
+				ErrorMsg:      "Unauthorized",
+				Disconnect:    true,
+				Transmissions: []string{"rejected"},
+			}, nil)
+
+		res, err := controller.Subscribe(
+			"42",
+			&common.SessionEnv{URL: url, Headers: &headers, ConnectionState: &cstate},
+			"ids", "fail_channel",
+		)
+
+		assert.NotNil(t, err)
+		assert.Equal(t, []string{"rejected"}, res.Transmissions)
+		assert.True(t, res.Disconnect)
+		assert.Nil(t, res.StoppedStreams)
+		assert.Empty(t, res.Broadcasts)
+	})
+}
+
 func TestDisconnect(t *testing.T) {
 	controller := NewTestController()
 	client := mocks.RPCClient{}
