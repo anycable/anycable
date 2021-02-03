@@ -1,6 +1,6 @@
 module github.com/anycable/anycable-go
 
-go 1.14
+go 1.15
 
 require (
 	cloud.google.com/go v0.43.0 // indirect

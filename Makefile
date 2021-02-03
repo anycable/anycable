@@ -1,11 +1,5 @@
 OUTPUT ?= dist/anycable-go
 
-ifdef GOBIN
-PATH := $(GOBIN):$(PATH)
-else
-PATH := $(subst :,/bin:,$(GOPATH))/bin:$(PATH)
-endif
-
 export GO111MODULE=on
 export GOFLAGS=-mod=vendor
 
