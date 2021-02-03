@@ -60,10 +60,15 @@ func main() {
 	appNode := node.NewNode(controller, metrics)
 	appNode.Start()
 
-	// There could be different disconnectors in the future
-	disconnector := node.NewDisconnectQueue(appNode, &config.DisconnectQueue)
-	go disconnector.Run() // nolint:errcheck
+	var disconnector node.Disconnector
 
+	if config.DisconnectorDisabled {
+		disconnector = node.NewNoopDisconnector()
+	} else {
+		disconnector = node.NewDisconnectQueue(appNode, &config.DisconnectQueue)
+	}
+
+	go disconnector.Run() // nolint:errcheck
 	appNode.SetDisconnector(disconnector)
 
 	go func() {
