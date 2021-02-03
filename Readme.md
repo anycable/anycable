@@ -65,11 +65,6 @@ For more information about available options run `anycable-go -h`.
 
 📑 [Documentation](https://docs.anycable.io/#/anycable-go/getting_started)
 
-## Redis Sentinel
-
-To enable redis sentinel support set `--redis-sentinels` to a comma separated list of sentinels (format: `<host>:<port>,...`)
-and set the `--redis-url` like that: `redis://[:<redis_password>@]<redis_master_name>`
-
 ## Build
 
 ```shell
