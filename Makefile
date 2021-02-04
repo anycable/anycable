@@ -1,4 +1,5 @@
 OUTPUT ?= dist/anycable-go
+GOBENCHDIST ?= dist/gobench
 
 export GO111MODULE=on
 export GOFLAGS=-mod=vendor
@@ -29,7 +30,7 @@ build:
 	go build -tags mrb -ldflags $(LD_FLAGS) -o $(OUTPUT) cmd/anycable-go/main.go
 
 build-gobench:
-	go build -tags mrb -ldflags $(LD_FLAGS) -o dist/gobench-cable cmd/gobench-cable/main.go
+	go build -tags mrb -ldflags $(LD_FLAGS) -o $(GOBENCHDIST) cmd/gobench-cable/main.go
 
 prepare-mruby:
 	cd vendor/github.com/mitchellh/go-mruby && \
