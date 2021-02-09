@@ -2,6 +2,11 @@
 
 ## master
 
+- Added concurrency to broadcasting. ([@palkan][])
+
+Now new broadcast messages are handled (and retransmitted) concurrently by a pool of workers (Go routines).
+You can control the size of the pool via the `hub_gopool_size` configuration parameter (defaults to 16).
+
 ## 1.0.5 (2021-03-17)
 
 - Fix interval values for counters. ([@prburgu][])

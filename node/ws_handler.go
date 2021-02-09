@@ -69,21 +69,31 @@ func WebsocketHandler(app *Node, fetchHeaders []string, config *WSConfig) http.H
 
 		// Separate goroutine for better GC of caller's data.
 		go func() {
-			session := NewSession(app, ws, url, headers, uid)
+			wrappedConn := WSConnection{conn: ws}
+			session := NewSession(app, wrappedConn, url, headers, uid)
 
 			err := app.Authenticate(session)
 
 			if err != nil {
 				ctx.Errorf("Websocket session initialization failed: %v", err)
-				session.Close("Auth Error", CloseInternalServerErr)
 				return
 			}
 
 			session.Log.Debug("websocket session established")
 
-			session.ReadMessages()
-
-			session.Log.Debug("websocket session completed")
+			serveConnection(app, ws, session)
 		}()
 	})
+}
+
+func serveConnection(app *Node, ws *websocket.Conn, session *Session) {
+	go func() {
+		for {
+			err := session.ReadMessage()
+
+			if err != nil {
+				break
+			}
+		}
+	}()
 }

@@ -90,6 +90,7 @@ func init() {
 
 	fs.IntVar(&defaults.App.PingInterval, "ping_interval", 3, "")
 	fs.IntVar(&defaults.App.StatsRefreshInterval, "stats_refresh_interval", 5, "")
+	fs.IntVar(&defaults.App.HubGopoolSize, "hub_gopool_size", 16, "")
 
 	// CLI vars
 	fs.BoolVar(&showHelp, "h", false, "")
@@ -170,6 +171,7 @@ OPTIONS
   --write_buffer_size                    WebSocket connection write buffer size, default: 1024, env: ANYCABLE_WRITE_BUFFER_SIZE
   --max_message_size                     Maximum size of a message in bytes, default: 65536, env: ANYCABLE_MAX_MESSAGE_SIZE
   --enable_ws_compression                Enable experimental WebSocket per message compression, default: false, env: ANYCABLE_ENABLE_WS_COMPRESSION
+  --hub_gopool_size                      The size of the goroutines pool to broadcast messages, default: 16, env: ANYCABLE_HUB_GOPOOL_SIZE
 
   --ping_interval                        Action Cable ping interval (in seconds), default: 3, env: ANYCABLE_PING_INTERVAL
   --stats_refresh_interval               How often to refresh the server stats (in seconds), default: 5, env: ANYCABLE_STATS_REFRESH_INTERVAL

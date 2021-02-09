@@ -12,7 +12,7 @@ func TestDisconnectQueue_Run(t *testing.T) {
 		q := newQueue()
 		defer q.Shutdown() //nolint:errcheck
 
-		assert.Nil(t, q.Enqueue(NewMockSession("1")))
+		assert.Nil(t, q.Enqueue(NewMockSession("1", q.node)))
 		assert.Equal(t, 1, q.Size())
 
 		go func() {
@@ -32,8 +32,8 @@ func TestDisconnectQueue_Shutdown(t *testing.T) {
 	t.Run("Disconnects sessions", func(t *testing.T) {
 		q := newQueue()
 
-		assert.Nil(t, q.Enqueue(NewMockSession("1")))
-		assert.Nil(t, q.Enqueue(NewMockSession("2")))
+		assert.Nil(t, q.Enqueue(NewMockSession("1", q.node)))
+		assert.Nil(t, q.Enqueue(NewMockSession("2", q.node)))
 		assert.Equal(t, 2, q.Size())
 
 		assert.Nil(t, q.Shutdown())
@@ -57,7 +57,7 @@ func TestDisconnectQueue_Enqueue(t *testing.T) {
 	t.Run("Adds sessions to the queue", func(t *testing.T) {
 		q := newQueue()
 
-		assert.Nil(t, q.Enqueue(NewMockSession("1")))
+		assert.Nil(t, q.Enqueue(NewMockSession("1", q.node)))
 		assert.Equal(t, 1, q.Size())
 	})
 
@@ -65,7 +65,7 @@ func TestDisconnectQueue_Enqueue(t *testing.T) {
 		q := newQueue()
 		q.Shutdown() // nolint:errcheck
 
-		assert.Nil(t, q.Enqueue(NewMockSession("1")))
+		assert.Nil(t, q.Enqueue(NewMockSession("1", q.node)))
 		assert.Equal(t, 0, q.Size())
 	})
 }

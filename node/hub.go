@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/anycable/anycable-go/common"
+	"github.com/anycable/anycable-go/utils"
 	"github.com/apex/log"
 )
 
@@ -58,10 +59,16 @@ type Hub struct {
 
 	// Log context
 	log *log.Entry
+
+	// go pool
+	pool *utils.GoPool
+
+	// mutex
+	mu sync.RWMutex
 }
 
 // NewHub builds new hub instance
-func NewHub() *Hub {
+func NewHub(poolSize int) *Hub {
 	return &Hub{
 		broadcast:       make(chan *common.StreamMessage, 256),
 		disconnect:      make(chan *common.RemoteDisconnectMessage, 128),
@@ -73,6 +80,7 @@ func NewHub() *Hub {
 		sessionsStreams: make(map[string]map[string][]string),
 		shutdown:        make(chan struct{}),
 		log:             log.WithFields(log.Fields{"context": "hub"}),
+		pool:            utils.NewGoPool(poolSize),
 	}
 }
 
@@ -160,20 +168,32 @@ func (h *Hub) Shutdown() {
 
 // Size returns a number of active sessions
 func (h *Hub) Size() int {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
 	return len(h.sessions)
 }
 
 // UniqSize returns a number of uniq identifiers
 func (h *Hub) UniqSize() int {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
 	return len(h.identifiers)
 }
 
 // StreamsSize returns a number of uniq streams
 func (h *Hub) StreamsSize() int {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
 	return len(h.streams)
 }
 
 func (h *Hub) addSession(session *Session) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
 	h.sessions[session.UID] = session
 
 	if _, ok := h.identifiers[session.Identifiers]; !ok {
@@ -195,6 +215,9 @@ func (h *Hub) removeSession(session *Session) {
 	}
 
 	h.unsubscribeSessionFromAllChannels(session.UID)
+
+	h.mu.Lock()
+	defer h.mu.Unlock()
 
 	delete(h.sessions, session.UID)
 	delete(h.identifiers[session.Identifiers], session.UID)
@@ -219,6 +242,9 @@ func (h *Hub) unsubscribeSessionFromChannel(sid string, identifier string) {
 		return
 	}
 
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
 	for _, stream := range h.sessionsStreams[sid][identifier] {
 		delete(h.streams[stream][sid], identifier)
 
@@ -238,6 +264,9 @@ func (h *Hub) unsubscribeSessionFromChannel(sid string, identifier string) {
 }
 
 func (h *Hub) subscribeSession(sid string, stream string, identifier string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
 	if _, ok := h.streams[stream]; !ok {
 		h.streams[stream] = make(map[string]map[string]bool)
 	}
@@ -277,6 +306,9 @@ func (h *Hub) unsubscribeSession(sid string, stream string, identifier string) {
 		return
 	}
 
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
 	delete(h.streams[stream][sid], identifier)
 
 	h.log.WithFields(log.Fields{
@@ -296,28 +328,34 @@ func (h *Hub) broadcastToStream(stream string, data string) {
 		return
 	}
 
-	buf := make(map[string][]byte)
+	h.pool.Schedule(func() {
+		h.mu.RLock()
+		defer h.mu.RUnlock()
 
-	var bdata []byte
+		buf := make(map[string][]byte)
 
-	for sid, ids := range h.streams[stream] {
-		session, ok := h.sessions[sid]
+		var bdata []byte
 
-		if !ok {
-			continue
-		}
+		for sid, ids := range h.streams[stream] {
+			session, ok := h.sessions[sid]
 
-		for id := range ids {
-			if msg, ok := buf[id]; ok {
-				bdata = msg
-			} else {
-				bdata = buildMessage(data, id)
-				buf[id] = bdata
+			if !ok {
+				continue
 			}
 
-			session.Send(bdata)
+			for id := range ids {
+				if msg, ok := buf[id]; ok {
+					bdata = msg
+				} else {
+					bdata = buildMessage(data, id)
+					buf[id] = bdata
+				}
+
+				session.Send(bdata)
+				session.Flush()
+			}
 		}
-	}
+	})
 }
 
 func (h *Hub) disconnectSessions(identifier string, reconnect bool) {
@@ -330,12 +368,18 @@ func (h *Hub) disconnectSessions(identifier string, reconnect bool) {
 
 	disconnectMessage := newDisconnectMessage(remoteDisconnectReason, reconnect)
 
-	for id := range ids {
-		if ses, ok := h.sessions[id]; ok {
-			ses.Send(disconnectMessage)
-			ses.Disconnect("Closed remotely", CloseNormalClosure)
+	h.pool.Schedule(func() {
+		h.mu.RLock()
+		defer h.mu.RUnlock()
+
+		for id := range ids {
+			if ses, ok := h.sessions[id]; ok {
+				ses.Send(disconnectMessage)
+				ses.Disconnect("Closed remotely", CloseNormalClosure)
+				ses.Flush()
+			}
 		}
-	}
+	})
 }
 
 func buildMessage(data string, identifier string) []byte {

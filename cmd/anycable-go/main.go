@@ -76,7 +76,12 @@ func main() {
 	controller := rpc.NewController(metrics, &config.RPC)
 
 	appNode := node.NewNode(controller, metrics, &config.App)
-	appNode.Start()
+	err = appNode.Start()
+
+	if err != nil {
+		log.Errorf("!!! Failed to initialize application !!!\n%v", err)
+		os.Exit(1)
+	}
 
 	var disconnector node.Disconnector
 

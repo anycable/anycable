@@ -1,10 +1,6 @@
-# cloud.google.com/go v0.43.0
-## explicit
 # github.com/FZambia/sentinel v1.1.0
 ## explicit
 github.com/FZambia/sentinel
-# github.com/StackExchange/wmi v0.0.0-20210224194228-fe8f1750fd46
-## explicit
 # github.com/apex/log v1.1.0
 ## explicit
 github.com/apex/log
@@ -12,8 +8,6 @@ github.com/apex/log/handlers/json
 # github.com/davecgh/go-spew v1.1.1
 ## explicit
 github.com/davecgh/go-spew/spew
-# github.com/go-ole/go-ole v1.2.5
-## explicit
 # github.com/golang-collections/go-datastructures v0.0.0-20150211160725-59788d5eb259
 ## explicit
 github.com/golang-collections/go-datastructures/queue
@@ -33,16 +27,10 @@ github.com/gomodule/redigo/redis
 github.com/google/gops/agent
 github.com/google/gops/internal
 github.com/google/gops/signal
-# github.com/google/pprof v0.0.0-20190723021845-34ac40c74b70
-## explicit
 # github.com/gorilla/websocket v1.4.2
 ## explicit
 github.com/gorilla/websocket
-# github.com/hashicorp/golang-lru v0.5.3
-## explicit
-# github.com/kardianos/osext v0.0.0-20170510131534-ae77be60afb1
-## explicit
-# github.com/kr/pty v1.1.8
+# github.com/kr/pretty v0.1.0
 ## explicit
 # github.com/matoous/go-nanoid v1.3.0
 ## explicit
@@ -61,14 +49,6 @@ github.com/namsral/flag
 github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
-# github.com/processout/grpc-go-pool v1.2.1
-## explicit
-# github.com/shirou/gopsutil v0.0.0-20180427012116-c95755e4bcd7
-## explicit
-# github.com/shirou/gopsutil/v3 v3.21.3
-## explicit
-# github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4
-## explicit
 # github.com/stretchr/objx v0.1.0
 github.com/stretchr/objx
 # github.com/stretchr/testify v1.7.0
@@ -78,14 +58,6 @@ github.com/stretchr/testify/mock
 # github.com/syossan27/tebata v0.0.0-20180602121909-b283fe4bc5ba
 ## explicit
 github.com/syossan27/tebata
-# github.com/tklauser/go-sysconf v0.3.5
-## explicit
-# github.com/xlab/treeprint v1.1.0
-## explicit
-# golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
-## explicit
-# golang.org/x/mobile v0.0.0-20190806162312-597adff16ade
-## explicit
 # golang.org/x/net v0.0.0-20200506145744-7e3656a0809f
 ## explicit
 golang.org/x/net/http/httpguts
@@ -98,13 +70,11 @@ golang.org/x/net/trace
 ## explicit
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
-# golang.org/x/text v0.3.2
+# golang.org/x/text v0.3.0
 golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
-# golang.org/x/tools v0.0.0-20190808195139-e713427fea3f
-## explicit
 # google.golang.org/genproto v0.0.0-20200511104702-f5ebc3bea380
 ## explicit
 google.golang.org/genproto/googleapis/rpc/status
@@ -180,9 +150,7 @@ google.golang.org/protobuf/runtime/protoimpl
 google.golang.org/protobuf/types/known/anypb
 google.golang.org/protobuf/types/known/durationpb
 google.golang.org/protobuf/types/known/timestamppb
-# gopkg.in/yaml.v2 v2.2.2
+# gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127
 ## explicit
 # gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
 gopkg.in/yaml.v3
-# honnef.co/go/tools v0.0.1-2019.2.2
-## explicit

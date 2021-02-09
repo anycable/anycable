@@ -71,8 +71,11 @@ run:
 build-protos:
 	protoc --proto_path=./etc --go_out=plugins=grpc:./protos ./etc/rpc.proto
 
+bench:
+	go test -tags mrb -bench=. ./...
+
 test:
-	go test -tags mrb ./...
+	go test -count=1 -timeout=30s -race -tags mrb ./...
 
 tmp/anycable-go-test:
 	go build -tags mrb -o tmp/anycable-go-test cmd/anycable-go/main.go

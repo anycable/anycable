@@ -1,11 +1,11 @@
 package node
 
 import (
+	"errors"
 	"sync"
 	"time"
 
 	"github.com/anycable/anycable-go/common"
-	"github.com/anycable/anycable-go/utils"
 	"github.com/apex/log"
 	"github.com/gorilla/websocket"
 )
@@ -51,16 +51,18 @@ type sentFrame struct {
 // Session represents active client
 type Session struct {
 	node          *Node
-	ws            *websocket.Conn
+	ws            Connection
 	env           *common.SessionEnv
 	subscriptions map[string]bool
-	send          chan sentFrame
 	closed        bool
 	connected     bool
 	// Main mutex (for read/write and important session updates)
 	mu sync.Mutex
 	// Mutex for protocol-related state (env, subscriptions)
-	smu          sync.Mutex
+	smu sync.Mutex
+
+	sendCh chan sentFrame
+
 	pingTimer    *time.Timer
 	pingInterval time.Duration
 
@@ -70,13 +72,13 @@ type Session struct {
 }
 
 // NewSession build a new Session struct from ws connetion and http request
-func NewSession(node *Node, ws *websocket.Conn, url string, headers map[string]string, uid string) *Session {
+func NewSession(node *Node, ws Connection, url string, headers map[string]string, uid string) *Session {
 	session := &Session{
 		node:          node,
 		ws:            ws,
 		env:           common.NewSessionEnv(url, &headers),
 		subscriptions: make(map[string]bool),
-		send:          make(chan sentFrame, 256),
+		sendCh:        make(chan sentFrame, 256),
 		closed:        false,
 		connected:     false,
 		pingInterval:  time.Duration(node.config.PingInterval) * time.Second,
@@ -98,105 +100,53 @@ func NewSession(node *Node, ws *websocket.Conn, url string, headers map[string]s
 
 // SendMessages waits for incoming messages and send them to the client connection
 func (s *Session) SendMessages() {
-	defer s.Disconnect("Write Failed", CloseAbnormalClosure)
-	for message := range s.send {
-		switch message.frameType {
-		case textFrame:
-			err := s.write(message.payload, time.Now().Add(writeWait))
+	defer s.disconnect("Write Failed", CloseAbnormalClosure)
+	for message := range s.sendCh {
+		err := s.writeFrame(&message)
 
-			if err != nil {
-				return
-			}
-		case closeFrame:
-			utils.CloseWS(s.ws, message.closeCode, message.closeReason)
-			return
-		default:
-			s.Log.Errorf("Unknown frame type: %v", message)
+		if err != nil {
 			return
 		}
 	}
 }
 
-// Send data to client connection
+// ReadMessage reads messages from ws connection and send them to node
+func (s *Session) ReadMessage() error {
+	message, err := s.ws.Read()
+
+	if err != nil {
+		if websocket.IsCloseError(err, expectedCloseStatuses...) {
+			s.Log.Debugf("Websocket closed: %v", err)
+			s.disconnect("Read closed", CloseNormalClosure)
+		} else {
+			s.Log.Debugf("Websocket close error: %v", err)
+			s.disconnect("Read failed", CloseAbnormalClosure)
+		}
+		return err
+	}
+
+	if err := s.node.HandleCommand(s, message); err != nil {
+		s.Log.Warnf("Failed to handle incoming message '%s' with error: %v", message, err)
+	}
+
+	return nil
+}
+
+// Send schedules a data transmission
 func (s *Session) Send(msg []byte) {
+	s.send(msg)
+}
+
+func (s *Session) send(msg []byte) {
 	s.sendFrame(&sentFrame{frameType: textFrame, payload: msg})
 }
 
-func (s *Session) sendClose(reason string, code int) {
-	s.sendFrame(&sentFrame{
-		frameType:   closeFrame,
-		closeReason: reason,
-		closeCode:   code,
-	})
-}
-
-func (s *Session) sendFrame(frame *sentFrame) {
-	s.mu.Lock()
-
-	if s.send == nil {
-		s.mu.Unlock()
-		return
-	}
-
-	select {
-	case s.send <- *frame:
-	default:
-		if s.send != nil {
-			close(s.send)
-			defer s.Disconnect("Write failed", CloseAbnormalClosure)
-		}
-
-		s.send = nil
-	}
-
-	s.mu.Unlock()
-}
-
-func (s *Session) write(message []byte, deadline time.Time) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if err := s.ws.SetWriteDeadline(deadline); err != nil {
-		return err
-	}
-
-	w, err := s.ws.NextWriter(websocket.TextMessage)
-
-	if err != nil {
-		return err
-	}
-
-	if _, err = w.Write(message); err != nil {
-		return err
-	}
-
-	return w.Close()
-}
-
-// ReadMessages reads messages from ws connection and send them to node
-func (s *Session) ReadMessages() {
-	for {
-		_, message, err := s.ws.ReadMessage()
-
-		if err != nil {
-			if websocket.IsCloseError(err, expectedCloseStatuses...) {
-				s.Log.Debugf("Websocket closed: %v", err)
-				s.Disconnect("Read closed", CloseNormalClosure)
-			} else {
-				s.Log.Debugf("Websocket close error: %v", err)
-				s.Disconnect("Read failed", CloseAbnormalClosure)
-			}
-			break
-		}
-
-		if err := s.node.HandleCommand(s, message); err != nil {
-			s.Log.Warnf("Failed to handle incoming message '%s' with error: %v", message, err)
-		}
-	}
-}
-
-// Disconnect enqueues RPC disconnect request and closes the connection
+// Disconnect schedules connection disconnect
 func (s *Session) Disconnect(reason string, code int) {
+	s.disconnect(reason, code)
+}
+
+func (s *Session) disconnect(reason string, code int) {
 	s.mu.Lock()
 	if s.connected {
 		defer s.node.Disconnect(s) // nolint:errcheck
@@ -204,11 +154,15 @@ func (s *Session) Disconnect(reason string, code int) {
 	s.connected = false
 	s.mu.Unlock()
 
-	s.Close(reason, code)
+	s.close(reason, code)
 }
 
-// Close websocket connection with the specified reason
-func (s *Session) Close(reason string, code int) {
+// Flush executes tasks from the queue
+// NOTE: Currently, no-op; reserved for the future improvements.
+func (s *Session) Flush() {
+}
+
+func (s *Session) close(reason string, code int) {
 	s.mu.Lock()
 
 	if s.closed {
@@ -226,6 +180,57 @@ func (s *Session) Close(reason string, code int) {
 	}
 }
 
+func (s *Session) sendClose(reason string, code int) {
+	s.sendFrame(&sentFrame{
+		frameType:   closeFrame,
+		closeReason: reason,
+		closeCode:   code,
+	})
+}
+
+func (s *Session) sendFrame(message *sentFrame) {
+	s.mu.Lock()
+
+	if s.sendCh == nil {
+		s.mu.Unlock()
+		return
+	}
+
+	select {
+	case s.sendCh <- *message:
+	default:
+		if s.sendCh != nil {
+			close(s.sendCh)
+			defer s.disconnect("Write failed", CloseAbnormalClosure)
+		}
+
+		s.sendCh = nil
+	}
+
+	s.mu.Unlock()
+}
+
+func (s *Session) writeFrame(message *sentFrame) error {
+	switch message.frameType {
+	case textFrame:
+		err := s.write(message.payload, time.Now().Add(writeWait))
+		return err
+	case closeFrame:
+		s.ws.Close(message.closeCode, message.closeReason)
+		return errors.New("Closed")
+	default:
+		s.Log.Errorf("Unknown frame type: %v", message)
+		return errors.New("Unknown frame type")
+	}
+}
+
+func (s *Session) write(message []byte, deadline time.Time) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.ws.Write(message, deadline)
+}
+
 func (s *Session) sendPing() {
 	if s.closed {
 		return
@@ -237,7 +242,7 @@ func (s *Session) sendPing() {
 	if err == nil {
 		s.addPing()
 	} else {
-		s.Disconnect("Ping failed", CloseAbnormalClosure)
+		s.disconnect("Ping failed", CloseAbnormalClosure)
 	}
 }
 

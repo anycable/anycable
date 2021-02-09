@@ -6,12 +6,17 @@ import (
 )
 
 func TestSendRaceConditions(t *testing.T) {
+	node := NewMockNode()
 	var wg sync.WaitGroup
 
 	for i := 1; i <= 10; i++ {
-		session := NewMockSession("123")
-		// small buffer channel
-		session.send = make(chan sentFrame, 1)
+		session := NewMockSession("123", &node)
+
+		go func() {
+			for {
+				session.ws.Read() // nolint:errcheck
+			}
+		}()
 
 		wg.Add(2)
 		go func() {
