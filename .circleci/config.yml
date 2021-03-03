@@ -238,7 +238,7 @@ jobs:
     - attach_workspace:
         at: /go/src/github.com/anycable/anycable-go/
     - run: env GO111MODULE=off go get github.com/anycable/websocket-bench
-    - run: make build-gobench
+    - run: env GOBENCHDIST=dist/gobench-cable make build-gobench
     - run:
         command: dist/gobench-cable
         background: true
