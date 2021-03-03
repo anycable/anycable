@@ -2,6 +2,8 @@
 
 ## master
 
+- Add `sid=xxx` to RPC logs. ([@palkan][])
+
 ## 1.0.3 (2021-01-05)
 
 - Handle TLS Redis connections by using VERIFY_NONE mode. ([@palkan][])

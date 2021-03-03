@@ -98,7 +98,7 @@ func (c *Controller) Shutdown() error {
 	}
 
 	// Wait for active connections
-	_, err := c.retry(func() (interface{}, error) {
+	_, err := c.retry("", func() (interface{}, error) {
 		busy := c.busy()
 
 		if busy > 0 {
@@ -128,7 +128,7 @@ func (c *Controller) Authenticate(sid string, env *common.SessionEnv) (*common.C
 
 	c.metrics.Counter(metricsRPCCalls).Inc()
 
-	response, err := c.retry(op)
+	response, err := c.retry(sid, op)
 
 	if err != nil {
 		c.metrics.Counter(metricsRPCFailures).Inc()
@@ -138,7 +138,7 @@ func (c *Controller) Authenticate(sid string, env *common.SessionEnv) (*common.C
 
 	if r, ok := response.(*pb.ConnectionResponse); ok {
 
-		c.log.Debugf("Authenticate response: %v", r)
+		c.log.WithField("sid", sid).Debugf("Authenticate response: %v", r)
 
 		reply, err := protocol.ParseConnectResponse(r)
 
@@ -164,9 +164,9 @@ func (c *Controller) Subscribe(sid string, env *common.SessionEnv, id string, ch
 		)
 	}
 
-	response, err := c.retry(op)
+	response, err := c.retry(sid, op)
 
-	return c.parseCommandResponse(response, err)
+	return c.parseCommandResponse(sid, response, err)
 }
 
 // Unsubscribe performs Command RPC call with "unsubscribe" command
@@ -183,9 +183,9 @@ func (c *Controller) Unsubscribe(sid string, env *common.SessionEnv, id string, 
 		)
 	}
 
-	response, err := c.retry(op)
+	response, err := c.retry(sid, op)
 
-	return c.parseCommandResponse(response, err)
+	return c.parseCommandResponse(sid, response, err)
 }
 
 // Perform performs Command RPC call with "perform" command
@@ -202,9 +202,9 @@ func (c *Controller) Perform(sid string, env *common.SessionEnv, id string, chan
 		)
 	}
 
-	response, err := c.retry(op)
+	response, err := c.retry(sid, op)
 
-	return c.parseCommandResponse(response, err)
+	return c.parseCommandResponse(sid, response, err)
 }
 
 // Disconnect performs disconnect RPC call
@@ -223,7 +223,7 @@ func (c *Controller) Disconnect(sid string, env *common.SessionEnv, id string, s
 
 	c.metrics.Counter(metricsRPCCalls).Inc()
 
-	response, err := c.retry(op)
+	response, err := c.retry(sid, op)
 
 	if err != nil {
 		c.metrics.Counter(metricsRPCFailures).Inc()
@@ -231,7 +231,7 @@ func (c *Controller) Disconnect(sid string, env *common.SessionEnv, id string, s
 	}
 
 	if r, ok := response.(*pb.DisconnectResponse); ok {
-		c.log.Debugf("Disconnect response: %v", r)
+		c.log.WithField("sid", sid).Debugf("Disconnect response: %v", r)
 
 		err = protocol.ParseDisconnectResponse(r)
 
@@ -245,7 +245,7 @@ func (c *Controller) Disconnect(sid string, env *common.SessionEnv, id string, s
 	return errors.New("Failed to deserialize disconnect response")
 }
 
-func (c *Controller) parseCommandResponse(response interface{}, err error) (*common.CommandResult, error) {
+func (c *Controller) parseCommandResponse(sid string, response interface{}, err error) (*common.CommandResult, error) {
 	c.metrics.Counter(metricsRPCCalls).Inc()
 
 	if err != nil {
@@ -255,7 +255,7 @@ func (c *Controller) parseCommandResponse(response interface{}, err error) (*com
 	}
 
 	if r, ok := response.(*pb.CommandResponse); ok {
-		c.log.Debugf("Command response: %v", r)
+		c.log.WithField("sid", sid).Debugf("Command response: %v", r)
 
 		res, err := protocol.ParseCommandResponse(r)
 
@@ -274,7 +274,7 @@ func (c *Controller) busy() int {
 	return c.config.Concurrency - len(c.sem)
 }
 
-func (c *Controller) retry(callback func() (interface{}, error)) (res interface{}, err error) {
+func (c *Controller) retry(sid string, callback func() (interface{}, error)) (res interface{}, err error) {
 	retryAge := 0
 	attempt := 0
 	wasExhausted := false
@@ -301,7 +301,7 @@ func (c *Controller) retry(callback func() (interface{}, error)) (res interface{
 			return nil, err
 		}
 
-		c.log.WithField("code", st.Code()).Debugf("RPC failure: %v", st.Message())
+		c.log.WithFields(log.Fields{"sid": sid, "code": st.Code()}).Debugf("RPC failure: %v", st.Message())
 
 		interval := retryUnavailableInterval
 
