@@ -58,8 +58,11 @@ type Session struct {
 	send          chan sentFrame
 	closed        bool
 	connected     bool
-	mu            sync.Mutex
-	pingTimer     *time.Timer
+	// Main mutex (for read/write and important session updates)
+	mu sync.Mutex
+	// Mutex for protocol-related state (env, subscriptions)
+	smu       sync.Mutex
+	pingTimer *time.Timer
 
 	UID         string
 	Identifiers string
@@ -67,7 +70,7 @@ type Session struct {
 }
 
 // NewSession build a new Session struct from ws connetion and http request
-func NewSession(node *Node, ws *websocket.Conn, url string, headers map[string]string, uid string) (*Session, error) {
+func NewSession(node *Node, ws *websocket.Conn, url string, headers map[string]string, uid string) *Session {
 	session := &Session{
 		node:          node,
 		ws:            ws,
@@ -86,17 +89,10 @@ func NewSession(node *Node, ws *websocket.Conn, url string, headers map[string]s
 
 	session.Log = ctx
 
-	err := node.Authenticate(session)
-
-	if err != nil {
-		defer session.Close("Auth Error", CloseInternalServerErr)
-	}
-
+	session.addPing()
 	go session.SendMessages()
 
-	session.addPing()
-
-	return session, err
+	return session
 }
 
 // SendMessages waits for incoming messages and send them to the client connection
@@ -230,6 +226,10 @@ func (s *Session) Close(reason string, code int) {
 }
 
 func (s *Session) sendPing() {
+	if s.closed {
+		return
+	}
+
 	deadline := time.Now().Add(pingInterval / 2)
 	err := s.write(newPingMessage(), deadline)
 
@@ -241,13 +241,6 @@ func (s *Session) sendPing() {
 }
 
 func (s *Session) addPing() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if s.closed {
-		return
-	}
-
 	s.pingTimer = time.AfterFunc(pingInterval, s.sendPing)
 }
 

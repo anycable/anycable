@@ -185,11 +185,11 @@ func (n *Node) Authenticate(s *Session) (err error) {
 
 // Subscribe subscribes session to a channel
 func (n *Node) Subscribe(s *Session, msg *common.Message) (err error) {
-	s.mu.Lock()
+	s.smu.Lock()
 
 	if _, ok := s.subscriptions[msg.Identifier]; ok {
 		s.Log.Warnf("Already subscribed to %s", msg.Identifier)
-		s.mu.Unlock()
+		s.smu.Unlock()
 		return
 	}
 
@@ -202,7 +202,7 @@ func (n *Node) Subscribe(s *Session, msg *common.Message) (err error) {
 		s.Log.Debugf("Subscribed to channel: %s", msg.Identifier)
 	}
 
-	s.mu.Unlock()
+	s.smu.Unlock()
 
 	if res != nil {
 		n.handleCommandReply(s, msg, res)
@@ -213,11 +213,11 @@ func (n *Node) Subscribe(s *Session, msg *common.Message) (err error) {
 
 // Unsubscribe unsubscribes session from a channel
 func (n *Node) Unsubscribe(s *Session, msg *common.Message) (err error) {
-	s.mu.Lock()
+	s.smu.Lock()
 
 	if _, ok := s.subscriptions[msg.Identifier]; !ok {
 		s.Log.Warnf("Unknown subscription %s", msg.Identifier)
-		s.mu.Unlock()
+		s.smu.Unlock()
 		return
 	}
 
@@ -234,7 +234,7 @@ func (n *Node) Unsubscribe(s *Session, msg *common.Message) (err error) {
 		s.Log.Debugf("Unsubscribed from channel: %s", msg.Identifier)
 	}
 
-	s.mu.Unlock()
+	s.smu.Unlock()
 
 	if res != nil {
 		n.handleCommandReply(s, msg, res)
@@ -245,15 +245,15 @@ func (n *Node) Unsubscribe(s *Session, msg *common.Message) (err error) {
 
 // Perform executes client command
 func (n *Node) Perform(s *Session, msg *common.Message) (err error) {
-	s.mu.Lock()
+	s.smu.Lock()
 
 	if _, ok := s.subscriptions[msg.Identifier]; !ok {
 		s.Log.Warnf("Unknown subscription %s", msg.Identifier)
-		s.mu.Unlock()
+		s.smu.Unlock()
 		return
 	}
 
-	s.mu.Unlock()
+	s.smu.Unlock()
 
 	res, err := n.controller.Perform(s.UID, s.env, s.Identifiers, msg.Identifier, msg.Data)
 
@@ -336,7 +336,9 @@ func (n *Node) handleCommandReply(s *Session, msg *common.Message, reply *common
 	}
 
 	if reply.IState != nil {
+		s.smu.Lock()
 		s.env.MergeChannelState(msg.Identifier, &reply.IState)
+		s.smu.Unlock()
 	}
 
 	n.handleCallReply(s, reply.ToCallResult())
@@ -344,7 +346,9 @@ func (n *Node) handleCommandReply(s *Session, msg *common.Message, reply *common
 
 func (n *Node) handleCallReply(s *Session, reply *common.CallResult) {
 	if reply.CState != nil {
+		s.smu.Lock()
 		s.env.MergeConnectionState(&reply.CState)
+		s.smu.Unlock()
 	}
 
 	if reply.Broadcasts != nil {
