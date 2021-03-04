@@ -11,11 +11,12 @@ import (
 // NewMockNode build new node with mock controller
 func NewMockNode() Node {
 	controller := mocks.NewMockController()
-	node := NewNode(&controller, metrics.NewMetrics(nil, 10))
+	config := NewConfig()
+	node := NewNode(&controller, metrics.NewMetrics(nil, 10), &config)
 
-	config := NewDisconnectQueueConfig()
-	config.Rate = 1
-	node.SetDisconnector(NewDisconnectQueue(node, &config))
+	dconfig := NewDisconnectQueueConfig()
+	dconfig.Rate = 1
+	node.SetDisconnector(NewDisconnectQueue(node, &dconfig))
 	return *node
 }
 

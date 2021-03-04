@@ -16,9 +16,6 @@ const (
 	serverRestartReason    = "server_restart"
 	remoteDisconnectReason = "remote"
 
-	// How often update node stats
-	statsCollectInterval = 5 * time.Second
-
 	metricsGoroutines      = "goroutines_num"
 	metricsMemSys          = "mem_sys_bytes"
 	metricsClientsNum      = "clients_num"
@@ -42,6 +39,7 @@ type AppNode interface {
 type Node struct {
 	Metrics *metrics.Metrics
 
+	config       *Config
 	hub          *Hub
 	controller   Controller
 	disconnector Disconnector
@@ -50,9 +48,10 @@ type Node struct {
 }
 
 // NewNode builds new node struct
-func NewNode(controller Controller, metrics *metrics.Metrics) *Node {
+func NewNode(controller Controller, metrics *metrics.Metrics, config *Config) *Node {
 	node := &Node{
 		Metrics:    metrics,
+		config:     config,
 		controller: controller,
 		shutdownCh: make(chan struct{}),
 		log:        log.WithFields(log.Fields{"context": "node"}),
@@ -363,6 +362,8 @@ func (n *Node) handleCallReply(s *Session, reply *common.CallResult) {
 }
 
 func (n *Node) collectStats() {
+	statsCollectInterval := time.Duration(n.config.StatsRefreshInterval) * time.Second
+
 	for {
 		select {
 		case <-n.shutdownCh:

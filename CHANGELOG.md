@@ -2,6 +2,10 @@
 
 ## master
 
+- Make ping and stats refresh intervals configurable. ([@palkan][])
+
+Added `--ping_interval N` and `--stats_refresh_interval N` options respectively (both use seconds).
+
 ## 1.0.4 (2021-03-04)
 
 - Fix race conditions in Hub. ([@palkan][])

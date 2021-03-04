@@ -23,8 +23,7 @@ const (
 	// CloseGoingAway indicates closing because of server shuts down or client disconnects
 	CloseGoingAway = websocket.CloseGoingAway
 
-	writeWait    = 10 * time.Second
-	pingInterval = 3 * time.Second
+	writeWait = 10 * time.Second
 )
 
 var (
@@ -61,8 +60,9 @@ type Session struct {
 	// Main mutex (for read/write and important session updates)
 	mu sync.Mutex
 	// Mutex for protocol-related state (env, subscriptions)
-	smu       sync.Mutex
-	pingTimer *time.Timer
+	smu          sync.Mutex
+	pingTimer    *time.Timer
+	pingInterval time.Duration
 
 	UID         string
 	Identifiers string
@@ -79,6 +79,7 @@ func NewSession(node *Node, ws *websocket.Conn, url string, headers map[string]s
 		send:          make(chan sentFrame, 256),
 		closed:        false,
 		connected:     false,
+		pingInterval:  time.Duration(node.config.PingInterval) * time.Second,
 	}
 
 	session.UID = uid
@@ -230,7 +231,7 @@ func (s *Session) sendPing() {
 		return
 	}
 
-	deadline := time.Now().Add(pingInterval / 2)
+	deadline := time.Now().Add(s.pingInterval / 2)
 	err := s.write(newPingMessage(), deadline)
 
 	if err == nil {
@@ -241,7 +242,7 @@ func (s *Session) sendPing() {
 }
 
 func (s *Session) addPing() {
-	s.pingTimer = time.AfterFunc(pingInterval, s.sendPing)
+	s.pingTimer = time.AfterFunc(s.pingInterval, s.sendPing)
 }
 
 func newPingMessage() []byte {

@@ -10,6 +10,7 @@ import (
 
 // Config contains main application configuration
 type Config struct {
+	App                  node.Config
 	RPC                  rpc.Config
 	Redis                pubsub.RedisConfig
 	HTTPPubSub           pubsub.HTTPConfig
@@ -32,6 +33,7 @@ type Config struct {
 // New returns a new empty config
 func New() Config {
 	config := Config{}
+	config.App = node.NewConfig()
 	config.SSL = server.NewSSLConfig()
 	config.WS = node.NewWSConfig()
 	config.Metrics = metrics.NewConfig()

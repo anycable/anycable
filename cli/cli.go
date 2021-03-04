@@ -88,6 +88,9 @@ func init() {
 	fs.StringVar(&defaults.Metrics.Host, "metrics_host", "", "")
 	fs.IntVar(&defaults.Metrics.Port, "metrics_port", 0, "")
 
+	fs.IntVar(&defaults.App.PingInterval, "ping_interval", 3, "")
+	fs.IntVar(&defaults.App.StatsRefreshInterval, "stats_refresh_interval", 5, "")
+
 	// CLI vars
 	fs.BoolVar(&showHelp, "h", false, "")
 	fs.BoolVar(&showVersion, "v", false, "")
@@ -167,6 +170,9 @@ OPTIONS
   --write_buffer_size                    WebSocket connection write buffer size, default: 1024, env: ANYCABLE_WRITE_BUFFER_SIZE
   --max_message_size                     Maximum size of a message in bytes, default: 65536, env: ANYCABLE_MAX_MESSAGE_SIZE
   --enable_ws_compression                Enable experimental WebSocket per message compression, default: false, env: ANYCABLE_ENABLE_WS_COMPRESSION
+
+  --ping_interval                        Action Cable ping interval (in seconds), default: 3, env: ANYCABLE_PING_INTERVAL
+  --stats_refresh_interval               How often to refresh the server stats (in seconds), default: 5, env: ANYCABLE_STATS_REFRESH_INTERVAL
 
   -h                       This help screen
   -v                       Show version

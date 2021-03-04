@@ -74,7 +74,7 @@ func main() {
 
 	controller := rpc.NewController(metrics, &config.RPC)
 
-	appNode := node.NewNode(controller, metrics)
+	appNode := node.NewNode(controller, metrics, &config.App)
 	appNode.Start()
 
 	var disconnector node.Disconnector
