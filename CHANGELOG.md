@@ -2,6 +2,8 @@
 
 ## master
 
+## 1.0.4 (2021-03-04)
+
 - Fix race conditions in Hub. ([@palkan][])
 
 Use a single channel for register/unregister and subscribe/unsubscribe to make order of

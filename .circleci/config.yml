@@ -270,7 +270,7 @@ jobs:
     - run:
         name: Installing Golang
         command: |
-          curl -o go.pkg https://dl.google.com/go/go${GO_VERSION}.darwin-amd64.pkg && \
+          curl --http1.1 -o go.pkg https://dl.google.com/go/go${GO_VERSION}.darwin-amd64.pkg && \
           echo "${GO_SHA}  go.pkg" | shasum -a 256 -c - && \
           sudo installer -pkg go.pkg -target /
     - run:
