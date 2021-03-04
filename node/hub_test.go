@@ -4,7 +4,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/anycable/anycable-go/common"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -23,7 +22,7 @@ func TestUnsubscribeRaceConditions(t *testing.T) {
 	hub.addSession(session2)
 	hub.subscribeSession("321", "test", "test_channel")
 
-	hub.broadcast <- &common.StreamMessage{Stream: "test", Data: "hello"}
+	hub.Broadcast("test", "hello")
 
 	done := make(chan bool)
 	timer := time.After(100 * time.Millisecond)
@@ -43,13 +42,13 @@ func TestUnsubscribeRaceConditions(t *testing.T) {
 	assert.Equal(t, 2, hub.Size(), "Connections size must be equal 2")
 
 	go func() {
-		hub.broadcast <- &common.StreamMessage{Stream: "test", Data: "pong"}
-		hub.unregister <- session
-		hub.broadcast <- &common.StreamMessage{Stream: "test", Data: "ping"}
+		hub.Broadcast("test", "pong")
+		hub.RemoveSession(session)
+		hub.Broadcast("test", "ping")
 	}()
 
 	go func() {
-		hub.broadcast <- &common.StreamMessage{Stream: "test", Data: "bye-bye"}
+		hub.Broadcast("test", "bye-bye")
 	}()
 
 	timer2 := time.After(2500 * time.Millisecond)
@@ -82,7 +81,7 @@ func TestUnsubscribeSession(t *testing.T) {
 	hub.subscribeSession("123", "test", "test_channel")
 	hub.subscribeSession("123", "test2", "test_channel")
 
-	hub.broadcast <- &common.StreamMessage{Stream: "test", Data: "\"hello\""}
+	hub.Broadcast("test", "\"hello\"")
 
 	timer := time.After(100 * time.Millisecond)
 	select {
@@ -94,7 +93,7 @@ func TestUnsubscribeSession(t *testing.T) {
 
 	hub.unsubscribeSession("123", "test", "test_channel")
 
-	hub.broadcast <- &common.StreamMessage{Stream: "test", Data: "\"goodbye\""}
+	hub.Broadcast("test", "\"goodbye\"")
 
 	timer = time.After(100 * time.Millisecond)
 	select {
@@ -103,7 +102,7 @@ func TestUnsubscribeSession(t *testing.T) {
 		t.Fatalf("Session shouldn't have received any messages but received: %v", string(msg.payload))
 	}
 
-	hub.broadcast <- &common.StreamMessage{Stream: "test2", Data: "\"bye\""}
+	hub.Broadcast("test2", "\"bye\"")
 
 	timer = time.After(100 * time.Millisecond)
 	select {
@@ -115,7 +114,7 @@ func TestUnsubscribeSession(t *testing.T) {
 
 	hub.unsubscribeSessionFromAllChannels("123")
 
-	hub.broadcast <- &common.StreamMessage{Stream: "test2", Data: "\"goodbye\""}
+	hub.Broadcast("test2", "\"goodbye\"")
 
 	timer = time.After(100 * time.Millisecond)
 	select {
@@ -137,7 +136,7 @@ func TestSubscribeSession(t *testing.T) {
 	t.Run("Subscribe to a single channel", func(t *testing.T) {
 		hub.subscribeSession("123", "test", "test_channel")
 
-		hub.broadcast <- &common.StreamMessage{Stream: "test", Data: "\"hello\""}
+		hub.Broadcast("test", "\"hello\"")
 
 		timer := time.After(100 * time.Millisecond)
 		select {
@@ -152,7 +151,7 @@ func TestSubscribeSession(t *testing.T) {
 		hub.subscribeSession("123", "test", "test_channel")
 		hub.subscribeSession("123", "test", "test_channel2")
 
-		hub.broadcast <- &common.StreamMessage{Stream: "test", Data: "\"hello twice\""}
+		hub.Broadcast("test", "\"hello twice\"")
 
 		done := make(chan bool)
 		received := []string{}

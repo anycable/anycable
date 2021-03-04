@@ -104,12 +104,11 @@ func TestSubscribe(t *testing.T) {
 		// Adds subscription to session
 		assert.Contains(t, session.subscriptions, "stream", "Session subsription must be set")
 
-		var subscription SubscriptionInfo
+		var subscription HubSubscription
 
 		// Expected to subscribe session to hub
 		select {
-		case sub := <-node.hub.subscribe:
-			subscription = *sub
+		case subscription = <-node.hub.subscribe:
 		default:
 			assert.Fail(t, "Expected hub to receive subscribe message but none was sent")
 		}
@@ -150,12 +149,11 @@ func TestUnsubscribe(t *testing.T) {
 		// Removes subscription from session
 		assert.NotContains(t, session.subscriptions, "test_channel", "Shouldn't contain test_channel")
 
-		var subscription SubscriptionInfo
+		var subscription HubSubscription
 
 		// Expected to subscribe session to hub
 		select {
-		case sub := <-node.hub.unsubscribe:
-			subscription = *sub
+		case subscription = <-node.hub.subscribe:
 		default:
 			assert.Fail(t, "Expected hub to receive unsubscribe message but none was sent")
 		}
@@ -223,12 +221,11 @@ func TestPerform(t *testing.T) {
 	t.Run("With stopped streams", func(t *testing.T) {
 		assert.Nil(t, node.Perform(session, &common.Message{Identifier: "test_channel", Data: "stop_stream"}))
 
-		var subscription SubscriptionInfo
+		var subscription HubSubscription
 
 		// Expected to subscribe session to hub
 		select {
-		case sub := <-node.hub.unsubscribe:
-			subscription = *sub
+		case subscription = <-node.hub.subscribe:
 		default:
 			assert.Fail(t, "Expected hub to receive unsubscribe message but none was sent")
 			return
@@ -258,8 +255,8 @@ func TestDisconnect(t *testing.T) {
 
 	// Expected to unregister session
 	select {
-	case s := <-node.hub.unregister:
-		assert.Equal(t, session, s, "Expected to disconnect session")
+	case info := <-node.hub.register:
+		assert.Equal(t, session, info.session, "Expected to disconnect session")
 	default:
 		assert.Fail(t, "Expected hub to receive unregister message but none was sent")
 	}

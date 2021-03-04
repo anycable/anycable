@@ -8,11 +8,18 @@ import (
 	"github.com/apex/log"
 )
 
-// SubscriptionInfo contains information about session-channel(-stream) subscription
-type SubscriptionInfo struct {
+// HubSubscription contains information about session-channel(-stream) subscription
+type HubSubscription struct {
+	event      string
 	session    string
 	stream     string
 	identifier string
+}
+
+// HubRegistration represents registration event ("add" or "remove")
+type HubRegistration struct {
+	event   string
+	session *Session
 }
 
 // Hub stores all the sessions and the corresponding subscriptions info
@@ -38,16 +45,10 @@ type Hub struct {
 	disconnect chan *common.RemoteDisconnectMessage
 
 	// Register requests from the sessions
-	register chan *Session
-
-	// Unregister requests from sessions
-	unregister chan *Session
+	register chan HubRegistration
 
 	// Subscribe requests to streams
-	subscribe chan *SubscriptionInfo
-
-	// Unsubscribe requests from streams
-	unsubscribe chan *SubscriptionInfo
+	subscribe chan HubSubscription
 
 	// Control channel to shutdown hub
 	shutdown chan struct{}
@@ -64,10 +65,8 @@ func NewHub() *Hub {
 	return &Hub{
 		broadcast:       make(chan *common.StreamMessage, 256),
 		disconnect:      make(chan *common.RemoteDisconnectMessage, 128),
-		register:        make(chan *Session, 128),
-		unregister:      make(chan *Session, 2048),
-		subscribe:       make(chan *SubscriptionInfo, 128),
-		unsubscribe:     make(chan *SubscriptionInfo, 128),
+		register:        make(chan HubRegistration, 2048),
+		subscribe:       make(chan HubSubscription, 128),
 		sessions:        make(map[string]*Session),
 		identifiers:     make(map[string]map[string]bool),
 		streams:         make(map[string]map[string]map[string]bool),
@@ -82,17 +81,17 @@ func (h *Hub) Run() {
 	h.done.Add(1)
 	for {
 		select {
-		case s := <-h.register:
-			h.addSession(s)
-
-		case s := <-h.unregister:
-			h.removeSession(s)
+		case r := <-h.register:
+			if r.event == "add" {
+				h.addSession(r.session)
+			} else {
+				h.removeSession(r.session)
+			}
 
 		case subinfo := <-h.subscribe:
-			h.subscribeSession(subinfo.session, subinfo.stream, subinfo.identifier)
-
-		case subinfo := <-h.unsubscribe:
-			if subinfo.stream == "" {
+			if subinfo.event == "add" {
+				h.subscribeSession(subinfo.session, subinfo.stream, subinfo.identifier)
+			} else if subinfo.event == "removeAll" {
 				h.unsubscribeSessionFromChannel(subinfo.session, subinfo.identifier)
 			} else {
 				h.unsubscribeSession(subinfo.session, subinfo.stream, subinfo.identifier)
@@ -109,6 +108,46 @@ func (h *Hub) Run() {
 			return
 		}
 	}
+}
+
+// AddSession enqueues sessions registration
+func (h *Hub) AddSession(s *Session) {
+	h.register <- HubRegistration{event: "add", session: s}
+}
+
+// RemoveSession enqueues session un-registration
+func (h *Hub) RemoveSession(s *Session) {
+	h.register <- HubRegistration{event: "remove", session: s}
+}
+
+// AddSubscription enqueues adding a subscription for session-identifier pair to the hub
+func (h *Hub) AddSubscription(sid string, identifier string, stream string) {
+	h.subscribe <- HubSubscription{event: "add", session: sid, identifier: identifier, stream: stream}
+}
+
+// RemoveSubscription enqueues removing a subscription for session-identifier pair from the hub
+func (h *Hub) RemoveSubscription(sid string, identifier string, stream string) {
+	h.subscribe <- HubSubscription{event: "remove", session: sid, identifier: identifier, stream: stream}
+}
+
+// RemoveAllSubscriptions enqueues removing all subscription for session-identifier pair from the hub
+func (h *Hub) RemoveAllSubscriptions(sid string, identifier string) {
+	h.subscribe <- HubSubscription{event: "removeAll", session: sid, identifier: identifier}
+}
+
+// Broadcast enqueues data broadcasting to a stream
+func (h *Hub) Broadcast(stream string, data string) {
+	h.broadcast <- &common.StreamMessage{Stream: stream, Data: data}
+}
+
+// BroadcastMessage enqueues broadcasting a pre-built StreamMessage
+func (h *Hub) BroadcastMessage(msg *common.StreamMessage) {
+	h.broadcast <- msg
+}
+
+// RemoteDisconnect enqueues remote disconnect command
+func (h *Hub) RemoteDisconnect(msg *common.RemoteDisconnectMessage) {
+	h.disconnect <- msg
 }
 
 // Shutdown sends shutdown command to hub

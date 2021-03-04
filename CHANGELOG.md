@@ -2,6 +2,12 @@
 
 ## master
 
+- Fix race conditions in Hub. ([@palkan][])
+
+Use a single channel for register/unregister and subscribe/unsubscribe to make order of
+execution deterministic. Since `select .. case` chooses channels randomly, we may hit the situation when registration is added
+after disconnection (_un-registration_).
+
 - Add `sid=xxx` to RPC logs. ([@palkan][])
 
 ## 1.0.3 (2021-01-05)

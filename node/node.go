@@ -171,7 +171,7 @@ func (n *Node) Authenticate(s *Session) (err error) {
 		s.Identifiers = res.Identifier
 		s.connected = true
 
-		n.hub.register <- s
+		n.hub.AddSession(s)
 	} else {
 		n.Metrics.Counter(metricsFailedAuths).Inc()
 	}
@@ -274,12 +274,12 @@ func (n *Node) Perform(s *Session, msg *common.Message) (err error) {
 func (n *Node) Broadcast(msg *common.StreamMessage) {
 	n.Metrics.Counter(metricsBroadcastMsg).Inc()
 	n.log.Debugf("Incoming pubsub message: %v", msg)
-	n.hub.broadcast <- msg
+	n.hub.BroadcastMessage(msg)
 }
 
 // Disconnect adds session to disconnector queue and unregister session from hub
 func (n *Node) Disconnect(s *Session) error {
-	n.hub.unregister <- s
+	n.hub.RemoveSession(s)
 	return n.disconnector.Enqueue(s)
 }
 
@@ -307,7 +307,7 @@ func (n *Node) DisconnectNow(s *Session) error {
 func (n *Node) RemoteDisconnect(msg *common.RemoteDisconnectMessage) {
 	n.Metrics.Counter(metricsBroadcastMsg).Inc()
 	n.log.Debugf("Incoming pubsub command: %v", msg)
-	n.hub.disconnect <- msg
+	n.hub.RemoteDisconnect(msg)
 }
 
 func transmit(s *Session, transmissions []string) {
@@ -322,16 +322,16 @@ func (n *Node) handleCommandReply(s *Session, msg *common.Message, reply *common
 	}
 
 	if reply.StopAllStreams {
-		n.hub.unsubscribe <- &SubscriptionInfo{session: s.UID, identifier: msg.Identifier}
+		n.hub.RemoveAllSubscriptions(s.UID, msg.Identifier)
 	} else if reply.StoppedStreams != nil {
 		for _, stream := range reply.StoppedStreams {
-			n.hub.unsubscribe <- &SubscriptionInfo{session: s.UID, stream: stream, identifier: msg.Identifier}
+			n.hub.RemoveSubscription(s.UID, msg.Identifier, stream)
 		}
 	}
 
 	if reply.Streams != nil {
 		for _, stream := range reply.Streams {
-			n.hub.subscribe <- &SubscriptionInfo{session: s.UID, stream: stream, identifier: msg.Identifier}
+			n.hub.AddSubscription(s.UID, msg.Identifier, stream)
 		}
 	}
 
