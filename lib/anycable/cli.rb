@@ -103,9 +103,9 @@ module AnyCable
       AnyCable.logger
     end
 
-    def at_stop
-      if block_given?
-        @at_stop << Proc.new
+    def at_stop(&block)
+      if block
+        @at_stop << block
       else
         @at_stop
       end

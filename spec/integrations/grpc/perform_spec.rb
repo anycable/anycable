@@ -170,7 +170,7 @@ describe "client messages" do
         # the istate has changed
         expect(second_call.istate.to_h).not_to be_empty
 
-        expect(second_call.istate).not_to eq first_istate
+        expect(second_call.istate.to_h).not_to eq first_istate.to_h
 
         request.data = {action: "add", a: 1, b: 2}.to_json
 

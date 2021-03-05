@@ -53,7 +53,11 @@ module AnyCable
     end
 
     def build_server
-      require "webrick"
+      begin
+        require "webrick"
+      rescue LoadError
+        raise "Please, install webrick gem to use health server"
+      end
 
       WEBrick::HTTPServer.new(
         Port: port,
