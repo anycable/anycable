@@ -2,6 +2,10 @@
 
 ## master
 
+## 1.0.3 (2021-03-05)
+
+- Ruby 3.0 compatibility. ([@palkan][])
+
 ## 1.0.2 (2021-01-05)
 
 - Handle TLS Redis connections by using VERIFY_NONE mode. ([@palkan][])
