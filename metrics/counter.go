@@ -34,7 +34,7 @@ func (c *Counter) Value() int64 {
 
 // IntervalValue allows to get last interval value for counter.
 func (c *Counter) IntervalValue() int64 {
-	if c.lastIntervalDelta == 0 {
+	if c.lastIntervalValue == 0 {
 		return c.Value()
 	}
 	return atomic.LoadInt64(&c.lastIntervalDelta)

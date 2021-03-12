@@ -19,4 +19,10 @@ func TestCounter(t *testing.T) {
 	cnt.Inc()
 	assert.Equal(t, int64(1501), cnt.Value())
 	assert.Equal(t, int64(1500), cnt.IntervalValue())
+	cnt.UpdateDelta()
+	assert.Equal(t, int64(1501), cnt.Value())
+	assert.Equal(t, int64(1), cnt.IntervalValue())
+	cnt.UpdateDelta()
+	assert.Equal(t, int64(1501), cnt.Value())
+	assert.Equal(t, int64(0), cnt.IntervalValue())
 }
