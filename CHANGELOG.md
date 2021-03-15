@@ -2,6 +2,10 @@
 
 ## master
 
+- Fix interval values for counters. ([@prburgu][])
+
+See [#128](https://github.com/anycable/anycable-go/pull/128).
+
 - Make ping and stats refresh intervals configurable. ([@palkan][])
 
 Added `--ping_interval N` and `--stats_refresh_interval N` options respectively (both use seconds).
@@ -100,3 +104,4 @@ See [Changelog](https://github.com/anycable/anycable-go/blob/0-6-stable/CHANGELO
 [@bibendi]: https://github.com/bibendi
 [@rolandg]: https://github.com/rolandg
 [@gr8bit]: https://github.com/gr8bit
+[@prburgu]: https://github.com/prburgu
