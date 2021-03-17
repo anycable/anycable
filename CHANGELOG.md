@@ -2,6 +2,8 @@
 
 ## master
 
+## 1.0.5 (2021-03-17)
+
 - Fix interval values for counters. ([@prburgu][])
 
 See [#128](https://github.com/anycable/anycable-go/pull/128).
