@@ -66,6 +66,8 @@ type Session struct {
 	pingTimer    *time.Timer
 	pingInterval time.Duration
 
+	pingTimestampFormat string
+
 	UID         string
 	Identifiers string
 	Log         *log.Entry
@@ -82,6 +84,7 @@ func NewSession(node *Node, ws Connection, url string, headers map[string]string
 		closed:        false,
 		connected:     false,
 		pingInterval:  time.Duration(node.config.PingInterval) * time.Second,
+		pingTimestampFormat: node.config.PingTimestampFormat,
 	}
 
 	session.UID = uid
@@ -240,7 +243,7 @@ func (s *Session) sendPing() {
 	}
 
 	deadline := time.Now().Add(s.pingInterval / 2)
-	err := s.write(newPingMessage(), deadline)
+	err := s.write(newPingMessage(s.pingTimestampFormat), deadline)
 
 	if err == nil {
 		s.addPing()
@@ -253,6 +256,17 @@ func (s *Session) addPing() {
 	s.pingTimer = time.AfterFunc(s.pingInterval, s.sendPing)
 }
 
-func newPingMessage() []byte {
-	return (&common.PingMessage{Type: "ping", Message: time.Now().Unix()}).ToJSON()
+func newPingMessage(format string) []byte {
+	var ts int64
+
+	switch format {
+		case "ns":
+			ts = time.Now().UnixNano()
+		case "ms":
+			ts = time.Now().UnixNano() / int64(time.Millisecond)
+		default:
+			ts = time.Now().Unix()
+	}
+
+	return (&common.PingMessage{Type: "ping", Message: ts}).ToJSON()
 }
