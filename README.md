@@ -12,8 +12,6 @@ AnyCable allows you to use any WebSocket server (written in any language) as a r
 
 AnyCable uses the same protocol as ActionCable, so you can use its [JavaScript client](https://www.npmjs.com/package/actioncable) without any monkey-patching.
 
-**Important** This is a readme for the upcoming v1.0 release. For v0.6.x see the readme from the [0-6-stable](https://github.com/anycable/anycable/tree/0-6-stable) branch.
-
 <a href="https://evilmartians.com/">
 <img src="https://evilmartians.com/badges/sponsored-by-evil-martians.svg" alt="Sponsored by Evil Martians" width="236" height="54"></a>
 
