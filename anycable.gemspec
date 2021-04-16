@@ -24,10 +24,10 @@ Gem::Specification.new do |spec|
   spec.files = Dir.glob("lib/**/*") + Dir.glob("bin/*") + %w[README.md MIT-LICENSE CHANGELOG.md]
   spec.require_paths = ["lib"]
 
-  spec.required_ruby_version = ">= 2.5.0"
+  spec.required_ruby_version = ">= 2.6.0"
 
-  spec.add_dependency "anyway_config", ">= 1.4.2"
-  spec.add_dependency "grpc", "~> 1.17"
+  spec.add_dependency "anyway_config", ">= 2.1.0"
+  spec.add_dependency "grpc", "~> 1.37"
 
   spec.add_development_dependency "redis", ">= 4.0"
   spec.add_development_dependency "bundler", ">= 1"
