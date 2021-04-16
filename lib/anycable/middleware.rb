@@ -16,7 +16,6 @@ module AnyCable
     end
 
     def server_streamer(**kwargs)
-      p kwargs
       yield
     end
 
