@@ -5,7 +5,7 @@ gem "pry-byebug", platform: :mri
 
 gem "benchmark_driver"
 
-gem "anyway_config", ENV.fetch("ANYWAY_CONFIG_VERSION", ">= 1.4.2")
+gem "anyway_config", ENV.fetch("ANYWAY_CONFIG_VERSION", ">= 2.1.0")
 
 eval_gemfile "gemfiles/rubocop.gemfile"
 

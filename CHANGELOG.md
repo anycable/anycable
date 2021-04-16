@@ -2,6 +2,11 @@
 
 ## master
 
+## 1.1.0-dev
+
+- **Ruby >= 2.6** is required.
+- **Anyway Config >= 2.1** is required.
+
 ## 1.0.3 (2021-03-05)
 
 - Ruby 3.0 compatibility. ([@palkan][])

@@ -7,8 +7,8 @@ Run `anycable` CLI to start a gRPC server:
 ```sh
 $ bundle exec anycable --require "./path/to/app.rb"
 #> Starting AnyCable gRPC server (pid: 85746, workers_num: 30)
-#> AnyCable version: 1.0.0
-#> gRPC version: 1.26.0
+#> AnyCable version: 1.1.0
+#> gRPC version: 1.37.0
 #> Serving Rails application from ./path/to/app.rb ...
 #> ...
 ```
@@ -29,8 +29,8 @@ For example:
 ```sh
 $ bundle exec anycable --server-command "anycable-go -p 8080"
 #> Starting AnyCable gRPC server (pid: 85746, workers_num: 30)
-#> AnyCable version: 1.0.0
-#> gRPC version: 1.26.0
+#> AnyCable version: 1.1.0
+#> gRPC version: 1.37.0
 #> Serving Rails application from ./path/to/app.rb ...
 #> ...
 #> Started command: anycable-go --port 8080 (pid: 13710)
