@@ -3,16 +3,9 @@ inherit_from: ".rubocop.yml"
 require:
   - rubocop-md
 
-
 AllCops:
   Include:
     - '**/*.md'
-
-# See https://github.com/rubocop-hq/rubocop/issues/4222
-Lint/AmbiguousBlockAssociation:
-  Exclude:
-    - '**/*.md'
-
 
 Naming/FileName:
   Exclude:

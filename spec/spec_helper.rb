@@ -60,11 +60,11 @@ RSpec.configure do |config|
   config.order = :random
   Kernel.srand config.seed
 
-  config.before(:each) do
+  config.before do
     Anyway.env.clear if defined?(Anyway::Config)
   end
 
-  config.after(:each) do
+  config.after do
     AnyCable.logger.reset if AnyCable.logger.respond_to?(:reset)
     TestExHandler.flush!
   end

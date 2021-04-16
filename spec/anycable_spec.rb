@@ -23,6 +23,7 @@ describe AnyCable do
 
     context "logging to file" do
       before { AnyCable.config.log_file = "tmp/test_anycable.log" }
+
       after { FileUtils.rm("tmp/test_anycable.log") }
 
       it "writes log to file" do

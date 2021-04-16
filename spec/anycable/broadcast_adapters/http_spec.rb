@@ -28,6 +28,7 @@ describe AnyCable::BroadcastAdapters::Http do
 
   describe "#broadcast" do
     let(:adapter) { described_class.new(url: "http://ws.example.com:8090/_broadcast") }
+
     subject { adapter }
 
     it "publish data to channel" do

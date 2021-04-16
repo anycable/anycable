@@ -1,8 +1,11 @@
 require:
-  - standard/cop/semantic_blocks
+  - standard/cop/block_single_line_braces
 
 inherit_gem:
   standard: config/base.yml
+
+inherit_from:
+  - .rubocop/rubocop_rspec.yml
 
 AllCops:
   Exclude:
@@ -12,24 +15,14 @@ AllCops:
     - 'vendor/**/*'
     - 'gemfiles/**/*'
   DisplayCopNames: true
-  TargetRubyVersion: 2.5
+  SuggestExtensions: false
+  TargetRubyVersion: 2.6
 
-Standard/SemanticBlocks:
+Standard/BlockSingleLineBraces:
   Enabled: false
 
 Style/FrozenStringLiteralComment:
   Enabled: true
-
-Style/TrailingCommaInArrayLiteral:
-  EnforcedStyleForMultiline: no_comma
-
-Style/TrailingCommaInHashLiteral:
-  EnforcedStyleForMultiline: no_comma
-
-# See https://github.com/rubocop-hq/rubocop/issues/4222
-Lint/AmbiguousBlockAssociation:
-  Exclude:
-    - 'spec/**/*'
 
 Naming/FileName:
   Exclude:
