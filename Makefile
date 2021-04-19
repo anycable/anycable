@@ -107,6 +107,9 @@ vet:
 vet-shadow:
 	go vet -vettool=$$(which shadow) ./...
 
+sec:
+	gosec -quiet -confidence=medium -severity=medium  ./...
+
 fmt:
 	go fmt ./...
 

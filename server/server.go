@@ -62,7 +62,7 @@ func NewServer(host string, port string, ssl *SSLConfig) (*HTTPServer, error) {
 			return nil, errors.New(msg)
 		}
 
-		server.TLSConfig = &tls.Config{Certificates: []tls.Certificate{cer}}
+		server.TLSConfig = &tls.Config{Certificates: []tls.Certificate{cer}, MinVersion: tls.VersionTLS12}
 	}
 
 	return &HTTPServer{

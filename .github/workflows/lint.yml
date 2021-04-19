@@ -30,4 +30,14 @@ jobs:
       run: make vet
     - name: go vet shadow
       run: make vet-shadow
-
+  gosec:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-go@v2
+      with:
+        go-version: 1.16.x
+    - name: Run Gosec Security Scanner
+      uses: securego/gosec@master
+      with:
+        args: -confidence=medium -severity=medium ./...

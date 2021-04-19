@@ -250,6 +250,6 @@ loop:
 }
 
 func nextRetry(step int) time.Duration {
-	secs := (step * step) + (rand.Intn(step*4) * (step + 1))
+	secs := (step * step) + (rand.Intn(step*4) * (step + 1)) // #nosec
 	return time.Duration(secs) * time.Second
 }
