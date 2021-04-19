@@ -3,6 +3,11 @@
 require "anycable/rpc/rpc_pb"
 require "anycable/rpc/rpc_services_pb"
 
+require "anycable/rpc/helpers"
+require "anycable/rpc/handlers/connect"
+require "anycable/rpc/handlers/disconnect"
+require "anycable/rpc/handlers/command"
+
 # Extend some PB auto-generated classes
 module AnyCable
   # Current RPC proto version (used for compatibility checks)

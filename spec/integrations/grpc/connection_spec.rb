@@ -6,21 +6,33 @@ describe "client connection" do
   include_context "anycable:rpc:server"
   include_context "rpc_command"
 
+  let(:headers) do
+    {
+      "Cookie" => "username=john;"
+    }
+  end
+  let(:url) { "http://example.io/cable?token=123" }
+
   let(:request) { AnyCable::ConnectionRequest.new(env: env) }
 
   subject { service.connect(request) }
 
-  context "no cookies" do
-    it "responds with exception if no cookies" do
-      expect(subject).to be_failure
-    end
+  it "responds with success", :aggregate_failures do
+    expect(subject).to be_success
+    identifiers = JSON.parse(subject.identifiers)
+    expect(identifiers).to include(
+      "current_user" => "john",
+      "path" => "/cable",
+      "token" => "123"
+    )
+    expect(subject.transmissions.first).to eq JSON.dump("type" => "welcome")
+  end
 
-    it "returns disconnect message" do
-      expect(subject).to be_failure
-      expect(subject.transmissions).to eq(
-        [JSON.dump("type" => "disconnect", "reason" => "unauthorized")]
-      )
-    end
+  it "invokes Connect handler" do
+    allow(AnyCable::RPC::Handlers::Connect).to receive(:call).and_call_original
+
+    expect(subject).to be_success
+    expect(AnyCable::RPC::Handlers::Connect).to have_received(:call).with(request)
   end
 
   context "when exception" do
@@ -38,90 +50,6 @@ describe "client connection" do
         exception: have_attributes(message: "sudden_connect_error"),
         method: "connect",
         message: request.to_h
-      )
-    end
-  end
-
-  context "with cookies and path info" do
-    let(:headers) do
-      {
-        "Cookie" => "username=john;"
-      }
-    end
-    let(:url) { "http://example.io/cable?token=123" }
-
-    it "responds with success, correct identifiers and 'welcome' message", :aggregate_failures do
-      expect(subject).to be_success
-      identifiers = JSON.parse(subject.identifiers)
-      expect(identifiers).to include(
-        "current_user" => "john",
-        "path" => "/cable",
-        "token" => "123"
-      )
-      expect(subject.transmissions.first).to eq JSON.dump("type" => "welcome")
-    end
-  end
-
-  context "with arbitrary headers" do
-    let(:headers) do
-      {
-        "cookie" => "username=john;",
-        "x-api-token" => "abc123"
-      }
-    end
-    let(:url) { "http://example.io/cable" }
-
-    it "responds with success, correct identifiers and 'welcome' message", :aggregate_failures do
-      expect(subject).to be_success
-      identifiers = JSON.parse(subject.identifiers)
-      expect(identifiers).to include(
-        "token" => "abc123"
-      )
-      expect(subject.transmissions.first).to eq JSON.dump("type" => "welcome")
-    end
-  end
-
-  context "with remote ip from headers" do
-    let(:headers) do
-      {
-        "cookie" => "username=john;",
-        "REMOTE_ADDR" => "1.2.3.4"
-      }
-    end
-    let(:url) { "http://example.io/cable" }
-
-    it "sets ip and cleans synthetic header", :aggregate_failures do
-      identifiers = JSON.parse(subject.identifiers)
-      expect(identifiers).to include(
-        "ip" => "1.2.3.4",
-        "remote_addr" => nil
-      )
-    end
-  end
-
-  describe "env building" do
-    let(:headers) do
-      {
-        "Cookie" => "username=john;"
-      }
-    end
-    let(:url) { "https://example.io/cable?token=123" }
-
-    it "builds properly structured Rack-compatible env" do
-      identifiers = JSON.parse(subject.identifiers)
-      request = Rack::Request.new(identifiers["env"])
-
-      expect(request).to have_attributes(
-        request_method: "GET",
-        script_name: "",
-        scheme: "https",
-        host: "example.io",
-        port: 443,
-        path: "/cable",
-        query_string: "token=123",
-        params: a_hash_including(
-          "token" => "123"
-        )
       )
     end
   end
