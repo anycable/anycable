@@ -104,6 +104,9 @@ gen-ssl:
 vet:
 	go vet ./...
 
+vet-shadow:
+	go vet -vettool=$$(which shadow) ./...
+
 fmt:
 	go fmt ./...
 

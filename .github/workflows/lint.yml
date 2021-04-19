@@ -22,5 +22,12 @@ jobs:
     - uses: actions/setup-go@v2
       with:
         go-version: 1.14.x
+    - name: Install shadow
+      env:
+        GO111MODULE: off
+      run: go get golang.org/x/tools/go/analysis/passes/shadow/cmd/shadow
     - name: go vet
-      run: go vet ./...
+      run: make vet
+    - name: go vet shadow
+      run: make vet-shadow
+

@@ -56,7 +56,8 @@ func main() {
 	mrubySupport := ""
 
 	if mrb.Supported() {
-		mrbv, err := mrb.Version()
+		var mrbv string
+		mrbv, err = mrb.Version()
 		if err != nil {
 			ctx.Errorf("mruby failed to initialize: %v", err)
 		} else {
@@ -102,15 +103,15 @@ func main() {
 	}
 
 	go func() {
-		if err := subscriber.Start(); err != nil {
-			ctx.Errorf("!!! Subscriber failed !!!\n%v", err)
+		if subscribeErr := subscriber.Start(); subscribeErr != nil {
+			ctx.Errorf("!!! Subscriber failed !!!\n%v", subscribeErr)
 			os.Exit(1)
 		}
 	}()
 
 	go func() {
-		if err := controller.Start(); err != nil {
-			ctx.Errorf("!!! RPC failed !!!\n%v", err)
+		if contrErr := controller.Start(); contrErr != nil {
+			ctx.Errorf("!!! RPC failed !!!\n%v", contrErr)
 			os.Exit(1)
 		}
 	}()

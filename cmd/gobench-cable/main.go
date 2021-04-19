@@ -78,8 +78,8 @@ func main() {
 	appNode.SetDisconnector(disconnector)
 
 	go func() {
-		if err := controller.Start(); err != nil {
-			ctx.Errorf("!!! Controller failed !!!\n%v", err)
+		if contrErr := controller.Start(); contrErr != nil {
+			ctx.Errorf("!!! Controller failed !!!\n%v", contrErr)
 			os.Exit(1)
 		}
 	}()

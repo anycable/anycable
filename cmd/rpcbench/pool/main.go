@@ -97,7 +97,8 @@ func main() {
 	}
 
 	if options.pool {
-		p, err := grpcpool.NewChannelPool(options.initialCapacity, options.capacity, factory)
+		var p grpcpool.Pool
+		p, err = grpcpool.NewChannelPool(options.initialCapacity, options.capacity, factory)
 
 		if err != nil {
 			log.Errorf("!!! Failed to intialize RPC pool !!!\n%v", err)
@@ -106,7 +107,8 @@ func main() {
 
 		b.pool = &p
 	} else {
-		conn, err := grpc.Dial(
+		var conn *grpc.ClientConn
+		conn, err = grpc.Dial(
 			options.host,
 			grpc.WithInsecure(),
 			grpc.WithKeepaliveParams(kacp),
