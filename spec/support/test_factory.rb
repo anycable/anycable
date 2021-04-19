@@ -60,9 +60,15 @@ module AnyCable
           case command
           when "subscribe"
             channel.handle_subscribe
+            if !channel.subscription_rejected?
+              transmit(type: "confirm_subscription", identifier: identifier)
+            else
+              transmit(type: "reject_subscription", identifier: identifier)
+            end
             !channel.subscription_rejected?
           when "unsubscribe"
             channel.handle_unsubscribe
+            transmit(type: "confirm_unsubscribe", identifier: identifier)
             true
           when "message"
             channel.handle_action(data)
@@ -80,7 +86,7 @@ module AnyCable
 
       def channel_for(identifier)
         channel_class = TestFactory.channel_for(identifier)
-        channel_class&.new(self, identifier)
+        channel_class&.new(self, identifier) || raise("Unknown channel: #{identifier}")
       end
 
       def identifiers_json
@@ -104,6 +110,7 @@ module AnyCable
       end
 
       def handle_unsubscribe
+        stop_all_streams
       end
 
       def handle_action(data)
@@ -150,6 +157,10 @@ module AnyCable
 
       def register_channel(identifier, channel)
         channels[identifier] = channel
+      end
+
+      def unregister_channel(identifier)
+        channels.delete(identifier)
       end
 
       def channel_for(identifier)

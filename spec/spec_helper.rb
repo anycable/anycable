@@ -23,7 +23,10 @@ Dir["#{File.dirname(__FILE__)}/support/**/*.rb"].sort.each { |f| require f }
 AnyCable.connection_factory = AnyCable::TestFactory
 AnyCable.logger = TestLogger.new
 
-AnyCable::Server.log_grpc! if ENV["LOG"]
+if ENV["LOG"]
+  AnyCable.logger = Logger.new($stdout)
+  ::GRPC.define_singleton_method(:logger) { AnyCable.logger }
+end
 
 module TestExHandler
   Error = Struct.new(:exception, :method, :message)
