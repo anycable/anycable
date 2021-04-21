@@ -1,26 +1,26 @@
 # frozen_string_literal: true
 
 require "anyway_config"
-require "grpc"
 
 require "uri"
 
 module AnyCable
   # AnyCable configuration.
   class Config < Anyway::Config
+    class << self
+      # Add usage txt for CLI
+      def usage(txt)
+        usages << txt
+      end
+
+      def usages
+        @usages ||= []
+      end
+    end
+
     config_name :anycable
 
     attr_config(
-      ### gRPC options
-      rpc_host: "127.0.0.1:50051",
-      # For defaults see https://github.com/grpc/grpc/blob/51f0d35509bcdaba572d422c4f856208162022de/src/ruby/lib/grpc/generic/rpc_server.rb#L186-L216
-      rpc_pool_size: ::GRPC::RpcServer::DEFAULT_POOL_SIZE,
-      rpc_max_waiting_requests: ::GRPC::RpcServer::DEFAULT_MAX_WAITING_REQUESTS,
-      rpc_poll_period: ::GRPC::RpcServer::DEFAULT_POLL_PERIOD,
-      rpc_pool_keep_alive: ::GRPC::Pool::DEFAULT_KEEP_ALIVE,
-      # See https://github.com/grpc/grpc/blob/f526602bff029b8db50a8d57134d72da33d8a752/include/grpc/impl/codegen/grpc_types.h#L292-L315
-      rpc_server_args: {},
-
       ## PubSub
       broadcast_adapter: :redis,
 
@@ -36,7 +36,6 @@ module AnyCable
       ### Logging options
       log_file: nil,
       log_level: :info,
-      log_grpc: false,
       debug: false, # Shortcut to enable GRPC logging and debug level
 
       ### Health check options
@@ -49,8 +48,7 @@ module AnyCable
 
     alias_method :version_check_enabled?, :version_check_enabled
 
-    ignore_options :rpc_server_args
-    flag_options :log_grpc, :debug
+    flag_options :debug
 
     on_load { self.debug = debug != false }
 
@@ -58,24 +56,30 @@ module AnyCable
       debug? ? :debug : super
     end
 
-    def log_grpc
-      debug? || super
-    end
-
     def http_health_port_provided?
       !http_health_port.nil? && http_health_port != ""
     end
 
-    # Build gRPC server parameters
-    def to_grpc_params
-      {
-        pool_size: rpc_pool_size,
-        max_waiting_requests: rpc_max_waiting_requests,
-        poll_period: rpc_poll_period,
-        pool_keep_alive: rpc_pool_keep_alive,
-        server_args: rpc_server_args
-      }
-    end
+    usage <<~TXT
+      APPLICATION
+          --broadcast-adapter=type          Pub/sub adapter type for broadcasts, default: redis
+          --log-level=level                 Logging level, default: "info"
+          --log-file=path                   Path to log file, default: <none> (log to STDOUT)
+          --debug                           Turn on verbose logging ("debug" level and gRPC logging on)
+
+      HTTP HEALTH CHECKER
+          --http-health-port=port           Port to run HTTP health server on, default: <none> (disabled)
+          --http-health-path=path           Endpoint to server health cheks, default: "/health"
+
+      REDIS PUB/SUB
+          --redis-url=url                   Redis URL for pub/sub, default: REDIS_URL or "redis://localhost:6379/5"
+          --redis-channel=name              Redis channel for broadcasting, default: "__anycable__"
+          --redis-sentinels=<...hosts>      Redis Sentinel followers addresses (as a comma-separated list), default: nil
+
+      HTTP PUB/SUB
+          --http-broadcast-url              HTTP pub/sub endpoint URL, default: "http://localhost:8090/_broadcast"
+          --http-broadcast-secret           HTTP pub/sub authorization secret, default: <none> (disabled)
+    TXT
 
     # Build Redis parameters
     def to_redis_params
