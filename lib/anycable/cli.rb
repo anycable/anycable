@@ -55,7 +55,7 @@ module AnyCable
 
       use_version_check! if config.version_check_enabled?
 
-      @server = AnyCable::Server.new(
+      @server = AnyCable::GRPC::Server.new(
         host: config.rpc_host,
         **config.to_grpc_params,
         interceptors: AnyCable.middleware.to_a
@@ -134,7 +134,7 @@ module AnyCable
 
     def print_versions!
       logger.info "AnyCable version: #{AnyCable::VERSION} (proto_version: #{AnyCable::PROTO_VERSION})"
-      logger.info "gRPC version: #{GRPC::VERSION}"
+      logger.info "gRPC version: #{::GRPC::VERSION}"
     end
 
     # rubocop:disable Metrics/MethodLength

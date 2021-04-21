@@ -3,7 +3,7 @@
 require "spec_helper"
 
 describe AnyCable::Middleware do
-  let(:method) { AnyCable::RPCHandler.new.method(:connect) }
+  let(:method) { AnyCable::GRPC::Handler.new.method(:connect) }
 
   let(:middleware) do
     Class.new(described_class) do

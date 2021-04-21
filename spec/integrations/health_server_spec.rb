@@ -21,7 +21,7 @@ describe "health server" do
 
     it "responds with 200" do
       res = Net::HTTP.get_response(URI("http://localhost:54321/health"))
-      expect(res.code).to eq "200"
+      expect(res.code).to eq("200"), res.body
     end
   end
 
@@ -30,7 +30,7 @@ describe "health server" do
 
     it "responds with 200" do
       res = Net::HTTP.get_response(URI("http://localhost:54321/health"))
-      expect(res.code).to eq "503"
+      expect(res.code).to eq("503"), res.body
     end
   end
 end

@@ -62,13 +62,13 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
 end
 
 module AnyCable
-  Env = Google::Protobuf::DescriptorPool.generated_pool.lookup("anycable.Env").msgclass
-  EnvResponse = Google::Protobuf::DescriptorPool.generated_pool.lookup("anycable.EnvResponse").msgclass
-  ConnectionRequest = Google::Protobuf::DescriptorPool.generated_pool.lookup("anycable.ConnectionRequest").msgclass
-  ConnectionResponse = Google::Protobuf::DescriptorPool.generated_pool.lookup("anycable.ConnectionResponse").msgclass
-  CommandMessage = Google::Protobuf::DescriptorPool.generated_pool.lookup("anycable.CommandMessage").msgclass
-  CommandResponse = Google::Protobuf::DescriptorPool.generated_pool.lookup("anycable.CommandResponse").msgclass
-  DisconnectRequest = Google::Protobuf::DescriptorPool.generated_pool.lookup("anycable.DisconnectRequest").msgclass
-  DisconnectResponse = Google::Protobuf::DescriptorPool.generated_pool.lookup("anycable.DisconnectResponse").msgclass
-  Status = Google::Protobuf::DescriptorPool.generated_pool.lookup("anycable.Status").enummodule
+  Env = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("anycable.Env").msgclass
+  EnvResponse = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("anycable.EnvResponse").msgclass
+  ConnectionRequest = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("anycable.ConnectionRequest").msgclass
+  ConnectionResponse = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("anycable.ConnectionResponse").msgclass
+  CommandMessage = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("anycable.CommandMessage").msgclass
+  CommandResponse = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("anycable.CommandResponse").msgclass
+  DisconnectRequest = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("anycable.DisconnectRequest").msgclass
+  DisconnectResponse = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("anycable.DisconnectResponse").msgclass
+  Status = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("anycable.Status").enummodule
 end
