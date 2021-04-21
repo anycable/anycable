@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
-require "anycable/rpc/rpc_pb"
-require "anycable/rpc/rpc_services_pb"
+require "anycable/protos/rpc_pb"
 
 require "anycable/rpc/helpers"
 require "anycable/rpc/handlers/connect"

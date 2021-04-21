@@ -6,8 +6,8 @@ module AnyCable
   # Basic usage:
   #
   #  # create a new healthcheck server for a specified
-  #  # gRPC server lisening on the port
-  #  health_server = AnyCable::HealthServer.new(grpc_server, port)
+  #  # server listening on the port
+  #  health_server = AnyCable::HealthServer.new(server, port)
   #
   #  # start health server in background
   #  health_server.start
@@ -18,20 +18,20 @@ module AnyCable
     SUCCESS_RESPONSE = [200, "Ready"].freeze
     FAILURE_RESPONSE = [503, "Not Ready"].freeze
 
-    attr_reader :grpc_server, :port, :path, :server
+    attr_reader :server, :port, :path, :http_server
 
-    def initialize(grpc_server, port:, logger: nil, path: "/health")
-      @grpc_server = grpc_server
+    def initialize(server, port:, logger: nil, path: "/health")
+      @server = server
       @port = port
       @path = path
       @logger = logger
-      @server = build_server
+      @http_server = build_server
     end
 
     def start
       return if running?
 
-      Thread.new { server.start }
+      Thread.new { http_server.start }
 
       logger.info "HTTP health server is listening on localhost:#{port} and mounted at \"#{path}\""
     end
@@ -39,11 +39,11 @@ module AnyCable
     def stop
       return unless running?
 
-      server.shutdown
+      http_server.shutdown
     end
 
     def running?
-      server.status == :Running
+      http_server.status == :Running
     end
 
     private
@@ -63,9 +63,9 @@ module AnyCable
         Port: port,
         Logger: logger,
         AccessLog: []
-      ).tap do |server|
-        server.mount_proc path do |_, res|
-          res.status, res.body = grpc_server.running? ? SUCCESS_RESPONSE : FAILURE_RESPONSE
+      ).tap do |http_server|
+        http_server.mount_proc path do |_, res|
+          res.status, res.body = server.running? ? SUCCESS_RESPONSE : FAILURE_RESPONSE
         end
       end
     end

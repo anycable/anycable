@@ -14,10 +14,10 @@ module AnyCable
       ### gRPC options
       rpc_host: "127.0.0.1:50051",
       # For defaults see https://github.com/grpc/grpc/blob/51f0d35509bcdaba572d422c4f856208162022de/src/ruby/lib/grpc/generic/rpc_server.rb#L186-L216
-      rpc_pool_size: GRPC::RpcServer::DEFAULT_POOL_SIZE,
-      rpc_max_waiting_requests: GRPC::RpcServer::DEFAULT_MAX_WAITING_REQUESTS,
-      rpc_poll_period: GRPC::RpcServer::DEFAULT_POLL_PERIOD,
-      rpc_pool_keep_alive: GRPC::Pool::DEFAULT_KEEP_ALIVE,
+      rpc_pool_size: ::GRPC::RpcServer::DEFAULT_POOL_SIZE,
+      rpc_max_waiting_requests: ::GRPC::RpcServer::DEFAULT_MAX_WAITING_REQUESTS,
+      rpc_poll_period: ::GRPC::RpcServer::DEFAULT_POLL_PERIOD,
+      rpc_pool_keep_alive: ::GRPC::Pool::DEFAULT_KEEP_ALIVE,
       # See https://github.com/grpc/grpc/blob/f526602bff029b8db50a8d57134d72da33d8a752/include/grpc/impl/codegen/grpc_types.h#L292-L315
       rpc_server_args: {},
 
