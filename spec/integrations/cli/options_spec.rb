@@ -23,11 +23,12 @@ describe "CLI options", :cli do
     specify "--help" do
       run_cli("--help") do |cli|
         expect(cli).to have_output_line("$ anycable [options]")
-        expect(cli).to have_output_line("BASIC OPTIONS")
-        expect(cli).to have_output_line("REDIS PUB/SUB OPTIONS")
-        expect(cli).to have_output_line("HTTP PUB/SUB OPTIONS")
-        expect(cli).to have_output_line("HTTP HEALTH CHECKER OPTIONS")
-        expect(cli).to have_output_line("GRPC OPTIONS")
+        expect(cli).to have_output_line("CLI")
+        expect(cli).to have_output_line("APPLICATION")
+        expect(cli).to have_output_line("REDIS PUB/SUB")
+        expect(cli).to have_output_line("HTTP PUB/SUB")
+        expect(cli).to have_output_line("HTTP HEALTH CHECKER")
+        expect(cli).to have_output_line("GRPC")
         expect(cli).to have_stopped
         expect(cli).to have_exit_status(0)
       end
