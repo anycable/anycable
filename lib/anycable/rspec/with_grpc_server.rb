@@ -2,7 +2,7 @@
 
 RSpec.shared_context "anycable:rpc:server" do
   before(:all) do
-    @server = AnyCable::Server.new(
+    @server = AnyCable::GRPC::Server.new(
       host: AnyCable.config.rpc_host,
       **AnyCable.config.to_grpc_params,
       interceptors: AnyCable.middleware.to_a

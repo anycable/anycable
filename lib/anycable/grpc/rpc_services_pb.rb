@@ -6,17 +6,17 @@
 require "grpc"
 
 module AnyCable
-  module RPC
+  module GRPC
     class Service
-      include GRPC::GenericService
+      include ::GRPC::GenericService
 
       self.marshal_class_method = :encode
       self.unmarshal_class_method = :decode
       self.service_name = "anycable.RPC"
 
-      rpc :Connect, ConnectionRequest, ConnectionResponse
-      rpc :Command, CommandMessage, CommandResponse
-      rpc :Disconnect, DisconnectRequest, DisconnectResponse
+      rpc :Connect, ::AnyCable::ConnectionRequest, ::AnyCable::ConnectionResponse
+      rpc :Command, ::AnyCable::CommandMessage, ::AnyCable::CommandResponse
+      rpc :Disconnect, ::AnyCable::DisconnectRequest, ::AnyCable::DisconnectResponse
     end
 
     Stub = Service.rpc_stub_class

@@ -10,7 +10,7 @@ describe "version check spec" do
     chain = AnyCable::MiddlewareChain.new
     chain.use(AnyCable::Middlewares::CheckVersion.new("test-v1"))
 
-    @server = AnyCable::Server.new(
+    @server = AnyCable::GRPC::Server.new(
       host: AnyCable.config.rpc_host,
       **AnyCable.config.to_grpc_params,
       interceptors: chain.to_a
@@ -44,14 +44,14 @@ describe "version check spec" do
   it "fails without matching version" do
     meta["protov"] = "test-v0,test-v01"
     expect { subject }.to raise_error(
-      GRPC::Internal,
+      ::GRPC::Internal,
       %r{Client supported versions: test-v0,test-v01}
     )
   end
 
   it "fails without metadata" do
     expect { subject }.to raise_error(
-      GRPC::Internal,
+      ::GRPC::Internal,
       %r{Client supported versions: unknown}
     )
   end

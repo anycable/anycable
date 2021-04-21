@@ -2,7 +2,7 @@
 
 RSpec.shared_context "anycable:rpc:stub" do
   before(:all) do
-    @service = AnyCable::RPC::Stub.new(AnyCable.config.rpc_host, :this_channel_is_insecure)
+    @service = AnyCable::GRPC::Stub.new(AnyCable.config.rpc_host, :this_channel_is_insecure)
   end
 
   let(:service) { @service }

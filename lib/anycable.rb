@@ -8,12 +8,13 @@ require "anycable/broadcast_adapters"
 
 require "anycable/middleware_chain"
 
-require "anycable/server"
+require "anycable/grpc"
+require "anycable/health_server"
 
 # AnyCable allows to use any websocket service (written in any language) as a replacement
 # for ActionCable server.
 #
-# AnyCable includes a gRPC server, which is used by external WS server to execute commands
+# AnyCable includes an RPC server (gRPC by default), which is used by external WS server to execute commands
 # (authentication, subscription authorization, client-to-server messages).
 #
 # Broadcasting messages to WS is done through _broadcast adapter_ (Redis Pub/Sub by default).

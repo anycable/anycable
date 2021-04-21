@@ -15,7 +15,7 @@ module AnyCable
         supported_versions = call.metadata["protov"]&.split(",")
         return yield if supported_versions&.include?(version)
 
-        raise GRPC::Internal,
+        raise ::GRPC::Internal,
           "Incompatible AnyCable RPC client.\nCurrent server version: #{version}.\n" \
           "Client supported versions: #{call.metadata["protov"] || "unknown"}."
       end
