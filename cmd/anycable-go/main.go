@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/anycable/anycable-go/cli"
+	_ "github.com/anycable/anycable-go/diagnostics"
 	"github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/mrb"
 	"github.com/anycable/anycable-go/node"

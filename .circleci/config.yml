@@ -26,10 +26,6 @@ workflows:
         <<: *common_tags_filter
         requires:
         - prepare_mruby
-    - benchmark:
-        <<: *common_tags_filter
-        requires:
-        - prepare_mruby
     - build_binary_for_conformance:
         <<: *common_tags_filter
         requires:
@@ -131,7 +127,15 @@ workflows:
             only: /^v[0-9]+\.[0-9]+\.[0-9]+((\-|\.)(preview|beta|rc)\d+)?$/
           branches:
             ignore: /.*/
-
+  benchmark:
+    jobs:
+    - prepare_code
+    - prepare_mruby:
+        requires:
+        - prepare_code
+    - benchmark:
+        requires:
+        - prepare_mruby
 executors:
   golang:
     docker:
@@ -184,6 +188,9 @@ commands:
     steps:
       - run: env GOOS=<< parameters.os >> GOARCH=<< parameters.arch >> go build -ldflags "-s -w -X github.com/anycable/anycable-go/utils.version=${CIRCLE_TAG/v/''} -X github.com/anycable/anycable-go/utils.sha=$(echo "$CIRCLE_SHA1" | cut -c -7)" -tags mrb -a -o "/tmp/dist/anycable-go-<< parameters.postfix >>" cmd/anycable-go/main.go
 
+orbs:
+  ruby: circleci/ruby@1.1.2
+
 # Jobs definitions
 jobs:
   prepare_code:
@@ -231,22 +238,34 @@ jobs:
     - run: make fmt
 
   benchmark:
-    executor: golang
+    docker:
+      - image: circleci/golang:1.14-stretch
+      - image: circleci/redis:4.0.11-alpine3.8
+    working_directory: /go/src/github.com/anycable/anycable-go/
     environment:
+      GO111MODULE: "on"
+      GOFLAGS: "-mod=vendor"
       CGO_ENABLED: "1"
+      BUNDLE_GEMFILE: .circleci/Gemfile
+      ANYCABLE_RPC_HOST: "127.0.0.1:50051"
     steps:
     - attach_workspace:
         at: /go/src/github.com/anycable/anycable-go/
+    - ruby/install:
+        version: '2.7'
+    - run: bundle install
     - run: env GO111MODULE=off go get github.com/anycable/websocket-bench
-    - run: env GOBENCHDIST=dist/gobench-cable make build-gobench
+    - run: env GO111MODULE=off go get github.com/google/gops
+    - run: make build
     - run:
-        command: dist/gobench-cable
-        background: true
+        name: Wait for Redis
+        command: dockerize -wait tcp://localhost:6379 -timeout 1m
     - run:
-        name: Wait for gobench cable
-        command: dockerize -wait tcp://localhost:8080 -timeout 5s
-    - run:
-        command: websocket-bench broadcast --concurrent 40 --sample-size 100 --step-size 200 --payload-padding 200 --total-steps 5 ws://localhost:8080/cable --server-type=actioncable
+        name: Run benchmarks
+        command: |
+          ruby benchmarks/runner.rb benchmarks/broadcasts.benchfile
+          ruby benchmarks/runner.rb benchmarks/goroutines.benchfile
+
 
   build_binary_for_conformance:
     executor: golang

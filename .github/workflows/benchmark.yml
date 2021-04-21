@@ -1,0 +1,65 @@
+name: Benchmark
+
+on:
+  # Hangs during tests run for (yet) unknown reason
+  #
+  # push:
+  #   branches:
+  #   - master
+  # pull_request:
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    timeout-minutes: 5
+    strategy:
+      matrix:
+        go-version: [1.15.x]
+    runs-on: ubuntu-latest
+    env:
+      GO111MODULE: on
+      GOFLAGS: "-mod=vendor"
+      BUNDLE_GEMFILE: .circleci/Gemfile
+      BUNDLE_PATH: /home/runner/bundle
+      DEBUG: true
+    services:
+      redis:
+        image: redis:5.0-alpine
+        ports: ["6379:6379"]
+        options: --health-cmd="redis-cli ping" --health-interval 1s --health-timeout 3s --health-retries 30
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install system deps
+      run: |
+        sudo apt-get update
+        sudo apt-get install bison
+    - name: Build mruby
+      run: make prepare-mruby
+    - uses: actions/setup-go@v2
+      with:
+        go-version: ${{ matrix.go-version }}
+    - uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: 2.7
+    - uses: actions/cache@v1
+      with:
+        path: /home/runner/bundle
+        key: bundle-${{ hashFiles('**/.circle/Gemfile') }}
+        restore-keys: |
+          bundle-
+    - name: Install anyt
+      run: |
+        bundle install && bundle update
+    - name: Install websocket-bench & gops
+      env:
+        GO111MODULE: off
+      run: |
+        go get -u github.com/anycable/websocket-bench
+        go get -u github.com/google/gops
+    - name: Build test binary
+      run: |
+        make build
+    - name: Run benchmarks
+      run: |
+        ruby benchmarks/runner.rb benchmarks/broadcasts.benchfile
+        ruby benchmarks/runner.rb benchmarks/goroutines.benchfile

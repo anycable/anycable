@@ -1,0 +1,3 @@
+// +build !gops
+
+package diagnostics

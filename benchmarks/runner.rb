@@ -1,0 +1,154 @@
+# frozen_string_literal: true
+
+
+# Only use bundler/inline if gems are not installed yet
+begin
+  require "childprocess"
+rescue LoadError
+  require "bundler/inline"
+
+  gemfile(true, quiet: true) do
+    source "https://rubygems.org"
+
+    gem "childprocess"
+  end
+
+  require "childprocess"
+end
+
+require "socket"
+require "time"
+
+class BenchRunner
+  LOG_LEVEL_TO_NUM = {
+    error: 0,
+    warn: 1,
+    info: 2,
+    debug: 3
+  }.freeze
+
+  # CI machines could be slow
+  RUN_TIMEOUT = ENV["CI"] ? 60 : 30
+
+  def initialize
+    @processes = {}
+    @pipes = {}
+    @log_level = ENV["DEBUG"] == "true" ? LOG_LEVEL_TO_NUM[:debug] : LOG_LEVEL_TO_NUM[:info]
+  end
+
+  def load(script)
+    instance_eval script
+  end
+
+  def launch(name, cmd)
+    log(:info) { "Launching background process: #{cmd}"}
+
+    process = ChildProcess.build(*cmd.split(/\s+/))
+    process.detach = true
+
+    processes[name] = process
+    process.start
+  end
+
+  def run(name, cmd, timeout: RUN_TIMEOUT)
+    log(:info) { "Running command: #{cmd}" }
+
+    r, w = IO.pipe
+
+    process = ChildProcess.build(*cmd.split(/\s+/))
+    process.io.stdout = w
+
+    processes[name] = process
+    pipes[name] = {r: r, w: w}
+
+    process.start
+
+    begin
+      process.poll_for_exit(timeout)
+    rescue ChildProcess::TimeoutError
+      process.stop
+      log(:debug) { "Output:\n#{stdout(name)}" }
+      fail "Command expected to finish in #{timeout}s but is still running"
+    end
+
+    log(:info) { "Finished" }
+    log(:debug) { "Output:\n#{stdout(name)}" }
+  ensure
+    w.close
+  end
+
+  def gops(pid)
+    log(:info) { "Fetching Go process #{pid} stats... "}
+
+    `gops stats #{pid}`.lines.each_with_object({}) do |line, acc|
+      key, val = line.split(/:\s+/)
+      acc[key] = val.to_i
+    end
+  end
+
+  def wait_tcp(port, host: "127.0.0.1", timeout: 10)
+    log(:info) { "Waiting for TCP server to start at #{port}" }
+
+    listening = false
+    while timeout > 0
+      begin
+        Socket.tcp(host, port, connect_timeout: 1).close
+        listening = true
+        log(:info) { "TCP server is listening at #{port}" }
+        break
+      rescue Errno::ECONNREFUSED, Errno::EHOSTUNREACH, SocketError
+      end
+
+      Kernel.sleep 0.5
+      timeout -= 0.5
+    end
+
+    fail "No server is listening at #{port}" unless listening
+  end
+
+  def pid(name)
+    processes.fetch(name).pid
+  end
+
+  def stdout(name)
+    pipes.fetch(name).then do |pipe|
+      pipe[:data] ||= pipe[:r].read
+    end
+  end
+
+  def sleep(time)
+    log(:info) { "Wait for #{time}s" }
+    Kernel.sleep time
+  end
+
+  def shutdown
+    processes.each_value do |process|
+      process.stop
+    end
+  end
+
+  private
+
+  attr_reader :processes, :pipes, :log_level
+
+  def log(level, &block)
+    return unless log_level >= LOG_LEVEL_TO_NUM[level]
+
+    $stdout.puts "[#{level}] [#{Time.now.iso8601}]  #{block.call}"
+  end
+end
+
+if ARGF
+  script = ARGF.read
+  runner = BenchRunner.new
+
+  begin
+    runner.load(script)
+    puts "All OK 👍"
+  rescue => e
+    $stderr.puts e.message
+    exit(1)
+  ensure
+    runner.shutdown
+  end
+end

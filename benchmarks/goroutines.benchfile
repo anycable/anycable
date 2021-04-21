@@ -1,0 +1,33 @@
+launch :rpc, "bundle exec anyt --only-rpc"
+wait_tcp 50051
+
+launch :anycable, "./dist/anycable-go"
+wait_tcp 8080
+
+BENCHMARK_COMMAND = <<~CMD
+  websocket-bench broadcast --concurrent 40 --sample-size 100 \
+  --step-size 200 --payload-padding 200 --total-steps 5 \
+  ws://localhost:8080/cable --server-type=actioncable
+CMD
+
+IDLE_ROUTINES_MAX = 200
+
+run :bench, BENCHMARK_COMMAND
+# Give some time to cool down after the benchmark
+sleep 5
+
+routines_1 = gops(pid(:anycable))["goroutines"]
+
+if routines_1 > IDLE_ROUTINES_MAX
+  fail "Too many goroutines: #{routines_1}"
+end
+
+# Run benchmark again to check whether we're leaking routines
+run :bench, BENCHMARK_COMMAND
+sleep 5
+
+routines_2 = gops(pid(:anycable))["goroutines"]
+
+if (routines_2 / routines_1.to_f) > 1.1
+  fail "Go routines leak detected: #{routines_1} -> #{routines_2}"
+end
