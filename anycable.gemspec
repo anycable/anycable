@@ -20,20 +20,12 @@ Gem::Specification.new do |spec|
     "source_code_uri" => "http://github.com/anycable/anycable"
   }
 
-  spec.executables = %w[anycable anycabled]
-  spec.files = Dir.glob("lib/**/*") + Dir.glob("bin/*") + %w[README.md MIT-LICENSE CHANGELOG.md]
+  spec.executables = []
+  spec.files = %w[README.md MIT-LICENSE CHANGELOG.md]
   spec.require_paths = ["lib"]
 
   spec.required_ruby_version = ">= 2.6.0"
 
-  spec.add_dependency "anyway_config", ">= 2.1.0"
+  spec.add_dependency "anycable-core", AnyCable::VERSION
   spec.add_dependency "grpc", "~> 1.37"
-
-  spec.add_development_dependency "redis", ">= 4.0"
-  spec.add_development_dependency "bundler", ">= 1"
-  spec.add_development_dependency "rake", ">= 13.0"
-  spec.add_development_dependency "rack", "~> 2.0"
-  spec.add_development_dependency "rspec", ">= 3.5"
-  spec.add_development_dependency "webmock", "~> 3.8"
-  spec.add_development_dependency "webrick"
 end

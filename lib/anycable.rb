@@ -96,12 +96,11 @@ module AnyCable
     attr_writer :middleware
   end
 
-  require "anycable/middlewares/check_version"
-
   self.middleware = MiddlewareChain.new
 end
 
+# gRPC is the default for now, so, let's try to load it.
 begin
   require "anycable/grpc"
-rescue LoadError, NameError
+rescue LoadError
 end

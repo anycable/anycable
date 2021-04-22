@@ -45,3 +45,8 @@ jobs:
     - name: Run RSpec
       run: |
         bundle exec rspec
+    - name: Run RSpec w/o gRPC
+      env:
+        GRPC: false
+      run: |
+        bundle exec rspec
