@@ -4,11 +4,7 @@ module AnyCable
   module RPC
     module Handlers
       module Disconnect
-        using Helpers
-
-        module_function
-
-        def call(request)
+        def disconnect(request)
           logger.debug("RPC Disconnect: #{request.inspect}")
 
           socket = build_socket(env: rack_env(request.env))

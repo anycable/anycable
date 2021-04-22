@@ -4,11 +4,7 @@ module AnyCable
   module RPC
     module Handlers
       module Connect
-        using Helpers
-
-        module_function
-
-        def call(request)
+        def connect(request)
           logger.debug("RPC Connect: #{request.inspect}")
 
           socket = build_socket(env: rack_env(request.env))

@@ -15,7 +15,9 @@ describe "Rack lint" do
   let(:url) { "ws://example.com/cable?rack=lint" }
   let(:request) { AnyCable::ConnectionRequest.new(env: env) }
 
-  subject { AnyCable::RPC::Handlers::Connect.call(request) }
+  let(:handler) { AnyCable::RPC::Handler.new }
+
+  subject { handler.connect(request) }
 
   specify do
     expect(subject).to be_success
