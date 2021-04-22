@@ -20,7 +20,9 @@ describe AnyCable::RPC::Handlers::Disconnect do
 
   let(:log) { AnyCable::TestFactory.events_log }
 
-  subject { described_class.call(request) }
+  let(:handler) { AnyCable::RPC::Handler.new }
+
+  subject { handler.disconnect(request) }
 
   it "invokes #disconnect method with correct data" do
     expect { subject }.to change { log.size }.by(1)

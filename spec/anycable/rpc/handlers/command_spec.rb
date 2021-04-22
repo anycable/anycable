@@ -5,7 +5,9 @@ require "spec_helper"
 describe AnyCable::RPC::Handlers::Command do
   include_context "rpc_command"
 
-  subject { described_class.call(request) }
+  let(:handler) { AnyCable::RPC::Handler.new }
+
+  subject { handler.command(request) }
 
   describe "PERFORM" do
     before(:all) do
@@ -102,7 +104,7 @@ describe AnyCable::RPC::Handlers::Command do
       let(:data) { {action: "tick"} }
 
       it "persists session after each command" do
-        first_call = described_class.call(request)
+        first_call = handler.command(request)
 
         expect(first_call).to be_success
         expect(first_call.transmissions.size).to eq 1
@@ -114,7 +116,7 @@ describe AnyCable::RPC::Handlers::Command do
 
         request.session = first_session
 
-        second_call = described_class.call(request)
+        second_call = handler.command(request)
 
         expect(second_call).to be_success
         expect(second_call.transmissions.size).to eq 1
@@ -126,7 +128,7 @@ describe AnyCable::RPC::Handlers::Command do
 
         request.data = {action: "add", a: 1, b: 2}.to_json
 
-        third_call = described_class.call(request)
+        third_call = handler.command(request)
 
         expect(third_call).to be_success
         # # performing a call that doesn't modify session shouldn't
@@ -139,7 +141,7 @@ describe AnyCable::RPC::Handlers::Command do
       let(:data) { {action: "itick"} }
 
       it "persists session after each command" do
-        first_call = described_class.call(request)
+        first_call = handler.command(request)
 
         expect(first_call).to be_success
         expect(first_call.transmissions.size).to eq 1
@@ -151,7 +153,7 @@ describe AnyCable::RPC::Handlers::Command do
 
         request.istate = first_istate
 
-        second_call = described_class.call(request)
+        second_call = handler.command(request)
 
         expect(second_call).to be_success
         expect(second_call.transmissions.size).to eq 1
@@ -163,7 +165,7 @@ describe AnyCable::RPC::Handlers::Command do
 
         request.data = {action: "add", a: 1, b: 2}.to_json
 
-        third_call = described_class.call(request)
+        third_call = handler.command(request)
 
         expect(third_call).to be_success
         # erforming a call that doesn't modify instance vars

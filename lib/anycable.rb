@@ -30,7 +30,7 @@ module AnyCable
     # Provide a method to build a server to serve RPC
     attr_accessor :server_builder
 
-    attr_writer :logger
+    attr_writer :logger, :rpc_handler
 
     attr_reader :middleware
 
@@ -89,6 +89,10 @@ module AnyCable
     # To send hash or object use ActionCable.server.broadcast instead!
     def broadcast(channel, payload)
       broadcast_adapter.broadcast(channel, payload)
+    end
+
+    def rpc_handler
+      @rpc_handler ||= AnyCable::RPC::Handler.new
     end
 
     private

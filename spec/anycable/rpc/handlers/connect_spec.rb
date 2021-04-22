@@ -5,9 +5,11 @@ require "spec_helper"
 describe AnyCable::RPC::Handlers::Connect do
   include_context "rpc_command"
 
+  let(:handler) { AnyCable::RPC::Handler.new }
+
   let(:request) { AnyCable::ConnectionRequest.new(env: env) }
 
-  subject { described_class.call(request) }
+  subject { handler.connect(request) }
 
   context "no cookies" do
     it "responds with failure if no cookies" do

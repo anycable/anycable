@@ -2,10 +2,7 @@
 
 require "anycable/protos/rpc_pb"
 
-require "anycable/rpc/helpers"
-require "anycable/rpc/handlers/connect"
-require "anycable/rpc/handlers/disconnect"
-require "anycable/rpc/handlers/command"
+require "anycable/rpc/handler"
 
 # Extend some PB auto-generated classes
 module AnyCable
