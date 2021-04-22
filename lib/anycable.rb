@@ -8,6 +8,7 @@ require "anycable/exceptions_handling"
 require "anycable/broadcast_adapters"
 
 require "anycable/middleware_chain"
+require "anycable/middlewares/exceptions"
 
 require "anycable/socket"
 require "anycable/rpc"
@@ -100,7 +101,10 @@ module AnyCable
     attr_writer :middleware
   end
 
-  self.middleware = MiddlewareChain.new
+  self.middleware = MiddlewareChain.new.tap do |chain|
+    # Include exceptions handling middleware by default
+    chain.use(Middlewares::Exceptions)
+  end
 end
 
 # gRPC is the default for now, so, let's try to load it.
