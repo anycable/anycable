@@ -4,7 +4,7 @@ require "spec_helper"
 require "anycable/middlewares/check_version"
 
 describe "version check spec" do
-  include_context "rpc_command"
+  include_context "anycable:grpc:stub"
 
   before(:all) do
     chain = AnyCable::MiddlewareChain.new

@@ -5,7 +5,6 @@ require "spec_helper"
 # Only lint rack env in this spec to avoid
 # failing all the specs if it's invalid
 describe "Rack lint" do
-  include_context "anycable:rpc:server"
   include_context "rpc_command"
 
   let(:headers) do

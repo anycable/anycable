@@ -3,8 +3,8 @@
 require "spec_helper"
 
 describe "disconnection" do
-  include_context "anycable:rpc:server"
-  include_context "rpc_command"
+  include_context "anycable:grpc:server"
+  include_context "anycable:grpc:stub"
 
   let(:user) { "disco" }
   let(:url) { "http://example.io/cable_lite?token=123" }

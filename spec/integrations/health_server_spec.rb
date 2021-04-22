@@ -4,9 +4,8 @@ require "spec_helper"
 require "net/http"
 
 describe "health server" do
-  include_context "anycable:rpc:server"
-
   before(:all) do
+    @server = double("server")
     @health_server = AnyCable::HealthServer.new(
       @server,
       port: 54_321

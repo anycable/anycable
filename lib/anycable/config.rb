@@ -36,7 +36,7 @@ module AnyCable
       ### Logging options
       log_file: nil,
       log_level: :info,
-      debug: false, # Shortcut to enable GRPC logging and debug level
+      debug: false, # Shortcut to enable debug level and verbose logging
 
       ### Health check options
       http_health_port: nil,
@@ -65,7 +65,7 @@ module AnyCable
           --broadcast-adapter=type          Pub/sub adapter type for broadcasts, default: redis
           --log-level=level                 Logging level, default: "info"
           --log-file=path                   Path to log file, default: <none> (log to STDOUT)
-          --debug                           Turn on verbose logging ("debug" level and gRPC logging on)
+          --debug                           Turn on verbose logging ("debug" level and verbose logging on)
 
       HTTP HEALTH CHECKER
           --http-health-port=port           Port to run HTTP health server on, default: <none> (disabled)

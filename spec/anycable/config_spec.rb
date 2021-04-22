@@ -2,19 +2,12 @@
 
 require "spec_helper"
 
-describe "AnyCable::Config" do
-  let(:described_class) do
-    require "anycable/config"
-    AnyCable::Config
-  end
-
+describe AnyCable::Config do
   subject(:config) { AnyCable.config }
 
   it "loads config vars from anycable.yml", :aggregate_failures do
-    expect(config.rpc_host).to eq "0.0.0.0:50123"
     expect(config.redis_channel).to eq "__anycable__"
     expect(config.log_level).to eq :info
-    expect(config.log_grpc).to eq false
   end
 
   context "when DEBUG is set" do
@@ -22,9 +15,8 @@ describe "AnyCable::Config" do
 
     subject(:config) { described_class.new }
 
-    it "sets log to debug and log_grpc to true" do
+    it "sets log to debug" do
       expect(config.log_level).to eq :debug
-      expect(config.log_grpc).to eq true
     end
   end
 
@@ -106,8 +98,8 @@ describe "AnyCable::Config" do
 
     around { |ex| with_env("ANYCABLE_CONF" => nil, &ex) }
 
-    describe "#rpc_host" do
-      specify { expect(config.rpc_host).to eq("127.0.0.1:50051") }
+    describe "#redis_url" do
+      specify { expect(config.redis_url).to eq("redis://localhost:6379/5") }
     end
   end
 end
