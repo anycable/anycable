@@ -6,6 +6,7 @@ module AnyCable
     class << self
       def call(_)
         AnyCable.logger.info "Dummy RPC is running!"
+        TestServer.new
       end
     end
 

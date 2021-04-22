@@ -1,11 +1,12 @@
 source 'https://rubygems.org'
-gemspec
+gemspec name: "anycable-core"
 
 gem "pry-byebug", platform: :mri
 
 gem "benchmark_driver"
 
 gem "anyway_config", ENV.fetch("ANYWAY_CONFIG_VERSION", ">= 2.1.0")
+gem "grpc", "~> 1.37" unless ENV["GRPC"] == "false"
 
 eval_gemfile "gemfiles/rubocop.gemfile"
 
