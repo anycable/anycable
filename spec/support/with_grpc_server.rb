@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.shared_context "anycable:rpc:server" do
+RSpec.shared_context "anycable:grpc:server" do
   before(:all) do
     @server = AnyCable::GRPC::Server.new(
       host: AnyCable.config.rpc_host,

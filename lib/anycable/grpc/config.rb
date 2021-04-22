@@ -23,6 +23,9 @@ module AnyCable
         debug? || super
       end
 
+      # Add alias explicitly, 'cause previous alias refers to the original log_grpc method
+      alias_method :log_grpc?, :log_grpc
+
       # Build gRPC server parameters
       def to_grpc_params
         {

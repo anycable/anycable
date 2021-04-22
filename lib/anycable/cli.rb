@@ -7,7 +7,7 @@ require "anycable"
 $stdout.sync = true
 
 module AnyCable
-  # Command-line interface for running AnyCable gRPC server
+  # Command-line interface for running AnyCable RPC server
   class CLI
     # (not-so-big) List of common boot files for
     # different applications
@@ -44,25 +44,21 @@ module AnyCable
 
       configure_server!
 
-      logger.info "Starting AnyCable gRPC server (pid: #{Process.pid}, workers_num: #{config.rpc_pool_size})"
+      logger.info "Starting AnyCable RPC server (pid: #{Process.pid})"
 
-      print_versions!
+      print_version!
 
       logger.info "Serving #{defined?(::Rails) ? "Rails " : ""}application from #{boot_file}" unless embedded?
 
       verify_connection_factory!
 
-      log_grpc! if config.log_grpc
-
       log_errors!
 
       use_version_check! if config.version_check_enabled?
 
-      @server = AnyCable::GRPC::Server.new(
-        host: config.rpc_host,
-        **config.to_grpc_params,
-        interceptors: AnyCable.middleware.to_a
-      )
+      verify_server_builder!
+
+      @server = AnyCable.server_builder.call(config)
 
       # Make sure middlewares are not adding after server has started
       AnyCable.middleware.freeze
@@ -135,9 +131,8 @@ module AnyCable
       self_read
     end
 
-    def print_versions!
+    def print_version!
       logger.info "AnyCable version: #{AnyCable::VERSION} (proto_version: #{AnyCable::PROTO_VERSION})"
-      logger.info "gRPC version: #{::GRPC::VERSION}"
     end
 
     # rubocop:disable Metrics/MethodLength
@@ -196,7 +191,6 @@ module AnyCable
       AnyCable.broadcast_adapter.announce!
     end
 
-    # rubocop: disable Metrics/MethodLength, Metrics/AbcSize
     def run_custom_server_command!
       pid = nil
       stopped = false
@@ -232,11 +226,6 @@ module AnyCable
         end
       end
     end
-    # rubocop: enable Metrics/MethodLength, Metrics/AbcSize
-
-    def log_grpc!
-      ::GRPC.define_singleton_method(:logger) { AnyCable.logger }
-    end
 
     # Add default exceptions handler: print error message to log
     def log_errors!
@@ -256,6 +245,15 @@ module AnyCable
       logger.error "AnyCable connection factory must be configured. " \
                    "Make sure you've required a gem (e.g. `anycable-rails`) or " \
                    "configured `AnyCable.connection_factory` yourself"
+      exit(1)
+    end
+
+    def verify_server_builder!
+      return if AnyCable.server_builder
+
+      logger.error "AnyCable server builder must be configured. " \
+                   "Make sure you've required a gem (e.g. `anycable-grpc`) or " \
+                   "configured `AnyCable.server_builder` yourself"
       exit(1)
     end
 

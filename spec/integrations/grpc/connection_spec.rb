@@ -3,8 +3,8 @@
 require "spec_helper"
 
 describe "client connection" do
-  include_context "anycable:rpc:server"
-  include_context "rpc_command"
+  include_context "anycable:grpc:server"
+  include_context "anycable:grpc:stub"
 
   let(:headers) do
     {

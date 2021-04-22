@@ -8,6 +8,12 @@ require "anycable/grpc/handler"
 
 module AnyCable
   module GRPC
+    using(Module.new do
+      refine ::GRPC::RpcServer do
+        attr_reader :pool_size
+      end
+    end)
+
     # Wrapper over gRPC server.
     #
     # Basic example:
@@ -42,7 +48,7 @@ module AnyCable
 
         grpc_server.wait_till_running
 
-        logger.info "RPC server is listening on #{host}"
+        logger.info "RPC server is listening on #{host} (workers_num: #{grpc_server.pool_size})"
       end
 
       def wait_till_terminated
