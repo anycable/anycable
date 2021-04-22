@@ -1,17 +1,26 @@
 # frozen_string_literal: true
 
 module AnyCable
-  module Middlewares
-    # Checks that RPC client version is compatible with
+  module GRPC
+    # Checks that gRPC client version is compatible with
     # the current RPC proto version
-    class CheckVersion < Middleware
+    class CheckVersion < ::GRPC::ServerInterceptor
       attr_reader :version
 
       def initialize(version)
         @version = version
       end
 
-      def call(_request, call, _method)
+      def request_response(request: nil, call: nil, method: nil)
+        # Call only for AnyCable service
+        return yield unless method.receiver.is_a?(AnyCable::GRPC::Handler)
+
+        check_version(call) do
+          yield
+        end
+      end
+
+      def check_version(call)
         supported_versions = call.metadata["protov"]&.split(",")
         return yield if supported_versions&.include?(version)
 

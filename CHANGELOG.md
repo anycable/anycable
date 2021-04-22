@@ -4,6 +4,20 @@
 
 ## 1.1.0-dev
 
+- **BREAKING** Move middlewares from gRPC interceptors to custom implementation. ([@palkan][])
+
+That allowed us to have _real_ middlewares with ability to modify responses, intercept exceptions, etc.
+The API changed a bit:
+
+```diff
+ class SomeMiddleware < AnyCable::Middleware
+-  def call(request, rpc_call, rpc_handler)
++  def call(rpc_method_name, request)
+     yield
+   end
+ end
+```
+
 - **Ruby >= 2.6** is required.
 - **Anyway Config >= 2.1** is required.
 

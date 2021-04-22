@@ -1,19 +1,17 @@
 # frozen_string_literal: true
 
 require "spec_helper"
-require "anycable/middlewares/check_version"
 
 describe "version check spec" do
   include_context "anycable:grpc:stub"
 
   before(:all) do
-    chain = AnyCable::MiddlewareChain.new
-    chain.use(AnyCable::Middlewares::CheckVersion.new("test-v1"))
+    interceptor = AnyCable::GRPC::CheckVersion.new("test-v1")
 
     @server = AnyCable::GRPC::Server.new(
       host: AnyCable.config.rpc_host,
       **AnyCable.config.to_grpc_params,
-      interceptors: chain.to_a
+      interceptors: [interceptor]
     )
 
     @server.start

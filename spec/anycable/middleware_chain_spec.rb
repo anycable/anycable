@@ -38,4 +38,62 @@ describe AnyCable::MiddlewareChain do
       )
     end
   end
+
+  describe "#call" do
+    before do
+      # Add rescue middleware
+      chain.use(Class.new(AnyCable::Middleware) do
+        def call(mid, req)
+          yield
+        rescue => exp
+          {status: :exception, message: exp.message}
+        end
+      end)
+
+      # Add time tracking middleware
+      chain.use(Class.new(AnyCable::Middleware) do
+        def call(mid, req)
+          start = Time.now
+          yield.tap do |response|
+            response[:duration] = Time.now - start
+          end
+        end
+      end)
+
+      # Add sleeping middleware
+      chain.use(Class.new(AnyCable::Middleware) do
+        def call(mid, req)
+          if mid == :sleep
+            sleep 1
+          end
+          yield
+        end
+      end)
+
+      # Add aborting middleware
+      chain.use(Class.new(AnyCable::Middleware) do
+        def call(mid, req)
+          if mid == :abort
+            raise "Aborting from middleware"
+          end
+          yield
+        end
+      end)
+    end
+
+    specify "allows manipulating response" do
+      response = chain.call(:test, "data") { {status: :ok} }
+
+      expect(response[:status]).to eq :ok
+      expect(response).to have_key(:duration)
+
+      response = chain.call(:sleep, "data") { {status: :ok} }
+      expect(response[:duration]).to be >= 1.0
+    end
+
+    specify "allows aborting calls via exceptions" do
+      expect(chain.call(:abort, "data", &(proc {}))).to eq({status: :exception, message: "Aborting from middleware"})
+      expect(chain.call(:test, "data") { raise "Handler exception" }).to eq({status: :exception, message: "Handler exception"})
+    end
+  end
 end

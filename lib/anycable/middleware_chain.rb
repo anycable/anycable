@@ -30,6 +30,22 @@ module AnyCable
       registry
     end
 
+    def call(*args, &block)
+      return yield(*args) if registry.none?
+
+      execute_next_middleware(0, *args, block)
+    end
+
+    private
+
+    def execute_next_middleware(ind, *args, block)
+      return block.call(*args) if ind >= registry.size
+
+      registry[ind].call(*args) do
+        execute_next_middleware(ind + 1, *args, block)
+      end
+    end
+
     private
 
     attr_reader :mu, :registry
