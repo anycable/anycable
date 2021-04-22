@@ -9,21 +9,11 @@ PROJECT_ROOT = File.expand_path("../", __dir__)
 
 ENV["ANYCABLE_CONF"] = File.join(File.dirname(__FILE__), "support/anycable.yml")
 
-# Whether to run tests without GRPC loaded
-NO_GRPC = ENV["GRPC"] == "false"
-# Make AnyCable think GRPC has been already loaded
-if NO_GRPC
-  grpc_path =
-    if $LOAD_PATH.respond_to?(:resolve_feature_path)
-      $LOAD_PATH.resolve_feature_path("grpc").last
-    else
-      RubyVM.resolve_feature_path("grpc").last
-    end
-
-  $LOADED_FEATURES << grpc_path
-end
-
 require "anycable"
+
+# Whether to run tests without GRPC loaded
+NO_GRPC = !defined?(::GRPC)
+
 require "json"
 require "rack"
 
