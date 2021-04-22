@@ -1,8 +1,9 @@
 # frozen_string_literal: true
 
 RSpec.shared_context "anycable:rpc:command" do
-  include_context "anycable:rpc:stub"
-
+  let(:url) { "ws://example.anycable.com/cable" }
+  let(:headers) { {} }
+  let(:env) { AnyCable::Env.new(url: url, headers: headers) }
   let(:command) { "" }
   let(:channel_id) { "" }
   let(:identifiers) { {} }

@@ -3,7 +3,7 @@
 require "spec_helper"
 
 describe "health checker" do
-  include_context "anycable:rpc:server"
+  include_context "anycable:grpc:server"
 
   before(:all) do
     @service = Grpc::Health::Checker.rpc_stub_class

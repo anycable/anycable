@@ -9,7 +9,8 @@ require "anycable/broadcast_adapters"
 
 require "anycable/middleware_chain"
 
-require "anycable/grpc"
+require "anycable/socket"
+require "anycable/rpc"
 require "anycable/health_server"
 
 # AnyCable allows to use any websocket service (written in any language) as a replacement
@@ -25,6 +26,9 @@ module AnyCable
     # is a callable object with build
     # a Connection object
     attr_accessor :connection_factory
+
+    # Provide a method to build a server to serve RPC
+    attr_accessor :server_builder
 
     attr_writer :logger
 
@@ -48,7 +52,7 @@ module AnyCable
     end
 
     # Register a custom block that will be called
-    # when an exception is raised during gRPC call
+    # when an exception is raised during RPC call
     def capture_exception(&block)
       ExceptionsHandling << block
     end
@@ -95,4 +99,9 @@ module AnyCable
   require "anycable/middlewares/check_version"
 
   self.middleware = MiddlewareChain.new
+end
+
+begin
+  require "anycable/grpc"
+rescue LoadError, NameError
 end

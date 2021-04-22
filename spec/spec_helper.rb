@@ -9,6 +9,20 @@ PROJECT_ROOT = File.expand_path("../", __dir__)
 
 ENV["ANYCABLE_CONF"] = File.join(File.dirname(__FILE__), "support/anycable.yml")
 
+# Whether to run tests without GRPC loaded
+NO_GRPC = ENV["GRPC"] == "false"
+# Make AnyCable think GRPC has been already loaded
+if NO_GRPC
+  grpc_path =
+    if $LOAD_PATH.respond_to?(:resolve_feature_path)
+      $LOAD_PATH.resolve_feature_path("grpc").last
+    else
+      RubyVM.resolve_feature_path("grpc").last
+    end
+
+  $LOADED_FEATURES << grpc_path
+end
+
 require "anycable"
 require "json"
 require "rack"
@@ -25,7 +39,7 @@ AnyCable.logger = TestLogger.new
 
 if ENV["LOG"]
   AnyCable.logger = Logger.new($stdout)
-  ::GRPC.define_singleton_method(:logger) { AnyCable.logger }
+  ::GRPC.define_singleton_method(:logger) { AnyCable.logger } if defined?(::GRPC)
 end
 
 module TestExHandler
@@ -62,6 +76,11 @@ RSpec.configure do |config|
 
   config.order = :random
   Kernel.srand config.seed
+
+  config.define_derived_metadata(file_path: %r{/grpc/}) do |metadata|
+    metadata[:grpc] = true
+  end
+  config.filter_run_excluding(grpc: true) if NO_GRPC
 
   config.before do
     Anyway.env.clear if defined?(Anyway::Config)

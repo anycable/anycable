@@ -3,7 +3,7 @@
 require "spec_helper"
 
 describe "CLI embedded", :cli do
-  include_context "rpc_command"
+  include_context "anycable:grpc:stub"
 
   let(:request) { AnyCable::ConnectionRequest.new(env: env) }
 
