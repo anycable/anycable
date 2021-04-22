@@ -5,7 +5,10 @@ require "net/http"
 
 describe "health server" do
   before(:all) do
-    @server = double("server")
+    @server = Object.new.tap do |obj|
+      obj.define_singleton_method(:running?) { true }
+    end
+
     @health_server = AnyCable::HealthServer.new(
       @server,
       port: 54_321
