@@ -4,6 +4,8 @@ AnyCable server allows to add custom _middlewares_.
 
 For example, `anycable-rails` ships with [the middleware](https://github.com/anycable/anycable-rails/blob/master/lib/anycable/rails/middlewares/executor.rb) that integrate [Rails Executor](https://guides.rubyonrails.org/v5.2.0/threading_and_code_execution.html#framework-behavior) into RPC server.
 
+Exceptions handling is also implemented via [AnyCable middleware](https://github.com/anycable/anycable/blob/master/lib/anycable/middlewares/exceptions.rb).
+
 ## Adding custom middleware
 
 AnyCable middleware is a class inherited from `AnyCable::Middleware` and implementing `#call` method:

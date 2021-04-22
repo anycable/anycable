@@ -4,8 +4,7 @@ RSpec.shared_context "anycable:grpc:server" do
   before(:all) do
     @server = AnyCable::GRPC::Server.new(
       host: AnyCable.config.rpc_host,
-      **AnyCable.config.to_grpc_params,
-      interceptors: AnyCable.middleware.to_a
+      **AnyCable.config.to_grpc_params
     )
 
     @server.start
