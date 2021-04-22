@@ -26,7 +26,6 @@ module AnyCable
       @embedded = embedded
     end
 
-    # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
     def run(args = [])
       @at_stop = []
 
@@ -81,7 +80,6 @@ module AnyCable
         exit(0)
       end
     end
-    # rubocop:enable Metrics/AbcSize, Metrics/MethodLength
 
     def shutdown
       at_stop.each(&:call)
@@ -133,7 +131,6 @@ module AnyCable
       logger.info "AnyCable version: #{AnyCable::VERSION} (proto_version: #{AnyCable::PROTO_VERSION})"
     end
 
-    # rubocop:disable Metrics/MethodLength
     def boot_app!
       @boot_file ||= try_detect_app
 
@@ -157,7 +154,6 @@ module AnyCable
         exit(1)
       end
     end
-    # rubocop:enable Metrics/MethodLength
 
     def try_detect_app
       APP_CANDIDATES.detect { |path| File.exist?(path) }
@@ -255,7 +251,6 @@ module AnyCable
       exit(1)
     end
 
-    # rubocop:disable Metrics/MethodLength
     def parse_cli_options!(args)
       unknown_opts = []
 
@@ -295,7 +290,6 @@ module AnyCable
         end
       end
     end
-    # rubocop:enable Metrics/MethodLength
 
     def usage
       usage_header =
