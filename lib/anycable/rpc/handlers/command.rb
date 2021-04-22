@@ -4,11 +4,7 @@ module AnyCable
   module RPC
     module Handlers
       module Command
-        using Helpers
-
-        module_function
-
-        def call(message)
+        def command(message)
           logger.debug("RPC Command: #{message.inspect}")
 
           socket = build_socket(env: rack_env(message.env))

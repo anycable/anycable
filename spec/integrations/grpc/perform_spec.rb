@@ -19,10 +19,10 @@ describe "client messages" do
   end
 
   it "invokes Command handler" do
-    allow(AnyCable::RPC::Handlers::Command).to receive(:call).and_call_original
+    allow(AnyCable.rpc_handler).to receive(:handle).and_call_original
 
     expect(subject).to be_success
-    expect(AnyCable::RPC::Handlers::Command).to have_received(:call).with(request)
+    expect(AnyCable.rpc_handler).to have_received(:handle).with(:command, request)
   end
 
   context "when exception" do

@@ -10,7 +10,7 @@ module AnyCable
     class Handler < AnyCable::GRPC::Service
       # Handle connection request from WebSocket server
       def connect(request, _unused_call)
-        AnyCable::RPC::Handlers::Connect.call(request)
+        AnyCable.rpc_handler.handle(:connect, request)
       rescue => exp
         notify_exception(exp, :connect, request)
 
@@ -21,7 +21,7 @@ module AnyCable
       end
 
       def disconnect(request, _unused_call)
-        AnyCable::RPC::Handlers::Disconnect.call(request)
+        AnyCable.rpc_handler.handle(:disconnect, request)
       rescue => exp
         notify_exception(exp, :disconnect, request)
 
@@ -32,7 +32,7 @@ module AnyCable
       end
 
       def command(request, _unused_call)
-        AnyCable::RPC::Handlers::Command.call(request)
+        AnyCable.rpc_handler.handle(:command, request)
       rescue => exp
         notify_exception(exp, :command, request)
 
