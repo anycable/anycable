@@ -1,0 +1,11 @@
+module AnyCable
+  module GRPC
+    class CheckVersion
+      attr_reader version: untyped
+
+      def initialize: (untyped version) -> untyped
+      def request_response: (?request: untyped? request, ?call: untyped? call, ?method: untyped? method) { () -> untyped } -> untyped
+      def check_version: (untyped call) { () -> untyped } -> untyped
+    end
+  end
+end

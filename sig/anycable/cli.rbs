@@ -1,0 +1,40 @@
+module AnyCable
+  class CLI
+    APP_CANDIDATES: Array[String]
+    WAIT_PROCESS: Integer
+    attr_reader server: _Server
+    attr_reader health_server: HealthServer
+    attr_reader embedded: bool
+
+    alias embedded? embedded
+
+    def initialize: (?embedded: bool embedded) -> void
+    def run: (?untyped args) -> void
+    def shutdown: () -> void
+
+    private
+
+    attr_reader boot_file: String?
+    attr_reader server_command: String?
+
+    def config: () -> Config
+    def logger: () -> Logger
+    def at_stop: () { () -> void } -> Array[^() -> void]
+    def wait_till_terminated: () -> void
+    def setup_signals: () -> void
+    def print_version!: () -> void
+    def boot_app!: () -> void
+    def try_detect_app: () -> String?
+    def configure_server!: () -> void
+    def start_health_server!: () -> void
+    def start_pubsub!: () -> void
+    def run_custom_server_command!: () -> void
+    def log_errors!: () -> void
+    def verify_connection_factory!: () -> void
+    def verify_server_builder!: () -> void
+    def parse_gem_options!: (untyped args) -> void
+    def parse_cli_options!: (untyped args) -> void
+    def build_cli_parser: () -> untyped
+    def usage: () -> String
+  end
+end

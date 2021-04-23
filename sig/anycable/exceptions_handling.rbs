@@ -1,0 +1,14 @@
+module AnyCable
+  module ExceptionsHandling
+    def self.add_handler: (untyped block) -> untyped
+
+    alias self.<< self.add_handler
+
+    def self.notify: (untyped exp, untyped method_name, untyped message) -> untyped
+
+    private
+
+    def self.procify: (untyped block) -> untyped
+    def self.handlers: () -> untyped
+  end
+end

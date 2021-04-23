@@ -1,0 +1,5 @@
+module AnyCable
+  module BroadcastAdapters
+    def self?.lookup_adapter: (untyped args) -> untyped
+  end
+end

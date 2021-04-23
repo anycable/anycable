@@ -1,0 +1,9 @@
+module AnyCable
+  module RPC
+    module Handlers
+      module Connect : _Handler
+        def connect: (ConnectionRequest request) -> ConnectionResponse
+      end
+    end
+  end
+end

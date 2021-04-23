@@ -22,11 +22,17 @@ module AnyCable
 
     def session=(val)
       self.cstate = {} unless cstate
-      cstate[SESSION_KEY] = val
+      state_ = cstate
+      if state_
+        state_[SESSION_KEY] = val
+      end
     end
 
     def session
-      cstate[SESSION_KEY]
+      state_ = cstate
+      if state_
+        state_[SESSION_KEY]
+      end
     end
 
     def cstate

@@ -1,0 +1,21 @@
+module AnyCable
+  class HealthServer
+    SUCCESS_RESPONSE: Array[Integer | String]
+    FAILURE_RESPONSE: Array[Integer | String]
+
+    attr_reader server: _Server
+    attr_reader port: Integer
+    attr_reader path: String
+    attr_reader http_server: untyped
+
+    def initialize: (_Server server, port: Integer port, ?logger: Logger logger, ?path: String path) -> void
+    def start: () -> void
+    def stop: () -> void
+    def running?: () -> bool
+
+    private
+
+    def logger: () -> Logger
+    def build_server: () -> untyped
+  end
+end

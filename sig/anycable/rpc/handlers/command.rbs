@@ -1,0 +1,9 @@
+module AnyCable
+  module RPC
+    module Handlers
+      module Command : _Handler
+        def command: (CommandMessage message) -> CommandResponse
+      end
+    end
+  end
+end

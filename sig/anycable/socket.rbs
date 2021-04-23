@@ -1,0 +1,33 @@
+module AnyCable
+  class Socket
+    class State
+      attr_reader dirty_keys: Array[String]?
+      attr_reader source: protoMap
+
+      def initialize: (protoMap) -> void
+      def read: (String key) -> untyped
+      def write: (String key, String val) -> void
+      def changed_fields: () -> protoMap?
+
+      alias [] read
+      alias []= write
+    end
+
+    attr_reader transmissions: Array[String]
+    attr_reader env: Hash[String, untyped]
+    attr_reader cstate: State
+    attr_reader istate: State
+
+    def initialize: (env: Hash[String, untyped]) -> void
+    def transmit: (String) -> void
+    def subscribe: (String, String) -> void
+    def unsubscribe: (String, String) -> void
+    def unsubscribe_from_all: (String) -> void
+    def streams: () -> { start: Array[String], stop: Array[String] }
+    def close: () -> void
+    def closed?: () -> bool
+    def stop_streams?: () -> bool
+    def session: () -> untyped
+    def session=: (untyped val) -> untyped
+  end
+end

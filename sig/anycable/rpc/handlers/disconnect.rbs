@@ -1,0 +1,9 @@
+module AnyCable
+  module RPC
+    module Handlers
+      module Disconnect : _Handler
+        def disconnect: (DisconnectRequest request) -> DisconnectResponse
+      end
+    end
+  end
+end

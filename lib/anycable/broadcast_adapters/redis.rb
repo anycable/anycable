@@ -1,8 +1,11 @@
 # frozen_string_literal: true
 
-gem "redis", ">= 3"
+begin
+  require "redis"
+rescue LoadError
+  raise "Please, install redis gem to use Redis broadcast adapter"
+end
 
-require "redis"
 require "json"
 
 module AnyCable

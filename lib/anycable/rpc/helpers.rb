@@ -53,7 +53,8 @@ module AnyCable
       end
 
       def build_headers(headers)
-        headers.each_with_object({}) do |(k, v), obj|
+        headers.each_with_object({}) do |header, obj|
+          k, v = *header
           k = k.upcase
           k.tr!("-", "_")
           obj["HTTP_#{k}"] = v
