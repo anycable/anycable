@@ -1,0 +1,46 @@
+module AnyCable
+  interface _Config
+    def broadcast_adapter: () -> Symbol
+    def broadcast_adapter=: (Symbol) -> void
+    def redis_url: () -> String
+    def redis_url=: (String) -> void
+    def redis_sentinels: () -> Array[String | Hash[untyped, untyped]]?
+    def redis_sentinels=: (Array[String]) -> void
+    def redis_channel: () -> String
+    def redis_channel=: (String) -> void
+    def http_broadcast_url: () -> String
+    def http_broadcast_url=: (String) -> void
+    def http_broadcast_secret: () -> String?
+    def http_broadcast_secret=: (String) -> void
+    def log_file: () -> String?
+    def log_file=: (String) -> void
+    def log_level: () -> String
+    def log_level=: (String) -> void
+    def debug: () -> bool
+    def debug=: (bool) -> void
+    def http_health_port: () -> Integer?
+    def http_health_port=: (Integer) -> void
+    def http_health_path: () -> String
+    def http_health_path=: (String) -> void
+    def version_check_enabled: () -> bool
+    def version_check_enabled=: (bool) -> void
+  end
+
+  class Config < Anyway::Config
+    def self.usage: (String txt) -> void
+    def self.usages: () -> Array[String]
+
+    include _Config
+
+    alias debug? debug
+    alias version_check_enabled? version_check_enabled
+
+    def http_health_port_provided?: () -> bool
+    def to_redis_params: () -> { url: String, sentinels: Array[untyped]?, ssl_params: Hash[Symbol, untyped]? }
+    def to_http_health_params: () -> { port: Integer?, path: String }
+
+    private
+
+    def parse_sentinel: ((String | Hash[untyped, untyped]) sentinel) -> Hash[Symbol, untyped]
+  end
+end

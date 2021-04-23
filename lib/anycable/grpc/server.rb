@@ -32,7 +32,7 @@ module AnyCable
       def initialize(host:, logger: nil, **options)
         @logger = logger
         @host = host
-        @grpc_server = build_server(options)
+        @grpc_server = build_server(**options)
       end
 
       # Start gRPC server in background and
@@ -82,7 +82,7 @@ module AnyCable
         @logger ||= AnyCable.logger
       end
 
-      def build_server(options)
+      def build_server(**options)
         ::GRPC::RpcServer.new(**options).tap do |server|
           server.add_http2_port(host, :this_port_is_insecure)
           server.handle(AnyCable::GRPC::Handler)

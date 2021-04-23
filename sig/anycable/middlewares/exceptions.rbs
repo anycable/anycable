@@ -1,0 +1,12 @@
+module AnyCable
+  module Middlewares
+    class Exceptions < AnyCable::Middleware
+      def call: (untyped method_name, untyped request) { () -> untyped } -> untyped
+
+      private
+
+      def notify_exception: (untyped exp, untyped method_name, untyped message) -> untyped
+      def response_class: (untyped method_name) -> untyped
+    end
+  end
+end

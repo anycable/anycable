@@ -1,0 +1,3 @@
+module AnyCable
+  VERSION: String
+end

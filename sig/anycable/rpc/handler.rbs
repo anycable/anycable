@@ -1,0 +1,17 @@
+module AnyCable
+  module RPC
+    class Handler
+      include _Handler
+      include Handlers::Connect
+      include Handlers::Disconnect
+      include Handlers::Command
+
+      def initialize: (?middleware: MiddlewareChain) -> void
+      def handle: (Symbol cmd, rpcRequest data) -> rpcResponse
+
+      private
+
+      attr_reader middleware: MiddlewareChain
+    end
+  end
+end

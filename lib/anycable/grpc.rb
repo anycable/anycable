@@ -11,7 +11,7 @@ require "anycable/grpc/config"
 require "anycable/grpc/server"
 require "anycable/grpc/check_version"
 
-AnyCable.server_builder = proc do |config|
+AnyCable.server_builder = ->(config) {
   AnyCable.logger.info "gRPC version: #{::GRPC::VERSION}"
 
   ::GRPC.define_singleton_method(:logger) { AnyCable.logger } if config.log_grpc?
@@ -22,9 +22,9 @@ AnyCable.server_builder = proc do |config|
     interceptors << AnyCable::GRPC::CheckVersion.new(AnyCable::PROTO_VERSION)
   end
 
-  AnyCable::GRPC::Server.new(
-    host: config.rpc_host,
-    **config.to_grpc_params,
-    interceptors: interceptors
-  )
-end
+  params = config.to_grpc_params
+  params[:host] = config.rpc_host
+  params[:interceptors] = interceptors
+
+  AnyCable::GRPC::Server.new(**params)
+}

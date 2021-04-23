@@ -1,0 +1,8 @@
+module AnyCable
+  module GRPC
+    class Service
+    end
+
+    Stub: untyped
+  end
+end

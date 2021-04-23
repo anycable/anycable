@@ -1,0 +1,11 @@
+module Anyway
+  class Config
+    def self.attr_config: (*Symbol, **untyped) -> void
+    def self.config_name: (Symbol) -> void
+    def self.flag_options: (*Symbol) -> void
+    def self.ignore_options: (*Symbol) -> void
+    def self.on_load: () { () -> void } -> void
+
+    def parse_options!: (untyped) -> void
+  end
+end

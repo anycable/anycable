@@ -1,0 +1,34 @@
+module AnyCable
+  module GRPC
+    interface _Config
+      def rpc_host: () -> String
+      def rpc_host=: (String) -> void
+      def rpc_pool_size: () -> Integer
+      def rpc_pool_size=: (Integer) -> void
+      def rpc_max_waiting_requests: () -> Integer
+      def rpc_max_waiting_requests=: (Integer) -> void
+      def rpc_poll_period: () -> Integer
+      def rpc_poll_period=: (Integer) -> void
+      def rpc_pool_keep_alive: () -> Integer
+      def rpc_pool_keep_alive=: (Integer) -> void
+      def rpc_server_args: () -> Hash[Symbol, untyped]?
+      def rpc_server_args=: (Hash[Symbol, untyped]) -> void
+      def log_grpc: () -> bool
+      def log_grpc=: (bool) -> void
+    end
+
+    module Config : AnyCable::Config
+      include _Config
+
+      alias log_grpc? log_grpc
+
+      def to_grpc_params: () -> {
+        pool_size: Integer,
+        max_waiting_requests: Integer,
+        poll_period: Integer,
+        pool_keep_alive: Integer,
+        server_args: Hash[Symbol, untyped]?
+      }
+    end
+  end
+end
