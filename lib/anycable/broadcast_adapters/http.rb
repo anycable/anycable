@@ -83,6 +83,7 @@ module AnyCable
         @thread = Thread.new do
           loop do
             msg = queue.pop
+            # @type break: nil
             break if msg == :stop
 
             handle_response perform_request(msg)
@@ -119,7 +120,7 @@ module AnyCable
           retry_count += 1
           return logger.error("Broadcast request failed: #{e.message}") if MAX_ATTEMPTS < retry_count
 
-          sleep((DELAY**retry_count) * retry_count)
+          sleep((DELAY**retry_count).to_int * retry_count)
           retry
         ensure
           http.finish if http.started?

@@ -1,0 +1,10 @@
+module AnyCable
+  module BroadcastAdapters
+    class Redis < Base
+      attr_reader redis_conn: untyped
+      attr_reader channel: String
+
+      def initialize: (?channel: String channel, **untyped options) -> void
+    end
+  end
+end

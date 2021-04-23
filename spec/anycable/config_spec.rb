@@ -7,7 +7,7 @@ describe AnyCable::Config do
 
   it "loads config vars from anycable.yml", :aggregate_failures do
     expect(config.redis_channel).to eq "__anycable__"
-    expect(config.log_level).to eq :info
+    expect(config.log_level).to eq "info"
   end
 
   context "when DEBUG is set" do
@@ -16,7 +16,7 @@ describe AnyCable::Config do
     subject(:config) { described_class.new }
 
     it "sets log to debug" do
-      expect(config.log_level).to eq :debug
+      expect(config.log_level).to eq "debug"
     end
   end
 

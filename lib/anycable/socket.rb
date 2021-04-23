@@ -23,22 +23,28 @@ module AnyCable
         return if source&.[](key) == val
 
         @source ||= {}
-        @dirty_keys ||= []
-        dirty_keys << key
+
+        keys = (@dirty_keys ||= [])
+        keys << key
+
         source[key] = val
       end
 
       alias_method :[]=, :write
 
       def changed_fields
-        return unless source && dirty_keys
-        source.slice(*dirty_keys)
+        return unless source
+
+        keys = dirty_keys
+        return if keys.nil?
+
+        source.slice(*keys)
       end
     end
 
     attr_reader :transmissions, :env, :cstate, :istate
 
-    def initialize(env: nil)
+    def initialize(env:)
       @transmissions = []
       @env = env
       @cstate = env["anycable.cstate"] = State.new(env["anycable.raw_cstate"])

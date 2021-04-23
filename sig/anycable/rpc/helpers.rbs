@@ -1,0 +1,17 @@
+module AnyCable
+  module RPC
+    interface _Handler
+      def rack_env: (Env request_env) -> rackEnv
+      def base_rack_env: () -> rackEnv
+      def build_socket: (**untyped) -> Socket
+      def build_headers: (untyped headers) -> Hash[String, String]
+      def build_env_response: (Socket socket) -> EnvResponse
+      def logger: () -> Logger
+      def factory: () -> ^(Socket, ?identifiers: String, ?subscriptions: Array[String]) -> _Connection
+    end
+
+    module Helpers
+      include _Handler
+    end
+  end
+end

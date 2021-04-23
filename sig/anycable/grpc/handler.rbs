@@ -1,0 +1,11 @@
+module AnyCable
+  module GRPC
+    # RPC service handler
+    class Handler < AnyCable::GRPC::Service
+      # Handle connection request from WebSocket server
+      def connect: (untyped request, untyped _unused_call) -> untyped
+      def disconnect: (untyped request, untyped _unused_call) -> untyped
+      def command: (untyped request, untyped _unused_call) -> untyped
+    end
+  end
+end

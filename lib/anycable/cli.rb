@@ -199,14 +199,16 @@ module AnyCable
 
         logger.info "Wait till process #{pid} stop..."
 
-        tick = 0
+        tick = 0.0
 
         loop do
           tick += 0.2
+          # @type break: nil
           break if tick > WAIT_PROCESS
 
           if pid.nil?
             logger.info "Process #{pid} stopped."
+            # @type break: nil
             break
           end
         end
@@ -218,7 +220,9 @@ module AnyCable
       if AnyCable.config.debug?
         # Print error with backtrace in debug mode
         AnyCable.capture_exception do |e|
-          AnyCable.logger.error("#{e.message}:\n#{e.backtrace.take(20).join("\n")}")
+          stack = e.backtrace
+          backtrace = stack ? ":\n#{stack.take(20).join("\n")}" : ""
+          AnyCable.logger.error("#{e.message}#{backtrace}")
         end
       else
         AnyCable.capture_exception { |e| AnyCable.logger.error(e.message) }

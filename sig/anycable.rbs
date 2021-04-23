@@ -1,0 +1,37 @@
+module AnyCable
+  interface _Server
+    def start: () -> void
+    def wait_till_terminated: () -> void
+    def stop: () -> void
+    def running?: () -> bool
+    def stopped?: () -> bool
+  end
+
+  interface _Connection
+    def handle_open: () -> void
+    def handle_close: () -> void
+    def handle_channel_command: (String identifier, String command, String data) -> void
+    def identifiers_json: () -> String
+  end
+
+  type rackEnv = Hash[String, untyped]
+
+  type serverBuilder = ^(Config) -> _Server
+
+  attr_accessor self.connection_factory: ^(Socket, ?identifiers: String, ?subscriptions: Array[String]) -> _Connection
+  attr_accessor self.server_builder: serverBuilder
+  attr_writer self.logger: Logger
+  attr_writer self.rpc_handler: RPC::Handler
+  attr_accessor self.middleware: MiddlewareChain
+
+  def self.logger: () -> Logger
+  def self.config: () -> Config
+  def self.configure: () { (Config) -> void } -> void
+  def self.capture_exception: () { (StandardError) -> void } -> void
+  def self.configure_server: () { () -> void } -> void
+  def self.server_callbacks: () -> Array[^() -> void]
+  def self.broadcast_adapter: () -> _BroadcastAdapter
+  def self.broadcast_adapter=: (untyped adapter) -> void
+  def self.broadcast: (String channel, String payload) -> void
+  def self.rpc_handler: () -> RPC::Handler
+end

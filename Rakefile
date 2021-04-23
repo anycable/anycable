@@ -16,4 +16,19 @@ rescue LoadError
   task("rubocop:md") {}
 end
 
-task default: %w[rubocop rubocop:md spec]
+task :steep do
+  # Steep doesn't provide Rake integration yet,
+  # but can do that ourselves
+  require "steep"
+  require "steep/cli"
+
+  Steep::CLI.new(argv: ["check"], stdout: $stdout, stderr: $stderr, stdin: $stdin).run
+end
+
+namespace :steep do
+  task :stats do
+    exec "bundle exec steep stats --log-level=fatal --format=table"
+  end
+end
+
+task default: %w[rubocop rubocop:md steep spec]

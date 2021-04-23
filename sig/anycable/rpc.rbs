@@ -1,0 +1,143 @@
+module AnyCable
+  PROTO_VERSION: ::String
+  SESSION_KEY: ::String
+
+  type rpcStatus = 0 | 1 | 2
+  type protoMap = Hash[String, String]
+
+  interface _WithEnvState
+    def cstate: () -> protoMap?
+    def cstate=: (protoMap) -> void
+    def istate: () -> protoMap?
+    def istate=: (protoMap) -> void
+  end
+
+  class Env
+    include _WithEnvState
+
+    attr_accessor url: String
+    attr_accessor headers: protoMap
+
+    def initialize: (?url: String, ?headers: protoMap, ?cstate: protoMap, ?istate: protoMap) -> void
+  end
+
+  class EnvResponse
+    include _WithEnvState
+
+    def initialize: (?cstate: protoMap, ?istate: protoMap) -> void
+  end
+
+  interface _ProtoMessage
+    def initialize: (**untyped) -> void
+  end
+
+  interface _WithEnv
+    def env: () -> Env
+    def env=: (Env) -> void
+  end
+
+  module WithConnectionState : _WithEnv, _ProtoMessage
+    def initialize: (?session: untyped? session, **untyped other) -> untyped
+
+    def session=: (untyped val) -> untyped
+    def session: () -> untyped
+
+    def cstate: () -> protoMap?
+    def cstate=: (protoMap val) -> protoMap
+
+    def istate: () -> protoMap?
+    def istate=: (protoMap val) -> protoMap
+  end
+
+  module StatusPredicates
+    def status: () -> rpcStatus
+    def success?: () -> bool
+    def failure?: () -> bool
+    def error?: () -> bool
+  end
+
+  class ConnectionRequest
+    include _WithEnv
+
+    def initialize: (?env: Env) -> void
+  end
+
+  class ConnectionResponse
+    include StatusPredicates
+
+    attr_accessor status: rpcStatus
+    attr_accessor identifiers: String
+    attr_accessor transmissions: Array[String]
+    attr_accessor error_msg: String?
+    attr_accessor env: EnvResponse
+
+    def initialize: (
+      status: rpcStatus,
+      ?identifiers: String,
+      ?transmissions: Array[String],
+      ?error_msg: String,
+      ?env: EnvResponse
+    ) -> void
+  end
+
+  class CommandMessage
+    include _WithEnv
+
+    attr_accessor command: String
+    attr_accessor identifier: String
+    attr_accessor connection_identifiers: String
+    attr_accessor data: String
+
+    def initialize: (
+      command: String,
+      identifier: String,
+      ?connection_identifiers: String,
+      ?env: Env
+    ) -> void
+  end
+
+  class CommandResponse
+    include StatusPredicates
+
+    attr_accessor status: rpcStatus
+    attr_accessor disconnect: bool
+    attr_accessor stop_streams: bool
+    attr_accessor streams: Array[String]
+    attr_accessor transmissions: Array[String]
+    attr_accessor error_msg: String?
+    attr_accessor env: EnvResponse
+    attr_accessor stopped_streams: Array[String]
+
+    def initialize: (
+      status: rpcStatus,
+      ?disconnect: bool,
+      ?stop_streams: bool,
+      ?streams: Array[String],
+      ?stopped_streams: Array[String],
+      ?transmissions: Array[String],
+      ?error_msg: String,
+      ?env: EnvResponse
+    ) -> void
+  end
+
+  class DisconnectRequest
+    include _WithEnv
+
+    attr_accessor identifiers: String
+    attr_accessor subscriptions: Array[String]
+
+    def initialize: (identifiers: String, ?subscriptions: Array[String], ?env: Env) -> void
+  end
+
+  class DisconnectResponse
+    include StatusPredicates
+
+    attr_accessor status: rpcStatus
+    attr_accessor error_msg: String?
+
+    def initialize: (status: rpcStatus, ?error_msg: String) -> void
+  end
+
+  type rpcRequest = ConnectionRequest | DisconnectRequest | CommandMessage
+  type rpcResponse = ConnectionResponse | DisconnectResponse | CommandResponse
+end

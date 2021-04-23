@@ -1,0 +1,31 @@
+module AnyCable
+  module BroadcastAdapters
+    class Http < Base
+      RECOVERABLE_EXCEPTIONS: Array[singleton(Class)]
+      OPEN_TIMEOUT: Integer
+      READ_TIMEOUT: Integer
+      MAX_ATTEMPTS: Integer
+      DELAY: Integer
+
+      attr_reader url: String
+      attr_reader headers: Hash[String, String]
+      attr_reader authorized: bool
+
+      alias authorized? authorized
+
+      def initialize: (?url: String url, ?secret: String secret) -> void
+      def shutdown: () -> void
+
+      private
+
+      attr_reader uri: URI::Generic
+      attr_reader queue: Thread::Queue
+      attr_reader thread: Thread
+
+      def ensure_thread_is_alive: () -> void
+      def perform_request: (String payload) -> untyped
+      def handle_response: (untyped response) -> void
+      def build_http: () { (untyped) -> untyped } -> untyped
+    end
+  end
+end

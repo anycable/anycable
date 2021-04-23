@@ -35,7 +35,7 @@ module AnyCable
 
       ### Logging options
       log_file: nil,
-      log_level: :info,
+      log_level: "info",
       debug: false, # Shortcut to enable debug level and verbose logging
 
       ### Health check options
@@ -50,10 +50,13 @@ module AnyCable
 
     flag_options :debug
 
-    on_load { self.debug = debug != false }
+    on_load do
+      # @type self : AnyCable::Config
+      self.debug = debug != false
+    end
 
     def log_level
-      debug? ? :debug : super
+      debug? ? "debug" : super
     end
 
     def http_health_port_provided?
@@ -83,14 +86,17 @@ module AnyCable
 
     # Build Redis parameters
     def to_redis_params
-      {url: redis_url}.tap do |params|
-        next if redis_sentinels.nil? || redis_sentinels.empty?
+      # @type var base_params: { url: String, sentinels: Array[untyped]?, ssl_params: Hash[Symbol, untyped]? }
+      base_params = {url: redis_url}
+      base_params.tap do |params|
+        sentinels = redis_sentinels
+        next if sentinels.nil? || sentinels.empty?
 
-        sentinels = Array(redis_sentinels)
+        sentinels = Array(sentinels) unless sentinels.is_a?(Array)
 
         next if sentinels.empty?
 
-        params[:sentinels] = sentinels.map(&method(:parse_sentinel))
+        params[:sentinels] = sentinels.map { |sentinel| parse_sentinel(sentinel) }
       end.tap do |params|
         next unless redis_url.match?(/rediss:\/\//)
 

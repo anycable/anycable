@@ -18,16 +18,17 @@ module AnyCable
           # We couldn't require the adapter itself.
           if e.path == path_to_adapter
             raise e.class, "Couldn't load the '#{adapter}' broadcast adapter for AnyCable",
-              e.backtrace
+              e.backtrace || []
           # Bubbled up from the adapter require.
           else
             raise e.class, "Error loading the '#{adapter}' broadcast adapter for AnyCable",
-              e.backtrace
+              e.backtrace || []
           end
         end
       end
 
-      BroadcastAdapters.const_get(adapter_class_name, false).new(**(options || {}))
+      options ||= {}
+      BroadcastAdapters.const_get(adapter_class_name, false).new(**options)
     end
   end
 end
