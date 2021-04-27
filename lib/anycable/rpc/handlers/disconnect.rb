@@ -7,7 +7,7 @@ module AnyCable
         def disconnect(request)
           logger.debug("RPC Disconnect: #{request.inspect}")
 
-          socket = build_socket(env: rack_env(request.env))
+          socket = build_socket(env: request.env)
 
           connection = factory.call(
             socket,
