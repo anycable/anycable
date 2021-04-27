@@ -27,8 +27,6 @@ message EnvResponse {
 }
 
 message ConnectionRequest {
-  string path = 1; // v0.x, deprecated in v1.0, to be removed in v1.1
-  map<string,string> headers = 2; // v0.x, deprecated in v1.0, to be removed in v1.1
   Env env = 3;
 }
 
@@ -62,8 +60,6 @@ message CommandResponse {
 message DisconnectRequest {
   string identifiers = 1;
   repeated string subscriptions = 2;
-  string path = 3; // v0.x, deprecated in v1.0, to be removed in v1.1
-  map<string,string> headers = 4; // v0.x, deprecated in v1.0, to be removed in v1.1
   Env env = 5;
 }
 

@@ -23,7 +23,7 @@ import (
 const (
 	// ProtoVersions contains a comma-seprated list of compatible RPC protos versions
 	// (we pass it as request meta to notify clients)
-	ProtoVersions = "v0,v1"
+	ProtoVersions = "v1"
 	invokeTimeout = 3000
 
 	retryExhaustedInterval   = 10

@@ -12,9 +12,7 @@ import (
 // NewConnectMessage builds a connect RPC payload from the session env
 func NewConnectMessage(env *common.SessionEnv) *pb.ConnectionRequest {
 	return &pb.ConnectionRequest{
-		Path:    env.URL,
-		Headers: *env.Headers,
-		Env:     buildEnv(env),
+		Env: buildEnv(env),
 	}
 }
 
@@ -41,8 +39,6 @@ func NewDisconnectMessage(env *common.SessionEnv, identifiers string, subscripti
 	return &pb.DisconnectRequest{
 		Identifiers:   identifiers,
 		Subscriptions: subscriptions,
-		Path:          env.URL,
-		Headers:       *env.Headers,
 		Env:           buildDisconnectEnv(env),
 	}
 }

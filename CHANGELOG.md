@@ -2,6 +2,8 @@
 
 ## master
 
+- Dropped deprecated RPC v0.6 support. ([@palkan][])
+
 - Added concurrency to broadcasting. ([@palkan][])
 
 Now new broadcast messages are handled (and retransmitted) concurrently by a pool of workers (Go routines).

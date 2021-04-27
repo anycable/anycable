@@ -29,9 +29,7 @@ func TestAuthenticate(t *testing.T) {
 
 		client.On("Connect", mock.Anything,
 			&pb.ConnectionRequest{
-				Path:    url,
-				Headers: headers,
-				Env:     &pb.Env{Url: url, Headers: headers},
+				Env: &pb.Env{Url: url, Headers: headers},
 			}).Return(
 			&pb.ConnectionResponse{
 				Identifiers:   "user=john",
@@ -54,9 +52,7 @@ func TestAuthenticate(t *testing.T) {
 
 		client.On("Connect", mock.Anything,
 			&pb.ConnectionRequest{
-				Path:    url,
-				Headers: headers,
-				Env:     &pb.Env{Url: url, Headers: headers},
+				Env: &pb.Env{Url: url, Headers: headers},
 			}).Return(
 			&pb.ConnectionResponse{
 				Transmissions: []string{"unauthorized"},
@@ -282,8 +278,6 @@ func TestDisconnect(t *testing.T) {
 			&pb.DisconnectRequest{
 				Identifiers:   "ids",
 				Subscriptions: []string{"chat_42"},
-				Path:          url,
-				Headers:       headers,
 				Env:           &pb.Env{Url: url, Headers: headers, Cstate: cstate, Istate: istate},
 			}).Return(
 			&pb.DisconnectResponse{

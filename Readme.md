@@ -8,14 +8,10 @@
 
 WebSocket server for [AnyCable](https://github.com/anycable/anycable).
 
-**Important** This is a readme for the upcoming v1.0 release. For v0.6.x see the readme from the [0-6-stable](https://github.com/anycable/anycable-go/tree/0-6-stable) branch.
-
 ## Versioning
 
 **Important** Use the same major version of AnyCable-Go as your AnyCable gem.
 AnyCable-Go uses the same major version number (and minor version as well for 0.x series) as other libraries to indicate the compatibility.
-
-**NOTE**: AnyCable-Go v1.0 is backward-compatible with v0.6.x series (to allow incremental upgrades). The next minor relase (v1.1) will drop 0.6.x support.
 
 ## Installation
 
@@ -56,7 +52,7 @@ Run server:
 ```shell
 $ anycable-go
 
-=> INFO 2020-02-05T08:44:57.684Z context=main Starting AnyCable 1.0.0
+=> INFO 2020-02-05T08:44:57.684Z context=main Starting AnyCable 1.1.0
 ```
 
 You can also provide configuration parameters through the corresponding environment variables (i.e. `ANYCABLE_RPC_HOST`, `ANYCABLE_REDIS_URL`, etc).
@@ -91,7 +87,7 @@ make test-conformance
 We use [golangci-lint](https://golangci-lint.run) to lint Go source code:
 
 ```sh
-golangci-lint run
+make lint
 ```
 
 ## Docker

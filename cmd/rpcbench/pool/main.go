@@ -217,8 +217,10 @@ func (b *Benchmark) performPoolRequest() (err error) {
 
 	_, err = retry(func() (interface{}, error) {
 		return client.Connect(context.Background(), &pb.ConnectionRequest{
-			Path:    path,
-			Headers: *headers,
+			Env: &pb.Env{
+				Url:     path,
+				Headers: *headers,
+			},
 		})
 	})
 
@@ -236,8 +238,10 @@ func (b *Benchmark) performRequest() (err error) {
 
 	_, err = retry(func() (interface{}, error) {
 		return client.Connect(context.Background(), &pb.ConnectionRequest{
-			Path:    path,
-			Headers: *headers,
+			Env: &pb.Env{
+				Url:     path,
+				Headers: *headers,
+			},
 		})
 	})
 

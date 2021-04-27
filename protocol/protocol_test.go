@@ -22,8 +22,6 @@ func TestNewConnectMessage(t *testing.T) {
 
 	msg := NewConnectMessage(env)
 
-	assert.Equal(t, "/cable-test", msg.Path)
-	assert.Equal(t, map[string]string{"cookie": "token=secret;"}, msg.Headers)
 	assert.NotNil(t, msg.Env)
 	assert.Equal(t, "/cable-test", msg.Env.Url)
 	assert.Equal(t, map[string]string{"cookie": "token=secret;"}, msg.Env.Headers)
