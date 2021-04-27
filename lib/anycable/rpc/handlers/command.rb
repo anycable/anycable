@@ -7,7 +7,7 @@ module AnyCable
         def command(message)
           logger.debug("RPC Command: #{message.inspect}")
 
-          socket = build_socket(env: rack_env(message.env))
+          socket = build_socket(env: message.env)
 
           connection = factory.call(
             socket,

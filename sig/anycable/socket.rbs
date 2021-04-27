@@ -14,11 +14,9 @@ module AnyCable
     end
 
     attr_reader transmissions: Array[String]
-    attr_reader env: Hash[String, untyped]
-    attr_reader cstate: State
-    attr_reader istate: State
+    attr_reader request_env: Env
 
-    def initialize: (env: Hash[String, untyped]) -> void
+    def initialize: (env: Env) -> void
     def transmit: (String) -> void
     def subscribe: (String, String) -> void
     def unsubscribe: (String, String) -> void
@@ -29,5 +27,14 @@ module AnyCable
     def stop_streams?: () -> bool
     def session: () -> untyped
     def session=: (untyped val) -> untyped
+    def env: () -> Hash[String, untyped]
+    def cstate: () -> State
+    def istate: () -> State
+
+    private
+
+    def build_rack_env: () -> rackEnv
+    def base_rack_env: () -> rackEnv
+    def build_headers: (untyped headers) -> Hash[String, String]
   end
 end
