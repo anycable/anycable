@@ -1,5 +1,12 @@
 module AnyCable
   module RPC
+    interface _Handler
+      def build_socket: (env: Env) -> Socket
+      def build_env_response: (Socket socket) -> EnvResponse
+      def logger: () -> Logger
+      def factory: () -> ^(Socket, ?identifiers: String, ?subscriptions: Array[String]) -> _Connection
+    end
+
     class Handler
       include _Handler
       include Handlers::Connect
