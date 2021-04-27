@@ -332,8 +332,8 @@ jobs:
         postfix: win-amd64.exe
     - build:
         os: darwin
-        arch: "386"
-        postfix: darwin-386
+        arch: "arm64"
+        postfix: darwin-arm64
     - build:
         os: darwin
         arch: amd64
