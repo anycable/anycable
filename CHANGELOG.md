@@ -2,6 +2,8 @@
 
 ## master
 
+- Added `server_msg_total` and `failed_server_msg_total` metrics. ([@prburgu][])
+
 - Dropped deprecated RPC v0.6 support. ([@palkan][])
 
 - Added concurrency to broadcasting. ([@palkan][])

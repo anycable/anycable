@@ -105,8 +105,11 @@ func (s *Session) SendMessages() {
 		err := s.writeFrame(&message)
 
 		if err != nil {
+			s.node.Metrics.Counter(metricsFailedSent).Inc()
 			return
 		}
+
+		s.node.Metrics.Counter(metricsSentMsg).Inc()
 	}
 }
 

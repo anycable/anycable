@@ -66,6 +66,14 @@ anycable_go_goroutines_num 5222
 # HELP anycable_go_disconnect_queue_size The size of delayed disconnect
 # TYPE anycable_go_disconnect_queue_size gauge
 anycable_go_disconnect_queue_size 0
+
+# HELP anycable_go_server_msg_total The total number of messages sent to clients
+# TYPE anycable_go_server_msg_total counter
+anycable_go_server_msg_total 453
+
+# HELP anycable_go_failed_server_msg_total The total number of messages failed to send to clients
+# TYPE anycable_go_failed_server_msg_total counter
+anycable_go_failed_server_msg_total 0
 ```
 
 ## Logging
