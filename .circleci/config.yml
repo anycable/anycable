@@ -39,6 +39,8 @@ workflows:
         - prepare_mruby
     - conformance:
         <<: *common_tags_filter
+        requires:
+         - build_binary_for_conformance
     - build_docker:
         name: build_docker_main
         requires:
