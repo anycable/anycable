@@ -11,25 +11,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: golangci-lint
-      uses: golangci/golangci-lint-action@v2
+    - uses: actions/setup-go@v2
       with:
-        version: v1.35
+        go-version: 1.16.x
+    - run: make lint
+
   vet:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
     - uses: actions/setup-go@v2
       with:
-        go-version: 1.14.x
-    - name: Install shadow
-      env:
-        GO111MODULE: off
-      run: go get golang.org/x/tools/go/analysis/passes/shadow/cmd/shadow
-    - name: go vet
-      run: make vet
-    - name: go vet shadow
-      run: make vet-shadow
+        go-version: 1.16.x
+    - run: make vet
+
   gosec:
     runs-on: ubuntu-latest
     steps:
@@ -37,7 +32,4 @@ jobs:
     - uses: actions/setup-go@v2
       with:
         go-version: 1.16.x
-    - name: Run Gosec Security Scanner
-      uses: securego/gosec@master
-      with:
-        args: -confidence=medium -severity=medium ./...
+    - run: make sec
