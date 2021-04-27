@@ -10,26 +10,43 @@ import (
 
 // RubyPrinter contains refs to mruby vm and code
 type RubyPrinter struct {
+	interval  int
+	path      string
 	mrbModule *mruby.MrbValue
 	engine    *mrb.Engine
 }
 
 // NewCustomPrinter generates log formatter from the provided (as path)
 // Ruby script
-func NewCustomPrinter(path string) (*RubyPrinter, error) {
-	// return nil, errors.New("Not supported")
+func NewCustomPrinter(path string, interval int) (*RubyPrinter, error) {
+	return &RubyPrinter{path: path, interval: interval}, nil
+}
 
-	engine := mrb.DefaultEngine()
+// Run initializes the Ruby VM
+func (p *RubyPrinter) Run() error {
+	p.engine = mrb.DefaultEngine()
 
-	if err := engine.LoadFile(path); err != nil {
-		return nil, err
+	if err := p.engine.LoadFile(p.path); err != nil {
+		return err
 	}
 
-	mod := engine.VM.Module("MetricsFormatter")
+	mod := p.engine.VM.Module("MetricsFormatter")
 
-	modValue := mod.MrbValue(engine.VM)
+	p.mrbModule = mod.MrbValue(p.engine.VM)
 
-	return &RubyPrinter{mrbModule: modValue, engine: engine}, nil
+	log.WithField("context", "metrics").Infof("Log metrics every %ds using a custom Ruby formatter from %s", p.interval, p.path)
+
+	return nil
+}
+
+func (p *RubyPrinter) Stop() {
+}
+
+// Write prints formatted snapshot to the log
+func (p *RubyPrinter) Write(m *Metrics) error {
+	snapshot := m.IntervalSnapshot()
+	p.Print(snapshot)
+	return nil
 }
 
 // Print calls Ruby script to format the output and prints it to the log

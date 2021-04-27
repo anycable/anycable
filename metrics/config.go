@@ -17,7 +17,7 @@ func NewConfig() Config {
 
 // LogEnabled returns true iff Log is true
 func (c *Config) LogEnabled() bool {
-	return c.Log || c.LogFormatterEnabled()
+	return c.Log || c.LogFormatterEnabled() || c.LogInterval > 0
 }
 
 // HTTPEnabled returns true iff HTTP is not empty

@@ -11,15 +11,17 @@ import (
 	"github.com/apex/log"
 )
 
-// Printer describes metrics logging interface
-type Printer interface {
-	Print(snapshot map[string]int64)
+// IntervalHandler describe a periodical metrics writer interface
+type IntervalWriter interface {
+	Run() error
+	Stop()
+	Write(m *Metrics) error
 }
 
 // Metrics stores some useful stats about node
 type Metrics struct {
 	mu             sync.RWMutex
-	printer        Printer
+	writers        []IntervalWriter
 	server         *server.HTTPServer
 	httpPath       string
 	rotateInterval time.Duration
@@ -29,35 +31,15 @@ type Metrics struct {
 	log            *log.Entry
 }
 
-// BasePrinter simply logs stats as structured log
-type BasePrinter struct {
-}
-
-// NewBasePrinter returns new base printer struct
-func NewBasePrinter() *BasePrinter {
-	return &BasePrinter{}
-}
-
-// Print logs stats data using global logger with info level
-func (*BasePrinter) Print(snapshot map[string]int64) {
-	fields := make(log.Fields, len(snapshot)+1)
-
-	fields["context"] = "metrics"
-
-	for k, v := range snapshot {
-		fields[k] = v
-	}
-
-	log.WithFields(fields).Info("")
-}
-
 // FromConfig creates a new metrics instance from the prodived configuration
 func FromConfig(config *Config) (*Metrics, error) {
-	var metricsPrinter Printer
+	var metricsPrinter IntervalWriter
+
+	writers := []IntervalWriter{}
 
 	if config.LogEnabled() {
 		if config.LogFormatterEnabled() {
-			customPrinter, err := NewCustomPrinter(config.LogFormatter)
+			customPrinter, err := NewCustomPrinter(config.LogFormatter, config.LogInterval)
 
 			if err == nil {
 				metricsPrinter = customPrinter
@@ -65,11 +47,13 @@ func FromConfig(config *Config) (*Metrics, error) {
 				return nil, err
 			}
 		} else {
-			metricsPrinter = NewBasePrinter()
+			metricsPrinter = NewBasePrinter(config.LogInterval)
 		}
+
+		writers = append(writers, metricsPrinter)
 	}
 
-	instance := NewMetrics(metricsPrinter, config.LogInterval)
+	instance := NewMetrics(writers, config.LogInterval)
 
 	if config.HTTPEnabled() {
 		if config.Host != "" && config.Host != server.Host {
@@ -94,11 +78,11 @@ func FromConfig(config *Config) (*Metrics, error) {
 }
 
 // NewMetrics build new metrics struct
-func NewMetrics(printer Printer, logIntervalSeconds int) *Metrics {
+func NewMetrics(writers []IntervalWriter, logIntervalSeconds int) *Metrics {
 	rotateInterval := time.Duration(logIntervalSeconds) * time.Second
 
 	return &Metrics{
-		printer:        printer,
+		writers:        writers,
 		rotateInterval: rotateInterval,
 		counters:       make(map[string]*Counter),
 		gauges:         make(map[string]*Gauge),
@@ -109,8 +93,10 @@ func NewMetrics(printer Printer, logIntervalSeconds int) *Metrics {
 
 // Run periodically updates counters delta (and logs metrics if necessary)
 func (m *Metrics) Run() error {
-	if m.printer != nil {
-		m.log.Infof("Log metrics every %s", m.rotateInterval)
+	for _, writer := range m.writers {
+		if err := writer.Run(); err != nil {
+			return err
+		}
 	}
 
 	if m.server != nil {
@@ -130,10 +116,10 @@ func (m *Metrics) Run() error {
 		case <-time.After(m.rotateInterval):
 			m.rotate()
 
-			if m.printer != nil {
-				snapshot := m.IntervalSnapshot()
-
-				m.printer.Print(snapshot)
+			for _, writer := range m.writers {
+				if err := writer.Write(m); err != nil {
+					log.Errorf("Metrics writer failed to write: %v", err)
+				}
 			}
 		}
 	}
@@ -153,6 +139,10 @@ func (m *Metrics) Shutdown() {
 
 	if m.server != nil {
 		m.server.Stop() //nolint:errcheck
+	}
+
+	for _, writer := range m.writers {
+		writer.Stop()
 	}
 }
 

@@ -16,7 +16,12 @@ func TestLogEnabled(t *testing.T) {
 	config.Log = false
 	assert.False(t, config.LogEnabled())
 
+	config = NewConfig()
 	config.LogFormatter = "test"
+	assert.True(t, config.LogEnabled())
+
+	config = NewConfig()
+	config.LogInterval = 2
 	assert.True(t, config.LogEnabled())
 }
 
