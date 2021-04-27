@@ -156,7 +156,7 @@ executors:
     working_directory: /root/project/
   ruby:
     docker:
-      - image: circleci/ruby:2.7-stretch
+      - image: cimg/ruby:2.7.1
 
 commands:
   build:
@@ -371,7 +371,7 @@ jobs:
 
   conformance:
     docker:
-    - image: circleci/ruby:2.7-stretch
+    - image: cimg/ruby:2.7.1
     - image: circleci/redis:4.0.11-alpine3.8
     environment:
       BUNDLE_GEMFILE: ".circleci/Gemfile"
