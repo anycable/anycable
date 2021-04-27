@@ -39,12 +39,6 @@ workflows:
         - prepare_mruby
     - conformance:
         <<: *common_tags_filter
-        requires:
-        - conformance_v1
-    - conformance_v1:
-        <<: *common_tags_filter
-        requires:
-        - build_binary_for_conformance
     - build_docker:
         name: build_docker_main
         requires:
@@ -139,7 +133,7 @@ workflows:
 executors:
   golang:
     docker:
-      - image: circleci/golang:1.14-stretch
+      - image: circleci/golang:1.16-stretch
     working_directory: /go/src/github.com/anycable/anycable-go/
     environment:
       CGO_ENABLED: "0"
@@ -162,7 +156,7 @@ executors:
     working_directory: /root/project/
   ruby:
     docker:
-      - image: circleci/ruby:2.5-stretch
+      - image: circleci/ruby:2.7-stretch
 
 commands:
   build:
@@ -239,7 +233,7 @@ jobs:
 
   benchmark:
     docker:
-      - image: circleci/golang:1.14-stretch
+      - image: circleci/golang:1.16-stretch
       - image: circleci/redis:4.0.11-alpine3.8
     working_directory: /go/src/github.com/anycable/anycable-go/
     environment:
@@ -375,28 +369,9 @@ jobs:
         key: linux-mruby-{{ .Revision }}
         paths: /tmp/dist/
 
-  # Replace with conformance_v1 after v1.1 release
   conformance:
     docker:
-    - image: circleci/ruby:2.5.1-stretch
-    - image: circleci/redis:4.0.11-alpine3.8
-    steps:
-    - attach_workspace:
-        at: .
-    - restore_cache:
-        key: binary-for-conformance-{{ .Revision }}
-    - run:
-        name: Install gem anyt (conformance testing tool)
-        command: gem install anyt -v '~> 0.8.0'
-    - run:
-        name: Wait for Redis
-        command: dockerize -wait tcp://localhost:6379 -timeout 1m
-    - run: anyt -c "/tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable"
-    - run: anyt -c "/tmp/anycable-go-test --headers=cookie,x-api-token --ssl_key=etc/ssl/server.key --ssl_cert=etc/ssl/server.crt --port=8443" --target-url="wss://localhost:8443/cable"
-
-  conformance_v1:
-    docker:
-    - image: circleci/ruby:2.6.3-stretch
+    - image: circleci/ruby:2.7-stretch
     - image: circleci/redis:4.0.11-alpine3.8
     environment:
       BUNDLE_GEMFILE: ".circleci/Gemfile"
