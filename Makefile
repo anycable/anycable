@@ -27,10 +27,10 @@ install-with-mruby:
 	go install -tags mrb ./...
 
 build:
-	go build -tags mrb -tags gops -ldflags $(LD_FLAGS) -o $(OUTPUT) cmd/anycable-go/main.go
+	go build -tags "mrb gops" -ldflags $(LD_FLAGS) -o $(OUTPUT) cmd/anycable-go/main.go
 
 build-gobench:
-	go build -tags mrb -tags gops -ldflags $(LD_FLAGS) -o $(GOBENCHDIST) cmd/gobench-cable/main.go
+	go build -tags "mrb gops" -ldflags $(LD_FLAGS) -o $(GOBENCHDIST) cmd/gobench-cable/main.go
 
 prepare-mruby:
 	cd vendor/github.com/mitchellh/go-mruby && \
