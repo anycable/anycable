@@ -10,3 +10,9 @@ build: gem/grpc-tools
 	sed -i '' 's/Anycable/AnyCable/g' ./lib/anycable/protos/*_pb.rb
 	sed -i '' 's/Anycable/AnyCable/g' ./lib/anycable/grpc/*_pb.rb
 	bundle exec rubocop -A ./lib/anycable/protos ./lib/anycable/grpc
+
+release:
+	gem release anycable-core
+	gem release anycable -t
+	git push
+	git push --tags
