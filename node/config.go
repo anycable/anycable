@@ -9,10 +9,10 @@ type Config struct {
 	// The max size of the Go routines pool for hub
 	HubGopoolSize int
 	// How should ping message timestamp be formatted? ('s' => seconds, 'ms' => milli seconds, 'ns' => nano seconds)
-	PingTimestampFormat string
+	PingTimestampPrecision string
 }
 
 // NewConfig builds a new config
 func NewConfig() Config {
-	return Config{PingInterval: 3, StatsRefreshInterval: 5, HubGopoolSize: 16, PingTimestampFormat: "s"}
+	return Config{PingInterval: 3, StatsRefreshInterval: 5, HubGopoolSize: 16, PingTimestampPrecision: "s"}
 }
