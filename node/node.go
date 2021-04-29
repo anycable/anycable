@@ -1,7 +1,6 @@
 package node
 
 import (
-	"encoding/json"
 	"fmt"
 	"runtime"
 	"time"
@@ -125,15 +124,8 @@ func (n *Node) SetDisconnector(d Disconnector) {
 
 // HandleCommand parses incoming message from client and
 // execute the command (if recognized)
-func (n *Node) HandleCommand(s *Session, raw []byte) error {
-	msg := &common.Message{}
-
+func (n *Node) HandleCommand(s *Session, msg *common.Message) error {
 	n.Metrics.Counter(metricsReceivedMsg).Inc()
-
-	if err := json.Unmarshal(raw, &msg); err != nil {
-		n.Metrics.Counter(metricsUnknownReceived).Inc()
-		return err
-	}
 
 	s.Log.Debugf("Incoming message: %s", msg)
 	switch msg.Command {
@@ -366,7 +358,7 @@ func (n *Node) RemoteDisconnect(msg *common.RemoteDisconnectMessage) {
 
 func transmit(s *Session, transmissions []string) {
 	for _, msg := range transmissions {
-		s.Send([]byte(msg))
+		s.SendJSONTransmission(msg)
 	}
 }
 
@@ -474,6 +466,6 @@ func subscriptionsList(m map[string]bool) []string {
 	return keys
 }
 
-func newDisconnectMessage(reason string, reconnect bool) []byte {
-	return (&common.DisconnectMessage{Type: "disconnect", Reason: reason, Reconnect: reconnect}).ToJSON()
+func newDisconnectMessage(reason string, reconnect bool) *common.DisconnectMessage {
+	return &common.DisconnectMessage{Type: "disconnect", Reason: reason, Reconnect: reconnect}
 }

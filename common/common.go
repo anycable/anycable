@@ -113,6 +113,10 @@ func (c *CommandResult) ToCallResult() *CallResult {
 	return &res
 }
 
+type SentMessage interface {
+	ToJSON() []byte
+}
+
 // Message represents incoming client message
 type Message struct {
 	Command    string `json:"command"`
@@ -172,13 +176,24 @@ type Reply struct {
 	Type       string      `json:"type,omitempty"`
 	Identifier string      `json:"identifier"`
 	Message    interface{} `json:"message"`
+
+	encoded      bool
+	encodedBytes []byte
 }
 
 func (r *Reply) ToJSON() []byte {
+	if r.encoded {
+		return r.encodedBytes
+	}
+
 	jsonStr, err := json.Marshal(&r)
 	if err != nil {
 		panic("Failed to build JSON")
 	}
+
+	r.encoded = true
+	r.encodedBytes = jsonStr
+
 	return jsonStr
 }
 

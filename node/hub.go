@@ -332,9 +332,9 @@ func (h *Hub) broadcastToStream(stream string, data string) {
 		h.mu.RLock()
 		defer h.mu.RUnlock()
 
-		buf := make(map[string][]byte)
+		buf := make(map[string](*common.Reply))
 
-		var bdata []byte
+		var bdata *common.Reply
 
 		for sid, ids := range h.streams[stream] {
 			session, ok := h.sessions[sid]
@@ -382,11 +382,11 @@ func (h *Hub) disconnectSessions(identifier string, reconnect bool) {
 	})
 }
 
-func buildMessage(data string, identifier string) []byte {
+func buildMessage(data string, identifier string) *common.Reply {
 	var msg interface{}
 
 	// We ignore JSON deserialization failures and consider the message to be a string
 	json.Unmarshal([]byte(data), &msg) // nolint:errcheck
 
-	return (&common.Reply{Identifier: identifier, Message: msg}).ToJSON()
+	return (&common.Reply{Identifier: identifier, Message: msg})
 }
