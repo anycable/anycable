@@ -8,6 +8,7 @@ module AnyCable
 
     alias embedded? embedded
 
+    def self.embed!: (Array[String]?) -> void
     def initialize: (?embedded: bool embedded) -> void
     def run: (?untyped args) -> void
     def shutdown: () -> void
