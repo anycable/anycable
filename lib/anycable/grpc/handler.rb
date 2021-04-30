@@ -9,16 +9,16 @@ module AnyCable
     # RPC service handler
     class Handler < AnyCable::GRPC::Service
       # Handle connection request from WebSocket server
-      def connect(request, _unused_call)
-        AnyCable.rpc_handler.handle(:connect, request)
+      def connect(request, call)
+        AnyCable.rpc_handler.handle(:connect, request, call.metadata)
       end
 
-      def disconnect(request, _unused_call)
-        AnyCable.rpc_handler.handle(:disconnect, request)
+      def disconnect(request, call)
+        AnyCable.rpc_handler.handle(:disconnect, request, call.metadata)
       end
 
-      def command(request, _unused_call)
-        AnyCable.rpc_handler.handle(:command, request)
+      def command(request, call)
+        AnyCable.rpc_handler.handle(:command, request, call.metadata)
       end
     end
   end

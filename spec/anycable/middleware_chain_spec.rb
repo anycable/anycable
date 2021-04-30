@@ -43,7 +43,7 @@ describe AnyCable::MiddlewareChain do
     before do
       # Add rescue middleware
       chain.use(Class.new(AnyCable::Middleware) do
-        def call(mid, req)
+        def call(mid, req, _)
           yield
         rescue => exp
           {status: :exception, message: exp.message}
@@ -52,7 +52,7 @@ describe AnyCable::MiddlewareChain do
 
       # Add time tracking middleware
       chain.use(Class.new(AnyCable::Middleware) do
-        def call(mid, req)
+        def call(mid, req, _)
           start = Time.now
           yield.tap do |response|
             response[:duration] = Time.now - start
@@ -62,7 +62,7 @@ describe AnyCable::MiddlewareChain do
 
       # Add sleeping middleware
       chain.use(Class.new(AnyCable::Middleware) do
-        def call(mid, req)
+        def call(mid, req, _)
           if mid == :sleep
             sleep 1
           end
@@ -72,7 +72,7 @@ describe AnyCable::MiddlewareChain do
 
       # Add aborting middleware
       chain.use(Class.new(AnyCable::Middleware) do
-        def call(mid, req)
+        def call(mid, req, _)
           if mid == :abort
             raise "Aborting from middleware"
           end

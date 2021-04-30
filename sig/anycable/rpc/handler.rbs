@@ -14,7 +14,7 @@ module AnyCable
       include Handlers::Command
 
       def initialize: (?middleware: MiddlewareChain) -> void
-      def handle: (Symbol cmd, rpcRequest data) -> rpcResponse
+      def handle: (Symbol cmd, rpcRequest data, ?rpcMetadata meta) -> rpcResponse
 
       private
 

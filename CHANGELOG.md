@@ -12,7 +12,7 @@ The API changed a bit:
 ```diff
  class SomeMiddleware < AnyCable::Middleware
 -  def call(request, rpc_call, rpc_handler)
-+  def call(rpc_method_name, request)
++  def call(rpc_method_name, request, metadata)
      yield
    end
  end

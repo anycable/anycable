@@ -25,7 +25,7 @@ describe "subscriptions" do
       allow(AnyCable.rpc_handler).to receive(:handle).and_call_original
 
       expect(subject).to be_success
-      expect(AnyCable.rpc_handler).to have_received(:handle).with(:command, request)
+      expect(AnyCable.rpc_handler).to have_received(:handle).with(:command, request, an_instance_of(Hash))
     end
   end
 
@@ -46,7 +46,7 @@ describe "subscriptions" do
       allow(AnyCable.rpc_handler).to receive(:handle).and_call_original
 
       expect(subject).to be_success
-      expect(AnyCable.rpc_handler).to have_received(:handle).with(:command, request)
+      expect(AnyCable.rpc_handler).to have_received(:handle).with(:command, request, an_instance_of(Hash))
     end
   end
 
