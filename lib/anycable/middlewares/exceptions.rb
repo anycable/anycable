@@ -3,7 +3,7 @@
 module AnyCable
   module Middlewares
     class Exceptions < AnyCable::Middleware
-      def call(method_name, request)
+      def call(method_name, request, _meta)
         yield
       rescue => exp
         notify_exception(exp, method_name, request)
@@ -16,8 +16,8 @@ module AnyCable
 
       private
 
-      def notify_exception(exp, method_name, message)
-        AnyCable::ExceptionsHandling.notify(exp, method_name.to_s, message.to_h)
+      def notify_exception(exp, method_name, request)
+        AnyCable::ExceptionsHandling.notify(exp, method_name.to_s, request.to_h)
       end
 
       def response_class(method_name)

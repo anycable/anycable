@@ -1,16 +1,16 @@
 module AnyCable
   class MiddlewareChain
-    type rpcHandlerBlock = ^(Symbol, rpcRequest) -> rpcResponse
+    type rpcHandlerBlock = ^(Symbol, rpcRequest, rpcMetadata) -> rpcResponse
 
     def initialize: () -> void
     def use: (singleton(Middleware) | Middleware middleware) -> void
     def freeze: () -> void
     def to_a: () -> Array[Middleware]
-    def call: (Symbol, rpcRequest) { (Symbol, rpcRequest) -> rpcResponse } -> rpcResponse
+    def call: (Symbol, rpcRequest, ?rpcMetadata) { (Symbol, rpcRequest, rpcMetadata) -> rpcResponse } -> rpcResponse
 
     private
 
-    def execute_next_middleware: (Integer ind, Symbol, rpcRequest, rpcHandlerBlock block) -> rpcResponse
+    def execute_next_middleware: (Integer ind, Symbol, rpcRequest, rpcMetadata, rpcHandlerBlock block) -> rpcResponse
 
     attr_reader mu: untyped
     attr_reader registry: Array[Middleware]

@@ -14,7 +14,8 @@ AnyCable middleware is a class inherited from `AnyCable::Middleware` and impleme
 class PrintMiddleware < AnyCable::Middleware
   # request - is a request payload (incoming message)
   # handler - is a method (Symbol) of RPC handler which is called
-  def call(handler, request)
+  # meta - is a metadata (Hash) provided along with request
+  def call(handler, request, meta)
     p request
     yield
   end

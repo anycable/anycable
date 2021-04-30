@@ -9,6 +9,7 @@ require "anycable/broadcast_adapters"
 
 require "anycable/middleware_chain"
 require "anycable/middlewares/exceptions"
+require "anycable/middlewares/check_version"
 
 require "anycable/socket"
 require "anycable/rpc"

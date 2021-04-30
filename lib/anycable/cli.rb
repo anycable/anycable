@@ -63,6 +63,8 @@ module AnyCable
 
       verify_server_builder!
 
+      check_version!
+
       @server = AnyCable.server_builder.call(config)
 
       # Make sure middlewares are not adding after server has started
@@ -253,6 +255,14 @@ module AnyCable
                    "Make sure you've required a gem (e.g. `anycable-grpc`) or " \
                    "configured `AnyCable.server_builder` yourself"
       exit(1)
+    end
+
+    def check_version!
+      return unless config.version_check_enabled?
+
+      AnyCable.middleware.use(
+        AnyCable::Middlewares::CheckVersion.new(AnyCable::PROTO_VERSION)
+      )
     end
 
     def parse_gem_options!(args)

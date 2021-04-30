@@ -30,19 +30,19 @@ module AnyCable
       registry
     end
 
-    def call(method_name, request, &block)
-      return yield(method_name, request) if registry.none?
+    def call(method_name, request, meta = {}, &block)
+      return yield(method_name, request, meta) if registry.none?
 
-      execute_next_middleware(0, method_name, request, block)
+      execute_next_middleware(0, method_name, request, meta, block)
     end
 
     private
 
-    def execute_next_middleware(ind, method_name, request, block)
-      return block.call(method_name, request) if ind >= registry.size
+    def execute_next_middleware(ind, method_name, request, meta, block)
+      return block.call(method_name, request, meta) if ind >= registry.size
 
-      registry[ind].call(method_name, request) do
-        execute_next_middleware(ind + 1, method_name, request, block)
+      registry[ind].call(method_name, request, meta) do
+        execute_next_middleware(ind + 1, method_name, request, meta, block)
       end
     end
 

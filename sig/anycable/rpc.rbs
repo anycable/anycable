@@ -4,6 +4,7 @@ module AnyCable
 
   type rpcStatus = 0 | 1 | 2
   type protoMap = Hash[String, String]
+  type rpcMetadata = Hash[String, String]
 
   interface _WithEnvState
     def cstate: () -> protoMap?
@@ -60,6 +61,7 @@ module AnyCable
     include _WithEnv
 
     def initialize: (?env: Env) -> void
+    def to_h: () -> Hash[String, untyped]
   end
 
   class ConnectionResponse
@@ -78,6 +80,8 @@ module AnyCable
       ?error_msg: String,
       ?env: EnvResponse
     ) -> void
+
+    def to_h: () -> Hash[String, untyped]
   end
 
   class CommandMessage
@@ -94,6 +98,8 @@ module AnyCable
       ?connection_identifiers: String,
       ?env: Env
     ) -> void
+
+    def to_h: () -> Hash[String, untyped]
   end
 
   class CommandResponse
@@ -118,6 +124,8 @@ module AnyCable
       ?error_msg: String,
       ?env: EnvResponse
     ) -> void
+
+    def to_h: () -> Hash[String, untyped]
   end
 
   class DisconnectRequest
@@ -127,6 +135,7 @@ module AnyCable
     attr_accessor subscriptions: Array[String]
 
     def initialize: (identifiers: String, ?subscriptions: Array[String], ?env: Env) -> void
+    def to_h: () -> Hash[String, untyped]
   end
 
   class DisconnectResponse
@@ -136,6 +145,7 @@ module AnyCable
     attr_accessor error_msg: String?
 
     def initialize: (status: rpcStatus, ?error_msg: String) -> void
+    def to_h: () -> Hash[String, untyped]
   end
 
   type rpcRequest = ConnectionRequest | DisconnectRequest | CommandMessage

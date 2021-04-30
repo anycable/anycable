@@ -17,8 +17,8 @@ module AnyCable
         @commands = {}
       end
 
-      def handle(cmd, data)
-        middleware.call(cmd, data) do
+      def handle(cmd, data, meta = {})
+        middleware.call(cmd, data, meta) do
           send(cmd, data)
         end
       end

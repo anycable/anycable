@@ -1,0 +1,10 @@
+module AnyCable
+  module Middlewares
+    class CheckVersion < AnyCable::Middleware
+      attr_reader version: String
+
+      def initialize: (String version) -> void
+      def check_version: (rpcMetadata) { () -> untyped } -> untyped
+    end
+  end
+end
