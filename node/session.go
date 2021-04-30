@@ -274,7 +274,7 @@ func (s *Session) addPing() {
 	s.pingTimer = time.AfterFunc(s.pingInterval, s.sendPing)
 }
 
-func newPingMessage(format string) []byte {
+func newPingMessage(format string) *common.PingMessage {
 	var ts int64
 
 	switch format {
