@@ -19,6 +19,14 @@ module AnyCable
     # Wait for external process termination (s)
     WAIT_PROCESS = 2
 
+    # Run CLI inside the current process and shutdown at exit
+    def self.embed!(args = [])
+      new(embedded: true).tap do |cli|
+        cli.run(args)
+        at_exit { cli.shutdown }
+      end
+    end
+
     attr_reader :server, :health_server, :embedded
     alias_method :embedded?, :embedded
 
