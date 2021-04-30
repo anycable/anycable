@@ -17,7 +17,8 @@ Gem::Specification.new do |spec|
     "changelog_uri" => "https://github.com/anycable/anycable/blob/master/CHANGELOG.md",
     "documentation_uri" => "https://docs.anycable.io/",
     "homepage_uri" => "https://anycable.io/",
-    "source_code_uri" => "http://github.com/anycable/anycable"
+    "source_code_uri" => "http://github.com/anycable/anycable",
+    "funding_uri" => "https://github.com/sponsors/anycable"
   }
 
   spec.executables = %w[anycable anycabled]
