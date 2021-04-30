@@ -146,13 +146,13 @@ func TestSubscribeSession(t *testing.T) {
 
 func TestBuildMessageJSON(t *testing.T) {
 	expected := []byte("{\"identifier\":\"chat\",\"message\":{\"text\":\"hello!\"}}")
-	actual := buildMessage("{\"text\":\"hello!\"}", "chat")
+	actual := buildMessage("{\"text\":\"hello!\"}", "chat").ToJSON()
 	assert.Equal(t, expected, actual)
 }
 
 func TestBuildMessageString(t *testing.T) {
 	expected := []byte("{\"identifier\":\"chat\",\"message\":\"plain string\"}")
-	actual := buildMessage("\"plain string\"", "chat")
+	actual := buildMessage("\"plain string\"", "chat").ToJSON()
 	assert.Equal(t, expected, actual)
 }
 

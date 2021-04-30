@@ -1,6 +1,7 @@
 package node
 
 import (
+	"encoding/json"
 	"errors"
 	"sync"
 	"time"
@@ -131,7 +132,14 @@ func (s *Session) ReadMessage() error {
 		return err
 	}
 
-	if err := s.node.HandleCommand(s, message); err != nil {
+	command, err := s.decodeMessage(message)
+
+	if err != nil {
+		s.node.Metrics.Counter(metricsUnknownReceived).Inc()
+		return err
+	}
+
+	if err := s.node.HandleCommand(s, command); err != nil {
 		s.Log.Warnf("Failed to handle incoming message '%s' with error: %v", message, err)
 	}
 
@@ -139,8 +147,18 @@ func (s *Session) ReadMessage() error {
 }
 
 // Send schedules a data transmission
-func (s *Session) Send(msg []byte) {
-	s.send(msg)
+func (s *Session) Send(msg common.SentMessage) {
+	s.send(s.encodeMessage(msg))
+}
+
+// SendJSONTransmission is used to propagate the direct transmission to the client
+// (from RPC call result)
+func (s *Session) SendJSONTransmission(msg string) {
+	if b, err := s.encodeTransmission(msg); err == nil {
+		s.send(b)
+	} else {
+		s.Log.Warnf("Failed to encode transmission %s. Error: %v", msg, err)
+	}
 }
 
 func (s *Session) send(msg []byte) {
@@ -243,7 +261,7 @@ func (s *Session) sendPing() {
 	}
 
 	deadline := time.Now().Add(s.pingInterval / 2)
-	err := s.write(newPingMessage(s.pingTimestampPrecision), deadline)
+	err := s.write(s.encodeMessage(newPingMessage(s.pingTimestampPrecision)), deadline)
 
 	if err == nil {
 		s.addPing()
@@ -268,5 +286,23 @@ func newPingMessage(format string) []byte {
 		ts = time.Now().Unix()
 	}
 
-	return (&common.PingMessage{Type: "ping", Message: ts}).ToJSON()
+	return (&common.PingMessage{Type: "ping", Message: ts})
+}
+
+func (s *Session) encodeMessage(msg common.SentMessage) []byte {
+	return msg.ToJSON()
+}
+
+func (s *Session) encodeTransmission(msg string) ([]byte, error) {
+	return []byte(msg), nil
+}
+
+func (s *Session) decodeMessage(raw []byte) (*common.Message, error) {
+	msg := &common.Message{}
+
+	if err := json.Unmarshal(raw, &msg); err != nil {
+		return nil, err
+	}
+
+	return msg, nil
 }
