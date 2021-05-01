@@ -11,6 +11,8 @@ import (
 	"github.com/apex/log"
 )
 
+const DefaultLogInterval = 15
+
 // IntervalHandler describe a periodical metrics writer interface
 type IntervalWriter interface {
 	Run() error

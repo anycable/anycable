@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/anycable/anycable-go/config"
+	"github.com/anycable/anycable-go/metrics"
 	"github.com/namsral/flag"
 )
 
@@ -82,7 +83,7 @@ func init() {
 	fs.BoolVar(&debugMode, "debug", false, "")
 
 	fs.BoolVar(&defaults.Metrics.Log, "metrics_log", false, "")
-	fs.IntVar(&defaults.Metrics.LogInterval, "metrics_log_interval", 15, "")
+	fs.IntVar(&defaults.Metrics.LogInterval, "metrics_log_interval", 0, "")
 	fs.StringVar(&defaults.Metrics.LogFormatter, "metrics_log_formatter", "", "")
 	fs.StringVar(&defaults.Metrics.HTTP, "metrics_http", "", "")
 	fs.StringVar(&defaults.Metrics.Host, "metrics_host", "", "")
@@ -196,6 +197,10 @@ func prepareComplexDefaults() {
 
 	if defaults.Metrics.Port == 0 {
 		defaults.Metrics.Port = defaults.Port
+	}
+
+	if defaults.Metrics.Log && defaults.Metrics.LogInterval == 0 {
+		defaults.Metrics.LogInterval = metrics.DefaultLogInterval
 	}
 }
 
