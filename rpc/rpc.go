@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"sync"
 	"time"
 
 	"github.com/anycable/anycable-go/common"
@@ -15,6 +16,7 @@ import (
 	pb "github.com/anycable/anycable-go/protos"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -35,14 +37,75 @@ const (
 	metricsRPCPending  = "rpc_pending_num"
 )
 
+type clientState interface {
+	Ready() error
+}
+
+type grpcState struct {
+	conn       *grpc.ClientConn
+	recovering bool
+	mu         sync.Mutex
+}
+
+// Returns nil if connection in the READY/IDLE/CONNECTING state.
+// If connection is in the TransientFailure state, we try to re-connect immediately
+// once.
+// See https://github.com/grpc/grpc/blob/master/doc/connectivity-semantics-and-api.md
+// and https://github.com/grpc/grpc/blob/master/doc/connection-backoff.md
+// See also https://github.com/cockroachdb/cockroach/blob/master/pkg/util/grpcutil/grpc_util.go
+func (st *grpcState) Ready() error {
+	s := st.conn.GetState()
+
+	if s == connectivity.Shutdown {
+		return errors.New("grpc connection is closed")
+	}
+
+	if s == connectivity.TransientFailure {
+		return st.tryRecover()
+	}
+
+	if st.recovering {
+		st.reset()
+	}
+
+	return nil
+}
+
+func (st *grpcState) tryRecover() error {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+
+	if st.recovering {
+		return errors.New("grpc connection is not ready")
+	}
+
+	st.recovering = true
+	st.conn.ResetConnectBackoff()
+
+	log.WithField("context", "rpc").Warn("Connection is lost. Trying to reconnect immediately")
+
+	return nil
+}
+
+func (st *grpcState) reset() {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+
+	if st.recovering {
+		st.recovering = false
+		log.WithField("context", "rpc").Info("Connection is restored")
+	}
+}
+
 // Controller implements node.Controller interface for gRPC
 type Controller struct {
-	config  *Config
-	sem     chan (struct{})
-	conn    *grpc.ClientConn
-	client  pb.RPCClient
-	metrics *metrics.Metrics
-	log     *log.Entry
+	config      *Config
+	sem         chan (struct{})
+	conn        *grpc.ClientConn
+	client      pb.RPCClient
+	metrics     *metrics.Metrics
+	log         *log.Entry
+	clientState clientState
 }
 
 // NewController builds new Controller
@@ -80,6 +143,7 @@ func (c *Controller) Start() error {
 
 	c.conn = conn
 	c.client = pb.NewRPCClient(conn)
+	c.clientState = &grpcState{conn: conn}
 	return err
 }
 
@@ -280,6 +344,10 @@ func (c *Controller) retry(sid string, callback func() (interface{}, error)) (re
 	wasExhausted := false
 
 	for {
+		if stErr := c.clientState.Ready(); stErr != nil {
+			return nil, stErr
+		}
+
 		res, err = callback()
 
 		if err == nil {

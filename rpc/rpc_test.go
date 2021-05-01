@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/anycable/anycable-go/common"
@@ -11,10 +12,23 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+type MockState struct {
+	ready bool
+}
+
+func (st MockState) Ready() error {
+	if st.ready {
+		return nil
+	}
+
+	return errors.New("not ready")
+}
+
 func NewTestController() *Controller {
 	config := NewConfig()
 	controller := NewController(metrics.NewMetrics(nil, 0), &config)
 	controller.initSemaphore(1)
+	controller.clientState = MockState{true}
 	return controller
 }
 
