@@ -2,6 +2,11 @@
 
 ## master
 
+- Refactored Redis pub/sub internals. ([@skryukov][])
+
+The `redis_sentinel_discovery_interval` and `redis_keeepalive_interval` options are no longer
+configurable and deprecated.
+
 - Added `server_msg_total` and `failed_server_msg_total` metrics. ([@prburgu][])
 
 - Dropped deprecated RPC v0.6 support. ([@palkan][])
@@ -118,3 +123,4 @@ See [Changelog](https://github.com/anycable/anycable-go/blob/0-6-stable/CHANGELO
 [@rolandg]: https://github.com/rolandg
 [@gr8bit]: https://github.com/gr8bit
 [@prburgu]: https://github.com/prburgu
+[@skryukov]: https://github.com/skryukov
