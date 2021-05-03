@@ -8,6 +8,8 @@
 
 - Added concurrency to broadcasting. ([@palkan][])
 
+- Made ping message timestamp precision configurable ([@prburgu][])
+
 Now new broadcast messages are handled (and retransmitted) concurrently by a pool of workers (Go routines).
 You can control the size of the pool via the `hub_gopool_size` configuration parameter (defaults to 16).
 
