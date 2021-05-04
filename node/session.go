@@ -67,6 +67,8 @@ type Session struct {
 	pingTimer    *time.Timer
 	pingInterval time.Duration
 
+	pingTimestampPrecision string
+
 	UID         string
 	Identifiers string
 	Log         *log.Entry
@@ -75,14 +77,15 @@ type Session struct {
 // NewSession build a new Session struct from ws connetion and http request
 func NewSession(node *Node, ws Connection, url string, headers map[string]string, uid string) *Session {
 	session := &Session{
-		node:          node,
-		ws:            ws,
-		env:           common.NewSessionEnv(url, &headers),
-		subscriptions: make(map[string]bool),
-		sendCh:        make(chan sentFrame, 256),
-		closed:        false,
-		connected:     false,
-		pingInterval:  time.Duration(node.config.PingInterval) * time.Second,
+		node:                   node,
+		ws:                     ws,
+		env:                    common.NewSessionEnv(url, &headers),
+		subscriptions:          make(map[string]bool),
+		sendCh:                 make(chan sentFrame, 256),
+		closed:                 false,
+		connected:              false,
+		pingInterval:           time.Duration(node.config.PingInterval) * time.Second,
+		pingTimestampPrecision: node.config.PingTimestampPrecision,
 	}
 
 	session.UID = uid
@@ -258,7 +261,7 @@ func (s *Session) sendPing() {
 	}
 
 	deadline := time.Now().Add(s.pingInterval / 2)
-	err := s.write(s.encodeMessage(newPingMessage()), deadline)
+	err := s.write(s.encodeMessage(newPingMessage(s.pingTimestampPrecision)), deadline)
 
 	if err == nil {
 		s.addPing()
@@ -271,8 +274,19 @@ func (s *Session) addPing() {
 	s.pingTimer = time.AfterFunc(s.pingInterval, s.sendPing)
 }
 
-func newPingMessage() *common.PingMessage {
-	return (&common.PingMessage{Type: "ping", Message: time.Now().Unix()})
+func newPingMessage(format string) *common.PingMessage {
+	var ts int64
+
+	switch format {
+	case "ns":
+		ts = time.Now().UnixNano()
+	case "ms":
+		ts = time.Now().UnixNano() / int64(time.Millisecond)
+	default:
+		ts = time.Now().Unix()
+	}
+
+	return (&common.PingMessage{Type: "ping", Message: ts})
 }
 
 func (s *Session) encodeMessage(msg common.SentMessage) []byte {

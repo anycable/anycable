@@ -93,6 +93,8 @@ func init() {
 	fs.IntVar(&defaults.App.StatsRefreshInterval, "stats_refresh_interval", 5, "")
 	fs.IntVar(&defaults.App.HubGopoolSize, "hub_gopool_size", 16, "")
 
+	fs.StringVar(&defaults.App.PingTimestampPrecision, "ping_timestamp_precision", "s", "")
+
 	// CLI vars
 	fs.BoolVar(&showHelp, "h", false, "")
 	fs.BoolVar(&showVersion, "v", false, "")
