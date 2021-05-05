@@ -16,6 +16,10 @@ func NewMockController() MockController {
 	return MockController{Started: true}
 }
 
+func (c *MockController) Start() error {
+	return nil
+}
+
 // Authenticate emulates authentication process:
 // - if path is equal to "failure" then authentication failed
 // - otherwise returns value of headers['id'] as identifier

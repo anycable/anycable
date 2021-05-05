@@ -126,7 +126,7 @@ func (n *Node) HandlePubSub(raw []byte) {
 }
 
 // Shutdown stops all services (hub, controller)
-func (n *Node) Shutdown() {
+func (n *Node) Shutdown() (err error) {
 	close(n.shutdownCh)
 
 	if n.hub != nil {
@@ -166,6 +166,8 @@ func (n *Node) Shutdown() {
 			n.log.Warnf("%v", err)
 		}
 	}
+
+	return
 }
 
 // Authenticate calls controller to perform authentication.

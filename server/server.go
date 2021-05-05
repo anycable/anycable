@@ -114,8 +114,8 @@ func (s *HTTPServer) Running() bool {
 	return s.started
 }
 
-// Stop shuts down server gracefully.
-func (s *HTTPServer) Stop() error {
+// Shutdown shuts down server gracefully.
+func (s *HTTPServer) Shutdown() error {
 	s.mu.Lock()
 	if s.shutdown {
 		s.mu.Unlock()

@@ -183,7 +183,8 @@ func (s *RedisSubscriber) Start() error {
 }
 
 // Shutdown is no-op for Redis
-func (s *RedisSubscriber) Shutdown() {
+func (s *RedisSubscriber) Shutdown() error {
+	return nil
 }
 
 func (s *RedisSubscriber) listen() error {

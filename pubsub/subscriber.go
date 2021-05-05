@@ -10,7 +10,7 @@ import (
 // and sending them to hub
 type Subscriber interface {
 	Start() error
-	Shutdown()
+	Shutdown() error
 }
 
 // NewSubscriber creates an instance of the provided adapter

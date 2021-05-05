@@ -75,10 +75,12 @@ func (s *HTTPSubscriber) Start() error {
 }
 
 // Shutdown stops the HTTP server
-func (s *HTTPSubscriber) Shutdown() {
+func (s *HTTPSubscriber) Shutdown() error {
 	if s.server != nil {
-		s.server.Stop() //nolint:errcheck
+		s.server.Shutdown() //nolint:errcheck
 	}
+
+	return nil
 }
 
 // Handler processes HTTP requests

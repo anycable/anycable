@@ -128,7 +128,7 @@ func (m *Metrics) Run() error {
 }
 
 // Shutdown stops metrics updates
-func (m *Metrics) Shutdown() {
+func (m *Metrics) Shutdown() (err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -140,12 +140,14 @@ func (m *Metrics) Shutdown() {
 	m.shutdownCh = nil
 
 	if m.server != nil {
-		m.server.Stop() //nolint:errcheck
+		m.server.Shutdown() //nolint:errcheck
 	}
 
 	for _, writer := range m.writers {
 		writer.Stop()
 	}
+
+	return
 }
 
 // RegisterCounter adds new counter to the registry
