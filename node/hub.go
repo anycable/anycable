@@ -6,6 +6,7 @@ import (
 
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/utils"
+	"github.com/anycable/anycable-go/ws"
 	"github.com/apex/log"
 )
 
@@ -375,7 +376,7 @@ func (h *Hub) disconnectSessions(identifier string, reconnect bool) {
 		for id := range ids {
 			if ses, ok := h.sessions[id]; ok {
 				ses.Send(disconnectMessage)
-				ses.Disconnect("Closed remotely", CloseNormalClosure)
+				ses.Disconnect("Closed remotely", ws.CloseNormalClosure)
 				ses.Flush()
 			}
 		}

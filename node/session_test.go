@@ -14,7 +14,7 @@ func TestSendRaceConditions(t *testing.T) {
 
 		go func() {
 			for {
-				session.ws.Read() // nolint:errcheck
+				session.conn.Read() // nolint:errcheck
 			}
 		}()
 

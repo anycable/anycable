@@ -18,7 +18,7 @@ func TestAuthenticate(t *testing.T) {
 		assert.Equal(t, true, session.connected, "Session must be marked as connected")
 		assert.Equalf(t, "test_id", session.Identifiers, "Identifiers must be equal to %s", "test_id")
 
-		msg, err := session.ws.Read()
+		msg, err := session.conn.Read()
 		assert.Nil(t, err)
 
 		assert.Equalf(t, []byte("welcome"), msg, "Sent message is invalid: %s", msg)
@@ -31,7 +31,7 @@ func TestAuthenticate(t *testing.T) {
 
 		assert.NotNil(t, err, "Error must not be nil")
 
-		msg, err := session.ws.Read()
+		msg, err := session.conn.Read()
 		assert.Nil(t, err)
 
 		assert.Equalf(t, []byte("unauthorized"), msg, "Sent message is invalid: %s", msg)
@@ -69,7 +69,7 @@ func TestSubscribe(t *testing.T) {
 		// Adds subscription to session
 		assert.Contains(t, session.subscriptions, "test_channel", "Session subscription must be set")
 
-		msg, err := session.ws.Read()
+		msg, err := session.conn.Read()
 		assert.Nil(t, err)
 
 		assert.Equalf(t, []byte("14"), msg, "Sent message is invalid: %s", msg)
@@ -95,7 +95,7 @@ func TestSubscribe(t *testing.T) {
 		assert.Equalf(t, "stream", subscription.identifier, "Channel is invalid: %s", subscription.identifier)
 		assert.Equalf(t, "stream", subscription.stream, "Stream is invalid: %s", subscription.stream)
 
-		msg, err := session.ws.Read()
+		msg, err := session.conn.Read()
 		assert.Nil(t, err)
 
 		assert.Equalf(t, []byte("14"), msg, "Sent message is invalid: %s", msg)
@@ -132,7 +132,7 @@ func TestUnsubscribe(t *testing.T) {
 		assert.Equalf(t, "14", subscription.session, "Session is invalid: %s", subscription.session)
 		assert.Equalf(t, "test_channel", subscription.identifier, "Channel is invalid: %s", subscription.identifier)
 
-		msg, err := session.ws.Read()
+		msg, err := session.conn.Read()
 		assert.Nil(t, err)
 
 		assert.Equalf(t, []byte("14"), msg, "Sent message is invalid: %s", msg)
@@ -155,7 +155,7 @@ func TestPerform(t *testing.T) {
 	t.Run("Successful perform", func(t *testing.T) {
 		assert.Nil(t, node.Perform(session, &common.Message{Identifier: "test_channel", Data: "action"}))
 
-		msg, err := session.ws.Read()
+		msg, err := session.conn.Read()
 		assert.Nil(t, err)
 
 		assert.Equalf(t, []byte("action"), msg, "Sent message is invalid: %s", msg)
@@ -164,7 +164,7 @@ func TestPerform(t *testing.T) {
 	t.Run("With connection state", func(t *testing.T) {
 		assert.Nil(t, node.Perform(session, &common.Message{Identifier: "test_channel", Data: "session"}))
 
-		_, err := session.ws.Read()
+		_, err := session.conn.Read()
 		assert.Nil(t, err)
 
 		assert.Len(t, *session.env.ConnectionState, 1)
@@ -191,7 +191,7 @@ func TestPerform(t *testing.T) {
 			return
 		}
 
-		_, err := session.ws.Read()
+		_, err := session.conn.Read()
 		assert.Nil(t, err)
 
 		assert.Equalf(t, "14", subscription.session, "Session is invalid: %s", subscription.session)
@@ -204,7 +204,7 @@ func TestPerform(t *testing.T) {
 
 		assert.Nil(t, node.Perform(session, &common.Message{Identifier: "test_channel", Data: "channel_state"}))
 
-		_, err := session.ws.Read()
+		_, err := session.conn.Read()
 		assert.Nil(t, err)
 
 		assert.Len(t, *session.env.ChannelStates, 1)
@@ -252,11 +252,11 @@ func TestHandlePubSub(t *testing.T) {
 
 	expected := "{\"identifier\":\"test_channel\",\"message\":\"abc123\"}"
 
-	msg, err := session.ws.Read()
+	msg, err := session.conn.Read()
 	assert.Nil(t, err)
 	assert.Equalf(t, expected, string(msg), "Expected to receive %s but got %s", expected, string(msg))
 
-	msg2, err := session2.ws.Read()
+	msg2, err := session2.conn.Read()
 	assert.Nil(t, err)
 	assert.Equalf(t, expected, string(msg2), "Expected to receive %s but got %s", expected, string(msg2))
 }
@@ -274,7 +274,7 @@ func TestHandlePubSubWithCommand(t *testing.T) {
 
 	expected := string(newDisconnectMessage("remote", false).ToJSON())
 
-	msg, err := session.ws.Read()
+	msg, err := session.conn.Read()
 	assert.Nil(t, err)
 	assert.Equalf(t, expected, string(msg), "Expected to receive %s but got %s", expected, string(msg))
 	assert.True(t, session.closed)

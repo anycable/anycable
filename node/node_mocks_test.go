@@ -7,6 +7,7 @@ import (
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/mocks"
+	"github.com/anycable/anycable-go/ws"
 
 	"github.com/apex/log"
 )
@@ -34,6 +35,11 @@ func (conn MockConnection) Write(msg []byte, deadline time.Time) error {
 	return nil
 }
 
+func (conn MockConnection) WriteBinary(msg []byte, deadline time.Time) error {
+	conn.send <- msg
+	return nil
+}
+
 func (conn MockConnection) Read() ([]byte, error) {
 	timer := time.After(100 * time.Millisecond)
 
@@ -46,7 +52,7 @@ func (conn MockConnection) Read() ([]byte, error) {
 			case <-done:
 				return
 			case frame := <-conn.session.sendCh:
-				conn.session.writeFrame(&frame) // nolint:errcheck
+				conn.session.writeFrame(frame) // nolint:errcheck
 			}
 		}
 	}()
@@ -73,7 +79,7 @@ func (conn MockConnection) ReadIndifinitely() []byte {
 			case <-done:
 				return
 			case frame := <-conn.session.sendCh:
-				conn.session.writeFrame(&frame) // nolint:errcheck
+				conn.session.writeFrame(frame) // nolint:errcheck
 			}
 		}
 	}()
@@ -104,10 +110,10 @@ func NewMockSession(uid string, node *Node) *Session {
 		Log:           log.WithField("sid", uid),
 		subscriptions: make(map[string]bool),
 		env:           common.NewSessionEnv("/cable-test", &map[string]string{}),
-		sendCh:        make(chan sentFrame, 256),
+		sendCh:        make(chan *ws.SentFrame, 256),
 	}
 
-	session.ws = NewMockConnection(&session)
+	session.conn = NewMockConnection(&session)
 
 	return &session
 }

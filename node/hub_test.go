@@ -32,13 +32,13 @@ func TestUnsubscribeRaceConditions(t *testing.T) {
 
 	hub.Broadcast("test", "hello")
 
-	_, err := session.ws.Read()
+	_, err := session.conn.Read()
 	assert.Nil(t, err)
 
-	_, err = session2.ws.Read()
+	_, err = session2.conn.Read()
 	assert.Nil(t, err)
 
-	_, err = session3.ws.Read()
+	_, err = session3.conn.Read()
 	assert.Nil(t, err)
 
 	assert.Equal(t, 3, hub.Size(), "Connections size must be equal 2")
@@ -56,7 +56,7 @@ func TestUnsubscribeRaceConditions(t *testing.T) {
 	}()
 
 	for i := 1; i < 5; i++ {
-		_, err = session2.ws.Read()
+		_, err = session2.conn.Read()
 		assert.Nil(t, err)
 	}
 
@@ -78,7 +78,7 @@ func TestUnsubscribeSession(t *testing.T) {
 
 	hub.Broadcast("test", "\"hello\"")
 
-	msg, err := session.ws.Read()
+	msg, err := session.conn.Read()
 	assert.Nil(t, err)
 	assert.Equal(t, "{\"identifier\":\"test_channel\",\"message\":\"hello\"}", string(msg))
 
@@ -86,12 +86,12 @@ func TestUnsubscribeSession(t *testing.T) {
 
 	hub.Broadcast("test", "\"goodbye\"")
 
-	_, err = session.ws.Read()
+	_, err = session.conn.Read()
 	assert.NotNil(t, err)
 
 	hub.Broadcast("test2", "\"bye\"")
 
-	msg, err = session.ws.Read()
+	msg, err = session.conn.Read()
 	assert.Nil(t, err)
 	assert.Equal(t, "{\"identifier\":\"test_channel\",\"message\":\"bye\"}", string(msg))
 
@@ -99,7 +99,7 @@ func TestUnsubscribeSession(t *testing.T) {
 
 	hub.Broadcast("test2", "\"goodbye\"")
 
-	_, err = session.ws.Read()
+	_, err = session.conn.Read()
 	assert.NotNil(t, err)
 }
 
@@ -118,7 +118,7 @@ func TestSubscribeSession(t *testing.T) {
 
 		hub.Broadcast("test", "\"hello\"")
 
-		msg, err := session.ws.Read()
+		msg, err := session.conn.Read()
 		assert.Nil(t, err)
 		assert.Equal(t, "{\"identifier\":\"test_channel\",\"message\":\"hello\"}", string(msg))
 	})
@@ -131,11 +131,11 @@ func TestSubscribeSession(t *testing.T) {
 
 		received := []string{}
 
-		msg, err := session.ws.Read()
+		msg, err := session.conn.Read()
 		assert.Nil(t, err)
 		received = append(received, string(msg))
 
-		msg, err = session.ws.Read()
+		msg, err = session.conn.Read()
 		assert.Nil(t, err)
 		received = append(received, string(msg))
 
@@ -217,7 +217,7 @@ func BenchmarkBroadcast(b *testing.B) {
 							break
 						}
 
-						(session.ws.(MockConnection)).ReadIndifinitely()
+						(session.conn.(MockConnection)).ReadIndifinitely()
 						countdown++
 					}
 				}()

@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/anycable/anycable-go/utils"
+	"github.com/anycable/anycable-go/ws"
 	"github.com/apex/log"
 	"github.com/gorilla/websocket"
 )
@@ -36,7 +37,7 @@ func WebsocketHandler(app *Node, fetchHeaders []string, config *WSConfig) http.H
 		}
 
 		rheader := map[string][]string{"X-AnyCable-Version": {utils.Version()}}
-		ws, err := upgrader.Upgrade(w, r, rheader)
+		wsc, err := upgrader.Upgrade(w, r, rheader)
 		if err != nil {
 			ctx.Debugf("Websocket connection upgrade error: %#v", err.Error())
 			return
@@ -57,19 +58,19 @@ func WebsocketHandler(app *Node, fetchHeaders []string, config *WSConfig) http.H
 
 		uid, err := utils.FetchUID(r)
 		if err != nil {
-			utils.CloseWS(ws, websocket.CloseAbnormalClosure, "UID Retrieval Error")
+			ws.CloseWithReason(wsc, websocket.CloseAbnormalClosure, "UID Retrieval Error")
 			return
 		}
 
-		ws.SetReadLimit(config.MaxMessageSize)
+		wsc.SetReadLimit(config.MaxMessageSize)
 
 		if config.EnableCompression {
-			ws.EnableWriteCompression(true)
+			wsc.EnableWriteCompression(true)
 		}
 
 		// Separate goroutine for better GC of caller's data.
 		go func() {
-			wrappedConn := WSConnection{conn: ws}
+			wrappedConn := ws.NewConnection(wsc)
 			session := NewSession(app, wrappedConn, url, headers, uid)
 
 			err := app.Authenticate(session)
@@ -81,12 +82,12 @@ func WebsocketHandler(app *Node, fetchHeaders []string, config *WSConfig) http.H
 
 			session.Log.Debug("websocket session established")
 
-			serveConnection(app, ws, session)
+			serveConnection(app, wsc, session)
 		}()
 	})
 }
 
-func serveConnection(app *Node, ws *websocket.Conn, session *Session) {
+func serveConnection(app *Node, wsc *websocket.Conn, session *Session) {
 	go func() {
 		for {
 			err := session.ReadMessage()

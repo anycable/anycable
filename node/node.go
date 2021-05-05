@@ -7,9 +7,8 @@ import (
 
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/metrics"
-	"github.com/anycable/anycable-go/utils"
+	"github.com/anycable/anycable-go/ws"
 	"github.com/apex/log"
-	"github.com/gorilla/websocket"
 )
 
 const (
@@ -42,42 +41,9 @@ type AppNode interface {
 // Connection represents underlying connection
 type Connection interface {
 	Write(msg []byte, deadline time.Time) error
+	WriteBinary(msg []byte, deadline time.Time) error
 	Read() ([]byte, error)
 	Close(code int, reason string)
-}
-
-// WSConnection is a WebSocket implementation of Connection
-type WSConnection struct {
-	conn *websocket.Conn
-}
-
-// Write writes message to a WebSocket
-func (ws WSConnection) Write(msg []byte, deadline time.Time) error {
-	if err := ws.conn.SetWriteDeadline(deadline); err != nil {
-		return err
-	}
-
-	w, err := ws.conn.NextWriter(websocket.TextMessage)
-
-	if err != nil {
-		return err
-	}
-
-	if _, err = w.Write(msg); err != nil {
-		return err
-	}
-
-	return w.Close()
-}
-
-func (ws WSConnection) Read() ([]byte, error) {
-	_, message, err := ws.conn.ReadMessage()
-	return message, err
-}
-
-// Close sends close frame with a given code and a reason
-func (ws WSConnection) Close(code int, reason string) {
-	utils.CloseWS(ws.conn, code, reason)
 }
 
 // Node represents the whole application
@@ -174,7 +140,7 @@ func (n *Node) Shutdown() {
 			// Close all registered sessions
 			for _, session := range n.hub.sessions {
 				session.Send(disconnectMessage)
-				session.Disconnect("Shutdown", CloseGoingAway)
+				session.Disconnect("Shutdown", ws.CloseGoingAway)
 				session.Flush()
 			}
 
@@ -221,7 +187,7 @@ func (n *Node) Authenticate(s *Session) (err error) {
 	}
 
 	if err != nil {
-		s.Disconnect("Auth Error", CloseInternalServerErr)
+		s.Disconnect("Auth Error", ws.CloseInternalServerErr)
 	}
 
 	s.Flush()
@@ -366,7 +332,7 @@ func (n *Node) handleCommandReply(s *Session, msg *common.Message, reply *common
 	defer s.Flush()
 
 	if reply.Disconnect {
-		defer s.Disconnect("Command Failed", CloseAbnormalClosure)
+		defer s.Disconnect("Command Failed", ws.CloseAbnormalClosure)
 	}
 
 	if reply.StopAllStreams {
