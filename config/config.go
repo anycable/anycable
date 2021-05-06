@@ -6,6 +6,7 @@ import (
 	"github.com/anycable/anycable-go/pubsub"
 	"github.com/anycable/anycable-go/rpc"
 	"github.com/anycable/anycable-go/server"
+	"github.com/anycable/anycable-go/ws"
 )
 
 // Config contains main application configuration
@@ -21,7 +22,7 @@ type Config struct {
 	HealthPath           string
 	Headers              []string
 	SSL                  server.SSLConfig
-	WS                   node.WSConfig
+	WS                   ws.Config
 	MaxMessageSize       int64
 	DisconnectorDisabled bool
 	DisconnectQueue      node.DisconnectQueueConfig
@@ -35,7 +36,7 @@ func New() Config {
 	config := Config{}
 	config.App = node.NewConfig()
 	config.SSL = server.NewSSLConfig()
-	config.WS = node.NewWSConfig()
+	config.WS = ws.NewConfig()
 	config.Metrics = metrics.NewConfig()
 	config.RPC = rpc.NewConfig()
 	config.Redis = pubsub.NewRedisConfig()

@@ -16,13 +16,16 @@ import (
 	"github.com/anycable/anycable-go/pubsub"
 	"github.com/anycable/anycable-go/server"
 	"github.com/anycable/anycable-go/utils"
+	"github.com/anycable/anycable-go/ws"
 	"github.com/apex/log"
+	"github.com/gorilla/websocket"
 	"github.com/syossan27/tebata"
 )
 
 type controllerFactory = func(*metrics.Metrics, *config.Config) (node.Controller, error)
 type disconnectorFactory = func(*node.Node, *config.Config) (node.Disconnector, error)
 type subscriberFactory = func(*node.Node, *config.Config) (pubsub.Subscriber, error)
+type websocketHandler = func(*node.Node, *config.Config) (http.Handler, error)
 
 type Shutdownable interface {
 	Shutdown() error
@@ -34,6 +37,7 @@ type Runner struct {
 	controllerFactory   controllerFactory
 	disconnectorFactory disconnectorFactory
 	subscriberFactory   subscriberFactory
+	websocketHandler    websocketHandler
 
 	errChan       chan error
 	shutdownables []Shutdownable
@@ -65,6 +69,10 @@ func (r *Runner) DisconnectorFactory(fn disconnectorFactory) {
 
 func (r *Runner) SubscriberFactory(fn subscriberFactory) {
 	r.subscriberFactory = fn
+}
+
+func (r *Runner) WebsocketHandler(fn websocketHandler) {
+	r.websocketHandler = fn
 }
 
 func (r *Runner) Run() error {
@@ -154,7 +162,12 @@ func (r *Runner) Run() error {
 
 	r.shutdownables = append(r.shutdownables, wsServer)
 
-	wsServer.Mux.Handle(config.Path, node.WebsocketHandler(appNode, config.Headers, &config.WS))
+	wsHandler, err := r.initWebSocketHandler(appNode, config)
+	if err != nil {
+		return fmt.Errorf("!!! Failed to initialize WebSocket handler !!!\n%v", err)
+	}
+
+	wsServer.Mux.Handle(config.Path, wsHandler)
 
 	ctx.Infof("Handle WebSocket connections at %s%s", wsServer.Address(), config.Path)
 
@@ -213,6 +226,30 @@ func (r *Runner) initSubscriber(n *node.Node, c *config.Config) (pubsub.Subscrib
 	}
 
 	return r.subscriberFactory(n, c)
+}
+
+func (r *Runner) initWebSocketHandler(n *node.Node, c *config.Config) (http.Handler, error) {
+	if r.websocketHandler == nil {
+		return r.defaultWebSocketHandler(n, c), nil
+	}
+
+	return r.websocketHandler(n, c)
+}
+
+func (r *Runner) defaultWebSocketHandler(n *node.Node, c *config.Config) http.Handler {
+	return ws.WebsocketHandler(c.Headers, &c.WS, func(wsc *websocket.Conn, info *ws.RequestInfo) error {
+		wrappedConn := ws.NewConnection(wsc)
+		session := node.NewSession(n, wrappedConn, info.Url, info.Headers, info.UID)
+
+		err := n.Authenticate(session)
+
+		if err != nil {
+			return err
+		}
+
+		session.Serve()
+		return nil
+	})
 }
 
 func (r *Runner) initMRuby() string {

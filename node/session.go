@@ -41,11 +41,11 @@ type Session struct {
 }
 
 // NewSession build a new Session struct from ws connetion and http request
-func NewSession(node *Node, conn Connection, url string, headers map[string]string, uid string) *Session {
+func NewSession(node *Node, conn Connection, url string, headers *map[string]string, uid string) *Session {
 	session := &Session{
 		node:                   node,
 		conn:                   conn,
-		env:                    common.NewSessionEnv(url, &headers),
+		env:                    common.NewSessionEnv(url, headers),
 		subscriptions:          make(map[string]bool),
 		sendCh:                 make(chan *ws.SentFrame, 256),
 		closed:                 false,
@@ -66,6 +66,17 @@ func NewSession(node *Node, conn Connection, url string, headers map[string]stri
 	go session.SendMessages()
 
 	return session
+}
+
+// Serve enters a loop to read incoming data
+func (s *Session) Serve() {
+	for {
+		err := s.ReadMessage()
+
+		if err != nil {
+			return
+		}
+	}
 }
 
 // SendMessages waits for incoming messages and send them to the client connection
