@@ -284,5 +284,5 @@ func (r *Runner) setupSignalHandlers() {
 		t.Reserve(shutdownable.Shutdown) // nolint:errcheck
 	}
 
-	t.Reserve(func() { r.errChan <- nil }, 0) // nolint:errcheck
+	t.Reserve(func() { r.errChan <- nil }) // nolint:errcheck
 }
