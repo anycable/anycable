@@ -95,12 +95,6 @@ func NewMetrics(writers []IntervalWriter, logIntervalSeconds int) *Metrics {
 
 // Run periodically updates counters delta (and logs metrics if necessary)
 func (m *Metrics) Run() error {
-	for _, writer := range m.writers {
-		if err := writer.Run(); err != nil {
-			return err
-		}
-	}
-
 	if m.server != nil {
 		m.log.Infof("Serve metrics at %s%s", m.server.Address(), m.httpPath)
 
@@ -108,6 +102,16 @@ func (m *Metrics) Run() error {
 			if !m.server.Stopped() {
 				return fmt.Errorf("Metrics HTTP server at %s stopped: %v", m.server.Address(), err)
 			}
+		}
+	}
+
+	if m.rotateInterval == 0 {
+		return nil
+	}
+
+	for _, writer := range m.writers {
+		if err := writer.Run(); err != nil {
+			return err
 		}
 	}
 
