@@ -82,6 +82,9 @@ make prepare
 
 # Run integrations tests
 make test-conformance
+
+# Run integration benchmarks
+make benchmarks
 ```
 
 We use [golangci-lint](https://golangci-lint.run) to lint Go source code:

@@ -1,0 +1,3 @@
+{
+    "postCreateCommand": "/bin/bash ./.devcontainer/post-create.sh > ~/post-create.log"
+}

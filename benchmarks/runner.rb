@@ -28,7 +28,7 @@ class BenchRunner
   }.freeze
 
   # CI machines could be slow
-  RUN_TIMEOUT = ENV["CI"] ? 60 : 30
+  RUN_TIMEOUT = (ENV["CI"] || ENV["CODESPACES"]) ? 60 : 30
 
   def initialize
     @processes = {}
