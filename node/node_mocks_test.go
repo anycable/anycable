@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/anycable/anycable-go/common"
+	"github.com/anycable/anycable-go/encoders"
 	"github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/mocks"
 	"github.com/anycable/anycable-go/ws"
@@ -111,6 +112,7 @@ func NewMockSession(uid string, node *Node) *Session {
 		subscriptions: make(map[string]bool),
 		env:           common.NewSessionEnv("/cable-test", &map[string]string{}),
 		sendCh:        make(chan *ws.SentFrame, 256),
+		encoder:       encoders.JSON{},
 	}
 
 	session.conn = NewMockConnection(&session)

@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/anycable/anycable-go/common"
+	"github.com/anycable/anycable-go/encoders"
 	"github.com/anycable/anycable-go/utils"
 	"github.com/anycable/anycable-go/ws"
 	"github.com/apex/log"
@@ -333,9 +334,9 @@ func (h *Hub) broadcastToStream(stream string, data string) {
 		h.mu.RLock()
 		defer h.mu.RUnlock()
 
-		buf := make(map[string](*common.Reply))
+		buf := make(map[string](encoders.EncodedMessage))
 
-		var bdata *common.Reply
+		var bdata encoders.EncodedMessage
 
 		for sid, ids := range h.streams[stream] {
 			session, ok := h.sessions[sid]
@@ -383,11 +384,11 @@ func (h *Hub) disconnectSessions(identifier string, reconnect bool) {
 	})
 }
 
-func buildMessage(data string, identifier string) *common.Reply {
+func buildMessage(data string, identifier string) encoders.EncodedMessage {
 	var msg interface{}
 
 	// We ignore JSON deserialization failures and consider the message to be a string
 	json.Unmarshal([]byte(data), &msg) // nolint:errcheck
 
-	return (&common.Reply{Identifier: identifier, Message: msg})
+	return encoders.NewCachedEncodedMessage(&common.Reply{Identifier: identifier, Message: msg})
 }

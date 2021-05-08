@@ -6,6 +6,16 @@ import (
 	"fmt"
 )
 
+// Outgoing message types (according to Action Cable protocol)
+const (
+	WelcomeType    = "welcome"
+	PingType       = "ping"
+	ReplyType      = "message"
+	DisconnectType = "disconnect"
+	ConfirmedType  = "confirm_subscription"
+	RejectedType   = "reject_subscription"
+)
+
 // SessionEnv represents the underlying HTTP connection data:
 // URL and request headers
 type SessionEnv struct {
@@ -113,10 +123,6 @@ func (c *CommandResult) ToCallResult() *CallResult {
 	return &res
 }
 
-type SentMessage interface {
-	ToJSON() []byte
-}
-
 // Message represents incoming client message
 type Message struct {
 	Command    string `json:"command"`
@@ -148,14 +154,6 @@ type PingMessage struct {
 	Message interface{} `json:"message"`
 }
 
-func (p *PingMessage) ToJSON() []byte {
-	jsonStr, err := json.Marshal(&p)
-	if err != nil {
-		panic("Failed to build ping JSON 😲")
-	}
-	return jsonStr
-}
-
 // DisconnectMessage represents a server disconnect message
 type DisconnectMessage struct {
 	Type      string `json:"type"`
@@ -163,38 +161,11 @@ type DisconnectMessage struct {
 	Reconnect bool   `json:"reconnect"`
 }
 
-func (d *DisconnectMessage) ToJSON() []byte {
-	jsonStr, err := json.Marshal(&d)
-	if err != nil {
-		panic("Failed to build disconnect JSON 😲")
-	}
-	return jsonStr
-}
-
 // Reply represents an outgoing client message
 type Reply struct {
 	Type       string      `json:"type,omitempty"`
 	Identifier string      `json:"identifier"`
 	Message    interface{} `json:"message"`
-
-	encoded      bool
-	encodedBytes []byte
-}
-
-func (r *Reply) ToJSON() []byte {
-	if r.encoded {
-		return r.encodedBytes
-	}
-
-	jsonStr, err := json.Marshal(&r)
-	if err != nil {
-		panic("Failed to build JSON")
-	}
-
-	r.encoded = true
-	r.encodedBytes = jsonStr
-
-	return jsonStr
 }
 
 // PubSubMessageFromJSON takes raw JSON byte array and return the corresponding struct
@@ -224,4 +195,45 @@ func PubSubMessageFromJSON(raw []byte) (interface{}, error) {
 	}
 
 	return nil, fmt.Errorf("Unknown message: %s", raw)
+}
+
+//
+// Encoding functions implementations
+//
+
+func (r *Reply) GetType() string {
+	return ReplyType
+}
+
+func (r *Reply) ToJSON() []byte {
+	jsonStr, err := json.Marshal(&r)
+	if err != nil {
+		panic("Failed to build JSON")
+	}
+
+	return jsonStr
+}
+
+func (d *DisconnectMessage) GetType() string {
+	return DisconnectType
+}
+
+func (d *DisconnectMessage) ToJSON() []byte {
+	jsonStr, err := json.Marshal(&d)
+	if err != nil {
+		panic("Failed to build disconnect JSON 😲")
+	}
+	return jsonStr
+}
+
+func (p *PingMessage) GetType() string {
+	return PingType
+}
+
+func (p *PingMessage) ToJSON() []byte {
+	jsonStr, err := json.Marshal(&p)
+	if err != nil {
+		panic("Failed to build ping JSON 😲")
+	}
+	return jsonStr
 }

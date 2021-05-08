@@ -1,12 +1,12 @@
 package node
 
 import (
-	"encoding/json"
 	"errors"
 	"sync"
 	"time"
 
 	"github.com/anycable/anycable-go/common"
+	"github.com/anycable/anycable-go/encoders"
 	"github.com/anycable/anycable-go/ws"
 	"github.com/apex/log"
 )
@@ -15,10 +15,17 @@ const (
 	writeWait = 10 * time.Second
 )
 
+// Executor handles incoming commands (messages)
+type Executor interface {
+	HandleCommand(*Session, *common.Message) error
+}
+
 // Session represents active client
 type Session struct {
 	node          *Node
 	conn          Connection
+	encoder       encoders.Encoder
+	executor      Executor
 	env           *common.SessionEnv
 	subscriptions map[string]bool
 	closed        bool
@@ -52,6 +59,10 @@ func NewSession(node *Node, conn Connection, url string, headers *map[string]str
 		connected:              false,
 		pingInterval:           time.Duration(node.config.PingInterval) * time.Second,
 		pingTimestampPrecision: node.config.PingTimestampPrecision,
+		// Use JSON by default
+		encoder: encoders.JSON{},
+		// Use Action Cable executor by default (implemented by node)
+		executor: node,
 	}
 
 	session.UID = uid
@@ -66,6 +77,14 @@ func NewSession(node *Node, conn Connection, url string, headers *map[string]str
 	go session.SendMessages()
 
 	return session
+}
+
+func (s *Session) SetEncoder(enc encoders.Encoder) {
+	s.encoder = enc
+}
+
+func (s *Session) SetExecutor(ex Executor) {
+	s.executor = ex
 }
 
 // Serve enters a loop to read incoming data
@@ -116,7 +135,11 @@ func (s *Session) ReadMessage() error {
 		return err
 	}
 
-	if err := s.node.HandleCommand(s, command); err != nil {
+	if command == nil {
+		return nil
+	}
+
+	if err := s.executor.HandleCommand(s, command); err != nil {
 		s.Log.Warnf("Failed to handle incoming message '%s' with error: %v", message, err)
 	}
 
@@ -124,17 +147,25 @@ func (s *Session) ReadMessage() error {
 }
 
 // Send schedules a data transmission
-func (s *Session) Send(msg common.SentMessage) {
-	s.sendFrame(s.encodeMessage(msg))
+func (s *Session) Send(msg encoders.EncodedMessage) {
+	if b, err := s.encodeMessage(msg); err == nil {
+		if b != nil {
+			s.sendFrame(b)
+		}
+	} else {
+		s.Log.Warnf("Failed to encode message %v. Error: %v", msg, err)
+	}
 }
 
 // SendJSONTransmission is used to propagate the direct transmission to the client
 // (from RPC call result)
 func (s *Session) SendJSONTransmission(msg string) {
 	if b, err := s.encodeTransmission(msg); err == nil {
-		s.sendFrame(b)
+		if b != nil {
+			s.sendFrame(b)
+		}
 	} else {
-		s.Log.Warnf("Failed to encode transmission %s. Error: %v", msg, err)
+		s.Log.Warnf("Failed to encode transmission %v. Error: %v", msg, err)
 	}
 }
 
@@ -245,13 +276,21 @@ func (s *Session) sendPing() {
 	}
 
 	deadline := time.Now().Add(s.pingInterval / 2)
-	err := s.writeFrameWithDeadline(s.encodeMessage(newPingMessage(s.pingTimestampPrecision)), deadline)
 
-	if err == nil {
-		s.addPing()
-	} else {
-		s.disconnect("Ping failed", ws.CloseAbnormalClosure)
+	b, err := s.encodeMessage(newPingMessage(s.pingTimestampPrecision))
+
+	if err != nil {
+		s.Log.Errorf("Failed to encode ping message: %v", err)
+	} else if b != nil {
+		err = s.writeFrameWithDeadline(b, deadline)
 	}
+
+	if err != nil {
+		s.disconnect("Ping failed", ws.CloseAbnormalClosure)
+		return
+	}
+
+	s.addPing()
 }
 
 func (s *Session) addPing() {
@@ -273,20 +312,14 @@ func newPingMessage(format string) *common.PingMessage {
 	return (&common.PingMessage{Type: "ping", Message: ts})
 }
 
-func (s *Session) encodeMessage(msg common.SentMessage) *ws.SentFrame {
-	return &ws.SentFrame{FrameType: ws.TextFrame, Payload: msg.ToJSON()}
+func (s *Session) encodeMessage(msg encoders.EncodedMessage) (*ws.SentFrame, error) {
+	return s.encoder.Encode(msg)
 }
 
 func (s *Session) encodeTransmission(msg string) (*ws.SentFrame, error) {
-	return &ws.SentFrame{FrameType: ws.TextFrame, Payload: []byte(msg)}, nil
+	return s.encoder.EncodeTransmission(msg)
 }
 
 func (s *Session) decodeMessage(raw []byte) (*common.Message, error) {
-	msg := &common.Message{}
-
-	if err := json.Unmarshal(raw, &msg); err != nil {
-		return nil, err
-	}
-
-	return msg, nil
+	return s.encoder.Decode(raw)
 }
