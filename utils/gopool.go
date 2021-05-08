@@ -9,6 +9,10 @@ import (
 // goroutines during some period of time.
 var ErrScheduleTimeout = fmt.Errorf("schedule error: timed out")
 
+// How many tasks should a worker perform before "re-starting" the goroutine
+// See https://adtac.in/2021/04/23/note-on-worker-pools-in-go.html
+const workerRespawnThreshold = 1 << 16
+
 // GoPool contains logic of goroutine reuse.
 // Copied from https://github.com/gobwas/ws-examples/blob/master/src/gopool/pool.go
 type GoPool struct {
@@ -68,11 +72,17 @@ func (p *GoPool) schedule(task func(), timeout <-chan time.Time) error {
 }
 
 func (p *GoPool) worker(task func()) {
+	counter := 1
 	defer func() { <-p.sem }()
 
 	task()
 
 	for task := range p.work {
+		if counter >= workerRespawnThreshold {
+			return
+		}
+
 		task()
+		counter++
 	}
 }
