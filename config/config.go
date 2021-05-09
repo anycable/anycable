@@ -11,6 +11,7 @@ import (
 	"github.com/anycable/anycable-go/broker"
 	"github.com/anycable/anycable-go/ds"
 	"github.com/anycable/anycable-go/enats"
+	"github.com/anycable/anycable-go/graphql"
 	"github.com/anycable/anycable-go/identity"
 	"github.com/anycable/anycable-go/logger"
 	"github.com/anycable/anycable-go/metrics"
@@ -64,6 +65,8 @@ type Config struct {
 	Pusher               pusher.Config              `toml:"pusher"`
 	DS                   ds.Config                  `toml:"ds"`
 	API                  api.Config                 `toml:"api"`
+	GraphQL              graphql.Config             `toml:"graphql"`
+	LegacyGraphQL        graphql.Config
 
 	ConfigFilePath string
 }
@@ -99,6 +102,8 @@ func NewConfig() Config {
 		Pusher:               pusher.NewConfig(),
 		DS:                   ds.NewConfig(),
 		API:                  api.NewConfig(),
+		GraphQL:              graphql.NewConfig(),
+		LegacyGraphQL:        graphql.NewConfig(),
 	}
 
 	return config // nolint:govet
@@ -249,6 +254,9 @@ func (c *Config) ToToml() string {
 
 	result.WriteString("# Disconnector configuration\n[disconnector]\n")
 	result.WriteString(c.DisconnectQueue.ToToml())
+
+	result.WriteString("# GraphQL configuration\n[graphql]\n")
+	result.WriteString(c.GraphQL.ToToml())
 
 	result.WriteString("# Embedded NATS configuration\n[embedded_nats]\n")
 	result.WriteString(c.EmbeddedNats.ToToml())
