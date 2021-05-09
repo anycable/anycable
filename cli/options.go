@@ -88,6 +88,7 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 	flags = append(flags, jwtCLIFlags(&c, &jwtIdKey, &jwtIdParam, &jwtIdEnforce)...)
 	flags = append(flags, signedStreamsCLIFlags(&c, &turboRailsKey, &cableReadyKey, &turboRailsClearText, &cableReadyClearText)...)
 	flags = append(flags, statsdCLIFlags(&c)...)
+	flags = append(flags, graphqlCLIFlags(&c)...)
 	flags = append(flags, embeddedNatsCLIFlags(&c, &enatsRoutes, &enatsGateways)...)
 	flags = append(flags, sseCLIFlags(&c)...)
 	flags = append(flags, miscCLIFlags(&c, &presets)...)
@@ -325,6 +326,30 @@ Use broadcast_key instead.`)
 		c.HTTPBroadcast.SecretBase = ""
 	}
 
+	if (c.LegacyGraphQL.Path) != "" {
+		fmt.Println(`DEPRECATION WARNING: apollo_path option is deprecated
+and will be deleted in the next major release of anycable-go.
+Use graphql_path instead.`)
+
+		c.GraphQL.Path = c.LegacyGraphQL.Path
+	}
+
+	if (c.LegacyGraphQL.Channel) != "" {
+		fmt.Println(`DEPRECATION WARNING: apollo_channel option is deprecated
+and will be deleted in the next major release of anycable-go.
+Use graphql_channel instead.`)
+
+		c.GraphQL.Channel = c.LegacyGraphQL.Channel
+	}
+
+	if (c.LegacyGraphQL.Action) != "" {
+		fmt.Println(`DEPRECATION WARNING: apollo_action option is deprecated
+and will be deleted in the next major release of anycable-go.
+Use graphql_action instead.`)
+
+		c.GraphQL.Action = c.LegacyGraphQL.Action
+	}
+
 	return &c, nil, false
 }
 
@@ -361,6 +386,7 @@ const (
 	miscCategoryDescription          = "MISC:"
 	brokerCategoryDescription        = "BROKER:"
 	sseCategoryDescription           = "SERVER-SENT EVENTS:"
+	graphqlCategoryDescription       = "GRAPHQL:"
 
 	envPrefix = "ANYCABLE_"
 )
@@ -1211,6 +1237,44 @@ func miscCLIFlags(c *config.Config, presets *string) []cli.Flag {
 			Name:        "presets",
 			Usage:       "Configuration presets, comma-separated (none, fly, heroku, broker). Inferred automatically",
 			Destination: presets,
+		},
+	})
+}
+
+// graphqlCLIFlags returns GraphQL specific flags
+func graphqlCLIFlags(c *config.Config) []cli.Flag {
+	return withDefaults(graphqlCategoryDescription, []cli.Flag{
+		&cli.StringFlag{
+			Name:        "graphql_path",
+			Usage:       "Enable GraphQL proxy and mount at the specified path",
+			Destination: &c.GraphQL.Path,
+		},
+		&cli.StringFlag{
+			Name:        "graphql_channel",
+			Usage:       "GraphQL Ruby channel class name",
+			Value:       c.GraphQL.Channel,
+			Destination: &c.GraphQL.Channel,
+		},
+		&cli.StringFlag{
+			Name:        "graphql_action",
+			Usage:       "GraphQL Ruby channel action (method) name",
+			Value:       c.GraphQL.Action,
+			Destination: &c.GraphQL.Action,
+		},
+		&cli.StringFlag{
+			Name:        "apollo_path",
+			Hidden:      true,
+			Destination: &c.LegacyGraphQL.Path,
+		},
+		&cli.StringFlag{
+			Name:        "apollo_channel",
+			Hidden:      true,
+			Destination: &c.LegacyGraphQL.Channel,
+		},
+		&cli.StringFlag{
+			Name:        "apollo_action",
+			Hidden:      true,
+			Destination: &c.LegacyGraphQL.Action,
 		},
 	})
 }

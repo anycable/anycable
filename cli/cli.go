@@ -16,6 +16,7 @@ import (
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/config"
 	"github.com/anycable/anycable-go/enats"
+	"github.com/anycable/anycable-go/graphql"
 	"github.com/anycable/anycable-go/identity"
 	"github.com/anycable/anycable-go/logger"
 	metricspkg "github.com/anycable/anycable-go/metrics"
@@ -193,6 +194,15 @@ func (r *Runner) Run() error {
 			return errorx.Decorate(err, "failed to initialize WebSocket handler for %s", path)
 		}
 		wsServer.SetupHandler(path, handler)
+	}
+
+	if r.config.GraphQL.Enabled() {
+		gqlPath := r.config.GraphQL.Path
+		apolloHandler := r.apolloWebsocketHandler(appNode, r.config)
+
+		wsServer.SetupHandler(gqlPath, apolloHandler)
+
+		r.log.Infof("Handle Apollo GraphQL WebSocket connections at %s%s", wsServer.Address(), gqlPath)
 	}
 
 	wsServer.SetupHandler(r.config.HealthPath, http.HandlerFunc(server.HealthHandler))
@@ -462,6 +472,18 @@ func (r *Runner) defaultSSEHandler(n *node.Node, ctx context.Context, c *config.
 	handler := sse.SSEHandler(n, ctx, &extractor, &c.SSE, r.log)
 
 	return handler, nil
+}
+
+func (r *Runner) apolloWebsocketHandler(n *node.Node, c *config.Config) http.Handler {
+	extractor := server.DefaultHeadersExtractor{Headers: c.Headers, Cookies: c.Cookies}
+	return ws.WebsocketHandler(graphql.GraphqlProtocols(), &extractor, &c.WS, r.log, func(wsc *websocket.Conn, info *server.RequestInfo, callback func()) error {
+		wrappedConn := ws.NewConnection(wsc)
+
+		session := node.NewSession(n, wrappedConn, info.URL, info.Headers, info.UID)
+		session.SetEncoder(graphql.Encoder{})
+		session.SetExecutor(graphql.NewExecutor(n, &c.GraphQL))
+		return session.Serve(callback)
+	})
 }
 
 func (r *Runner) initMRuby() string {

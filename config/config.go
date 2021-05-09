@@ -4,6 +4,7 @@ import (
 	"github.com/anycable/anycable-go/broadcast"
 	"github.com/anycable/anycable-go/broker"
 	"github.com/anycable/anycable-go/enats"
+	"github.com/anycable/anycable-go/graphql"
 	"github.com/anycable/anycable-go/identity"
 	"github.com/anycable/anycable-go/metrics"
 	nconfig "github.com/anycable/anycable-go/nats"
@@ -55,6 +56,8 @@ type Config struct {
 	SSE                  sse.Config
 	Streams              streams.Config
 	UserPresets          []string
+	GraphQL              graphql.Config
+	LegacyGraphQL        graphql.Config
 }
 
 // NewConfig returns a new empty config
@@ -85,6 +88,8 @@ func NewConfig() Config {
 		EmbeddedNats:     enats.NewConfig(),
 		SSE:              sse.NewConfig(),
 		Streams:          streams.NewConfig(),
+		GraphQL:          graphql.NewConfig(),
+		LegacyGraphQL:    graphql.NewConfig(),
 	}
 
 	return config
