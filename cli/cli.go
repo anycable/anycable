@@ -10,6 +10,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/anycable/anycable-go/apollo"
 	"github.com/anycable/anycable-go/config"
 	"github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/mrb"
@@ -180,6 +181,15 @@ func (r *Runner) Run() error {
 
 	ctx.Infof("Handle WebSocket connections at %s%s", wsServer.Address(), config.Path)
 
+	if config.Apollo.Enabled() {
+		gqlPath := config.Apollo.Path
+		apolloHandler := r.apolloWebsocketHandler(appNode, config)
+
+		wsServer.Mux.Handle(gqlPath, apolloHandler)
+
+		ctx.Infof("Handle Apollo GraphQL WebSocket connections at %s%s", wsServer.Address(), gqlPath)
+	}
+
 	wsServer.Mux.Handle(config.HealthPath, http.HandlerFunc(server.HealthHandler))
 	ctx.Infof("Handle health connections at %s%s", wsServer.Address(), config.HealthPath)
 
@@ -268,6 +278,17 @@ func (r *Runner) defaultWebSocketHandler(n *node.Node, c *config.Config) http.Ha
 			return err
 		}
 
+		return session.Serve(callback)
+	})
+}
+
+func (r *Runner) apolloWebsocketHandler(n *node.Node, c *config.Config) http.Handler {
+	return ws.WebsocketHandler(c.Headers, &c.WS, func(wsc *websocket.Conn, info *ws.RequestInfo, callback func()) error {
+		wrappedConn := ws.NewConnection(wsc)
+
+		session := node.NewSession(n, wrappedConn, info.Url, info.Headers, info.UID)
+		session.SetEncoder(apollo.Encoder{})
+		session.SetExecutor(apollo.NewExecutor(n, &c.Apollo))
 		return session.Serve(callback)
 	})
 }
