@@ -204,8 +204,8 @@ func (n *Node) Subscribe(s *Session, msg *common.Message) (res *common.CommandRe
 	s.smu.Lock()
 
 	if _, ok := s.subscriptions[msg.Identifier]; ok {
-		s.Log.Warnf("Already subscribed to %s", msg.Identifier)
 		s.smu.Unlock()
+		err = fmt.Errorf("Already subscribed to %s", msg.Identifier)
 		return
 	}
 
@@ -232,8 +232,8 @@ func (n *Node) Unsubscribe(s *Session, msg *common.Message) (res *common.Command
 	s.smu.Lock()
 
 	if _, ok := s.subscriptions[msg.Identifier]; !ok {
-		s.Log.Warnf("Unknown subscription %s", msg.Identifier)
 		s.smu.Unlock()
+		err = fmt.Errorf("Unknown subscription %s", msg.Identifier)
 		return
 	}
 
@@ -264,8 +264,8 @@ func (n *Node) Perform(s *Session, msg *common.Message) (res *common.CommandResu
 	s.smu.Lock()
 
 	if _, ok := s.subscriptions[msg.Identifier]; !ok {
-		s.Log.Warnf("Unknown subscription %s", msg.Identifier)
 		s.smu.Unlock()
+		err = fmt.Errorf("Unknown subscription %s", msg.Identifier)
 		return
 	}
 

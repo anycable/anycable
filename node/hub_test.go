@@ -1,12 +1,14 @@
 package node
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/anycable/anycable-go/encoders"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -149,13 +151,13 @@ func TestSubscribeSession(t *testing.T) {
 
 func TestBuildMessageJSON(t *testing.T) {
 	expected := []byte("{\"identifier\":\"chat\",\"message\":{\"text\":\"hello!\"}}")
-	actual := buildMessage("{\"text\":\"hello!\"}", "chat").ToJSON()
+	actual := toJSON(buildMessage("{\"text\":\"hello!\"}", "chat"))
 	assert.Equal(t, expected, actual)
 }
 
 func TestBuildMessageString(t *testing.T) {
 	expected := []byte("{\"identifier\":\"chat\",\"message\":\"plain string\"}")
-	actual := buildMessage("\"plain string\"", "chat").ToJSON()
+	actual := toJSON(buildMessage("\"plain string\"", "chat"))
 	assert.Equal(t, expected, actual)
 }
 
@@ -248,4 +250,13 @@ func BenchmarkBroadcast(b *testing.B) {
 			b.StopTimer()
 		})
 	}
+}
+
+func toJSON(msg encoders.EncodedMessage) []byte {
+	b, err := json.Marshal(&msg)
+	if err != nil {
+		panic("Failed to build JSON 😲")
+	}
+
+	return b
 }

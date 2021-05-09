@@ -276,7 +276,7 @@ func TestHandlePubSubWithCommand(t *testing.T) {
 
 	node.HandlePubSub([]byte("{\"command\":\"disconnect\",\"payload\":{\"identifier\":\"14\",\"reconnect\":false}}"))
 
-	expected := string(newDisconnectMessage("remote", false).ToJSON())
+	expected := string(toJSON(newDisconnectMessage("remote", false)))
 
 	msg, err := session.conn.Read()
 	assert.Nil(t, err)

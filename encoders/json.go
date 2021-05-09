@@ -12,8 +12,16 @@ const jsonEncoderID = "json"
 type JSON struct {
 }
 
+func (JSON) ID() string {
+	return jsonEncoderID
+}
+
 func (JSON) Encode(msg EncodedMessage) (*ws.SentFrame, error) {
-	return &ws.SentFrame{FrameType: ws.TextFrame, Payload: msg.ToJSON()}, nil
+	b, err := json.Marshal(&msg)
+	if err != nil {
+		panic("Failed to build JSON 😲")
+	}
+	return &ws.SentFrame{FrameType: ws.TextFrame, Payload: b}, nil
 }
 
 func (JSON) EncodeTransmission(msg string) (*ws.SentFrame, error) {

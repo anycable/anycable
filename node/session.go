@@ -313,6 +313,14 @@ func newPingMessage(format string) *common.PingMessage {
 }
 
 func (s *Session) encodeMessage(msg encoders.EncodedMessage) (*ws.SentFrame, error) {
+	if cm, ok := msg.(*CachedEncodedMessage); ok {
+		return cm.Fetch(
+			s.encoder.ID(),
+			func(m encoders.EncodedMessage) (*ws.SentFrame, error) {
+				return s.encoder.Encode(m)
+			})
+	}
+
 	return s.encoder.Encode(msg)
 }
 

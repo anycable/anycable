@@ -14,6 +14,8 @@ const (
 	DisconnectType = "disconnect"
 	ConfirmedType  = "confirm_subscription"
 	RejectedType   = "reject_subscription"
+	// Not suppurted by Action Cable currently
+	UnsubscribedType = "unsubscribed"
 )
 
 // SessionEnv represents the underlying HTTP connection data:
@@ -154,6 +156,10 @@ type PingMessage struct {
 	Message interface{} `json:"message"`
 }
 
+func (p *PingMessage) GetType() string {
+	return PingType
+}
+
 // DisconnectMessage represents a server disconnect message
 type DisconnectMessage struct {
 	Type      string `json:"type"`
@@ -161,11 +167,19 @@ type DisconnectMessage struct {
 	Reconnect bool   `json:"reconnect"`
 }
 
+func (d *DisconnectMessage) GetType() string {
+	return DisconnectType
+}
+
 // Reply represents an outgoing client message
 type Reply struct {
 	Type       string      `json:"type,omitempty"`
 	Identifier string      `json:"identifier"`
 	Message    interface{} `json:"message"`
+}
+
+func (r *Reply) GetType() string {
+	return ReplyType
 }
 
 // PubSubMessageFromJSON takes raw JSON byte array and return the corresponding struct
@@ -195,45 +209,4 @@ func PubSubMessageFromJSON(raw []byte) (interface{}, error) {
 	}
 
 	return nil, fmt.Errorf("Unknown message: %s", raw)
-}
-
-//
-// Encoding functions implementations
-//
-
-func (r *Reply) GetType() string {
-	return ReplyType
-}
-
-func (r *Reply) ToJSON() []byte {
-	jsonStr, err := json.Marshal(&r)
-	if err != nil {
-		panic("Failed to build JSON")
-	}
-
-	return jsonStr
-}
-
-func (d *DisconnectMessage) GetType() string {
-	return DisconnectType
-}
-
-func (d *DisconnectMessage) ToJSON() []byte {
-	jsonStr, err := json.Marshal(&d)
-	if err != nil {
-		panic("Failed to build disconnect JSON 😲")
-	}
-	return jsonStr
-}
-
-func (p *PingMessage) GetType() string {
-	return PingType
-}
-
-func (p *PingMessage) ToJSON() []byte {
-	jsonStr, err := json.Marshal(&p)
-	if err != nil {
-		panic("Failed to build ping JSON 😲")
-	}
-	return jsonStr
 }

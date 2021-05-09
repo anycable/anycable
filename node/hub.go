@@ -390,5 +390,5 @@ func buildMessage(data string, identifier string) encoders.EncodedMessage {
 	// We ignore JSON deserialization failures and consider the message to be a string
 	json.Unmarshal([]byte(data), &msg) // nolint:errcheck
 
-	return encoders.NewCachedEncodedMessage(&common.Reply{Identifier: identifier, Message: msg})
+	return NewCachedEncodedMessage(&common.Reply{Identifier: identifier, Message: msg})
 }
