@@ -90,21 +90,23 @@ func (n *Node) SetDisconnector(d Disconnector) {
 
 // HandleCommand parses incoming message from client and
 // execute the command (if recognized)
-func (n *Node) HandleCommand(s *Session, msg *common.Message) error {
+func (n *Node) HandleCommand(s *Session, msg *common.Message) (err error) {
 	n.Metrics.Counter(metricsReceivedMsg).Inc()
 
 	s.Log.Debugf("Incoming message: %s", msg)
 	switch msg.Command {
 	case "subscribe":
-		return n.Subscribe(s, msg)
+		_, err = n.Subscribe(s, msg)
 	case "unsubscribe":
-		return n.Unsubscribe(s, msg)
+		_, err = n.Unsubscribe(s, msg)
 	case "message":
-		return n.Perform(s, msg)
+		_, err = n.Perform(s, msg)
 	default:
 		n.Metrics.Counter(metricsUnknownReceived).Inc()
-		return fmt.Errorf("Unknown command: %s", msg.Command)
+		err = fmt.Errorf("Unknown command: %s", msg.Command)
 	}
+
+	return
 }
 
 // HandlePubSub parses incoming pubsub message and broadcast it
@@ -172,8 +174,8 @@ func (n *Node) Shutdown() (err error) {
 
 // Authenticate calls controller to perform authentication.
 // If authentication is successful, session is registered with a hub.
-func (n *Node) Authenticate(s *Session) (err error) {
-	res, err := n.controller.Authenticate(s.UID, s.env)
+func (n *Node) Authenticate(s *Session) (res *common.ConnectResult, err error) {
+	res, err = n.controller.Authenticate(s.UID, s.env)
 
 	if err == nil {
 		s.Identifiers = res.Identifier
@@ -198,7 +200,7 @@ func (n *Node) Authenticate(s *Session) (err error) {
 }
 
 // Subscribe subscribes session to a channel
-func (n *Node) Subscribe(s *Session, msg *common.Message) (err error) {
+func (n *Node) Subscribe(s *Session, msg *common.Message) (res *common.CommandResult, err error) {
 	s.smu.Lock()
 
 	if _, ok := s.subscriptions[msg.Identifier]; ok {
@@ -207,7 +209,7 @@ func (n *Node) Subscribe(s *Session, msg *common.Message) (err error) {
 		return
 	}
 
-	res, err := n.controller.Subscribe(s.UID, s.env, s.Identifiers, msg.Identifier)
+	res, err = n.controller.Subscribe(s.UID, s.env, s.Identifiers, msg.Identifier)
 
 	if err != nil {
 		s.Log.Errorf("Subscribe error: %v", err)
@@ -226,7 +228,7 @@ func (n *Node) Subscribe(s *Session, msg *common.Message) (err error) {
 }
 
 // Unsubscribe unsubscribes session from a channel
-func (n *Node) Unsubscribe(s *Session, msg *common.Message) (err error) {
+func (n *Node) Unsubscribe(s *Session, msg *common.Message) (res *common.CommandResult, err error) {
 	s.smu.Lock()
 
 	if _, ok := s.subscriptions[msg.Identifier]; !ok {
@@ -235,7 +237,7 @@ func (n *Node) Unsubscribe(s *Session, msg *common.Message) (err error) {
 		return
 	}
 
-	res, err := n.controller.Unsubscribe(s.UID, s.env, s.Identifiers, msg.Identifier)
+	res, err = n.controller.Unsubscribe(s.UID, s.env, s.Identifiers, msg.Identifier)
 
 	if err != nil {
 		s.Log.Errorf("Unsubscribe error: %v", err)
@@ -258,7 +260,7 @@ func (n *Node) Unsubscribe(s *Session, msg *common.Message) (err error) {
 }
 
 // Perform executes client command
-func (n *Node) Perform(s *Session, msg *common.Message) (err error) {
+func (n *Node) Perform(s *Session, msg *common.Message) (res *common.CommandResult, err error) {
 	s.smu.Lock()
 
 	if _, ok := s.subscriptions[msg.Identifier]; !ok {
@@ -269,7 +271,7 @@ func (n *Node) Perform(s *Session, msg *common.Message) (err error) {
 
 	s.smu.Unlock()
 
-	res, err := n.controller.Perform(s.UID, s.env, s.Identifiers, msg.Identifier, msg.Data)
+	res, err = n.controller.Perform(s.UID, s.env, s.Identifiers, msg.Identifier, msg.Data)
 
 	if err != nil {
 		s.Log.Errorf("Perform error: %v", err)

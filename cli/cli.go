@@ -241,7 +241,7 @@ func (r *Runner) defaultWebSocketHandler(n *node.Node, c *config.Config) http.Ha
 		wrappedConn := ws.NewConnection(wsc)
 		session := node.NewSession(n, wrappedConn, info.Url, info.Headers, info.UID)
 
-		err := n.Authenticate(session)
+		_, err := n.Authenticate(session)
 
 		if err != nil {
 			return err

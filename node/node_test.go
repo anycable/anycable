@@ -12,7 +12,7 @@ func TestAuthenticate(t *testing.T) {
 
 	t.Run("Successful authentication", func(t *testing.T) {
 		session := NewMockSessionWithEnv("1", &node, "/cable", &map[string]string{"id": "test_id"})
-		err := node.Authenticate(session)
+		_, err := node.Authenticate(session)
 
 		assert.Nil(t, err, "Error must be nil")
 		assert.Equal(t, true, session.connected, "Session must be marked as connected")
@@ -27,7 +27,7 @@ func TestAuthenticate(t *testing.T) {
 	t.Run("Failed authentication", func(t *testing.T) {
 		session := NewMockSessionWithEnv("1", &node, "/failure", &map[string]string{"id": "test_id"})
 
-		err := node.Authenticate(session)
+		_, err := node.Authenticate(session)
 
 		assert.NotNil(t, err, "Error must not be nil")
 
@@ -40,7 +40,7 @@ func TestAuthenticate(t *testing.T) {
 	t.Run("Error during authentication", func(t *testing.T) {
 		session := NewMockSessionWithEnv("1", &node, "/error", &map[string]string{"id": "test_id"})
 
-		err := node.Authenticate(session)
+		_, err := node.Authenticate(session)
 
 		assert.NotNil(t, err, "Error must not be nil")
 	})
@@ -48,7 +48,7 @@ func TestAuthenticate(t *testing.T) {
 	t.Run("With connection state", func(t *testing.T) {
 		session := NewMockSessionWithEnv("1", &node, "/cable", &map[string]string{"x-session-test": "my_session", "id": "session_id"})
 
-		err := node.Authenticate(session)
+		_, err := node.Authenticate(session)
 
 		assert.Nil(t, err, "Error must be nil")
 		assert.Equal(t, true, session.connected, "Session must be marked as connected")
@@ -63,7 +63,7 @@ func TestSubscribe(t *testing.T) {
 	session := NewMockSession("14", &node)
 
 	t.Run("Successful subscription", func(t *testing.T) {
-		err := node.Subscribe(session, &common.Message{Identifier: "test_channel"})
+		_, err := node.Subscribe(session, &common.Message{Identifier: "test_channel"})
 		assert.Nil(t, err, "Error must be nil")
 
 		// Adds subscription to session
@@ -76,7 +76,7 @@ func TestSubscribe(t *testing.T) {
 	})
 
 	t.Run("Subscription with a stream", func(t *testing.T) {
-		err := node.Subscribe(session, &common.Message{Identifier: "stream"})
+		_, err := node.Subscribe(session, &common.Message{Identifier: "stream"})
 		assert.Nil(t, err, "Error must be nil")
 
 		// Adds subscription to session
@@ -102,7 +102,7 @@ func TestSubscribe(t *testing.T) {
 	})
 
 	t.Run("Error during subscription", func(t *testing.T) {
-		err := node.Subscribe(session, &common.Message{Identifier: "failure"})
+		_, err := node.Subscribe(session, &common.Message{Identifier: "failure"})
 		assert.NotNil(t, err, "Error must not be nil")
 	})
 }
@@ -114,7 +114,7 @@ func TestUnsubscribe(t *testing.T) {
 	t.Run("Sucessful unsubscribe", func(t *testing.T) {
 		session.subscriptions["test_channel"] = true
 
-		err := node.Unsubscribe(session, &common.Message{Identifier: "test_channel"})
+		_, err := node.Unsubscribe(session, &common.Message{Identifier: "test_channel"})
 		assert.Nil(t, err, "Error must be nil")
 
 		// Removes subscription from session
@@ -141,7 +141,7 @@ func TestUnsubscribe(t *testing.T) {
 	t.Run("Error during unsubscription", func(t *testing.T) {
 		session.subscriptions["failure"] = true
 
-		err := node.Unsubscribe(session, &common.Message{Identifier: "failure"})
+		_, err := node.Unsubscribe(session, &common.Message{Identifier: "failure"})
 		assert.NotNil(t, err, "Error must not be nil")
 	})
 }
@@ -153,7 +153,8 @@ func TestPerform(t *testing.T) {
 	session.subscriptions["test_channel"] = true
 
 	t.Run("Successful perform", func(t *testing.T) {
-		assert.Nil(t, node.Perform(session, &common.Message{Identifier: "test_channel", Data: "action"}))
+		_, err := node.Perform(session, &common.Message{Identifier: "test_channel", Data: "action"})
+		assert.Nil(t, err)
 
 		msg, err := session.conn.Read()
 		assert.Nil(t, err)
@@ -162,9 +163,10 @@ func TestPerform(t *testing.T) {
 	})
 
 	t.Run("With connection state", func(t *testing.T) {
-		assert.Nil(t, node.Perform(session, &common.Message{Identifier: "test_channel", Data: "session"}))
+		_, err := node.Perform(session, &common.Message{Identifier: "test_channel", Data: "session"})
+		assert.Nil(t, err)
 
-		_, err := session.conn.Read()
+		_, err = session.conn.Read()
 		assert.Nil(t, err)
 
 		assert.Len(t, *session.env.ConnectionState, 1)
@@ -174,12 +176,13 @@ func TestPerform(t *testing.T) {
 	t.Run("Error during perform", func(t *testing.T) {
 		session.subscriptions["failure"] = true
 
-		err := node.Perform(session, &common.Message{Identifier: "failure", Data: "test"})
+		_, err := node.Perform(session, &common.Message{Identifier: "failure", Data: "test"})
 		assert.NotNil(t, err, "Error must not be nil")
 	})
 
 	t.Run("With stopped streams", func(t *testing.T) {
-		assert.Nil(t, node.Perform(session, &common.Message{Identifier: "test_channel", Data: "stop_stream"}))
+		_, err := node.Perform(session, &common.Message{Identifier: "test_channel", Data: "stop_stream"})
+		assert.Nil(t, err)
 
 		var subscription HubSubscription
 
@@ -191,7 +194,7 @@ func TestPerform(t *testing.T) {
 			return
 		}
 
-		_, err := session.conn.Read()
+		_, err = session.conn.Read()
 		assert.Nil(t, err)
 
 		assert.Equalf(t, "14", subscription.session, "Session is invalid: %s", subscription.session)
@@ -202,9 +205,10 @@ func TestPerform(t *testing.T) {
 	t.Run("With channel state", func(t *testing.T) {
 		assert.Len(t, *session.env.ChannelStates, 0)
 
-		assert.Nil(t, node.Perform(session, &common.Message{Identifier: "test_channel", Data: "channel_state"}))
+		_, err := node.Perform(session, &common.Message{Identifier: "test_channel", Data: "channel_state"})
+		assert.Nil(t, err)
 
-		_, err := session.conn.Read()
+		_, err = session.conn.Read()
 		assert.Nil(t, err)
 
 		assert.Len(t, *session.env.ChannelStates, 1)
