@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/anycable/anycable-go/apollo"
 	"github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/pubsub"
@@ -29,6 +30,7 @@ type Config struct {
 	LogLevel             string
 	LogFormat            string
 	Metrics              metrics.Config
+	Apollo               apollo.Config
 }
 
 // New returns a new empty config
@@ -42,5 +44,6 @@ func New() Config {
 	config.Redis = pubsub.NewRedisConfig()
 	config.HTTPPubSub = pubsub.NewHTTPConfig()
 	config.DisconnectQueue = node.NewDisconnectQueueConfig()
+	config.Apollo = apollo.NewConfig()
 	return config
 }
