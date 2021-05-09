@@ -60,6 +60,9 @@ func TestUnsubscribeRaceConditions(t *testing.T) {
 		assert.Nil(t, err)
 	}
 
+	_, err = session2.conn.Read()
+	assert.NotNil(t, err)
+
 	assert.Equal(t, 1, hub.Size(), "Connections size must be equal 1")
 }
 
