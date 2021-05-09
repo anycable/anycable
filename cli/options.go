@@ -96,6 +96,10 @@ func init() {
 	fs.IntVar(&defaults.App.StatsRefreshInterval, "stats_refresh_interval", 5, "")
 	fs.IntVar(&defaults.App.HubGopoolSize, "hub_gopool_size", 16, "")
 
+	fs.StringVar(&defaults.Apollo.Path, "apollo_path", "", "")
+	fs.StringVar(&defaults.Apollo.Channel, "apollo_channel", "GraphqlChannel", "")
+	fs.StringVar(&defaults.Apollo.Action, "apollo_action", "execute", "")
+
 	// CLI vars
 	fs.BoolVar(&showHelp, "h", false, "")
 	fs.BoolVar(&showVersion, "v", false, "")
@@ -183,6 +187,10 @@ OPTIONS
   --ping_interval                        Action Cable ping interval (in seconds), default: 3, env: ANYCABLE_PING_INTERVAL
   --ping_timestamp_precision             Precision for timestamps in ping messages (s, ms, ns), default: s, env: ANYCABLE_PING_TIMESTAMP_PRECISION
   --stats_refresh_interval               How often to refresh the server stats (in seconds), default: 5, env: ANYCABLE_STATS_REFRESH_INTERVAL
+
+  --apollo_path                          Enable Apollo GraphQL proxy and mount at the specified path, default: "" (disabled), env: ANYCABLE_APOLLO_PATH
+  --apollo_channel                       GraphQL Ruby channel class name, default: "GraphqlChannel", env: ANYCABLE_APOLLO_CHANNEL
+  --apollo_action                        GraphQL Ruby channel action name, default: "execute", env: ANYCABLE_APOLLO_ACTION
 
   -h                       This help screen
   -v                       Show version
