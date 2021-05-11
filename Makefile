@@ -4,7 +4,7 @@ GOBENCHDIST ?= dist/gobench
 export GO111MODULE=on
 export GOFLAGS=-mod=vendor
 
-MODIFIER ?= ""
+MODIFIER ?= "pro"
 
 ifdef VERSION
 	LD_FLAGS="-s -w -X github.com/anycable/anycable-go/version.version=$(VERSION) -X github.com/anycable/anycable-go/version.modifier=$(MODIFIER)"

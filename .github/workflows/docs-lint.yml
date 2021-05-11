@@ -3,7 +3,7 @@ name: Lint Docs
 on:
   push:
     branches:
-    - master
+    - pro-master
     paths:
     - "**/*.md"
   pull_request:
