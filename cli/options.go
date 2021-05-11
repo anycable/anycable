@@ -176,7 +176,7 @@ OPTIONS
   --hub_gopool_size                      The size of the goroutines pool to broadcast messages, default: 16, env: ANYCABLE_HUB_GOPOOL_SIZE
 
   --ping_interval                        Action Cable ping interval (in seconds), default: 3, env: ANYCABLE_PING_INTERVAL
-	--ping_timestamp_precision             Precision for timestamps in ping messages (s, ms, ns), default: s, env: ANYCABLE_PING_TIMESTAMP_PRECISION
+  --ping_timestamp_precision             Precision for timestamps in ping messages (s, ms, ns), default: s, env: ANYCABLE_PING_TIMESTAMP_PRECISION
   --stats_refresh_interval               How often to refresh the server stats (in seconds), default: 5, env: ANYCABLE_STATS_REFRESH_INTERVAL
 
   -h                       This help screen
