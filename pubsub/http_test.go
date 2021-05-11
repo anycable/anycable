@@ -7,12 +7,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/anycable/anycable-go/mocks"
+	"github.com/anycable/anycable-go/node_mocks"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestHttpHandler(t *testing.T) {
-	node := &mocks.AppNode{}
+	node := &node_mocks.AppNode{}
 	config := HTTPConfig{}
 	secretConfig := HTTPConfig{Secret: "secret"}
 	subscriber := NewHTTPSubscriber(node, &config)

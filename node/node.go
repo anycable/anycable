@@ -23,11 +23,11 @@ const (
 	metricsStreamsNum      = "broadcast_streams_num"
 	metricsDisconnectQueue = "disconnect_queue_size"
 
-	metricsFailedAuths      = "failed_auths_total"
-	metricsReceivedMsg      = "client_msg_total"
-	metricsUnknownReceived  = "failed_client_msg_total"
-	metricsBroadcastMsg     = "broadcast_msg_total"
-	metricsUnknownBroadcast = "failed_broadcast_msg_total"
+	metricsFailedAuths           = "failed_auths_total"
+	metricsReceivedMsg           = "client_msg_total"
+	metricsFailedCommandReceived = "failed_client_msg_total"
+	metricsBroadcastMsg          = "broadcast_msg_total"
+	metricsUnknownBroadcast      = "failed_broadcast_msg_total"
 
 	metricsSentMsg    = "server_msg_total"
 	metricsFailedSent = "failed_server_msg_total"
@@ -36,6 +36,11 @@ const (
 // AppNode describes a basic node interface
 type AppNode interface {
 	HandlePubSub(msg []byte)
+	Authenticate(s *Session) (*common.ConnectResult, error)
+	Subscribe(s *Session, msg *common.Message) (*common.CommandResult, error)
+	Unsubscribe(s *Session, msg *common.Message) (*common.CommandResult, error)
+	Perform(s *Session, msg *common.Message) (*common.CommandResult, error)
+	Disconnect(s *Session) error
 }
 
 // Connection represents underlying connection
@@ -91,8 +96,6 @@ func (n *Node) SetDisconnector(d Disconnector) {
 // HandleCommand parses incoming message from client and
 // execute the command (if recognized)
 func (n *Node) HandleCommand(s *Session, msg *common.Message) (err error) {
-	n.Metrics.Counter(metricsReceivedMsg).Inc()
-
 	s.Log.Debugf("Incoming message: %s", msg)
 	switch msg.Command {
 	case "subscribe":
@@ -102,7 +105,6 @@ func (n *Node) HandleCommand(s *Session, msg *common.Message) (err error) {
 	case "message":
 		_, err = n.Perform(s, msg)
 	default:
-		n.Metrics.Counter(metricsUnknownReceived).Inc()
 		err = fmt.Errorf("Unknown command: %s", msg.Command)
 	}
 
@@ -179,7 +181,7 @@ func (n *Node) Authenticate(s *Session) (res *common.ConnectResult, err error) {
 
 	if err == nil {
 		s.Identifiers = res.Identifier
-		s.connected = true
+		s.Connected = true
 
 		n.hub.AddSession(s)
 	} else {
@@ -417,7 +419,7 @@ func (n *Node) registerMetrics() {
 
 	n.Metrics.RegisterCounter(metricsFailedAuths, "The total number of failed authentication attempts")
 	n.Metrics.RegisterCounter(metricsReceivedMsg, "The total number of received messages from clients")
-	n.Metrics.RegisterCounter(metricsUnknownReceived, "The total number of unrecognized messages received from clients")
+	n.Metrics.RegisterCounter(metricsFailedCommandReceived, "The total number of unrecognized messages received from clients")
 	n.Metrics.RegisterCounter(metricsBroadcastMsg, "The total number of messages received through PubSub (for broadcast)")
 	n.Metrics.RegisterCounter(metricsUnknownBroadcast, "The total number of unrecognized messages received through PubSub")
 

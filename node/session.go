@@ -29,7 +29,6 @@ type Session struct {
 	env           *common.SessionEnv
 	subscriptions map[string]bool
 	closed        bool
-	connected     bool
 	// Main mutex (for read/write and important session updates)
 	mu sync.Mutex
 	// Mutex for protocol-related state (env, subscriptions)
@@ -44,6 +43,7 @@ type Session struct {
 
 	UID         string
 	Identifiers string
+	Connected   bool
 	Log         *log.Entry
 }
 
@@ -56,7 +56,7 @@ func NewSession(node *Node, conn Connection, url string, headers *map[string]str
 		subscriptions:          make(map[string]bool),
 		sendCh:                 make(chan *ws.SentFrame, 256),
 		closed:                 false,
-		connected:              false,
+		Connected:              false,
 		pingInterval:           time.Duration(node.config.PingInterval) * time.Second,
 		pingTimestampPrecision: node.config.PingTimestampPrecision,
 		// Use JSON by default
@@ -131,7 +131,7 @@ func (s *Session) ReadMessage() error {
 	command, err := s.decodeMessage(message)
 
 	if err != nil {
-		s.node.Metrics.Counter(metricsUnknownReceived).Inc()
+		s.node.Metrics.Counter(metricsFailedCommandReceived).Inc()
 		return err
 	}
 
@@ -139,7 +139,10 @@ func (s *Session) ReadMessage() error {
 		return nil
 	}
 
+	s.node.Metrics.Counter(metricsReceivedMsg).Inc()
+
 	if err := s.executor.HandleCommand(s, command); err != nil {
+		s.node.Metrics.Counter(metricsFailedCommandReceived).Inc()
 		s.Log.Warnf("Failed to handle incoming message '%s' with error: %v", message, err)
 	}
 
@@ -180,10 +183,10 @@ func (s *Session) Disconnect(reason string, code int) {
 
 func (s *Session) disconnect(reason string, code int) {
 	s.mu.Lock()
-	if s.connected {
+	if s.Connected {
 		defer s.node.Disconnect(s) // nolint:errcheck
 	}
-	s.connected = false
+	s.Connected = false
 	s.mu.Unlock()
 
 	s.close(reason, code)

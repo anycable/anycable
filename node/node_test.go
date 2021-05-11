@@ -15,7 +15,7 @@ func TestAuthenticate(t *testing.T) {
 		_, err := node.Authenticate(session)
 
 		assert.Nil(t, err, "Error must be nil")
-		assert.Equal(t, true, session.connected, "Session must be marked as connected")
+		assert.Equal(t, true, session.Connected, "Session must be marked as connected")
 		assert.Equalf(t, "test_id", session.Identifiers, "Identifiers must be equal to %s", "test_id")
 
 		msg, err := session.conn.Read()
@@ -51,7 +51,7 @@ func TestAuthenticate(t *testing.T) {
 		_, err := node.Authenticate(session)
 
 		assert.Nil(t, err, "Error must be nil")
-		assert.Equal(t, true, session.connected, "Session must be marked as connected")
+		assert.Equal(t, true, session.Connected, "Session must be marked as connected")
 
 		assert.Len(t, *session.env.ConnectionState, 1)
 		assert.Equal(t, "my_session", (*session.env.ConnectionState)["_s_"])
