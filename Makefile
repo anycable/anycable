@@ -4,7 +4,7 @@ EMBEDDEDDIST ?= dist/embedded-cable
 
 export GO111MODULE=on
 
-MODIFIER ?= ""
+MODIFIER ?= "pro"
 
 # Whether to build/test with mruby support. Set MRUBY_GO=false to drop the mrb tag
 # (useful in environments without mruby toolchain, e.g. the Dockerized dev env).

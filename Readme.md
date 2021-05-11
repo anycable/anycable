@@ -3,7 +3,7 @@
 [![Docker](https://img.shields.io/docker/pulls/anycable/anycable-go.svg)](https://hub.docker.com/r/anycable/anycable-go/)
 [![Documentation](https://img.shields.io/badge/docs-link-brightgreen.svg)](https://docs.anycable.io)
 
-# AnyCable
+# AnyCable <img class='pro-badge' src='https://docs.anycable.io/assets/pro.svg' alt='pro' />
 
 <img align="right" height="150" width="129"
      title="AnyCable logo" src="https://docs.anycable.io/assets/images/logo.svg">

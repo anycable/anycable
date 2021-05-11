@@ -3,16 +3,7 @@ permissions:
   contents: read
 
 on:
-  push:
-    branches:
-    - main
-    paths:
-    - "**/*.md"
-    - ".github/workflows/docs-lint.yml"
-  pull_request:
-    paths:
-    - "**/*.md"
-    - ".github/workflows/docs-lint.yml"
+  workflow_dispatch:
 
 jobs:
   docs-lint:

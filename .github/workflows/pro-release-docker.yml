@@ -1,0 +1,153 @@
+name: Publish PRO Docker images
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  push_to_ghcr:
+    runs-on: ubuntu-20.04
+    env:
+      GO111MODULE: on
+      CGO_ENABLED: "0"
+      GOFLAGS: "-mod=vendor"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install bison
+      - uses: actions/cache@v1
+        with:
+          path: vendor
+          key: vendor-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            vendor-
+      - run: go mod vendor
+      - name: Build mruby
+        run: bash -c '(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)'
+      - uses: actions/setup-go@v4
+        with:
+          go-version-file: go.mod
+      - name: Set VERSION (if any)
+        if: ${{ contains(github.ref, 'refs/tags/v') }}
+        id: version
+        run: |
+          echo VERSION=${GITHUB_REF#refs/tags/v} >> $GITHUB_OUTPUT
+      - name: Prepare files for Docker build
+        run: |
+          cp /etc/ssl/certs/ca-certificates.crt ./.docker/ca-certificates.crt
+      - name: Build binary
+        run: |
+          env GOOS=linux GOARCH=arm64 go build -ldflags "-s -w -X github.com/anycable/anycable-go/version.proVersion=${{ steps.version.outputs.VERSION }} -X github.com/anycable/anycable-go/version.sha=$(echo "$GITHUB_SHA" | cut -c -7) -X github.com/anycable/anycable-go/version.modifier=pro" -a -o .docker/linux/arm64/anycable-go cmd/anycable-go/main.go
+          env GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X github.com/anycable/anycable-go/version.proVersion=${{ steps.version.outputs.VERSION }} -X github.com/anycable/anycable-go/version.sha=$(echo "$GITHUB_SHA" | cut -c -7) -X github.com/anycable/anycable-go/version.modifier=pro" -a -o .docker/linux/amd64/anycable-go cmd/anycable-go/main.go
+          .docker/linux/amd64/anycable-go -v
+      - uses: docker/setup-buildx-action@v2
+      - uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GHCR_TOKEN }}
+      - name: Prepare Docker metadata and versions
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          flavor: |
+            latest=auto
+          images: |
+            ghcr.io/anycable/anycable-go-pro
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha,prefix=
+            type=edge,branch=pro-master
+      - name: Build and push base images
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: .docker/Dockerfile.universal
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: |
+            maintainer=Vladimir Dementyev
+            org.opencontainers.image.description=AnyCable WebSocket server (pro version)
+            org.opencontainers.image.vendor=Evil Martians
+            org.opencontainers.image.url=https://anycable.io
+            org.opencontainers.image.source=https://github.com/anycable/anycable-go-pro-releases
+            org.opencontainers.image.documentation=https://docs.anycable.io
+            org.opencontainers.image.licenses=https://anycable.io/eula
+      - name: Prepare Docker metadata and versions for alpine image
+        id: meta-alpine
+        uses: docker/metadata-action@v3
+        with:
+          flavor: |
+            latest=auto
+            prefix=
+            suffix=-alpine,onlatest=true
+          images: |
+            ghcr.io/anycable/anycable-go-pro
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha,prefix=
+            type=edge,branch=pro-master
+      - name: Build and push alpine images
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: .docker/Dockerfile.alpine
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta-alpine.outputs.tags }}
+          labels: |
+            maintainer=Vladimir Dementyev
+            org.opencontainers.image.description=AnyCable WebSocket server (pro version)
+            org.opencontainers.image.vendor=Evil Martians
+            org.opencontainers.image.url=https://anycable.io
+            org.opencontainers.image.source=https://github.com/anycable/anycable-go-pro-releases
+            org.opencontainers.image.documentation=https://docs.anycable.io
+            org.opencontainers.image.licenses=https://anycable.io/eula
+      - name: Build binary with MRuby
+        # Temporary disable buidling MRuby images
+        if: ${{ false }}
+        env:
+          CGO_ENABLED: "1"
+        run: |
+          env GOOS=linux GOARCH=amd64 go build -tags mrb -ldflags "-s -w -X github.com/anycable/anycable-go/version.proVersion=${{ steps.version.outputs.VERSION }} -X github.com/anycable/anycable-go/version.sha=$(echo "$GITHUB_SHA" | cut -c -7) -X github.com/anycable/anycable-go/version.modifier=pro" -a -o .docker/anycable-go-linux-amd64 cmd/anycable-go/main.go
+          .docker/anycable-go-linux-amd64 -v
+      - name: Prepare Docker metadata and versions for mrb image
+        if: ${{ false }}
+        id: meta-mrb
+        uses: docker/metadata-action@v3
+        with:
+          flavor: |
+            latest=auto
+            prefix=
+            suffix=-mrb
+          images: |
+            ghcr.io/anycable/anycable-go-pro
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha,prefix=
+            type=edge,branch=pro-master
+      - name: Build and push mrb images
+        if: ${{ false }}
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: .docker/Dockerfile.mrb-linux-amd64
+          push: true
+          tags: ${{ steps.meta-mrb.outputs.tags }}
+          labels: |
+            maintainer=Vladimir Dementyev
+            org.opencontainers.image.description=AnyCable WebSocket server (pro version)
+            org.opencontainers.image.vendor=Evil Martians
+            org.opencontainers.image.url=https://anycable.io
+            org.opencontainers.image.source=https://github.com/anycable/anycable-go-pro-releases
+            org.opencontainers.image.documentation=https://docs.anycable.io
+            org.opencontainers.image.licenses=https://anycable.io/eula
