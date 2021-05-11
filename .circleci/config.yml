@@ -171,7 +171,7 @@ commands:
       postfix:
         type: string
     steps:
-      - run: env GOOS=<< parameters.os >> GOARCH=<< parameters.arch >> go build -ldflags "-s -w -X github.com/anycable/anycable-go/utils.version=${CIRCLE_TAG/v/''} -X github.com/anycable/anycable-go/utils.sha=$(echo "$CIRCLE_SHA1" | cut -c -7)" -a -o "/tmp/dist/anycable-go-<< parameters.postfix >>" cmd/anycable-go/main.go
+      - run: env GOOS=<< parameters.os >> GOARCH=<< parameters.arch >> go build -ldflags "-s -w -X github.com/anycable/anycable-go/version.version=${CIRCLE_TAG/v/''} -X github.com/anycable/anycable-go/version.sha=$(echo "$CIRCLE_SHA1" | cut -c -7)" -a -o "/tmp/dist/anycable-go-<< parameters.postfix >>" cmd/anycable-go/main.go
   build-mruby:
     description: Build AnyCable Go binary with mruby support
     parameters:
@@ -182,7 +182,7 @@ commands:
       postfix:
         type: string
     steps:
-      - run: env GOOS=<< parameters.os >> GOARCH=<< parameters.arch >> go build -ldflags "-s -w -X github.com/anycable/anycable-go/utils.version=${CIRCLE_TAG/v/''} -X github.com/anycable/anycable-go/utils.sha=$(echo "$CIRCLE_SHA1" | cut -c -7)" -tags mrb -a -o "/tmp/dist/anycable-go-<< parameters.postfix >>" cmd/anycable-go/main.go
+      - run: env GOOS=<< parameters.os >> GOARCH=<< parameters.arch >> go build -ldflags "-s -w -X github.com/anycable/anycable-go/version.version=${CIRCLE_TAG/v/''} -X github.com/anycable/anycable-go/version.sha=$(echo "$CIRCLE_SHA1" | cut -c -7)" -tags mrb -a -o "/tmp/dist/anycable-go-<< parameters.postfix >>" cmd/anycable-go/main.go
 
 orbs:
   ruby: circleci/ruby@1.1.2

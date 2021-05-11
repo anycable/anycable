@@ -16,6 +16,7 @@ import (
 	"github.com/anycable/anycable-go/pubsub"
 	"github.com/anycable/anycable-go/server"
 	"github.com/anycable/anycable-go/utils"
+	"github.com/anycable/anycable-go/version"
 	"github.com/anycable/anycable-go/ws"
 	"github.com/apex/log"
 	"github.com/gorilla/websocket"
@@ -77,7 +78,7 @@ func (r *Runner) WebsocketHandler(fn websocketHandler) {
 
 func (r *Runner) Run() error {
 	if ShowVersion() {
-		fmt.Println(utils.Version())
+		fmt.Println(version.Version())
 		return nil
 	}
 
@@ -103,7 +104,7 @@ func (r *Runner) Run() error {
 
 	mrubySupport := r.initMRuby()
 
-	ctx.Infof("Starting %s %s%s (pid: %d, open file limit: %s)", r.name, utils.Version(), mrubySupport, os.Getpid(), utils.OpenFileLimit())
+	ctx.Infof("Starting %s %s%s (pid: %d, open file limit: %s)", r.name, version.Version(), mrubySupport, os.Getpid(), utils.OpenFileLimit())
 
 	metrics, err := metrics.FromConfig(&config.Metrics)
 

@@ -4,12 +4,14 @@ GOBENCHDIST ?= dist/gobench
 export GO111MODULE=on
 export GOFLAGS=-mod=vendor
 
+MODIFIER ?= ""
+
 ifdef VERSION
-	LD_FLAGS="-s -w -X github.com/anycable/anycable-go/utils.version=$(VERSION)"
+	LD_FLAGS="-s -w -X github.com/anycable/anycable-go/version.version=$(VERSION) -X github.com/anycable/anycable-go/version.modifier=$(MODIFIER)"
 else
 	COMMIT := $(shell sh -c 'git log --pretty=format:"%h" -n 1 ')
 	VERSION := $(shell sh -c 'git tag -l --sort=-version:refname "v*" | head -n1')
-	LD_FLAGS="-s -w -X github.com/anycable/anycable-go/utils.sha=$(COMMIT) -X github.com/anycable/anycable-go/utils.version=$(VERSION)"
+	LD_FLAGS="-s -w -X github.com/anycable/anycable-go/version.sha=$(COMMIT) -X github.com/anycable/anycable-go/utils.version=$(VERSION) -X github.com/anycable/anycable-go/version.modifier=$(MODIFIER)"
 endif
 
 GOBUILD=go build -ldflags $(LD_FLAGS) -a

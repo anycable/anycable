@@ -1,13 +1,18 @@
-package utils
+package version
 
 var (
-	version string
-	sha     string
+	version  string
+	modifier string
+	sha      string
 )
 
 func init() {
 	if version == "" {
 		version = "1.0.5"
+	}
+
+	if modifier != "" {
+		version = version + "-" + modifier
 	}
 
 	if sha != "" {

@@ -6,7 +6,7 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/anycable/anycable-go/utils"
+	"github.com/anycable/anycable-go/version"
 	"github.com/apex/log"
 	"github.com/gorilla/websocket"
 	nanoid "github.com/matoous/go-nanoid"
@@ -46,7 +46,7 @@ func WebsocketHandler(headersToFetch []string, config *Config, sessionHandler se
 			EnableCompression: config.EnableCompression,
 		}
 
-		rheader := map[string][]string{"X-AnyCable-Version": {utils.Version()}}
+		rheader := map[string][]string{"X-AnyCable-Version": {version.Version()}}
 		wsc, err := upgrader.Upgrade(w, r, rheader)
 		if err != nil {
 			ctx.Debugf("Websocket connection upgrade error: %#v", err.Error())
