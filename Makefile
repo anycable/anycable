@@ -4,7 +4,7 @@ GOBENCHDIST ?= dist/gobench
 export GO111MODULE=on
 export GOFLAGS=-mod=vendor
 
-MODIFIER ?= ""
+MODIFIER ?= "pro"
 
 ifndef ANYCABLE_DEBUG
   export ANYCABLE_DEBUG=1
