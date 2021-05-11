@@ -1,16 +1,7 @@
 name: Lint Docs
 
 on:
-  push:
-    branches:
-    - master
-    paths:
-    - "**/*.md"
-    - ".github/workflows/docs-lint.yml"
-  pull_request:
-    paths:
-    - "**/*.md"
-    - ".github/workflows/docs-lint.yml"
+  workflow_dispatch:
 
 jobs:
   docs-lint:

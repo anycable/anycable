@@ -1,11 +1,6 @@
 name: Push Stable
 
 on:
-  push:
-    tags:
-      - v1.2.*
-      - v1.3.*
-      - v1.4.*
   workflow_dispatch:
 
 jobs:

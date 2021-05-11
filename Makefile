@@ -4,7 +4,7 @@ EMBEDDEDDIST ?= dist/embedded-cable
 
 export GO111MODULE=on
 
-MODIFIER ?= ""
+MODIFIER ?= "pro"
 
 ifndef ANYCABLE_DEBUG
   export ANYCABLE_DEBUG=1

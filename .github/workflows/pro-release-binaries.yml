@@ -1,0 +1,109 @@
+name: Publish PRO binaries
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  upload_binaries:
+    runs-on: ubuntu-20.04
+    env:
+      GO111MODULE: on
+      CGO_ENABLED: "0"
+      GOFLAGS: "-mod=vendor"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install bison
+      - uses: actions/cache@v1
+        with:
+          path: vendor
+          key: vendor-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            vendor-
+      - run: go mod vendor
+      - uses: ruby/setup-ruby@v1
+        with:
+          # Use <3.0 since go-mruby's Rakefile has some problems with keyword arguments compatibility
+          ruby-version: 2.7
+          bundler-cache: true
+      - name: Build mruby
+        run: bash -c '(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)'
+      - uses: actions/setup-go@v4
+        with:
+          go-version-file: go.mod
+      - name: Set VERSION (if any)
+        if: ${{ contains(github.ref, 'refs/tags/v') }}
+        id: version
+        run: |
+          echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/v}
+      - name: Build binaries
+        run: |
+          env GOOS=linux GOARCH=arm64 go build -ldflags "-s -w -X github.com/anycable/anycable-go/version.proVersion=${{ steps.version.outputs.VERSION }} -X github.com/anycable/anycable-go/version.sha=$(echo "$GITHUB_SHA" | cut -c -7) -X github.com/anycable/anycable-go/version.modifier=pro" -a -o dist/anycable-go-linux-arm64 cmd/anycable-go/main.go
+          env GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X github.com/anycable/anycable-go/version.proVersion=${{ steps.version.outputs.VERSION }} -X github.com/anycable/anycable-go/version.sha=$(echo "$GITHUB_SHA" | cut -c -7) -X github.com/anycable/anycable-go/version.modifier=pro" -a -o dist/anycable-go-linux-amd64 cmd/anycable-go/main.go
+          dist/anycable-go-linux-amd64 -v
+      - name: Build binary with MRuby
+        env:
+          CGO_ENABLED: "1"
+        run: |
+          env GOOS=linux GOARCH=amd64 go build -tags mrb -ldflags "-s -w -X github.com/anycable/anycable-go/version.proVersion=${{ steps.version.outputs.VERSION }} -X github.com/anycable/anycable-go/version.sha=$(echo "$GITHUB_SHA" | cut -c -7) -X github.com/anycable/anycable-go/version.modifier=pro" -a -o dist/anycable-go-mrb-linux-amd64 cmd/anycable-go/main.go
+          dist/anycable-go-mrb-linux-amd64 -v
+      - uses: xresloader/upload-to-github-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        with:
+          file: "dist/anycable-go-*"
+          tags: true
+
+  upload_macos_binaries:
+    needs: [upload_binaries]
+    runs-on: macos-latest
+    env:
+      GO111MODULE: on
+      CGO_ENABLED: "0"
+      GOFLAGS: "-mod=vendor"
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install system deps
+      run: |
+        brew install bison
+    - uses: actions/cache@v1
+      with:
+        path: vendor
+        key: vendor-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          vendor-
+    - run: go mod vendor
+    - uses: ruby/setup-ruby@v1
+      with:
+        # Use <3.0 since go-mruby's Rakefile has some problems with keyword arguments compatibility
+        ruby-version: 2.7
+        bundler-cache: true
+    - name: Build mruby
+      run: bash -c '(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)'
+    - uses: actions/setup-go@v4
+      with:
+        go-version-file: go.mod
+    - name: Set VERSION (if any)
+      if: ${{ contains(github.ref, 'refs/tags/v') }}
+      id: version
+      run: |
+        echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/v}
+    - name: Build binaries for MacOS
+      run: |
+        env GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w -X github.com/anycable/anycable-go/version.proVersion=${{ steps.version.outputs.VERSION }} -X github.com/anycable/anycable-go/version.sha=$(echo "$GITHUB_SHA" | cut -c -7) -X github.com/anycable/anycable-go/version.modifier=pro" -a -o dist/anycable-go-darwin-amd64 cmd/anycable-go/main.go
+        env GOOS=darwin GOARCH=arm64 go build -ldflags "-s -w -X github.com/anycable/anycable-go/version.proVersion=${{ steps.version.outputs.VERSION }} -X github.com/anycable/anycable-go/version.sha=$(echo "$GITHUB_SHA" | cut -c -7) -X github.com/anycable/anycable-go/version.modifier=pro" -a -o dist/anycable-go-darwin-arm64 cmd/anycable-go/main.go
+    - name: Build binaries with MRuby for MacOS
+      env:
+        CGO_ENABLED: "1"
+      run: |
+        env GOOS=darwin GOARCH=amd64 go build -tags mrb -ldflags "-s -w -X github.com/anycable/anycable-go/version.proVersion=${{ steps.version.outputs.VERSION }} -X github.com/anycable/anycable-go/version.sha=$(echo "$GITHUB_SHA" | cut -c -7) -X github.com/anycable/anycable-go/version.modifier=pro" -a -o dist/anycable-go-mrb-darwin-amd64 cmd/anycable-go/main.go
+        dist/anycable-go-mrb-darwin-amd64 -v
+    - uses: xresloader/upload-to-github-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GHCR_TOKEN }}
+      with:
+        file: "dist/anycable-go-*"
+        tags: true

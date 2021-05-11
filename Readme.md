@@ -1,8 +1,8 @@
 [![Latest Release](https://img.shields.io/github/release/anycable/anycable-go.svg?include_prereleases)](https://github.com/anycable/anycable-go/releases/latest?include_prereleases)
 [![Build](https://github.com/anycable/anycable-go/workflows/Test/badge.svg)](https://github.com/anycable/anycable-go/actions)
 [![Docker](https://img.shields.io/docker/pulls/anycable/anycable-go.svg)](https://hub.docker.com/r/anycable/anycable-go/)
-[![Documentation](https://img.shields.io/badge/docs-link-brightgreen.svg)](https://docs.anycable.io/anycable-go/getting_started)
-# AnyCable-Go WebSocket Server
+[![Documentation](https://img.shields.io/badge/docs-link-brightgreen.svg)](https://docs.anycable.io/anycable-go/pro)
+# AnyCable-Go WebSocket Server <img class='pro-badge' src='https://docs.anycable.io/assets/pro.svg' alt='pro' />
 
 WebSocket server for [AnyCable](https://github.com/anycable/anycable).
 
