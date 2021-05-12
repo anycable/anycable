@@ -148,11 +148,7 @@ func (ms *messageState) pointer() pointer {
 	return pointer{p: unsafe.Pointer(ms)}
 }
 func (ms *messageState) messageInfo() *MessageInfo {
-	mi := ms.LoadMessageInfo()
-	if mi == nil {
-		panic("invalid nil message info; this suggests memory corruption due to a race or shallow copy on the message struct")
-	}
-	return mi
+	return ms.LoadMessageInfo()
 }
 func (ms *messageState) LoadMessageInfo() *MessageInfo {
 	return (*MessageInfo)(atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&ms.atomicMessageInfo))))

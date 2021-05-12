@@ -338,27 +338,24 @@ func (mi *MessageInfo) checkField(fd pref.FieldDescriptor) (*fieldInfo, pref.Ext
 	}
 	if fi != nil {
 		if fi.fieldDesc != fd {
-			if got, want := fd.FullName(), fi.fieldDesc.FullName(); got != want {
-				panic(fmt.Sprintf("mismatching field: got %v, want %v", got, want))
-			}
-			panic(fmt.Sprintf("mismatching field: %v", fd.FullName()))
+			panic("mismatching field descriptor")
 		}
 		return fi, nil
 	}
 
 	if fd.IsExtension() {
-		if got, want := fd.ContainingMessage().FullName(), mi.Desc.FullName(); got != want {
+		if fd.ContainingMessage().FullName() != mi.Desc.FullName() {
 			// TODO: Should this be exact containing message descriptor match?
-			panic(fmt.Sprintf("extension %v has mismatching containing message: got %v, want %v", fd.FullName(), got, want))
+			panic("mismatching containing message")
 		}
 		if !mi.Desc.ExtensionRanges().Has(fd.Number()) {
-			panic(fmt.Sprintf("extension %v extends %v outside the extension range", fd.FullName(), mi.Desc.FullName()))
+			panic("invalid extension field")
 		}
 		xtd, ok := fd.(pref.ExtensionTypeDescriptor)
 		if !ok {
-			panic(fmt.Sprintf("extension %v does not implement protoreflect.ExtensionTypeDescriptor", fd.FullName()))
+			panic("extension descriptor does not implement ExtensionTypeDescriptor")
 		}
 		return nil, xtd.Type()
 	}
-	panic(fmt.Sprintf("field %v is invalid", fd.FullName()))
+	panic("invalid field descriptor")
 }

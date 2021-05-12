@@ -31,13 +31,13 @@ type fieldInfo struct {
 func fieldInfoForOneof(fd pref.FieldDescriptor, fs reflect.StructField, x exporter, ot reflect.Type) fieldInfo {
 	ft := fs.Type
 	if ft.Kind() != reflect.Interface {
-		panic(fmt.Sprintf("field %v has invalid type: got %v, want interface kind", fd.FullName(), ft))
+		panic(fmt.Sprintf("invalid type: got %v, want interface kind", ft))
 	}
 	if ot.Kind() != reflect.Struct {
-		panic(fmt.Sprintf("field %v has invalid type: got %v, want struct kind", fd.FullName(), ot))
+		panic(fmt.Sprintf("invalid type: got %v, want struct kind", ot))
 	}
 	if !reflect.PtrTo(ot).Implements(ft) {
-		panic(fmt.Sprintf("field %v has invalid type: %v does not implement %v", fd.FullName(), ot, ft))
+		panic(fmt.Sprintf("invalid type: %v does not implement %v", ot, ft))
 	}
 	conv := NewConverter(ot.Field(0).Type, fd)
 	isMessage := fd.Message() != nil
@@ -90,7 +90,7 @@ func fieldInfoForOneof(fd pref.FieldDescriptor, fs reflect.StructField, x export
 		},
 		mutable: func(p pointer) pref.Value {
 			if !isMessage {
-				panic(fmt.Sprintf("field %v with invalid Mutable call on field with non-composite type", fd.FullName()))
+				panic("invalid Mutable on field with non-composite type")
 			}
 			rv := p.Apply(fieldOffset).AsValueOf(fs.Type).Elem()
 			if rv.IsNil() || rv.Elem().Type().Elem() != ot || rv.Elem().IsNil() {
@@ -114,7 +114,7 @@ func fieldInfoForOneof(fd pref.FieldDescriptor, fs reflect.StructField, x export
 func fieldInfoForMap(fd pref.FieldDescriptor, fs reflect.StructField, x exporter) fieldInfo {
 	ft := fs.Type
 	if ft.Kind() != reflect.Map {
-		panic(fmt.Sprintf("field %v has invalid type: got %v, want map kind", fd.FullName(), ft))
+		panic(fmt.Sprintf("invalid type: got %v, want map kind", ft))
 	}
 	conv := NewConverter(ft, fd)
 
@@ -147,7 +147,7 @@ func fieldInfoForMap(fd pref.FieldDescriptor, fs reflect.StructField, x exporter
 			rv := p.Apply(fieldOffset).AsValueOf(fs.Type).Elem()
 			pv := conv.GoValueOf(v)
 			if pv.IsNil() {
-				panic(fmt.Sprintf("map field %v cannot be set with read-only value", fd.FullName()))
+				panic(fmt.Sprintf("invalid value: setting map field to read-only value"))
 			}
 			rv.Set(pv)
 		},
@@ -167,7 +167,7 @@ func fieldInfoForMap(fd pref.FieldDescriptor, fs reflect.StructField, x exporter
 func fieldInfoForList(fd pref.FieldDescriptor, fs reflect.StructField, x exporter) fieldInfo {
 	ft := fs.Type
 	if ft.Kind() != reflect.Slice {
-		panic(fmt.Sprintf("field %v has invalid type: got %v, want slice kind", fd.FullName(), ft))
+		panic(fmt.Sprintf("invalid type: got %v, want slice kind", ft))
 	}
 	conv := NewConverter(reflect.PtrTo(ft), fd)
 
@@ -200,7 +200,7 @@ func fieldInfoForList(fd pref.FieldDescriptor, fs reflect.StructField, x exporte
 			rv := p.Apply(fieldOffset).AsValueOf(fs.Type).Elem()
 			pv := conv.GoValueOf(v)
 			if pv.IsNil() {
-				panic(fmt.Sprintf("list field %v cannot be set with read-only value", fd.FullName()))
+				panic(fmt.Sprintf("invalid value: setting repeated field to read-only value"))
 			}
 			rv.Set(pv.Elem())
 		},
@@ -225,7 +225,7 @@ func fieldInfoForScalar(fd pref.FieldDescriptor, fs reflect.StructField, x expor
 	isBytes := ft.Kind() == reflect.Slice && ft.Elem().Kind() == reflect.Uint8
 	if nullable {
 		if ft.Kind() != reflect.Ptr && ft.Kind() != reflect.Slice {
-			panic(fmt.Sprintf("field %v has invalid type: got %v, want pointer", fd.FullName(), ft))
+			panic(fmt.Sprintf("invalid type: got %v, want pointer", ft))
 		}
 		if ft.Kind() == reflect.Ptr {
 			ft = ft.Elem()
@@ -257,7 +257,7 @@ func fieldInfoForScalar(fd pref.FieldDescriptor, fs reflect.StructField, x expor
 			case reflect.String, reflect.Slice:
 				return rv.Len() > 0
 			default:
-				panic(fmt.Sprintf("field %v has invalid type: %v", fd.FullName(), rv.Type())) // should never happen
+				panic(fmt.Sprintf("invalid type: %v", rv.Type())) // should never happen
 			}
 		},
 		clear: func(p pointer) {
@@ -314,7 +314,7 @@ func fieldInfoForWeakMessage(fd pref.FieldDescriptor, weakOffset offset) fieldIn
 			messageName := fd.Message().FullName()
 			messageType, _ = preg.GlobalTypes.FindMessageByName(messageName)
 			if messageType == nil {
-				panic(fmt.Sprintf("weak message %v for field %v is not linked in", messageName, fd.FullName()))
+				panic(fmt.Sprintf("weak message %v is not linked in", messageName))
 			}
 		})
 	}
@@ -347,10 +347,7 @@ func fieldInfoForWeakMessage(fd pref.FieldDescriptor, weakOffset offset) fieldIn
 			lazyInit()
 			m := v.Message()
 			if m.Descriptor() != messageType.Descriptor() {
-				if got, want := m.Descriptor().FullName(), messageType.Descriptor().FullName(); got != want {
-					panic(fmt.Sprintf("field %v has mismatching message descriptor: got %v, want %v", fd.FullName(), got, want))
-				}
-				panic(fmt.Sprintf("field %v has mismatching message descriptor: %v", fd.FullName(), m.Descriptor().FullName()))
+				panic("mismatching message descriptor")
 			}
 			p.Apply(weakOffset).WeakFields().set(num, m.Interface())
 		},
@@ -405,7 +402,7 @@ func fieldInfoForMessage(fd pref.FieldDescriptor, fs reflect.StructField, x expo
 			rv := p.Apply(fieldOffset).AsValueOf(fs.Type).Elem()
 			rv.Set(conv.GoValueOf(v))
 			if rv.IsNil() {
-				panic(fmt.Sprintf("field %v has invalid nil pointer", fd.FullName()))
+				panic("invalid nil pointer")
 			}
 		},
 		mutable: func(p pointer) pref.Value {

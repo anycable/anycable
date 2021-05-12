@@ -58,10 +58,8 @@ func init() {
 	fs.StringVar(&defaults.Redis.URL, "redis_url", redisDefault, "")
 	fs.StringVar(&defaults.Redis.Channel, "redis_channel", "__anycable__", "")
 	fs.StringVar(&defaults.Redis.Sentinels, "redis_sentinels", "", "")
-	// TODO: remove deprecated
-	fs.IntVar(&defaults.Redis.SentinelDiscoveryInterval, "redis_sentinel_discovery_interval", -1, "")
-	// TODO: remove deprecated
-	fs.IntVar(&defaults.Redis.KeepalivePingInterval, "redis_keepalive_interval", -1, "")
+	fs.IntVar(&defaults.Redis.SentinelDiscoveryInterval, "redis_sentinel_discovery_interval", 30, "")
+	fs.IntVar(&defaults.Redis.KeepalivePingInterval, "redis_keepalive_interval", 30, "")
 
 	fs.IntVar(&defaults.HTTPPubSub.Port, "http_broadcast_port", 8090, "")
 	fs.StringVar(&defaults.HTTPPubSub.Path, "http_broadcast_path", "/_broadcast", "")
@@ -145,8 +143,8 @@ OPTIONS
   --redis_url                            Redis url, default: redis://localhost:6379/5, env: ANYCABLE_REDIS_URL, REDIS_URL
   --redis_channel                        Redis channel for broadcasts, default: __anycable__, env: ANYCABLE_REDIS_CHANNEL
   --redis_sentinels                      Comma separated list of sentinel hosts, format: 'hostname:port,..', env: ANYCABLE_REDIS_SENTINELS
-  --redis_sentinel_discovery_interval    DEPRECATED. Interval to rediscover sentinels in seconds, default: 30, env: ANYCABLE_REDIS_SENTINEL_DISCOVERY_INTERVAL
-  --redis_keeepalive_interval            DEPRECATED. Interval to periodically ping Redis to make sure it's alive, default: 30, env: ANYCABLE_REDIS_KEEPALIVE_INTERVAL
+  --redis_sentinel_discovery_interval    Interval to rediscover sentinels in seconds, default: 30, env: ANYCABLE_REDIS_SENTINEL_DISCOVERY_INTERVAL
+  --redis_keeepalive_interval            Interval to periodically ping Redis to make sure it's alive, default: 30, env: ANYCABLE_REDIS_KEEPALIVE_INTERVAL
 
   --http_broadcast_port                  HTTP pub/sub server port, default: 8090, env: ANYCABLE_HTTP_BROADCAST_PORT
   --http_broadcast_path                  HTTP pub/sub endpoint path, default: /_broadcast, env: ANYCABLE_HTTP_BROADCAST_PATH
@@ -192,17 +190,6 @@ func PrintHelp() {
 }
 
 func prepareComplexDefaults() {
-	if defaults.Redis.SentinelDiscoveryInterval != -1 {
-		fmt.Println(`DEPRECATION WARNING: redis_sentinel_discovery_interval option is deprecated
-and will be deleted in the next major release of anycable-go.
-This option is not used anymore, and you can delete it safely.`)
-	}
-	if defaults.Redis.KeepalivePingInterval != -1 {
-		fmt.Println(`DEPRECATION WARNING: redis_keepalive_interval option is deprecated
-and will be deleted in the next major release of anycable-go.
-This option is not used anymore, and you can delete it safely.`)
-	}
-
 	defaults.Headers = parseHeaders(headers)
 
 	if debugMode {

@@ -5,8 +5,6 @@
 package proto
 
 import (
-	"fmt"
-
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/runtime/protoiface"
 )
@@ -28,9 +26,6 @@ func Merge(dst, src Message) {
 
 	dstMsg, srcMsg := dst.ProtoReflect(), src.ProtoReflect()
 	if dstMsg.Descriptor() != srcMsg.Descriptor() {
-		if got, want := dstMsg.Descriptor().FullName(), srcMsg.Descriptor().FullName(); got != want {
-			panic(fmt.Sprintf("descriptor mismatch: %v != %v", got, want))
-		}
 		panic("descriptor mismatch")
 	}
 	mergeOptions{}.mergeMessage(dstMsg, srcMsg)
@@ -77,7 +72,7 @@ func (o mergeOptions) mergeMessage(dst, src protoreflect.Message) {
 	}
 
 	if !dst.IsValid() {
-		panic(fmt.Sprintf("cannot merge into invalid %v message", dst.Descriptor().FullName()))
+		panic("cannot merge into invalid destination message")
 	}
 
 	src.Range(func(fd protoreflect.FieldDescriptor, v protoreflect.Value) bool {
