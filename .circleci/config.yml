@@ -149,8 +149,8 @@ executors:
       CGO_ENABLED: "1"
       GO111MODULE: "on"
       GOFLAGS: "-mod=vendor"
-      GO_VERSION: 1.12.4
-      GO_SHA: 5b3c6aafd31746809e2776c685e89190f85307074e48af2681d472f8a6a3c504
+      GO_VERSION: 1.16.4
+      GO_SHA: 9f9b940d0f4b3ac764f0a33d78384a87b804aab29d1aacbdc9bca3a3480e9272
     working_directory: /Users/distiller/go/src/github.com/anycable/anycable-go/
   docker:
     docker:
