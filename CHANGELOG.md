@@ -2,7 +2,7 @@
 
 ## master
 
-## 1.1.0-dev
+## 1.1.0.rc1
 
 - **BREAKING** Move middlewares from gRPC interceptors to custom implementation. ([@palkan][])
 
