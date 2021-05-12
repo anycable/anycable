@@ -26,22 +26,13 @@ jobs:
           anyway_config: "~> 2.0"
     steps:
     - uses: actions/checkout@v2
-    - uses: actions/cache@v1
-      with:
-        path: /home/runner/bundle
-        key: bundle-${{ matrix.ruby }}-${{ matrix.anyway_config }}-${{ hashFiles('**/*.gemspec') }}-${{ hashFiles('**/Gemfile') }}
-        restore-keys: |
-          bundle-${{ matrix.ruby }}-
     - uses: ruby/setup-ruby@v1
-      with:
-        ruby-version: ${{ matrix.ruby }}
-    - name: Bundle install
       env:
         ANYWAY_CONFIG_VERSION: ${{ matrix.anyway_config }}
-      run: |
-        bundle config path /home/runner/bundle
-        bundle install
-        bundle update
+      with:
+        ruby-version: ${{ matrix.ruby }}
+        bundler: 2.2.15
+        bundler-cache: true
     - name: Run RSpec
       run: |
         bundle exec rspec
@@ -50,32 +41,3 @@ jobs:
         GRPC: false
       run: |
         bundle exec rspec
-  steep:
-    runs-on: ubuntu-latest
-    env:
-      BUNDLE_JOBS: 4
-      BUNDLE_RETRY: 3
-      BUNDLE_FORCE_RUBY_PLATFORM: 1
-      CI: true
-    strategy:
-      matrix:
-        ruby: ["2.7"]
-    steps:
-    - uses: actions/checkout@v2
-    - uses: actions/cache@v1
-      with:
-        path: /home/runner/bundle
-        key: bundle-${{ matrix.ruby }}-${{ matrix.anyway_config }}-${{ hashFiles('**/*.gemspec') }}-${{ hashFiles('**/Gemfile') }}
-        restore-keys: |
-          bundle-${{ matrix.ruby }}-
-    - uses: ruby/setup-ruby@v1
-      with:
-        ruby-version: ${{ matrix.ruby }}
-    - name: Bundle install
-      run: |
-        bundle config path /home/runner/bundle
-        bundle install
-        bundle update
-    - name: Run Steep
-      run: |
-        bundle exec rake steep
