@@ -79,10 +79,13 @@ module CLITesting
     end
   end
 
-  def run_command(command, chdir: nil)
+  # Unset ANYCABLE_CONF to use defaults (to avoid RPC servers from the test process and
+  # spawned process collision)
+  def run_command(command, chdir: nil, env: {"ANYCABLE_CONF" => ""})
     rspex = nil
 
     PTY.spawn(
+      env,
       command,
       chdir: chdir || File.join(PROJECT_ROOT, "bin")
     ) do |stdout, stderr, pid|

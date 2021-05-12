@@ -10,7 +10,8 @@ describe "CLI embedded", :cli do
   subject { service.connect(request) }
 
   it "runs gRPC server" do
-    run_ruby("../spec/dummies/embedded.rb") do |cli|
+    # Pass env to avoid resetting config path (see support/cli_testing.rb)
+    run_ruby("../spec/dummies/embedded.rb", env: {}) do |cli|
       expect(cli).to have_output_line("Server started")
 
       expect(subject).to be_failure
