@@ -133,4 +133,12 @@ lint: bin/golangci-lint
 fmt:
 	go fmt ./...
 
+bin/go-licenses:
+	@which go-licenses &> /dev/null || \
+		env GO111MODULE=off go get -v github.com/google/go-licenses
+
+licenses: bin/go-licenses
+	@env GOFLAGS="-tags=mrb" $$(go env GOPATH)/bin/go-licenses csv github.com/anycable/anycable-go/cli 2>/dev/null | awk -F',' '{ print $$3 }' | sort | uniq | grep -v "Unknown"
+	@env GOFLAGS="-tags=mrb" $$(go env GOPATH)/bin/go-licenses csv github.com/anycable/anycable-go/cli 2>/dev/null | grep "Unknown" | grep -v "anycable-go" || echo "No unknown licenses 👌"
+
 .PHONY: tmp/anycable-go-test
