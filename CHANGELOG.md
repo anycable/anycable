@@ -2,6 +2,8 @@
 
 ## master
 
+- Renamed `metrics_log_interval` to `metrics_rotate_interval`. ([@palkan][])
+
 ## 1.1.0.rc1 (2021-05-12)
 
 - Added `server_msg_total` and `failed_server_msg_total` metrics. ([@prburgu][])

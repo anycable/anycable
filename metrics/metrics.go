@@ -11,11 +11,11 @@ import (
 	"github.com/apex/log"
 )
 
-const DefaultLogInterval = 15
+const DefaultRotateInterval = 15
 
 // IntervalHandler describe a periodical metrics writer interface
 type IntervalWriter interface {
-	Run() error
+	Run(interval int) error
 	Stop()
 	Write(m *Metrics) error
 }
@@ -41,7 +41,7 @@ func FromConfig(config *Config) (*Metrics, error) {
 
 	if config.LogEnabled() {
 		if config.LogFormatterEnabled() {
-			customPrinter, err := NewCustomPrinter(config.LogFormatter, config.LogInterval)
+			customPrinter, err := NewCustomPrinter(config.LogFormatter)
 
 			if err == nil {
 				metricsPrinter = customPrinter
@@ -49,13 +49,13 @@ func FromConfig(config *Config) (*Metrics, error) {
 				return nil, err
 			}
 		} else {
-			metricsPrinter = NewBasePrinter(config.LogInterval)
+			metricsPrinter = NewBasePrinter()
 		}
 
 		writers = append(writers, metricsPrinter)
 	}
 
-	instance := NewMetrics(writers, config.LogInterval)
+	instance := NewMetrics(writers, config.RotateInterval)
 
 	if config.HTTPEnabled() {
 		if config.Host != "" && config.Host != server.Host {
@@ -80,8 +80,8 @@ func FromConfig(config *Config) (*Metrics, error) {
 }
 
 // NewMetrics build new metrics struct
-func NewMetrics(writers []IntervalWriter, logIntervalSeconds int) *Metrics {
-	rotateInterval := time.Duration(logIntervalSeconds) * time.Second
+func NewMetrics(writers []IntervalWriter, rotateIntervalSeconds int) *Metrics {
+	rotateInterval := time.Duration(rotateIntervalSeconds) * time.Second
 
 	return &Metrics{
 		writers:        writers,
@@ -91,6 +91,10 @@ func NewMetrics(writers []IntervalWriter, logIntervalSeconds int) *Metrics {
 		shutdownCh:     make(chan struct{}),
 		log:            log.WithField("context", "metrics"),
 	}
+}
+
+func (m *Metrics) RegisterWriter(w IntervalWriter) {
+	m.writers = append(m.writers, w)
 }
 
 // Run periodically updates counters delta (and logs metrics if necessary)
@@ -105,12 +109,17 @@ func (m *Metrics) Run() error {
 		}
 	}
 
-	if m.rotateInterval == 0 {
+	if len(m.writers) == 0 {
+		m.log.Debug("No metrics writers. Disable metrics rotation")
 		return nil
 	}
 
+	if m.rotateInterval == 0 {
+		m.rotateInterval = DefaultRotateInterval * time.Second
+	}
+
 	for _, writer := range m.writers {
-		if err := writer.Run(); err != nil {
+		if err := writer.Run(int(m.rotateInterval.Seconds())); err != nil {
 			return err
 		}
 	}
@@ -120,11 +129,12 @@ func (m *Metrics) Run() error {
 		case <-m.shutdownCh:
 			return nil
 		case <-time.After(m.rotateInterval):
+			m.log.Debugf("Rotate metrics (interval %v)", m.rotateInterval)
 			m.rotate()
 
 			for _, writer := range m.writers {
 				if err := writer.Write(m); err != nil {
-					log.Errorf("Metrics writer failed to write: %v", err)
+					m.log.Errorf("Metrics writer failed to write: %v", err)
 				}
 			}
 		}

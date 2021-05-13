@@ -9,17 +9,16 @@ type Printer interface {
 
 // BasePrinter simply logs stats as structured log
 type BasePrinter struct {
-	interval int
 }
 
 // NewBasePrinter returns new base printer struct
-func NewBasePrinter(interval int) *BasePrinter {
-	return &BasePrinter{interval}
+func NewBasePrinter() *BasePrinter {
+	return &BasePrinter{}
 }
 
 // Run prints a message to the log with metrics logging details
-func (p *BasePrinter) Run() error {
-	log.WithField("context", "metrics").Infof("Log metrics every %ds", p.interval)
+func (p *BasePrinter) Run(interval int) error {
+	log.WithField("context", "metrics").Infof("Log metrics every %ds", interval)
 	return nil
 }
 

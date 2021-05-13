@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/anycable/anycable-go/config"
-	"github.com/anycable/anycable-go/metrics"
 	"github.com/namsral/flag"
 )
 
@@ -83,7 +82,8 @@ func init() {
 	fs.BoolVar(&debugMode, "debug", false, "")
 
 	fs.BoolVar(&defaults.Metrics.Log, "metrics_log", false, "")
-	fs.IntVar(&defaults.Metrics.LogInterval, "metrics_log_interval", 0, "")
+	fs.IntVar(&defaults.Metrics.RotateInterval, "metrics_rotate_interval", 0, "")
+	fs.IntVar(&defaults.Metrics.LogInterval, "metrics_log_interval", -1, "")
 	fs.StringVar(&defaults.Metrics.LogFormatter, "metrics_log_formatter", "", "")
 	fs.StringVar(&defaults.Metrics.HTTP, "metrics_http", "", "")
 	fs.StringVar(&defaults.Metrics.Host, "metrics_host", "", "")
@@ -163,7 +163,8 @@ OPTIONS
   --debug                                Enable debug mode (more verbose logging), default: false, env: ANYCABLE_DEBUG
 
   --metrics_log                          Enable metrics logging (with info level), default: false, env: ANYCABLE_METRICS_LOG
-  --metrics_log_interval                 Specify how often flush metrics logs (in seconds), default: 15, env: ANYCABLE_METRICS_LOG_INTERVAL
+  --metrics_rotate_interval              Specify how often flush metrics to writers (logs, statsd) (in seconds), default: 15, env: ANYCABLE_METRICS_ROTATE_INTERVAL
+  --metrics_log_interval                 DEPRECATED. Specify how often flush metrics logs (in seconds), default: 15, env: ANYCABLE_METRICS_LOG_INTERVAL
   --metrics_log_formatter                Specify the path to custom Ruby formatter script (only supported on MacOS and Linux), default: "" (none), env: ANYCABLE_METRICS_LOG_FORMATTER
   --metrics_http                         Enable HTTP metrics endpoint at the specified path, default: "" (disabled), env: ANYCABLE_METRICS_HTTP
   --metrics_host                         Server host for metrics endpoint, default: the same as for main server, env: ANYCABLE_METRICS_HOST
@@ -201,8 +202,14 @@ func prepareComplexDefaults() {
 		defaults.Metrics.Port = defaults.Port
 	}
 
-	if defaults.Metrics.Log && defaults.Metrics.LogInterval == 0 {
-		defaults.Metrics.LogInterval = metrics.DefaultLogInterval
+	if defaults.Metrics.LogInterval > 0 {
+		fmt.Println(`DEPRECATION WARNING: metrics_log_interval option is deprecated
+and will be deleted in the next major release of anycable-go.
+Use metrics_rotate_interval instead.`)
+
+		if defaults.Metrics.RotateInterval == 0 {
+			defaults.Metrics.RotateInterval = defaults.Metrics.LogInterval
+		}
 	}
 }
 

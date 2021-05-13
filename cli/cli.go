@@ -106,7 +106,7 @@ func (r *Runner) Run() error {
 
 	ctx.Infof("Starting %s %s%s (pid: %d, open file limit: %s)", r.name, version.Version(), mrubySupport, os.Getpid(), utils.OpenFileLimit())
 
-	metrics, err := metrics.FromConfig(&config.Metrics)
+	metrics, err := r.initMetrics(&config.Metrics)
 
 	if err != nil {
 		return fmt.Errorf("!!! Failed to initialize metrics writer !!!\n%v", err)
@@ -195,6 +195,16 @@ func (r *Runner) Run() error {
 
 	// Wait for an error (or none)
 	return <-r.errChan
+}
+
+func (r *Runner) initMetrics(c *metrics.Config) (*metrics.Metrics, error) {
+	m, err := metrics.FromConfig(c)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return m, nil
 }
 
 func (r *Runner) initController(m *metrics.Metrics, c *config.Config) (node.Controller, error) {

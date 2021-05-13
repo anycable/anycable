@@ -88,7 +88,7 @@ Your logs should contain something like this:
 INFO 2018-03-06T14:16:27.872Z broadcast_msg_total=0 broadcast_streams_num=0 client_msg_total=0 clients_num=0 clients_uniq_num=0 context=metrics disconnect_queue_size=0 failed_auths_total=0 failed_broadcast_msg_total=0 failed_client_msg_total=0 goroutines_num=35 rpc_call_total=0 rpc_error_total=0
 ```
 
-By default, metrics are logged every 15 seconds (you can change this behavior through `--metrics_log_interval` option).
+By default, metrics are logged every 15 seconds (you can change this behavior through `--metrics_rotate_interval` option).
 
 ### Custom loggers with mruby
 
@@ -100,7 +100,7 @@ AnyCable-Go allows you to write custom log formatters using an embedded [mruby](
 
 mruby is the lightweight implementation of the Ruby language. Hence it is possible to use Ruby to write metrics exporters.
 
-First, you should download the version of `anycable-go` with mruby (it's not included by default): these binaries have `-mrb` suffix right after the version (i.e. `anycable-go-0.6.0-mrb-linux-amd64`).
+First, you should download the version of `anycable-go` with mruby (it's not included by default): these binaries have `-mrb` suffix right after the version (i.e. `anycable-go-1.0.0-mrb-linux-amd64`).
 
 **NOTE**: only MacOS and Linux are supported.
 

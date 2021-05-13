@@ -2,12 +2,13 @@ package metrics
 
 // Config contains metrics configuration
 type Config struct {
-	Log          bool
-	LogInterval  int
-	LogFormatter string
-	HTTP         string
-	Host         string
-	Port         int
+	Log            bool
+	LogInterval    int // Deprecated
+	RotateInterval int
+	LogFormatter   string
+	HTTP           string
+	Host           string
+	Port           int
 }
 
 // NewConfig creates an empty Config struct
@@ -15,9 +16,9 @@ func NewConfig() Config {
 	return Config{}
 }
 
-// LogEnabled returns true iff Log is true
+// LogEnabled returns true iff any log option is specified
 func (c *Config) LogEnabled() bool {
-	return c.Log || c.LogFormatterEnabled() || c.LogInterval > 0
+	return c.Log || c.LogFormatterEnabled()
 }
 
 // HTTPEnabled returns true iff HTTP is not empty

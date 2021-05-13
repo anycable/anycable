@@ -10,7 +10,6 @@ import (
 
 // RubyPrinter contains refs to mruby vm and code
 type RubyPrinter struct {
-	interval  int
 	path      string
 	mrbModule *mruby.MrbValue
 	engine    *mrb.Engine
@@ -18,12 +17,12 @@ type RubyPrinter struct {
 
 // NewCustomPrinter generates log formatter from the provided (as path)
 // Ruby script
-func NewCustomPrinter(path string, interval int) (*RubyPrinter, error) {
-	return &RubyPrinter{path: path, interval: interval}, nil
+func NewCustomPrinter(path string) (*RubyPrinter, error) {
+	return &RubyPrinter{path: path}, nil
 }
 
 // Run initializes the Ruby VM
-func (p *RubyPrinter) Run() error {
+func (p *RubyPrinter) Run(interval int) error {
 	p.engine = mrb.DefaultEngine()
 
 	if err := p.engine.LoadFile(p.path); err != nil {
@@ -34,7 +33,7 @@ func (p *RubyPrinter) Run() error {
 
 	p.mrbModule = mod.MrbValue(p.engine.VM)
 
-	log.WithField("context", "metrics").Infof("Log metrics every %ds using a custom Ruby formatter from %s", p.interval, p.path)
+	log.WithField("context", "metrics").Infof("Log metrics every %ds using a custom Ruby formatter from %s", interval, p.path)
 
 	return nil
 }

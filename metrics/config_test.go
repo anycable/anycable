@@ -19,10 +19,6 @@ func TestLogEnabled(t *testing.T) {
 	config = NewConfig()
 	config.LogFormatter = "test"
 	assert.True(t, config.LogEnabled())
-
-	config = NewConfig()
-	config.LogInterval = 2
-	assert.True(t, config.LogEnabled())
 }
 
 func TestHTTPEnabled(t *testing.T) {
