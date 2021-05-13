@@ -84,6 +84,18 @@ anycable_go_data_sent_bytes_total 1232434334
 anycable_go_data_rcvd_bytes_total 434334
 ```
 
+## StatsD <img class='pro-badge' src='https://docs.anycable.io/assets/pro.svg' alt='pro' />
+
+AnyCable Pro also supports emitting real-time metrics to [StatsD](https://github.com/statsd/statsd).
+
+For that, you must specify the StatsD server UDP host:
+
+```sh
+anycable-go -statsd_host=localhost:8125
+```
+
+Metrics are pushed with the `anycable_go.` prefix by default. You can override it by specifying the `statsd_prefix` parameter.
+
 ## Logging
 
 Another option is to periodically write stats to log (with `info` level).

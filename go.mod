@@ -17,6 +17,7 @@ require (
 	github.com/mitchellh/go-mruby v0.0.0-20181003231329-cd6a04a6ea57
 	github.com/namsral/flag v1.7.4-pre
 	github.com/pkg/errors v0.8.1 // indirect
+	github.com/smira/go-statsd v1.3.2
 	github.com/stretchr/testify v1.7.0
 	github.com/syossan27/tebata v0.0.0-20180602121909-b283fe4bc5ba
 	golang.org/x/net v0.0.0-20200506145744-7e3656a0809f // indirect

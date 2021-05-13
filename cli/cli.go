@@ -217,6 +217,11 @@ func (r *Runner) initMetrics(c *metrics.Config) (*metrics.Metrics, error) {
 		return nil, err
 	}
 
+	if c.Statsd.Enabled() {
+		sw := metrics.NewStatsdWriter(c.Statsd)
+		m.RegisterWriter(sw)
+	}
+
 	return m, nil
 }
 

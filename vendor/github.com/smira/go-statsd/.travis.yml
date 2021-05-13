@@ -1,0 +1,22 @@
+dist: xenial
+sudo: false
+
+language: go
+
+go:
+  - 1.13.x
+  - 1.14.x
+  - master
+
+env:
+  - GO111MODULE=on
+
+before_install:
+  - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin v1.28.3
+
+matrix:
+    allow_failures:
+        - go: master
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
