@@ -49,6 +49,9 @@ github.com/namsral/flag
 github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
+# github.com/smira/go-statsd v1.3.2
+## explicit
+github.com/smira/go-statsd
 # github.com/stretchr/objx v0.1.0
 github.com/stretchr/objx
 # github.com/stretchr/testify v1.7.0

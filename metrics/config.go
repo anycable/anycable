@@ -9,11 +9,12 @@ type Config struct {
 	HTTP           string
 	Host           string
 	Port           int
+	Statsd         StatsdConfig
 }
 
 // NewConfig creates an empty Config struct
 func NewConfig() Config {
-	return Config{}
+	return Config{Statsd: NewStatsdConfig()}
 }
 
 // LogEnabled returns true iff any log option is specified

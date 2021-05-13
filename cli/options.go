@@ -91,6 +91,10 @@ func init() {
 	fs.StringVar(&defaults.Metrics.Host, "metrics_host", "", "")
 	fs.IntVar(&defaults.Metrics.Port, "metrics_port", 0, "")
 
+	fs.StringVar(&defaults.Metrics.Statsd.Host, "statsd_host", "", "")
+	fs.StringVar(&defaults.Metrics.Statsd.Prefix, "statsd_prefix", "anycable_go.", "")
+	fs.IntVar(&defaults.Metrics.Statsd.MaxPacketSize, "statsd_max_prefix_size", 1400, "")
+
 	fs.IntVar(&defaults.App.PingInterval, "ping_interval", 3, "")
 	fs.StringVar(&defaults.App.PingTimestampPrecision, "ping_timestamp_precision", "s", "")
 	fs.IntVar(&defaults.App.StatsRefreshInterval, "stats_refresh_interval", 5, "")
@@ -176,6 +180,10 @@ OPTIONS
   --metrics_http                         Enable HTTP metrics endpoint at the specified path, default: "" (disabled), env: ANYCABLE_METRICS_HTTP
   --metrics_host                         Server host for metrics endpoint, default: the same as for main server, env: ANYCABLE_METRICS_HOST
   --metrics_port                         Server port for metrics endpoint, default: the same as for main server, env: ANYCABLE_METRICS_PORT
+
+  --statsd_host                          Server host for metrics sent to statsd server in the format <host>:<port>, default: "", env: ANYCABLE_STATSD_HOST
+  --statsd_prefix                        Statsd metrics prefix, default: "anycable_go.", env: ANYCABLE_STATSD_PREFIX
+  --statsd_max_packet_size               Statsd client maximum UDP packet size, default: 1400, env: ANYCABLE_STATSD_MAX_PACKET_SIZE
 
   --read_buffer_size                     WebSocket connection read buffer size, default: 1024, env: ANYCABLE_READ_BUFFER_SIZE
   --write_buffer_size                    WebSocket connection write buffer size, default: 1024, env: ANYCABLE_WRITE_BUFFER_SIZE
