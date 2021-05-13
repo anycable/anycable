@@ -76,6 +76,7 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 	flags = append(flags, pingCLIFlags(&c)...)
 	flags = append(flags, jwtCLIFlags(&c)...)
 	flags = append(flags, signedStreamsCLIFlags(&c)...)
+	flags = append(flags, statsdCLIFlags(&c)...)
 
 	app := &cli.App{
 		Name:            "anycable-go",
@@ -163,6 +164,7 @@ const (
 	pingCategoryDescription          = "PING:"
 	jwtCategoryDescription           = "JWT:"
 	signedStreamsCategoryDescription = "SIGNED STREAMS:"
+	statsdCategoryDescription        = "STATSD:"
 
 	envPrefix = "ANYCABLE_"
 )
@@ -602,6 +604,29 @@ func signedStreamsCLIFlags(c *config.Config) []cli.Flag {
 			Name:        "cable_ready_key",
 			Usage:       "Enable CableReady fastlane with the specified signing key",
 			Destination: &c.Rails.CableReadyKey,
+		},
+	})
+}
+
+// StatsD related flags
+func statsdCLIFlags(c *config.Config) []cli.Flag {
+	return withDefaults(statsdCategoryDescription, []cli.Flag{
+		&cli.StringFlag{
+			Name:        "statsd_host",
+			Usage:       "Server host for metrics sent to statsd server in the format <host>:<port>",
+			Destination: &c.Metrics.Statsd.Host,
+		},
+		&cli.StringFlag{
+			Name:        "statsd_prefix",
+			Usage:       "Statsd metrics prefix",
+			Value:       c.Metrics.Statsd.Prefix,
+			Destination: &c.Metrics.Statsd.Prefix,
+		},
+		&cli.IntFlag{
+			Name:        "statsd_max_packet_size",
+			Usage:       "Statsd client maximum UDP packet size",
+			Value:       c.Metrics.Statsd.MaxPacketSize,
+			Destination: &c.Metrics.Statsd.MaxPacketSize,
 		},
 	})
 }

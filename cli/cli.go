@@ -228,7 +228,18 @@ func (r *Runner) announceDebugMode() {
 }
 
 func (r *Runner) initMetrics(c *metricspkg.Config) (*metricspkg.Metrics, error) {
-	return metricspkg.NewFromConfig(c)
+	m, err := metricspkg.NewFromConfig(c)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if c.Statsd.Enabled() {
+		sw := metricspkg.NewStatsdWriter(c.Statsd)
+		m.RegisterWriter(sw)
+	}
+
+	return m, nil
 }
 
 func (r *Runner) newController(metrics *metricspkg.Metrics) (node.Controller, error) {

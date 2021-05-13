@@ -2,6 +2,15 @@
 
 ## master
 
+- Added Statsd support.
+
+You can send instrumentation data to Statsd.
+Specify `statsd_host` and (optionally) `statsd_prefix`:
+
+```sh
+anycable-go -statsd_host=localhost:8125 -statsd_prefix=anycable.
+```
+
 - Add `grpc_active_conn_num` metrics. ([@palkan][])
 
 Useful when you use DNS load balancing to know, how many active gRPC connections are established.

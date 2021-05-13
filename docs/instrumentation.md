@@ -130,9 +130,9 @@ anycable_go_data_sent_total 1232434334
 anycable_go_data_rcvd_total 434334
 ```
 
-<h2 id="statsd">StatsD <img class='pro-badge' src='https://docs.anycable.io/assets/pro.svg' alt='pro' /></h2>
+## StatsD
 
-AnyCable Pro also supports emitting real-time metrics to [StatsD](https://github.com/statsd/statsd).
+AnyCable also supports emitting real-time metrics to [StatsD](https://github.com/statsd/statsd).
 
 For that, you must specify the StatsD server UDP host:
 
@@ -142,7 +142,7 @@ anycable-go -statsd_host=localhost:8125
 
 Metrics are pushed with the `anycable_go.` prefix by default. You can override it by specifying the `statsd_prefix` parameter.
 
-<h2 id="metrics-tags">Default metrics tags <img class='pro-badge' src='https://docs.anycable.io/assets/pro.svg' alt='pro' /></h2>
+## Default metrics tags
 
 You can define global tags (added to every reported metric by default) for Prometheus (reported as labels)
 and StatsD. For example, we can add environment and node information:

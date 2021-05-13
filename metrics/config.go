@@ -11,12 +11,14 @@ type Config struct {
 	HTTP      string
 	Host      string
 	Port      int
+	Statsd    StatsdConfig
 }
 
 // NewConfig creates an empty Config struct
 func NewConfig() Config {
 	return Config{
 		RotateInterval: 15,
+		Statsd:         NewStatsdConfig(),
 	}
 }
 
