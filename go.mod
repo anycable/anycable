@@ -20,6 +20,7 @@ require (
 	github.com/smira/go-statsd v1.3.2
 	github.com/stretchr/testify v1.7.0
 	github.com/syossan27/tebata v0.0.0-20180602121909-b283fe4bc5ba
+	github.com/vmihailenco/msgpack/v5 v5.3.2
 	golang.org/x/net v0.0.0-20200506145744-7e3656a0809f
 	golang.org/x/sys v0.0.0-20210420205809-ac73e9fd8988 // indirect
 	google.golang.org/genproto v0.0.0-20200511104702-f5ebc3bea380 // indirect

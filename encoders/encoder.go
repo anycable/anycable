@@ -21,3 +21,4 @@ type Encoder interface {
 }
 
 var _ Encoder = (*JSON)(nil)
+var _ Encoder = (*Msgpack)(nil)
