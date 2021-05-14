@@ -12,6 +12,7 @@ import (
 
 	"github.com/anycable/anycable-go/apollo"
 	"github.com/anycable/anycable-go/config"
+	"github.com/anycable/anycable-go/encoders"
 	"github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/mrb"
 	"github.com/anycable/anycable-go/node"
@@ -276,6 +277,10 @@ func (r *Runner) defaultWebSocketHandler(n *node.Node, c *config.Config) http.Ha
 	return ws.WebsocketHandler(c.Headers, &c.WS, func(wsc *websocket.Conn, info *ws.RequestInfo, callback func()) error {
 		wrappedConn := ws.NewConnection(wsc)
 		session := node.NewSession(n, wrappedConn, info.Url, info.Headers, info.UID)
+
+		if wsc.Subprotocol() == ws.ActionCableMsgpackProtocol {
+			session.SetEncoder(encoders.Msgpack{})
+		}
 
 		_, err := n.Authenticate(session)
 

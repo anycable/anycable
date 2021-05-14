@@ -19,6 +19,7 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/stretchr/testify v1.7.0
 	github.com/syossan27/tebata v0.0.0-20180602121909-b283fe4bc5ba
+	github.com/vmihailenco/msgpack/v5 v5.3.2
 	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4
 	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c // indirect
 	google.golang.org/genproto v0.0.0-20210831024726-fe130286e0e2 // indirect
