@@ -22,7 +22,7 @@ func (m *Metrics) Prometheus() string {
 			"\n# HELP " + name + " " + counter.Desc() + "\n",
 		)
 		buf.WriteString("# TYPE " + name + " counter\n")
-		buf.WriteString(name + " " + strconv.FormatInt(counter.Value(), 10) + "\n")
+		buf.WriteString(name + " " + strconv.FormatUint(counter.Value(), 10) + "\n")
 	})
 
 	m.EachGauge(func(gauge *Gauge) {
@@ -32,7 +32,7 @@ func (m *Metrics) Prometheus() string {
 			"\n# HELP " + name + " " + gauge.Desc() + "\n",
 		)
 		buf.WriteString("# TYPE " + name + " gauge\n")
-		buf.WriteString(name + " " + strconv.FormatInt(gauge.Value(), 10) + "\n")
+		buf.WriteString(name + " " + strconv.FormatUint(gauge.Value(), 10) + "\n")
 	})
 
 	return buf.String()

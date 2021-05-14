@@ -400,7 +400,7 @@ func (n *Node) collectStatsOnce() {
 
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
-	n.Metrics.Gauge(metricsMemSys).Set64(int64(m.Sys))
+	n.Metrics.Gauge(metricsMemSys).Set64(m.Sys)
 
 	n.Metrics.Gauge(metricsClientsNum).Set(n.hub.Size())
 	n.Metrics.Gauge(metricsUniqClientsNum).Set(n.hub.UniqSize())

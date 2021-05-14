@@ -49,7 +49,7 @@ func (p *RubyPrinter) Write(m *Metrics) error {
 }
 
 // Print calls Ruby script to format the output and prints it to the log
-func (printer *RubyPrinter) Print(snapshot map[string]int64) {
+func (printer *RubyPrinter) Print(snapshot map[string]uint64) {
 	rhash, _ := printer.engine.VM.LoadString("{}")
 
 	hash := rhash.Hash()

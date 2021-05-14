@@ -9,9 +9,9 @@ import (
 
 func TestGauge(t *testing.T) {
 	g := NewGauge("test", "")
-	assert.Equal(t, int64(0), g.Value())
+	assert.Equal(t, uint64(0), g.Value())
 	g.Set(20)
-	assert.Equal(t, int64(20), g.Value())
+	assert.Equal(t, uint64(20), g.Value())
 }
 
 func TestGaugeIncDec(t *testing.T) {
@@ -39,5 +39,5 @@ func TestGaugeIncDec(t *testing.T) {
 
 	wg.Wait()
 
-	assert.Equal(t, int64(7), g.Value())
+	assert.Equal(t, uint64(7), g.Value())
 }

@@ -7,9 +7,9 @@ import "sync/atomic"
 type Counter struct {
 	name              string
 	desc              string
-	value             int64
-	lastIntervalValue int64
-	lastIntervalDelta int64
+	value             uint64
+	lastIntervalValue uint64
+	lastIntervalDelta uint64
 }
 
 // NewCounter creates new Counter.
@@ -28,31 +28,31 @@ func (c *Counter) Desc() string {
 }
 
 // Value allows to get raw counter value.
-func (c *Counter) Value() int64 {
-	return atomic.LoadInt64(&c.value)
+func (c *Counter) Value() uint64 {
+	return atomic.LoadUint64(&c.value)
 }
 
 // IntervalValue allows to get last interval value for counter.
-func (c *Counter) IntervalValue() int64 {
+func (c *Counter) IntervalValue() uint64 {
 	if c.lastIntervalValue == 0 {
 		return c.Value()
 	}
-	return atomic.LoadInt64(&c.lastIntervalDelta)
+	return atomic.LoadUint64(&c.lastIntervalDelta)
 }
 
 // Inc is equivalent to Add(name, 1)
-func (c *Counter) Inc() int64 {
+func (c *Counter) Inc() uint64 {
 	return c.Add(1)
 }
 
 // Add adds the given number to the counter and returns the new value.
-func (c *Counter) Add(n int64) int64 {
-	return atomic.AddInt64(&c.value, n)
+func (c *Counter) Add(n uint64) uint64 {
+	return atomic.AddUint64(&c.value, n)
 }
 
 // UpdateDelta updates the delta value for last interval based on current value and previous value.
 func (c *Counter) UpdateDelta() {
-	now := atomic.LoadInt64(&c.value)
-	atomic.StoreInt64(&c.lastIntervalDelta, now-atomic.LoadInt64(&c.lastIntervalValue))
-	atomic.StoreInt64(&c.lastIntervalValue, now)
+	now := atomic.LoadUint64(&c.value)
+	atomic.StoreUint64(&c.lastIntervalDelta, now-atomic.LoadUint64(&c.lastIntervalValue))
+	atomic.StoreUint64(&c.lastIntervalValue, now)
 }

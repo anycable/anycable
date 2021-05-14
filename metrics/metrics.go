@@ -211,11 +211,11 @@ func (m *Metrics) EachGauge(f func(g *Gauge)) {
 }
 
 // IntervalSnapshot returns recorded interval metrics snapshot
-func (m *Metrics) IntervalSnapshot() map[string]int64 {
+func (m *Metrics) IntervalSnapshot() map[string]uint64 {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	snapshot := make(map[string]int64)
+	snapshot := make(map[string]uint64)
 
 	for name, c := range m.counters {
 		snapshot[name] = c.IntervalValue()

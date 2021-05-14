@@ -33,7 +33,7 @@ func (p *BasePrinter) Write(m *Metrics) error {
 }
 
 // Print logs stats data using global logger with info level
-func (*BasePrinter) Print(snapshot map[string]int64) {
+func (*BasePrinter) Print(snapshot map[string]uint64) {
 	fields := make(log.Fields, len(snapshot)+1)
 
 	fields["context"] = "metrics"
