@@ -62,8 +62,16 @@ github.com/stretchr/testify/mock
 # github.com/syossan27/tebata v0.0.0-20180602121909-b283fe4bc5ba
 ## explicit
 github.com/syossan27/tebata
+# github.com/vmihailenco/msgpack/v5 v5.3.2
+## explicit
+github.com/vmihailenco/msgpack/v5
+github.com/vmihailenco/msgpack/v5/msgpcode
+# github.com/vmihailenco/tagparser/v2 v2.0.0
+github.com/vmihailenco/tagparser/v2
+github.com/vmihailenco/tagparser/v2/internal
+github.com/vmihailenco/tagparser/v2/internal/parser
 # golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4
-## explicit; go 1.11
+## explicit
 golang.org/x/net/http/httpguts
 golang.org/x/net/http2
 golang.org/x/net/http2/hpack
