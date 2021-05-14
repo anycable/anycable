@@ -17,7 +17,6 @@ const (
 const (
 	WelcomeType    = "welcome"
 	PingType       = "ping"
-	ReplyType      = "message"
 	DisconnectType = "disconnect"
 	ConfirmedType  = "confirm_subscription"
 	RejectedType   = "reject_subscription"
@@ -149,7 +148,7 @@ func (c *CommandResult) ToCallResult() *CallResult {
 type Message struct {
 	Command    string `json:"command"`
 	Identifier string `json:"identifier"`
-	Data       string `json:"data"`
+	Data       string `json:"data,omitempty"`
 }
 
 // StreamMessage represents a pub/sub message to be sent to stream
@@ -173,7 +172,7 @@ type RemoteDisconnectMessage struct {
 // PingMessage represents a server ping
 type PingMessage struct {
 	Type    string      `json:"type"`
-	Message interface{} `json:"message"`
+	Message interface{} `json:"message,omitempty"`
 }
 
 func (p *PingMessage) GetType() string {
@@ -194,12 +193,12 @@ func (d *DisconnectMessage) GetType() string {
 // Reply represents an outgoing client message
 type Reply struct {
 	Type       string      `json:"type,omitempty"`
-	Identifier string      `json:"identifier"`
-	Message    interface{} `json:"message"`
+	Identifier string      `json:"identifier,omitempty"`
+	Message    interface{} `json:"message,omitempty"`
 }
 
 func (r *Reply) GetType() string {
-	return ReplyType
+	return r.Type
 }
 
 // PubSubMessageFromJSON takes raw JSON byte array and return the corresponding struct

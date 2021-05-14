@@ -16,6 +16,11 @@ import (
 
 const remoteAddrHeader = "REMOTE_ADDR"
 
+const ActionCableJSONProtocol = "actioncable-v1-json"
+const ActionCableMsgpackProtocol = "actioncable-v1-msgpack"
+
+var subprotocols = []string{ActionCableJSONProtocol, ActionCableMsgpackProtocol}
+
 type RequestInfo struct {
 	UID     string
 	Url     string
@@ -42,7 +47,7 @@ func WebsocketHandler(headersToFetch []string, config *Config, sessionHandler se
 
 		upgrader := websocket.Upgrader{
 			CheckOrigin:       CheckOrigin(config.AllowedOrigins),
-			Subprotocols:      []string{"actioncable-v1-json"},
+			Subprotocols:      subprotocols,
 			ReadBufferSize:    config.ReadBufferSize,
 			WriteBufferSize:   config.WriteBufferSize,
 			EnableCompression: config.EnableCompression,

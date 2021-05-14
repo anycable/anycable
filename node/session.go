@@ -81,6 +81,7 @@ func NewSession(node *Node, conn Connection, url string, headers *map[string]str
 
 func (s *Session) SetEncoder(enc encoders.Encoder) {
 	s.encoder = enc
+	s.Log = s.Log.WithField("enc", enc.ID())
 }
 
 func (s *Session) SetExecutor(ex Executor) {
@@ -148,6 +149,7 @@ func (s *Session) ReadMessage(message []byte) error {
 	command, err := s.decodeMessage(message)
 
 	if err != nil {
+		s.Log.Debugf("Websocket read error: %v", err)
 		s.node.Metrics.Counter(metricsFailedCommandReceived).Inc()
 		return err
 	}
