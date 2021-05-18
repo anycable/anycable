@@ -2,6 +2,7 @@
 
 ## master
 
+- Add `--allowed_origins` option to enable Origin check during the WebSocket upgrade. ([@skryukov][])
 - Renamed `metrics_log_interval` to `metrics_rotate_interval`. ([@palkan][])
 
 ## 1.1.0.rc1 (2021-05-12)
@@ -122,3 +123,4 @@ See [Changelog](https://github.com/anycable/anycable-go/blob/0-6-stable/CHANGELO
 [@rolandg]: https://github.com/rolandg
 [@gr8bit]: https://github.com/gr8bit
 [@prburgu]: https://github.com/prburgu
+[@skryukov]: https://github.com/skryukov

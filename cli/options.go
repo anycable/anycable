@@ -72,6 +72,7 @@ func init() {
 	fs.IntVar(&defaults.WS.WriteBufferSize, "write_buffer_size", 1024, "")
 	fs.Int64Var(&defaults.WS.MaxMessageSize, "max_message_size", 65536, "")
 	fs.BoolVar(&defaults.WS.EnableCompression, "enable_ws_compression", false, "")
+	fs.StringVar(&defaults.WS.AllowedOrigins, "allowed_origins", "", "")
 
 	fs.IntVar(&defaults.DisconnectQueue.Rate, "disconnect_rate", 100, "")
 	fs.IntVar(&defaults.DisconnectQueue.ShutdownTimeout, "disconnect_timeout", 5, "")
@@ -175,6 +176,7 @@ OPTIONS
   --max_message_size                     Maximum size of a message in bytes, default: 65536, env: ANYCABLE_MAX_MESSAGE_SIZE
   --enable_ws_compression                Enable experimental WebSocket per message compression, default: false, env: ANYCABLE_ENABLE_WS_COMPRESSION
   --hub_gopool_size                      The size of the goroutines pool to broadcast messages, default: 16, env: ANYCABLE_HUB_GOPOOL_SIZE
+  --allowed_origins                      Accept requests only from specified origins, e.g., "www.example.com,*example.io". No check is performed if empty, default: "", env: ANYCABLE_ALLOWED_ORIGINS
 
   --ping_interval                        Action Cable ping interval (in seconds), default: 3, env: ANYCABLE_PING_INTERVAL
   --ping_timestamp_precision             Precision for timestamps in ping messages (s, ms, ns), default: s, env: ANYCABLE_PING_TIMESTAMP_PRECISION

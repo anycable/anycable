@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
+	"strings"
 
 	"github.com/anycable/anycable-go/version"
 	"github.com/apex/log"
@@ -39,7 +41,7 @@ func WebsocketHandler(headersToFetch []string, config *Config, sessionHandler se
 		ctx := log.WithField("context", "ws")
 
 		upgrader := websocket.Upgrader{
-			CheckOrigin:       func(r *http.Request) bool { return true },
+			CheckOrigin:       CheckOrigin(config.AllowedOrigins),
 			Subprotocols:      []string{"actioncable-v1-json"},
 			ReadBufferSize:    config.ReadBufferSize,
 			WriteBufferSize:   config.WriteBufferSize,
@@ -113,4 +115,30 @@ func FetchUID(r *http.Request) (string, error) {
 	}
 
 	return requestID, nil
+}
+
+func CheckOrigin(origins string) func(r *http.Request) bool {
+	if origins == "" {
+		return func(r *http.Request) bool { return true }
+	}
+
+	hosts := strings.Split(strings.ToLower(origins), ",")
+
+	return func(r *http.Request) bool {
+		origin := strings.ToLower(r.Header.Get("Origin"))
+		u, err := url.Parse(origin)
+		if err != nil {
+			return false
+		}
+
+		for _, host := range hosts {
+			if host[0] == '*' && strings.HasSuffix(u.Host, host[1:]) {
+				return true
+			}
+			if u.Host == host {
+				return true
+			}
+		}
+		return false
+	}
 }

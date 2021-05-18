@@ -6,6 +6,7 @@ type Config struct {
 	WriteBufferSize   int
 	MaxMessageSize    int64
 	EnableCompression bool
+	AllowedOrigins    string
 }
 
 // NewConfig build a new Config struct
