@@ -128,6 +128,8 @@ func (s *Session) ReadMessage() error {
 		return err
 	}
 
+	s.node.Metrics.Counter(metricsDataReceived).Add(uint64(len(message)))
+
 	command, err := s.decodeMessage(message)
 
 	if err != nil {
@@ -250,6 +252,8 @@ func (s *Session) writeFrame(message *ws.SentFrame) error {
 }
 
 func (s *Session) writeFrameWithDeadline(message *ws.SentFrame, deadline time.Time) error {
+	s.node.Metrics.Counter(metricsDataSent).Add(uint64(len(message.Payload)))
+
 	switch message.FrameType {
 	case ws.TextFrame:
 		s.mu.Lock()

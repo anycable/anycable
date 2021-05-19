@@ -31,6 +31,9 @@ const (
 
 	metricsSentMsg    = "server_msg_total"
 	metricsFailedSent = "failed_server_msg_total"
+
+	metricsDataSent     = "data_sent_total"
+	metricsDataReceived = "data_rcvd_total"
 )
 
 // AppNode describes a basic node interface
@@ -425,6 +428,9 @@ func (n *Node) registerMetrics() {
 
 	n.Metrics.RegisterCounter(metricsSentMsg, "The total number of messages sent to clients")
 	n.Metrics.RegisterCounter(metricsFailedSent, "The total number of messages failed to send to clients")
+
+	n.Metrics.RegisterCounter(metricsDataSent, "The total amount of bytes sent to clients")
+	n.Metrics.RegisterCounter(metricsDataReceived, "The total amount of bytes received from clients")
 }
 
 func subscriptionsList(m map[string]bool) []string {

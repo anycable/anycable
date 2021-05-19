@@ -74,6 +74,14 @@ anycable_go_server_msg_total 453
 # HELP anycable_go_failed_server_msg_total The total number of messages failed to send to clients
 # TYPE anycable_go_failed_server_msg_total counter
 anycable_go_failed_server_msg_total 0
+
+# HELP anycable_go_data_sent_bytes_total The total amount of bytes sent to clients
+# TYPE anycable_go_data_sent_bytes_total counter
+anycable_go_data_sent_bytes_total 1232434334
+
+# HELP anycable_go_data_rcvd_bytes_total The total amount of bytes received from clients
+# TYPE anycable_go_data_rcvd_bytes_total counter
+anycable_go_data_rcvd_bytes_total 434334
 ```
 
 ## Logging

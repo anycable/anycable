@@ -2,7 +2,10 @@
 
 ## master
 
+- Added `data_sent_bytes_total` and `data_rcvd_bytes_total` metrics. ([@palkan][])
+
 - Add `--allowed_origins` option to enable Origin check during the WebSocket upgrade. ([@skryukov][])
+
 - Renamed `metrics_log_interval` to `metrics_rotate_interval`. ([@palkan][])
 
 ## 1.1.0.rc1 (2021-05-12)
