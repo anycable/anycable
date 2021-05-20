@@ -30,6 +30,11 @@ RPC service address (default: `"localhost:50051"`).
 
 Comma-separated list of headers to proxy to RPC (default: `"cookie"`).
 
+**--allowed_origins** (`ANYCABLE_ALLOWED_ORIGINS`)
+
+Comma-separated list of hostnames to check the Origin header against during the WebSocket Upgrade.
+Supports wildcards, e.g., `--allowed_origins=*.evilmartians.io,www.evilmartians.com`.
+
 **--broadcast_adapter** (`ANYCABLE_BROADCAST_ADAPTER`, default: `redis`)
 
 [Broadcasting adapter](../ruby/broadcast_adapters.md) to use. Available options: `redis` (default), `http`.
