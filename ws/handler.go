@@ -18,8 +18,9 @@ const remoteAddrHeader = "REMOTE_ADDR"
 
 const ActionCableJSONProtocol = "actioncable-v1-json"
 const ActionCableMsgpackProtocol = "actioncable-v1-msgpack"
+const ActionCableProtobufProtocol = "actioncable-v1-protobuf"
 
-var subprotocols = []string{ActionCableJSONProtocol, ActionCableMsgpackProtocol}
+var subprotocols = []string{ActionCableJSONProtocol, ActionCableMsgpackProtocol, ActionCableProtobufProtocol}
 
 type RequestInfo struct {
 	UID     string
