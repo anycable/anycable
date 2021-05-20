@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package action_cable;
+
+enum Type {
+  no_type = 0;
+  welcome = 1;
+  disconnect = 2;
+  ping = 3;
+  confirm_subscription = 4;
+  reject_subscription = 5;
+}
+
+enum Command {
+  unknown_command = 0;
+  subscribe = 1;
+  unsubscribe = 2;
+  message = 3;
+}
+
+message Message {
+  Type type = 1;
+  Command command = 2;
+  string identifier = 3;
+  string data = 4;
+  bytes message = 5;
+  string reason = 6;
+  bool reconnect = 7;
+}
