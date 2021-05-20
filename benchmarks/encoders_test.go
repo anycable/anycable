@@ -9,8 +9,11 @@ import (
 	"github.com/anycable/anycable-go/apollo"
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/encoders"
+	"github.com/golang/protobuf/proto" // nolint:staticcheck
 	"github.com/stretchr/testify/assert"
 	"github.com/vmihailenco/msgpack/v5"
+
+	pb "github.com/anycable/anycable-go/ac_protos"
 )
 
 var (
@@ -18,11 +21,19 @@ var (
 	longIdentifier = fmt.Sprintf("{\"channel\":\"%s\",\"channelId\":\"%s\"}", strings.Repeat("test_channel", 10), strings.Repeat("123", 10))
 )
 
+type message struct {
+	Type       string      `json:"type,omitempty" msgpack:"type,omitempty"`
+	Identifier string      `json:"identifier,omitempty" msgpack:"identifier,omitempty"`
+	Message    interface{} `json:"message,omitempty" msgpack:"message,omitempty"`
+	Command    string      `json:"command,omitempty" msgpack:"command,omitempty"`
+	Data       string      `json:"data,omitempty" msgpack:"data,omitempty"`
+}
+
 func BenchmarkEncodersDecode(b *testing.B) {
-	baseCmd := common.Message{Command: "test", Identifier: identifier, Data: "hello world"}
+	baseCmd := message{Command: "message", Identifier: identifier, Data: "hello world"}
 	baseMsg, _ := json.Marshal(&baseCmd)
 
-	longCmd := common.Message{Command: "test", Identifier: longIdentifier, Data: string(baseMsg)}
+	longCmd := message{Command: "message", Identifier: longIdentifier, Message: baseMsg}
 	longMsg, _ := json.Marshal(&longCmd)
 
 	baseApolloMsg := []byte("{\"type\":\"start\",\"id\":\"abc2021\",\"payload\":{\"query\":\"Post { id }\"}}")
@@ -30,6 +41,9 @@ func BenchmarkEncodersDecode(b *testing.B) {
 
 	baseMsgpack, _ := msgpack.Marshal(&baseCmd)
 	longMsgpack, _ := msgpack.Marshal(&longCmd)
+
+	baseProtobuf, _ := proto.Marshal(&pb.Message{Command: pb.Command_message, Identifier: identifier, Data: "hello world"})
+	longProtobuf, _ := proto.Marshal(&pb.Message{Command: pb.Command_message, Identifier: longIdentifier, Message: baseMsgpack})
 
 	configs := []struct {
 		title   string
@@ -42,6 +56,8 @@ func BenchmarkEncodersDecode(b *testing.B) {
 		{"Apollo long", longApolloMsg, apollo.Encoder{}},
 		{"Msgpack base", baseMsgpack, encoders.Msgpack{}},
 		{"Msgpack long", longMsgpack, encoders.Msgpack{}},
+		{"Protobuf base", baseProtobuf, encoders.Protobuf{}},
+		{"Protobuf long", longProtobuf, encoders.Protobuf{}},
 	}
 
 	for _, config := range configs {
@@ -55,9 +71,10 @@ func BenchmarkEncodersDecode(b *testing.B) {
 }
 
 func BenchmarkEncodersEncode(b *testing.B) {
-	baseReply := common.Reply{Type: "test", Identifier: identifier, Message: "hello world"}
-	baseJSONReply, _ := json.Marshal(&baseReply)
-	longReply := common.Reply{Type: "test", Identifier: longIdentifier, Message: string(baseJSONReply)}
+	baseReply := common.Reply{Type: "message", Identifier: identifier, Message: map[string]int{"hello": 42, "world": 26}}
+
+	payload := message{Command: "message", Identifier: longIdentifier, Message: baseReply}
+	longReply := common.Reply{Type: "message", Identifier: longIdentifier, Message: payload}
 
 	configs := []struct {
 		title   string
@@ -70,6 +87,8 @@ func BenchmarkEncodersEncode(b *testing.B) {
 		{"Apollo long", &longReply, apollo.Encoder{}},
 		{"Msgpack base", &baseReply, encoders.Msgpack{}},
 		{"Msgpack long", &longReply, encoders.Msgpack{}},
+		{"Protobuf base", &baseReply, encoders.Protobuf{}},
+		{"Protobuf long", &longReply, encoders.Protobuf{}},
 	}
 
 	for _, config := range configs {
@@ -83,10 +102,10 @@ func BenchmarkEncodersEncode(b *testing.B) {
 }
 
 func BenchmarkEncodersEncodeTransmission(b *testing.B) {
-	baseReply := common.Reply{Type: "test", Identifier: identifier, Message: "hello world"}
+	baseReply := message{Type: "test", Identifier: identifier, Message: map[string]int{"hello": 42, "world": 26}}
 	baseJSONReplyBytes, _ := json.Marshal(&baseReply)
 	baseJSONReply := string(baseJSONReplyBytes)
-	longReply := common.Reply{Type: "test", Identifier: longIdentifier, Message: baseJSONReply}
+	longReply := message{Type: "test", Identifier: longIdentifier, Data: baseJSONReply, Message: baseReply}
 	longJSONReplyBytes, _ := json.Marshal(&longReply)
 	longJSONReply := string(longJSONReplyBytes)
 
@@ -101,6 +120,8 @@ func BenchmarkEncodersEncodeTransmission(b *testing.B) {
 		{"Apollo long", longJSONReply, apollo.Encoder{}},
 		{"Msgpack base", baseJSONReply, encoders.Msgpack{}},
 		{"Msgpack long", longJSONReply, encoders.Msgpack{}},
+		{"Protobuf base", baseJSONReply, encoders.Protobuf{}},
+		{"Protobuf long", longJSONReply, encoders.Protobuf{}},
 	}
 
 	for _, config := range configs {

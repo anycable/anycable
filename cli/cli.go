@@ -282,6 +282,10 @@ func (r *Runner) defaultWebSocketHandler(n *node.Node, c *config.Config) http.Ha
 			session.SetEncoder(encoders.Msgpack{})
 		}
 
+		if wsc.Subprotocol() == ws.ActionCableProtobufProtocol {
+			session.SetEncoder(encoders.Protobuf{})
+		}
+
 		_, err := n.Authenticate(session)
 
 		if err != nil {
