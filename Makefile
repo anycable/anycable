@@ -36,7 +36,9 @@ build-gobench:
 
 prepare-mruby:
 	cd vendor/github.com/mitchellh/go-mruby && \
-	MRUBY_COMMIT=$(MRUBY_VERSION) MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a
+	MRUBY_COMMIT=$(MRUBY_VERSION) MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a || \
+	(sed -i '' 's/{ :verbose => $$verbose }/verbose: $$verbose/g' ./vendor/mruby/Rakefile && \
+		MRUBY_COMMIT=$(MRUBY_VERSION) MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)
 
 upgrade-mruby: clean-mruby prepare-mruby
 
