@@ -88,12 +88,12 @@ func (s *Session) SetExecutor(ex Executor) {
 }
 
 // Serve enters a loop to read incoming data
-func (s *Session) Serve() {
+func (s *Session) Serve() error {
 	for {
 		err := s.ReadMessage()
 
 		if err != nil {
-			return
+			return err
 		}
 	}
 }

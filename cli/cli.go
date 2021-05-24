@@ -258,8 +258,7 @@ func (r *Runner) defaultWebSocketHandler(n *node.Node, c *config.Config) http.Ha
 			return err
 		}
 
-		session.Serve()
-		return nil
+		return session.Serve()
 	})
 }
 
