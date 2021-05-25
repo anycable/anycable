@@ -1032,6 +1032,27 @@ func wsCLIFlags(c *config.Config) []cli.Flag {
 			Usage:       `Accept requests only from specified origins, e.g., "www.example.com,*example.io". No check is performed if empty`,
 			Destination: &c.WS.AllowedOrigins,
 		},
+
+		&cli.IntFlag{
+			Name:        "read_gopool_size",
+			Usage:       "The size of the goroutine pool to read client messages",
+			Value:       c.App.ReadGopoolSize,
+			Destination: &c.App.ReadGopoolSize,
+		},
+
+		&cli.IntFlag{
+			Name:        "write_gopool_size",
+			Usage:       "The size of the goroutine pool to write client messages",
+			Value:       c.App.WriteGopoolSize,
+			Destination: &c.App.WriteGopoolSize,
+		},
+
+		&cli.BoolFlag{
+			Name:        "netpoll_enabled",
+			Usage:       "Whether to use net polling (epoll, kqueue) to read data or not",
+			Value:       c.App.NetpollEnabled,
+			Destination: &c.App.NetpollEnabled,
+		},
 	})
 }
 

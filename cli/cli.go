@@ -21,6 +21,7 @@ import (
 	"github.com/anycable/anycable-go/logger"
 	metricspkg "github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/mrb"
+	"github.com/anycable/anycable-go/netpoll"
 	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/pubsub"
 	"github.com/anycable/anycable-go/router"
@@ -67,6 +68,7 @@ type Runner struct {
 	router           *router.RouterController
 	metrics          *metricspkg.Metrics
 	telemetryEnabled bool
+	poller           netpoll.Poller
 
 	errChan       chan error
 	shutdownables []Shutdownable
@@ -160,8 +162,9 @@ func (r *Runner) Run() error {
 	r.announceDebugMode()
 
 	mrubySupport := r.initMRuby()
+	useNetpoll := r.config.App.NetpollEnabled
 
-	r.log.Info(fmt.Sprintf("Starting %s %s%s (pid: %d, open file limit: %s, gomaxprocs: %d)", r.name, version.Version(), mrubySupport, os.Getpid(), utils.OpenFileLimit(), numProcs))
+	r.log.Info(fmt.Sprintf("Starting %s %s%s (pid: %d, open file limit: %s, gomaxprocs: %d, netpoll: %v)", r.name, version.Version(), mrubySupport, os.Getpid(), utils.OpenFileLimit(), numProcs, useNetpoll))
 
 	if r.config.IsPublic() {
 		r.log.Warn("Server is running in the public mode")
@@ -202,7 +205,7 @@ func (r *Runner) Run() error {
 
 		wsServer.SetupHandler(gqlPath, apolloHandler)
 
-		r.log.Infof("Handle Apollo GraphQL WebSocket connections at %s%s", wsServer.Address(), gqlPath)
+		r.log.Info(fmt.Sprintf("Handle Apollo GraphQL WebSocket connections at %s%s", wsServer.Address(), gqlPath))
 	}
 
 	wsServer.SetupHandler(r.config.HealthPath, http.HandlerFunc(server.HealthHandler))
@@ -242,6 +245,21 @@ func (r *Runner) runNode() (*node.Node, error) {
 	controller, err := r.newController(metrics)
 	if err != nil {
 		return nil, err
+	}
+
+	if r.config.App.NetpollEnabled {
+		if r.config.WS.EnableCompression {
+			r.log.Warn("WebSocket per message compression is not compatible with the current netpoll implementation. Disabling the compression.")
+			r.config.WS.EnableCompression = false
+		}
+
+		poll, perr := netpoll.New(nil)
+
+		if perr != nil {
+			return nil, errorx.Decorate(perr, "failed to initialize netpoll")
+		}
+
+		r.poller = poll
 	}
 
 	appNode := node.NewNode(
@@ -463,6 +481,10 @@ func (r *Runner) defaultWebSocketHandler(n *node.Node, c *config.Config, l *slog
 			}
 		}
 
+		if r.poller != nil {
+			return session.ServeWithPoll(r.poller, callback)
+		}
+
 		return session.Serve(callback)
 	}), nil
 }
@@ -485,6 +507,10 @@ func (r *Runner) apolloWebsocketHandler(n *node.Node, c *config.Config) http.Han
 		}
 
 		session := node.NewSession(n, wrappedConn, info.URL, info.Headers, info.UID, opts...)
+
+		if r.poller != nil {
+			return session.ServeWithPoll(r.poller, callback)
+		}
 
 		return session.Serve(callback)
 	})

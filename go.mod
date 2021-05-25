@@ -31,13 +31,17 @@ require (
 	google.golang.org/grpc v1.60.1
 )
 
-require github.com/sony/gobreaker v0.5.0
+require (
+	github.com/gobwas/ws v1.3.2
+	github.com/sony/gobreaker v0.5.0
+)
 
 require (
 	github.com/bufbuild/protocompile v0.7.1 // indirect
+	github.com/gobwas/httphead v0.1.0 // indirect
+	github.com/gobwas/pool v0.2.1 // indirect
 	github.com/google/uuid v1.5.0 // indirect
 	github.com/klauspost/compress v1.17.4 // indirect
-	github.com/kr/pretty v0.2.0 // indirect
 	github.com/minio/highwayhash v1.0.2 // indirect
 	github.com/nats-io/jwt/v2 v2.5.3 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
@@ -56,7 +60,7 @@ require (
 	github.com/stretchr/objx v0.5.1 // indirect
 	github.com/xrash/smetrics v0.0.0-20231213231151-1d8dd44e695e // indirect
 	golang.org/x/crypto v0.18.0 // indirect
-	golang.org/x/sys v0.16.0 // indirect
+	golang.org/x/sys v0.16.0
 	golang.org/x/text v0.14.0 // indirect
 	google.golang.org/protobuf v1.32.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

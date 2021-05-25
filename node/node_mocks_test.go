@@ -17,6 +17,8 @@ func NewMockNode() *Node {
 	controller := mocks.NewMockController()
 	config := NewConfig()
 	config.HubGopoolSize = 2
+	config.ReadGopoolSize = 2
+	config.WriteGopoolSize = 2
 	node := NewNode(&config, WithInstrumenter(metrics.NewMetrics(nil, 10, slog.Default())), WithController(&controller))
 	node.SetBroker(broker.NewLegacyBroker(pubsub.NewLegacySubscriber(node)))
 	dconfig := NewDisconnectQueueConfig()
@@ -28,15 +30,18 @@ func NewMockNode() *Node {
 // NewMockSession returns a new session with a specified uid and identifiers equal to uid
 func NewMockSession(uid string, node *Node, opts ...SessionOption) *Session {
 	session := Session{
-		executor:      node,
-		closed:        true,
-		uid:           uid,
-		Log:           slog.With("sid", uid),
-		subscriptions: NewSubscriptionState(),
-		env:           common.NewSessionEnv("/cable-test", &map[string]string{}),
-		sendCh:        make(chan *ws.SentFrame, 256),
-		encoder:       encoders.JSON{},
-		metrics:       metrics.NoopMetrics{},
+		executor:        node,
+		closed:          true,
+		uid:             uid,
+		Log:             slog.With("sid", uid),
+		subscriptions:   NewSubscriptionState(),
+		env:             common.NewSessionEnv("/cable-test", &map[string]string{}),
+		sendCh:          make(chan *ws.SentFrame, 256),
+		sendChannelOpen: true,
+		encoder:         encoders.JSON{},
+		metrics:         metrics.NoopMetrics{},
+		readPool:        node.readPool,
+		writePool:       node.writePool,
 	}
 
 	session.SetIdentifiers(uid)
@@ -45,8 +50,6 @@ func NewMockSession(uid string, node *Node, opts ...SessionOption) *Session {
 	for _, opt := range opts {
 		opt(&session)
 	}
-
-	go session.SendMessages()
 
 	return &session
 }

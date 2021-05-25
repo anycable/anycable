@@ -29,11 +29,11 @@ func NewExecutor(node node.AppNode, config *Config) *Executor {
 }
 
 func (ex *Executor) HandleCommand(s *node.Session, msg *common.Message) error {
-	s.Log.Debugf("Incoming message: %v", msg)
+	s.Log.Debug("incoming message", "data", msg)
 
 	if msg.Command == GQL_CONNECTION_INIT {
 		if s.Connected {
-			return errors.New("Already connected")
+			return errors.New("already connected")
 		}
 		// Perform authentication
 		// We automatically transform welcome message into connection ack,
@@ -66,7 +66,7 @@ func (ex *Executor) HandleCommand(s *node.Session, msg *common.Message) error {
 	}
 
 	if !s.Connected {
-		return errors.New("Connection hasn't been initialized")
+		return errors.New("connection hasn't been initialized")
 	}
 
 	identifier := IDToIdentifier(msg.Identifier, ex.channel)
@@ -106,7 +106,7 @@ func (ex *Executor) HandleCommand(s *node.Session, msg *common.Message) error {
 			Data:       string(operation.ToJSON()),
 		}
 
-		s.Log.Debugf("Execute GraphQL query: %v", msg)
+		s.Log.Debug("execute GraphQL query", "data", msg)
 
 		res, err := ex.node.Perform(s, &msg)
 
@@ -117,7 +117,7 @@ func (ex *Executor) HandleCommand(s *node.Session, msg *common.Message) error {
 		// Now we need to check whether the query was subscription or not.
 		// If not, we should remove it from the subscription lists.
 		if len(res.Transmissions) != 1 {
-			return fmt.Errorf("Expected query execution to return one transmission, got: %v", res)
+			return fmt.Errorf("expected query execution to return one transmission, got: %v", res)
 		}
 
 		reply := struct {
@@ -145,7 +145,7 @@ func (ex *Executor) HandleCommand(s *node.Session, msg *common.Message) error {
 		return ex.completeRequest(s, identifier)
 	}
 
-	return fmt.Errorf("Unknown command: %s", msg.Command)
+	return fmt.Errorf("unknown command: %s", msg.Command)
 }
 
 func (ex *Executor) Disconnect(s *node.Session) error {

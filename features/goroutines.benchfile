@@ -1,7 +1,7 @@
 launch :rpc, "bundle exec anyt --only-rpc"
 wait_tcp 50051
 
-launch :anycable, "./dist/anycable-go"
+launch :anycable, "./dist/anycable-go --netpoll_enabled=false --write_gopool_size=100"
 wait_tcp 8080
 
 BENCHMARK_COMMAND = <<~CMD
@@ -12,20 +12,26 @@ CMD
 
 IDLE_ROUTINES_MAX = 200
 
-results = 2.times.map do |i|
-  run :bench, BENCHMARK_COMMAND
-  # Give some time to cool down after the benchmark
-  sleep 5
+run :bench, BENCHMARK_COMMAND
+# Give some time to cool down after the benchmark
+sleep 5
 
-  gops(pid(:anycable))["goroutines"].tap do |num|
-    fail "Failed to gops process: #{pid(:anycable)}" unless num
+routines_1 = gops(pid(:anycable))["goroutines"]
 
-    if num > IDLE_ROUTINES_MAX
-      fail "Too many goroutines: #{num}"
-    end
-  end
+unless routines_1
+  fail "Failed to gops process: #{pid(:anycable)}"
 end
 
-if (results[1] / results[0].to_f) > 1.1
-  fail "Go routines leak detected: #{results[0]} -> #{results[1]}"
+if routines_1 > IDLE_ROUTINES_MAX
+  fail "Too many goroutines: #{routines_1}"
+end
+
+# Run benchmark again to check whether we're leaking routines
+run :bench, BENCHMARK_COMMAND
+sleep 5
+
+routines_2 = gops(pid(:anycable))["goroutines"]
+
+if (routines_2 / routines_1.to_f) > 1.1
+  fail "Go routines leak detected: #{routines_1} -> #{routines_2}"
 end

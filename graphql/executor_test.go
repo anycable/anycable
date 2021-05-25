@@ -3,13 +3,13 @@ package graphql
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"testing"
 
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/node_mocks"
-	"github.com/apex/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -170,7 +170,7 @@ func buildSession() *node.Session {
 	sessionCounter++
 	s := node.Session{
 		Connected: true,
-		Log:       log.WithField("context", "test"),
+		Log:       slog.With("context", "test"),
 	}
 	s.SetID(strconv.Itoa(sessionCounter))
 	node.WithEncoder(Encoder{})(&s)
