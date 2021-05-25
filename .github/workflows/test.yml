@@ -122,7 +122,7 @@ jobs:
         ANYCABLE_HTTP_BROADCAST_URL: https://localhost:8090/_broadcast
       run: |
         bundle exec anyt -c \
-        "tmp/anycable-go-test --headers=cookie,x-api-token --ssl_key=etc/ssl/server.key --ssl_cert=etc/ssl/server.crt --port=8443" \
+        "tmp/anycable-go-test --headers=cookie,x-api-token --ssl_key=etc/ssl/server.key --ssl_cert=etc/ssl/server.crt --port=8443 --netpoll_enabled=false" \
         --target-url="wss://localhost:8443/cable"
     - name: Run anyt (without SSL)
       if: ${{ matrix.ssl == '' }}
