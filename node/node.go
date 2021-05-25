@@ -148,7 +148,6 @@ func (n *Node) Shutdown() (err error) {
 			for _, session := range n.hub.sessions {
 				session.Send(disconnectMessage)
 				session.Disconnect("Shutdown", ws.CloseGoingAway)
-				session.Flush()
 			}
 
 			n.log.Info("All active connections closed")
@@ -198,8 +197,6 @@ func (n *Node) Authenticate(s *Session) (res *common.ConnectResult, err error) {
 	if err != nil {
 		s.Disconnect("Auth Error", ws.CloseInternalServerErr)
 	}
-
-	s.Flush()
 
 	return
 }
@@ -338,8 +335,6 @@ func transmit(s *Session, transmissions []string) {
 }
 
 func (n *Node) handleCommandReply(s *Session, msg *common.Message, reply *common.CommandResult) {
-	defer s.Flush()
-
 	if reply.Disconnect {
 		defer s.Disconnect("Command Failed", ws.CloseAbnormalClosure)
 	}

@@ -3,6 +3,8 @@ package node
 import (
 	"sync"
 	"testing"
+
+	"github.com/anycable/anycable-go/ws"
 )
 
 func TestSendRaceConditions(t *testing.T) {
@@ -21,12 +23,12 @@ func TestSendRaceConditions(t *testing.T) {
 		wg.Add(2)
 		go func() {
 			go func() {
-				session.send([]byte("hi!"))
+				session.sendFrame(&ws.SentFrame{FrameType: ws.TextFrame, Payload: []byte("hi!")})
 				wg.Done()
 			}()
 
 			go func() {
-				session.send([]byte("bye"))
+				session.sendFrame(&ws.SentFrame{FrameType: ws.TextFrame, Payload: []byte("bye")})
 				wg.Done()
 			}()
 		}()
@@ -34,12 +36,12 @@ func TestSendRaceConditions(t *testing.T) {
 		wg.Add(2)
 		go func() {
 			go func() {
-				session.send([]byte("bye"))
+				session.sendFrame(&ws.SentFrame{FrameType: ws.TextFrame, Payload: []byte("bye")})
 				wg.Done()
 			}()
 
 			go func() {
-				session.send([]byte("why"))
+				session.sendFrame(&ws.SentFrame{FrameType: ws.TextFrame, Payload: []byte("why")})
 				wg.Done()
 			}()
 		}()

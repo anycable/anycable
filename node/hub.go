@@ -354,7 +354,6 @@ func (h *Hub) broadcastToStream(stream string, data string) {
 				}
 
 				session.Send(bdata)
-				session.Flush()
 			}
 		}
 	})
@@ -378,7 +377,6 @@ func (h *Hub) disconnectSessions(identifier string, reconnect bool) {
 			if ses, ok := h.sessions[id]; ok {
 				ses.Send(disconnectMessage)
 				ses.Disconnect("Closed remotely", ws.CloseNormalClosure)
-				ses.Flush()
 			}
 		}
 	})

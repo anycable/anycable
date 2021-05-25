@@ -33,7 +33,7 @@ func NewRequestInfo(r *http.Request, headersToFetch []string) (*RequestInfo, err
 	return &RequestInfo{UID: uid, Headers: &headers}, nil
 }
 
-type sessionHandler = func(conn *websocket.Conn, info *RequestInfo) error
+type sessionHandler = func(conn *websocket.Conn, info *RequestInfo, callback func()) error
 
 // WebsocketHandler generate a new http handler for WebSocket connections
 func WebsocketHandler(headersToFetch []string, config *Config, sessionHandler sessionHandler) http.Handler {
@@ -84,14 +84,14 @@ func WebsocketHandler(headersToFetch []string, config *Config, sessionHandler se
 		// Separate goroutine for better GC of caller's data.
 		go func() {
 			sessionCtx.Debugf("WebSocket session established")
-			serr := sessionHandler(wsc, info)
+			serr := sessionHandler(wsc, info, func() {
+				sessionCtx.Debugf("WebSocket session completed")
+			})
 
 			if serr != nil {
 				sessionCtx.Errorf("WebSocket session failed: %v", serr)
 				return
 			}
-
-			sessionCtx.Debugf("WebSocket session completed")
 		}()
 	})
 }

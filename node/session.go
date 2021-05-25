@@ -88,19 +88,25 @@ func (s *Session) SetExecutor(ex Executor) {
 }
 
 // Serve enters a loop to read incoming data
-func (s *Session) Serve() error {
-	for {
-		err := s.ReadMessage()
+func (s *Session) Serve(callback func()) error {
+	go func() {
+		defer callback()
 
-		if err != nil {
-			return err
+		for {
+			err := s.ReadMessage()
+
+			if err != nil {
+				return
+			}
 		}
-	}
+	}()
+
+	return nil
 }
 
 // SendMessages waits for incoming messages and send them to the client connection
 func (s *Session) SendMessages() {
-	defer s.disconnect("Write Failed", ws.CloseAbnormalClosure)
+	defer s.Disconnect("Write Failed", ws.CloseAbnormalClosure)
 	for message := range s.sendCh {
 		err := s.writeFrame(message)
 
@@ -120,10 +126,10 @@ func (s *Session) ReadMessage() error {
 	if err != nil {
 		if ws.IsCloseError(err) {
 			s.Log.Debugf("Websocket closed: %v", err)
-			s.disconnect("Read closed", ws.CloseNormalClosure)
+			s.Disconnect("Read closed", ws.CloseNormalClosure)
 		} else {
 			s.Log.Debugf("Websocket close error: %v", err)
-			s.disconnect("Read failed", ws.CloseAbnormalClosure)
+			s.Disconnect("Read failed", ws.CloseAbnormalClosure)
 		}
 		return err
 	}
@@ -174,16 +180,8 @@ func (s *Session) SendJSONTransmission(msg string) {
 	}
 }
 
-func (s *Session) send(msg []byte) {
-	s.sendFrame(&ws.SentFrame{FrameType: ws.TextFrame, Payload: msg})
-}
-
 // Disconnect schedules connection disconnect
 func (s *Session) Disconnect(reason string, code int) {
-	s.disconnect(reason, code)
-}
-
-func (s *Session) disconnect(reason string, code int) {
 	s.mu.Lock()
 	if s.Connected {
 		defer s.node.Disconnect(s) // nolint:errcheck
@@ -192,11 +190,6 @@ func (s *Session) disconnect(reason string, code int) {
 	s.mu.Unlock()
 
 	s.close(reason, code)
-}
-
-// Flush executes tasks from the queue
-// NOTE: Currently, no-op; reserved for the future improvements.
-func (s *Session) Flush() {
 }
 
 func (s *Session) close(reason string, code int) {
@@ -238,7 +231,7 @@ func (s *Session) sendFrame(message *ws.SentFrame) {
 	default:
 		if s.sendCh != nil {
 			close(s.sendCh)
-			defer s.disconnect("Write failed", ws.CloseAbnormalClosure)
+			defer s.Disconnect("Write failed", ws.CloseAbnormalClosure)
 		}
 
 		s.sendCh = nil
@@ -293,7 +286,7 @@ func (s *Session) sendPing() {
 	}
 
 	if err != nil {
-		s.disconnect("Ping failed", ws.CloseAbnormalClosure)
+		s.Disconnect("Ping failed", ws.CloseAbnormalClosure)
 		return
 	}
 
