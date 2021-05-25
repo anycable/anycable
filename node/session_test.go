@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/anycable/anycable-go/ws"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSendRaceConditions(t *testing.T) {
@@ -48,4 +49,42 @@ func TestSendRaceConditions(t *testing.T) {
 	}
 
 	wg.Wait()
+}
+
+func TestSessionSend(t *testing.T) {
+	node := NewMockNode()
+	session := NewMockSession("123", &node)
+
+	go func() {
+		for i := 1; i <= 10; i++ {
+			session.sendFrame(&ws.SentFrame{FrameType: ws.TextFrame, Payload: []byte("bye")})
+		}
+	}()
+
+	for i := 1; i <= 10; i++ {
+		_, err := session.conn.Read()
+		assert.Nil(t, err)
+	}
+}
+
+func TestSessionDisconnect(t *testing.T) {
+	node := NewMockNode()
+	session := NewMockSession("123", &node)
+	session.closed = false
+	session.Connected = true
+
+	go func() {
+		session.sendFrame(&ws.SentFrame{FrameType: ws.TextFrame, Payload: []byte("bye")})
+		session.Disconnect("test", 1042)
+	}()
+
+	// Message frame
+	_, err := session.conn.Read()
+	assert.Nil(t, err)
+
+	// Close frame
+	_, err = session.conn.Read()
+	assert.Nil(t, err)
+
+	assert.True(t, session.closed)
 }

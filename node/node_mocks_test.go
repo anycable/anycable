@@ -94,6 +94,7 @@ func (conn MockConnection) ReadIndifinitely() []byte {
 }
 
 func (conn MockConnection) Close(_code int, _reason string) {
+	conn.send <- []byte("")
 	conn.closed = true
 }
 
