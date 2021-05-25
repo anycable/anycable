@@ -16,6 +16,7 @@ func TestWorkerRespawn(t *testing.T) {
 	var wg sync.WaitGroup
 
 	resChan := make(chan uint64, 2)
+	dataChan := make(chan struct{}, workerRespawnThreshold+2)
 
 	wg.Add(1)
 
@@ -23,8 +24,10 @@ func TestWorkerRespawn(t *testing.T) {
 		resChan <- getGID()
 	})
 
-	for i := 0; i < workerRespawnThreshold; i++ {
-		pool.Schedule(func() {})
+	for i := 0; i < workerRespawnThreshold+2; i++ {
+		pool.Schedule(func() {
+			dataChan <- struct{}{}
+		})
 	}
 
 	pool.Schedule(func() {
@@ -36,6 +39,7 @@ func TestWorkerRespawn(t *testing.T) {
 	current := <-resChan
 
 	assert.NotEqual(t, initial, current)
+	assert.Equal(t, workerRespawnThreshold+2, len(dataChan))
 }
 
 // Get current goroutine ID

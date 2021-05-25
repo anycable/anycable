@@ -78,11 +78,11 @@ func (p *GoPool) worker(task func()) {
 	task()
 
 	for task := range p.work {
+		task()
+		counter++
+
 		if counter >= workerRespawnThreshold {
 			return
 		}
-
-		task()
-		counter++
 	}
 }
