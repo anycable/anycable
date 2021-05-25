@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"net"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -61,6 +62,10 @@ func (ws Connection) Read() ([]byte, error) {
 // Close sends close frame with a given code and a reason
 func (ws Connection) Close(code int, reason string) {
 	CloseWithReason(ws.conn, code, reason)
+}
+
+func (ws Connection) Descriptor() net.Conn {
+	return ws.conn.UnderlyingConn()
 }
 
 // CloseWithReason closes WebSocket connection with the specified close code and reason

@@ -1,0 +1,24 @@
+launch :rpc, "bundle exec anyt --only-rpc"
+wait_tcp 50051
+
+launch :anycable, "./dist/anycable-go --netpoll_enabled=true --write_gopool_size=1 --read_gopool_size=1"
+wait_tcp 8080
+
+BENCHMARK_COMMAND = <<~CMD
+  websocket-bench broadcast --concurrent 40 --sample-size 100 \
+  --step-size 200 --payload-padding 200 --total-steps 5 \
+  ws://localhost:8080/cable --server-type=actioncable
+CMD
+
+run :bench, BENCHMARK_COMMAND
+
+result = stdout(:bench)
+
+if result =~ /Missing received broadcasts: expected (\d+), got (\d+)/
+  expected = Regexp.last_match[1].to_i
+  actual = Regexp.last_match[2].to_i
+
+  if (actual / expected.to_f) < 0.7
+    fail "Received less than 70% of expected broadcasts: #{actual} / #{expected}"
+  end
+end

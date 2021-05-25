@@ -2,6 +2,7 @@ package node
 
 import (
 	"errors"
+	"net"
 	"time"
 
 	"github.com/anycable/anycable-go/common"
@@ -18,6 +19,8 @@ func NewMockNode() Node {
 	controller := mocks.NewMockController()
 	config := NewConfig()
 	config.HubGopoolSize = 2
+	config.ReadGopoolSize = 2
+	config.WriteGopoolSize = 2
 	node := NewNode(&controller, metrics.NewMetrics(nil, 10), &config)
 	dconfig := NewDisconnectQueueConfig()
 	dconfig.Rate = 1
@@ -44,24 +47,6 @@ func (conn MockConnection) WriteBinary(msg []byte, deadline time.Time) error {
 func (conn MockConnection) Read() ([]byte, error) {
 	timer := time.After(100 * time.Millisecond)
 
-	done := make(chan struct{}, 1)
-
-	// Lazily retrieve pending session messages
-	go func() {
-		for {
-			select {
-			case <-done:
-				return
-			case frame := <-conn.session.sendCh:
-				conn.session.writeFrame(frame) // nolint:errcheck
-			}
-		}
-	}()
-
-	defer func() {
-		done <- struct{}{}
-	}()
-
 	select {
 	case <-timer:
 		return nil, errors.New("Session hasn't received any messages")
@@ -71,24 +56,6 @@ func (conn MockConnection) Read() ([]byte, error) {
 }
 
 func (conn MockConnection) ReadIndifinitely() []byte {
-	done := make(chan struct{}, 1)
-
-	// Lazily retrieve pending session messages
-	go func() {
-		for {
-			select {
-			case <-done:
-				return
-			case frame := <-conn.session.sendCh:
-				conn.session.writeFrame(frame) // nolint:errcheck
-			}
-		}
-	}()
-
-	defer func() {
-		done <- struct{}{}
-	}()
-
 	msg := <-conn.send
 	return msg
 }
@@ -98,8 +65,12 @@ func (conn MockConnection) Close(_code int, _reason string) {
 	conn.closed = true
 }
 
+func (conn MockConnection) Descriptor() net.Conn {
+	return nil
+}
+
 func NewMockConnection(session *Session) MockConnection {
-	return MockConnection{closed: false, send: make(chan []byte, 2), session: session}
+	return MockConnection{closed: false, send: make(chan []byte, 10), session: session}
 }
 
 // NewMockSession returns a new session with a specified uid and identifiers equal to uid
@@ -114,6 +85,8 @@ func NewMockSession(uid string, node *Node) *Session {
 		env:           common.NewSessionEnv("/cable-test", &map[string]string{}),
 		sendCh:        make(chan *ws.SentFrame, 256),
 		encoder:       encoders.JSON{},
+		readPool:      node.readPool,
+		writePool:     node.writePool,
 	}
 
 	session.conn = NewMockConnection(&session)

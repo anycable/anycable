@@ -100,6 +100,9 @@ func init() {
 	fs.StringVar(&defaults.App.PingTimestampPrecision, "ping_timestamp_precision", "s", "")
 	fs.IntVar(&defaults.App.StatsRefreshInterval, "stats_refresh_interval", 5, "")
 	fs.IntVar(&defaults.App.HubGopoolSize, "hub_gopool_size", 16, "")
+	fs.IntVar(&defaults.App.ReadGopoolSize, "read_gopool_size", 1024, "")
+	fs.IntVar(&defaults.App.WriteGopoolSize, "write_gopool_size", 1024, "")
+	fs.BoolVar(&defaults.App.NetpollEnabled, "netpoll_enabled", true, "")
 
 	fs.StringVar(&defaults.Apollo.Path, "apollo_path", "", "")
 	fs.StringVar(&defaults.Apollo.Channel, "apollo_channel", "GraphqlChannel", "")
@@ -193,6 +196,10 @@ OPTIONS
   --enable_ws_compression                Enable experimental WebSocket per message compression, default: false, env: ANYCABLE_ENABLE_WS_COMPRESSION
   --hub_gopool_size                      The size of the goroutines pool to broadcast messages, default: 16, env: ANYCABLE_HUB_GOPOOL_SIZE
   --allowed_origins                      Accept requests only from specified origins, e.g., "www.example.com,*example.io". No check is performed if empty, default: "", env: ANYCABLE_ALLOWED_ORIGINS
+
+  --netpoll_enabled                      Whether to use net polling (epoll, kqueue) to read data or not, default: true, env: ANYCABLE_NETPOLL_ENABLED
+  --read_gopool_size                     The size of the goroutine pool to read client messages, default: 1024, env: ANYCABLE_READ_GOPOOL_SIZE
+  --write_gopool_size                    The size of the goroutine pool to write client messages, default: 1024, env: ANYCABLE_WRITE_GOPOOL_SIZE
 
   --ping_interval                        Action Cable ping interval (in seconds), default: 3, env: ANYCABLE_PING_INTERVAL
   --ping_timestamp_precision             Precision for timestamps in ping messages (s, ms, ns), default: s, env: ANYCABLE_PING_TIMESTAMP_PRECISION
