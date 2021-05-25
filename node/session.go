@@ -93,7 +93,20 @@ func (s *Session) Serve(callback func()) error {
 		defer callback()
 
 		for {
-			err := s.ReadMessage()
+			message, err := s.conn.Read()
+
+			if err != nil {
+				if ws.IsCloseError(err) {
+					s.Log.Debugf("Websocket closed: %v", err)
+					s.disconnectNow("Read closed", ws.CloseNormalClosure)
+				} else {
+					s.Log.Debugf("Websocket close error: %v", err)
+					s.disconnectNow("Read failed", ws.CloseAbnormalClosure)
+				}
+				return
+			}
+
+			err = s.ReadMessage(message)
 
 			if err != nil {
 				return
@@ -106,7 +119,8 @@ func (s *Session) Serve(callback func()) error {
 
 // SendMessages waits for incoming messages and send them to the client connection
 func (s *Session) SendMessages() {
-	defer s.Disconnect("Write Failed", ws.CloseAbnormalClosure)
+	defer s.disconnectNow("Write Failed", ws.CloseAbnormalClosure)
+
 	for message := range s.sendCh {
 		err := s.writeFrame(message)
 
@@ -120,20 +134,7 @@ func (s *Session) SendMessages() {
 }
 
 // ReadMessage reads messages from ws connection and send them to node
-func (s *Session) ReadMessage() error {
-	message, err := s.conn.Read()
-
-	if err != nil {
-		if ws.IsCloseError(err) {
-			s.Log.Debugf("Websocket closed: %v", err)
-			s.Disconnect("Read closed", ws.CloseNormalClosure)
-		} else {
-			s.Log.Debugf("Websocket close error: %v", err)
-			s.Disconnect("Read failed", ws.CloseAbnormalClosure)
-		}
-		return err
-	}
-
+func (s *Session) ReadMessage(message []byte) error {
 	s.node.Metrics.Counter(metricsDataReceived).Add(uint64(len(message)))
 
 	command, err := s.decodeMessage(message)
@@ -182,17 +183,39 @@ func (s *Session) SendJSONTransmission(msg string) {
 
 // Disconnect schedules connection disconnect
 func (s *Session) Disconnect(reason string, code int) {
+	s.disconnectFromNode()
+	s.sendClose(reason, code)
+	s.close()
+}
+
+func (s *Session) disconnectFromNode() {
 	s.mu.Lock()
 	if s.Connected {
 		defer s.node.Disconnect(s) // nolint:errcheck
 	}
 	s.Connected = false
 	s.mu.Unlock()
-
-	s.close(reason, code)
 }
 
-func (s *Session) close(reason string, code int) {
+func (s *Session) disconnectNow(reason string, code int) {
+	s.disconnectFromNode()
+	s.writeFrame(&ws.SentFrame{ // nolint:errcheck
+		FrameType:   ws.CloseFrame,
+		CloseReason: reason,
+		CloseCode:   code,
+	})
+
+	s.mu.Lock()
+	if s.sendCh != nil {
+		close(s.sendCh)
+		s.sendCh = nil
+	}
+	s.mu.Unlock()
+
+	s.close()
+}
+
+func (s *Session) close() {
 	s.mu.Lock()
 
 	if s.closed {
@@ -202,8 +225,6 @@ func (s *Session) close(reason string, code int) {
 
 	s.closed = true
 	s.mu.Unlock()
-
-	s.sendClose(reason, code)
 
 	if s.pingTimer != nil {
 		s.pingTimer.Stop()
