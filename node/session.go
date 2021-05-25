@@ -7,8 +7,13 @@ import (
 
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/encoders"
+	"github.com/anycable/anycable-go/utils"
 	"github.com/anycable/anycable-go/ws"
 	"github.com/apex/log"
+	"github.com/mailru/easygo/netpoll"
+
+	gobwas "github.com/gobwas/ws"
+	"github.com/gobwas/ws/wsutil"
 )
 
 const (
@@ -33,6 +38,14 @@ type Session struct {
 	mu sync.Mutex
 	// Mutex for protocol-related state (env, subscriptions)
 	smu sync.Mutex
+
+	readPool  *utils.GoPool
+	writePool *utils.GoPool
+
+	// Mutex for activating SendMessages worker
+	wmu             sync.Mutex
+	workerRunning   bool
+	workerScheduled bool
 
 	sendCh chan *ws.SentFrame
 
@@ -62,7 +75,9 @@ func NewSession(node *Node, conn Connection, url string, headers *map[string]str
 		// Use JSON by default
 		encoder: encoders.JSON{},
 		// Use Action Cable executor by default (implemented by node)
-		executor: node,
+		executor:  node,
+		readPool:  node.readPool,
+		writePool: node.writePool,
 	}
 
 	session.UID = uid
@@ -74,7 +89,6 @@ func NewSession(node *Node, conn Connection, url string, headers *map[string]str
 	session.Log = ctx
 
 	session.addPing()
-	go session.SendMessages()
 
 	return session
 }
@@ -118,19 +132,66 @@ func (s *Session) Serve(callback func()) error {
 	return nil
 }
 
-// SendMessages waits for incoming messages and send them to the client connection
-func (s *Session) SendMessages() {
-	defer s.disconnectNow("Write Failed", ws.CloseAbnormalClosure)
+// ServeWithPoll register the connection within a netpoll and subscribes to Read/Close events
+func (s *Session) ServeWithPoll(poller netpoll.Poller, callback func()) error {
+	desc, err := netpoll.HandleReadOnce(s.conn.Descriptor())
 
-	for message := range s.sendCh {
-		err := s.writeFrame(message)
+	if err != nil {
+		return err
+	}
 
-		if err != nil {
-			s.node.Metrics.Counter(metricsFailedSent).Inc()
+	err = poller.Start(desc, func(ev netpoll.Event) {
+		if ev&(netpoll.EventReadHup|netpoll.EventHup) != 0 {
+			s.Log.Debugf("Descriptor closed %v", ev)
+			poller.Stop(desc) // nolint:errcheck
+			callback()
 			return
 		}
 
-		s.node.Metrics.Counter(metricsSentMsg).Inc()
+		s.readPool.Schedule(func() {
+			wsconn := s.conn.Descriptor()
+			message, op, rerr := wsutil.ReadClientData(wsconn)
+			if op == gobwas.OpClose {
+				s.Log.Debugf("WebSocket closed: %v", rerr)
+				s.disconnectNow("Read closed", ws.CloseNormalClosure)
+				return
+			}
+
+			if rerr != nil {
+				s.Log.Debugf("WebSocket read failed: %v", rerr)
+				poller.Stop(desc) // nolint:errcheck
+				s.disconnectNow("Read error", ws.CloseAbnormalClosure)
+				callback()
+				return
+			}
+
+			if message != nil {
+				s.ReadMessage(message) // nolint:errcheck
+			}
+			poller.Resume(desc) // nolint:errcheck
+		})
+	})
+
+	return err
+}
+
+// SendMessages waits for incoming messages and send them to the client connection
+func (s *Session) SendMessages() {
+	for {
+		select {
+		case message := <-s.sendCh:
+			err := s.writeFrame(message)
+
+			if err != nil {
+				s.node.Metrics.Counter(metricsFailedSent).Inc()
+				s.disconnectNow("Write Failed", ws.CloseAbnormalClosure)
+				return
+			}
+
+			s.node.Metrics.Counter(metricsSentMsg).Inc()
+		default:
+			return
+		}
 	}
 }
 
@@ -249,18 +310,21 @@ func (s *Session) sendFrame(message *ws.SentFrame) {
 		return
 	}
 
+	s.mu.Unlock()
+
 	select {
 	case s.sendCh <- message:
+		s.ensureWorkerRunning()
 	default:
+		s.mu.Lock()
 		if s.sendCh != nil {
 			close(s.sendCh)
 			defer s.Disconnect("Write failed", ws.CloseAbnormalClosure)
 		}
 
 		s.sendCh = nil
+		s.mu.Unlock()
 	}
-
-	s.mu.Unlock()
 }
 
 func (s *Session) writeFrame(message *ws.SentFrame) error {
@@ -353,4 +417,35 @@ func (s *Session) encodeTransmission(msg string) (*ws.SentFrame, error) {
 
 func (s *Session) decodeMessage(raw []byte) (*common.Message, error) {
 	return s.encoder.Decode(raw)
+}
+
+func (s *Session) ensureWorkerRunning() {
+	s.wmu.Lock()
+
+	if s.workerRunning || s.workerScheduled {
+		s.wmu.Unlock()
+		return
+	}
+
+	s.workerScheduled = true
+
+	s.wmu.Unlock()
+
+	s.writePool.Schedule(func() {
+		s.wmu.Lock()
+		if s.workerRunning {
+			s.wmu.Unlock()
+			return
+		}
+
+		s.workerScheduled = false
+		s.workerRunning = true
+		s.wmu.Unlock()
+
+		s.SendMessages()
+
+		s.wmu.Lock()
+		s.workerRunning = false
+		s.wmu.Unlock()
+	})
 }
