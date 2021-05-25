@@ -82,8 +82,9 @@ func TestSessionDisconnect(t *testing.T) {
 	}()
 
 	// Message frame
-	_, err := session.conn.Read()
+	msg, err := session.conn.Read()
 	assert.Nil(t, err)
+	assert.Equal(t, msg, []byte("bye"))
 
 	// Close frame
 	_, err = session.conn.Read()

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"os"
 	"runtime"
 	"sync"
@@ -34,6 +35,9 @@ const (
 	metricsStreamsNum      = "broadcast_streams_num"
 	metricsDisconnectQueue = "disconnect_queue_size"
 
+	metricsWritePoolPendingNum = "write_pool_pending_num"
+	metricsReadPoolPendingNum  = "read_pool_pending_num"
+
 	metricsFailedAuths             = "failed_auths_total"
 	metricsReceivedMsg             = "client_msg_total"
 	metricsFailedCommandReceived   = "failed_client_msg_total"
@@ -51,6 +55,8 @@ const (
 
 	metricsDataSent     = "data_sent_total"
 	metricsDataReceived = "data_rcvd_total"
+
+	metricsAbnormalSocketClosure = "abnormal_socket_closure_total"
 )
 
 // AppNode describes a basic node interface
@@ -74,6 +80,7 @@ type Connection interface {
 	WritePing(deadline time.Time) error
 	Read() ([]byte, error)
 	Close(code int, reason string)
+	Descriptor() net.Conn
 }
 
 // Node represents the whole application
@@ -90,6 +97,9 @@ type Node struct {
 	shutdownMu   sync.Mutex
 	closed       bool
 	log          *slog.Logger
+
+	readPool  *utils.GoPool
+	writePool *utils.GoPool
 }
 
 var _ AppNode = (*Node)(nil)
@@ -137,6 +147,12 @@ func NewNode(config *Config, opts ...NodeOption) *Node {
 	}
 
 	n.hub = hub.NewHub(config.HubGopoolSize, n.log)
+
+	// ReadPool is only used with netpoll
+	if config.NetpollEnabled {
+		n.readPool = utils.NewGoPool("read", config.ReadGopoolSize)
+	}
+	n.writePool = utils.NewGoPool("write", config.WriteGopoolSize)
 
 	if n.metrics != nil {
 		n.registerMetrics()
@@ -1259,6 +1275,9 @@ func (n *Node) registerMetrics() {
 	n.metrics.RegisterGauge(metricsStreamsNum, "The number of active broadcasting streams")
 	n.metrics.RegisterGauge(metricsDisconnectQueue, "The size of delayed disconnect")
 
+	n.metrics.RegisterGauge(metricsReadPoolPendingNum, "The number of tasks pending in the read pool")
+	n.metrics.RegisterGauge(metricsWritePoolPendingNum, "The number of tasks pending in the write pool")
+
 	n.metrics.RegisterCounter(metricsFailedAuths, "The total number of failed authentication attempts")
 	n.metrics.RegisterCounter(metricsRejectedClients, "The total number of client connections rejected because the server was overloaded")
 	n.metrics.RegisterCounter(metricsReceivedMsg, "The total number of received messages from clients")
@@ -1276,4 +1295,6 @@ func (n *Node) registerMetrics() {
 
 	n.metrics.RegisterCounter(metricsDataSent, "The total amount of bytes sent to clients")
 	n.metrics.RegisterCounter(metricsDataReceived, "The total amount of bytes received from clients")
+
+	n.metrics.RegisterCounter(metricsAbnormalSocketClosure, "The total number of abnormally closed sockets (network error, etc.)")
 }

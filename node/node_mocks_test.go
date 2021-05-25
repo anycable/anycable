@@ -15,6 +15,8 @@ func NewMockNode() *Node {
 	controller := mocks.NewMockController()
 	config := NewConfig()
 	config.HubGopoolSize = 2
+	config.ReadGopoolSize = 2
+	config.WriteGopoolSize = 2
 	node := NewNode(&config, WithInstrumenter(metrics.NewMetrics(nil, 10, slog.Default())), WithController(&controller))
 	node.SetBroker(broker.NewLegacyBroker(pubsub.NewLegacySubscriber(node)))
 	dconfig := NewDisconnectQueueConfig()
@@ -31,14 +33,14 @@ func NewMockSession(uid string, node *Node, opts ...SessionOption) *Session {
 	session.broker = node.broker
 	session.uid = uid
 	session.Log = slog.With("sid", uid)
+	session.readPool = node.readPool
+	session.writePool = node.writePool
 
 	session.SetIdentifiers(uid)
 
 	for _, opt := range opts {
 		opt(session)
 	}
-
-	go session.SendMessages()
 
 	return session
 }

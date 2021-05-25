@@ -25,6 +25,12 @@ type Config struct {
 	StatsRefreshInterval int `toml:"stats_refresh_interval"`
 	// The max size of the Go routines pool for hub
 	HubGopoolSize int `toml:"broadcast_gopool_size"`
+	// Whether to use net polling for reading data or spawn a go routine
+	NetpollEnabled bool
+	// The max size of the Go routines pool to process inbound client messages
+	ReadGopoolSize int
+	// The max size of the Go routines pool to process outbound client messages
+	WriteGopoolSize int
 	// How should ping message timestamp be formatted? ('s' => seconds, 'ms' => milli seconds, 'ns' => nano seconds)
 	PingTimestampPrecision string `toml:"ping_timestamp_precision"`
 	// For how long to wait for pong message before disconnecting (seconds)
@@ -42,8 +48,11 @@ func NewConfig() Config {
 	return Config{
 		PingInterval:               3,
 		StatsRefreshInterval:       5,
+		NetpollEnabled:             true,
 		HubGopoolSize:              16,
 		ShutdownDisconnectPoolSize: 16,
+		WriteGopoolSize:            1024,
+		ReadGopoolSize:             1024,
 		PingTimestampPrecision:     "s",
 		DisconnectMode:             DISCONNECT_MODE_AUTO,
 		ShutdownTimeout:            30,
@@ -87,6 +96,15 @@ func (c Config) ToToml() string {
 
 	result.WriteString("# The number of Go routines to use for Disconnect RPC calls on shutdown\n")
 	result.WriteString(fmt.Sprintf("shutdown_disconnect_gopool_size = %d\n", c.ShutdownDisconnectPoolSize))
+
+	result.WriteString("# Use net polling read data from clients to reduce RAM usage (only affects WebSockets)\n")
+	result.WriteString(fmt.Sprintf("netpoll_enabled = %t\n", c.NetpollEnabled))
+
+	result.WriteString("# The number of Go routines to use for reading data from clients\n")
+	result.WriteString(fmt.Sprintf("read_gopool_size = %d\n", c.ReadGopoolSize))
+
+	result.WriteString("# The number of Go routines to use for writing data to clients\n")
+	result.WriteString(fmt.Sprintf("write_gopool_size = %d\n", c.WriteGopoolSize))
 
 	result.WriteString("\n")
 

@@ -23,6 +23,7 @@ import (
 	"github.com/anycable/anycable-go/logger"
 	metricspkg "github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/mrb"
+	"github.com/anycable/anycable-go/netpoll"
 	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/pubsub"
 	"github.com/anycable/anycable-go/pusher"
@@ -74,6 +75,8 @@ type Runner struct {
 
 	telemetryEnabled bool
 	telemetryConfig  *telemetry.Config
+
+	poller netpoll.Poller
 
 	errChan       chan error
 	shutdownables []Shutdownable
@@ -167,8 +170,9 @@ func (r *Runner) Run() error {
 	r.announceDebugMode()
 
 	mrubySupport := r.initMRuby()
+	useNetpoll := r.config.App.NetpollEnabled
 
-	r.log.Info(fmt.Sprintf("Starting %s %s%s (pid: %d, open file limit: %s, gomaxprocs: %d)", r.name, version.Version(), mrubySupport, os.Getpid(), utils.OpenFileLimit(), numProcs))
+	r.log.Info(fmt.Sprintf("Starting %s %s%s (pid: %d, open file limit: %s, gomaxprocs: %d, netpoll: %v)", r.name, version.Version(), mrubySupport, os.Getpid(), utils.OpenFileLimit(), numProcs, useNetpoll))
 
 	if r.config.ConfigFilePath != "" {
 		r.log.Info(fmt.Sprintf("Using configuration from file: %s", r.config.ConfigFilePath))
@@ -315,6 +319,21 @@ func (r *Runner) runNode() (*node.Node, error) {
 	controller, err := r.newController(metrics)
 	if err != nil {
 		return nil, err
+	}
+
+	if r.config.App.NetpollEnabled {
+		if r.config.WS.EnableCompression {
+			r.log.Warn("WebSocket per message compression is not compatible with the current netpoll implementation. Disabling the compression.")
+			r.config.WS.EnableCompression = false
+		}
+
+		poll, perr := netpoll.New(nil)
+
+		if perr != nil {
+			return nil, errorx.Decorate(perr, "failed to initialize netpoll")
+		}
+
+		r.poller = poll
 	}
 
 	appNode := node.NewNode(
@@ -596,6 +615,10 @@ func (r *Runner) defaultWebSocketHandler(n *node.Node, c *config.Config, l *slog
 			return nil
 		})
 
+		if r.poller != nil {
+			return session.ServeWithPoll(r.poller, callback)
+		}
+
 		return session.Serve(callback)
 	}), nil
 }
@@ -673,7 +696,7 @@ func (r *Runner) pusherWebsocketHandler(n *node.Node, c *config.Config) http.Han
 }
 
 func (r *Runner) apolloWebsocketHandler(n *node.Node, c *config.Config) http.Handler {
-	extractor := server.DefaultHeadersExtractor{Headers: c.Headers, Cookies: c.Cookies}
+	extractor := server.DefaultHeadersExtractor{Headers: c.RPC.ProxyHeaders, Cookies: c.RPC.ProxyCookies}
 	return ws.WebsocketHandler(graphql.GraphqlProtocols(), &extractor, &c.WS, r.log, func(wsc *websocket.Conn, info *server.RequestInfo, callback func()) error {
 		wrappedConn := ws.NewConnection(wsc)
 
@@ -683,6 +706,10 @@ func (r *Runner) apolloWebsocketHandler(n *node.Node, c *config.Config) http.Han
 		}
 
 		session := node.NewSession(n, wrappedConn, info.URL, info.Headers, info.UID, opts...)
+
+		if r.poller != nil {
+			return session.ServeWithPoll(r.poller, callback)
+		}
 
 		return session.Serve(callback)
 	})

@@ -17,8 +17,12 @@ import (
 	"github.com/anycable/anycable-go/encoders"
 	"github.com/anycable/anycable-go/logger"
 	"github.com/anycable/anycable-go/metrics"
+	"github.com/anycable/anycable-go/netpoll"
 	"github.com/anycable/anycable-go/utils"
 	"github.com/anycable/anycable-go/ws"
+
+	gobwas "github.com/gobwas/ws"
+	"github.com/gobwas/ws/wsutil"
 )
 
 // Executor handles incoming commands (messages)
@@ -158,6 +162,14 @@ type Session struct {
 	writeQueue     *utils.Queue[*ws.SentFrame]
 	writeTimeout   time.Duration
 	maxPendingSize atomic.Uint64
+
+	readPool  *utils.GoPool
+	writePool *utils.GoPool
+
+	// Mutex for activating SendMessages worker
+	wrmu            sync.Mutex
+	workerRunning   bool
+	workerScheduled bool
 
 	timers *SessionTimers
 
@@ -299,6 +311,9 @@ func NewSession(node *Node, conn Connection, url string, headers *map[string]str
 	session.pingTimestampPrecision = node.config.PingTimestampPrecision
 	session.sendNativePing = node.config.EnableNativePing
 	session.uid = uid
+
+	session.readPool = node.readPool
+	session.writePool = node.writePool
 
 	ctx := node.log.With("sid", session.uid)
 
@@ -475,10 +490,92 @@ func (s *Session) Serve(callback func()) error {
 	return nil
 }
 
+// ServeWithPoll register the connection within a netpoll and subscribes to Read/Close events
+func (s *Session) ServeWithPoll(poller netpoll.Poller, callback func()) error {
+	wsConn := s.conn.(*ws.Connection)
+
+	fd := wsConn.Fd()
+
+	// Connection has been already closed
+	if fd < 0 {
+		return nil
+	}
+
+	desc, err := netpoll.HandleReadOnce(fd)
+
+	if err != nil {
+		return err
+	}
+
+	s.Log.Debug("adding descriptor to poller")
+
+	retried := false
+
+ADD:
+	err = poller.Start(desc, func(ev netpoll.Event) {
+		if ev&(netpoll.EventReadHup|netpoll.EventHup) != 0 {
+			poller.Stop(desc) // nolint:errcheck
+			desc.Close()
+
+			if ev&(netpoll.EventErr) != 0 {
+				s.Log.Debug("descriptor closed with error")
+				s.metrics.CounterIncrement(metricsAbnormalSocketClosure)
+				s.cleanup()
+			} else {
+				s.Log.Debug("descriptor closed", "event", ev)
+				s.disconnectNow("Closed", ws.CloseNormalClosure)
+			}
+
+			callback()
+			return
+		}
+
+		s.metrics.GaugeIncrement(metricsReadPoolPendingNum)
+		s.readPool.Schedule(func() {
+			s.metrics.GaugeDecrement(metricsReadPoolPendingNum)
+
+			wsconn := s.conn.Descriptor()
+			message, op, rerr := wsutil.ReadClientData(wsconn)
+			if op == gobwas.OpClose {
+				s.Log.Debug("WebSocket closed", "error", rerr)
+				s.disconnectNow("Read closed", ws.CloseNormalClosure)
+				return
+			}
+
+			if rerr != nil {
+				s.Log.Debug("WebSocket read failed", "error", rerr)
+				poller.Stop(desc) // nolint:errcheck
+				desc.Close()
+				s.disconnectNow("Read error", ws.CloseAbnormalClosure)
+				callback()
+				return
+			}
+
+			if message != nil {
+				s.ReadMessage(message) // nolint:errcheck
+			}
+			poller.Resume(desc) // nolint:errcheck
+		})
+	})
+
+	// There could be a race condition when we haven't removed the closed
+	// socket from the poller; in this case, we force-remove it and try adding
+	// the descriptor again
+	if err == netpoll.ErrRegistered && !retried {
+		retried = true
+		s.Log.Debug("retried to add fd")
+		poller.Stop(desc) // nolint:errcheck
+		goto ADD
+	}
+
+	return err
+}
+
 // SendMessages waits for incoming messages and send them to the client connection
 func (s *Session) SendMessages() {
 	for {
-		if !s.writeQueue.Wait() {
+		pendingLen := s.writeQueue.Len()
+		if pendingLen <= 0 {
 			return
 		}
 
@@ -517,7 +614,7 @@ func (s *Session) ReadMessage(message []byte) error {
 	command, err := s.decodeMessage(message)
 
 	if err != nil {
-		s.Log.Debug("Websocket read error", "err", err)
+		s.Log.Debug("Websocket read failed", "error", err)
 		s.metrics.CounterIncrement(metricsFailedCommandReceived)
 		return err
 	}
@@ -671,12 +768,18 @@ func (s *Session) disconnectNow(reason string, code int) {
 	// the session as closed meanwhile.
 	s.close()
 
-	s.disconnectFromNode()
 	s.writeFrame(&ws.SentFrame{ // nolint:errcheck
 		FrameType:   ws.CloseFrame,
 		CloseReason: reason,
 		CloseCode:   code,
 	})
+
+	s.cleanup()
+}
+
+func (s *Session) cleanup() {
+	s.close()
+	s.disconnectFromNode()
 
 	s.writeQueue.Close()
 }
@@ -728,6 +831,8 @@ func (s *Session) sendFrame(message *ws.SentFrame) {
 		s.metrics.CounterIncrement(metricsDisconnectedSlowClients)
 		s.DisconnectWithMessage(common.NewDisconnectMessage(common.SLOW_CLIENT_REASON, true), common.SLOW_CLIENT_REASON)
 	}
+
+	s.ensureWorkerRunning()
 }
 
 func (s *Session) writeFrame(message *ws.SentFrame) error {
@@ -951,4 +1056,43 @@ func (s *Session) encodeTransmission(msg string) (*ws.SentFrame, error) {
 
 func (s *Session) decodeMessage(raw []byte) (*common.Message, error) {
 	return s.encoder.Decode(raw)
+}
+
+func (s *Session) ensureWorkerRunning() {
+	s.wrmu.Lock()
+
+	if s.writePool == nil {
+		s.wrmu.Unlock()
+		return
+	}
+
+	if s.workerRunning || s.workerScheduled {
+		s.wrmu.Unlock()
+		return
+	}
+
+	s.workerScheduled = true
+
+	s.wrmu.Unlock()
+
+	s.metrics.GaugeIncrement(metricsWritePoolPendingNum)
+	s.writePool.Schedule(func() {
+		s.metrics.GaugeDecrement(metricsWritePoolPendingNum)
+
+		s.wrmu.Lock()
+		if s.workerRunning {
+			s.wrmu.Unlock()
+			return
+		}
+
+		s.workerScheduled = false
+		s.workerRunning = true
+		s.wrmu.Unlock()
+
+		s.SendMessages()
+
+		s.wrmu.Lock()
+		s.workerRunning = false
+		s.wrmu.Unlock()
+	})
 }
