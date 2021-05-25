@@ -8,6 +8,19 @@ github.com/apex/log/handlers/json
 # github.com/davecgh/go-spew v1.1.1
 ## explicit
 github.com/davecgh/go-spew/spew
+# github.com/gobwas/httphead v0.1.0
+## explicit
+github.com/gobwas/httphead
+# github.com/gobwas/pool v0.2.1
+## explicit
+github.com/gobwas/pool
+github.com/gobwas/pool/internal/pmath
+github.com/gobwas/pool/pbufio
+github.com/gobwas/pool/pbytes
+# github.com/gobwas/ws v1.0.4
+## explicit
+github.com/gobwas/ws
+github.com/gobwas/ws/wsutil
 # github.com/golang-collections/go-datastructures v0.0.0-20150211160725-59788d5eb259
 ## explicit
 github.com/golang-collections/go-datastructures/queue
@@ -31,6 +44,10 @@ github.com/google/gops/signal
 ## explicit; go 1.12
 github.com/gorilla/websocket
 # github.com/kr/pretty v0.2.0
+## explicit
+# github.com/mailru/easygo v0.0.0-20190618140210-3c14a0dc985f => github.com/detailyang/easygo v0.0.0-20190618140210-3c14a0dc985f
+## explicit
+github.com/mailru/easygo/netpoll
 ## explicit; go 1.12
 # github.com/matoous/go-nanoid v1.5.0
 ## explicit; go 1.15
@@ -175,3 +192,4 @@ google.golang.org/protobuf/types/known/timestamppb
 # gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 ## explicit
 gopkg.in/yaml.v3
+# github.com/mailru/easygo => github.com/detailyang/easygo v0.0.0-20190618140210-3c14a0dc985f
