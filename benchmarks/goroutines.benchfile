@@ -1,7 +1,7 @@
 launch :rpc, "bundle exec anyt --only-rpc"
 wait_tcp 50051
 
-launch :anycable, "./dist/anycable-go"
+launch :anycable, "./dist/anycable-go --netpoll_enabled=false --write_gopool_size=100"
 wait_tcp 8080
 
 BENCHMARK_COMMAND = <<~CMD

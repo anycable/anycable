@@ -2,16 +2,22 @@ module github.com/anycable/anycable-go
 
 go 1.17
 
+replace github.com/mailru/easygo => github.com/detailyang/easygo v0.0.0-20190618140210-3c14a0dc985f
+
 require (
 	github.com/FZambia/sentinel v1.1.0
 	github.com/apex/log v1.9.0
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/gobwas/httphead v0.1.0 // indirect
+	github.com/gobwas/pool v0.2.1 // indirect
+	github.com/gobwas/ws v1.0.4
 	github.com/golang-collections/go-datastructures v0.0.0-20150211160725-59788d5eb259
 	github.com/golang/protobuf v1.5.2
 	github.com/gomodule/redigo v2.0.0+incompatible
 	github.com/google/gops v0.3.19
 	github.com/gorilla/websocket v1.4.2
 	github.com/kr/pretty v0.2.0 // indirect
+	github.com/mailru/easygo v0.0.0-20190618140210-3c14a0dc985f
 	github.com/matoous/go-nanoid v1.5.0
 	github.com/mattn/go-isatty v0.0.13
 	github.com/mitchellh/go-mruby v0.0.0-20200315023956-207cedc21542

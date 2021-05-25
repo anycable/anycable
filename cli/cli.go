@@ -23,6 +23,7 @@ import (
 	"github.com/anycable/anycable-go/ws"
 	"github.com/apex/log"
 	"github.com/gorilla/websocket"
+	"github.com/mailru/easygo/netpoll"
 	"github.com/syossan27/tebata"
 )
 
@@ -42,6 +43,8 @@ type Runner struct {
 	disconnectorFactory disconnectorFactory
 	subscriberFactory   subscriberFactory
 	websocketHandler    websocketHandler
+
+	poller netpoll.Poller
 
 	errChan       chan error
 	shutdownables []Shutdownable
@@ -114,7 +117,29 @@ func (r *Runner) Run() error {
 
 	mrubySupport := r.initMRuby()
 
-	ctx.Infof("Starting %s %s%s (pid: %d, open file limit: %s)", r.name, version.Version(), mrubySupport, os.Getpid(), utils.OpenFileLimit())
+	useNetpoll := false
+
+	if config.App.NetpollEnabled {
+		if config.SSL.Available() {
+			return fmt.Errorf("!!! Using netpoll together with TLS is not supported yet !!!\n")
+		}
+
+		if config.WS.EnableCompression {
+			ctx.Warn("WebSocket per message compression is not compatible with the current netpoll implementation. Disabling the compression.")
+			config.WS.EnableCompression = false
+		}
+
+		poll, perr := netpoll.New(nil)
+
+		if perr != nil {
+			return fmt.Errorf("!!! Failed to initialize netpoll !!!\n%v", perr)
+		}
+
+		r.poller = poll
+		useNetpoll = true
+	}
+
+	ctx.Infof("Starting %s %s%s (pid: %d, open file limit: %s, netpoll: %v)", r.name, version.Version(), mrubySupport, os.Getpid(), utils.OpenFileLimit(), useNetpoll)
 
 	metrics, err := r.initMetrics(&config.Metrics)
 
@@ -292,6 +317,10 @@ func (r *Runner) defaultWebSocketHandler(n *node.Node, c *config.Config) http.Ha
 			return err
 		}
 
+		if r.poller != nil {
+			return session.ServeWithPoll(r.poller, callback)
+		}
+
 		return session.Serve(callback)
 	})
 }
@@ -303,6 +332,11 @@ func (r *Runner) apolloWebsocketHandler(n *node.Node, c *config.Config) http.Han
 		session := node.NewSession(n, wrappedConn, info.Url, info.Headers, info.UID)
 		session.SetEncoder(apollo.Encoder{})
 		session.SetExecutor(apollo.NewExecutor(n, &c.Apollo))
+
+		if r.poller != nil {
+			return session.ServeWithPoll(r.poller, callback)
+		}
+
 		return session.Serve(callback)
 	})
 }

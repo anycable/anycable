@@ -3,11 +3,13 @@ package node
 import (
 	"errors"
 	"fmt"
+	"net"
 	"runtime"
 	"time"
 
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/metrics"
+	"github.com/anycable/anycable-go/utils"
 	"github.com/anycable/anycable-go/ws"
 	"github.com/apex/log"
 )
@@ -53,6 +55,7 @@ type Connection interface {
 	WriteBinary(msg []byte, deadline time.Time) error
 	Read() ([]byte, error)
 	Close(code int, reason string)
+	Descriptor() net.Conn
 }
 
 // Node represents the whole application
@@ -65,6 +68,9 @@ type Node struct {
 	disconnector Disconnector
 	shutdownCh   chan struct{}
 	log          *log.Entry
+
+	readPool  *utils.GoPool
+	writePool *utils.GoPool
 }
 
 // NewNode builds new node struct
@@ -78,6 +84,11 @@ func NewNode(controller Controller, metrics *metrics.Metrics, config *Config) *N
 	}
 
 	node.hub = NewHub(config.HubGopoolSize)
+	// ReadPool is only used with netpoll
+	if config.NetpollEnabled {
+		node.readPool = utils.NewGoPool("read", config.ReadGopoolSize)
+	}
+	node.writePool = utils.NewGoPool("write", config.WriteGopoolSize)
 
 	node.registerMetrics()
 
