@@ -16,19 +16,32 @@ const workerRespawnThreshold = 1 << 16
 // GoPool contains logic of goroutine reuse.
 // Copied from https://github.com/gobwas/ws-examples/blob/master/src/gopool/pool.go
 type GoPool struct {
+	name string
+	size int
 	sem  chan struct{}
 	work chan func()
 }
 
+var initializedPools []*GoPool = make([]*GoPool, 0)
+
+// Return all active pools
+func AllPools() []*GoPool {
+	return initializedPools
+}
+
 // NewGoPool creates new goroutine pool with given size.
-// Start size defaults to 20% of the max size.
-// Queue size defaults to 10% of the max size.
-func NewGoPool(size int) *GoPool {
+// Start size defaults to 20% of the max size but not greater than 1024.
+// Queue size defaults to 50% of the max size.
+func NewGoPool(name string, size int) *GoPool {
 	spawn := int(size / 5)
-	queue := int(size / 10)
+	queue := int(size / 2)
 
 	if spawn <= 0 {
 		spawn = 1
+	}
+
+	if spawn > 1024 {
+		spawn = 1024
 	}
 
 	if queue <= 0 {
@@ -36,6 +49,8 @@ func NewGoPool(size int) *GoPool {
 	}
 
 	p := &GoPool{
+		name: name,
+		size: size,
 		sem:  make(chan struct{}, size),
 		work: make(chan func(), queue),
 	}
@@ -45,7 +60,17 @@ func NewGoPool(size int) *GoPool {
 		go p.worker(func() {})
 	}
 
+	initializedPools = append(initializedPools, p)
+
 	return p
+}
+
+func (p *GoPool) Name() string {
+	return p.name
+}
+
+func (p *GoPool) Size() int {
+	return p.size
 }
 
 // Schedule schedules task to be executed over pool's workers.

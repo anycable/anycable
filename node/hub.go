@@ -82,7 +82,7 @@ func NewHub(poolSize int) *Hub {
 		sessionsStreams: make(map[string]map[string][]string),
 		shutdown:        make(chan struct{}),
 		log:             log.WithFields(log.Fields{"context": "hub"}),
-		pool:            utils.NewGoPool(poolSize),
+		pool:            utils.NewGoPool("broadcast", poolSize),
 	}
 }
 

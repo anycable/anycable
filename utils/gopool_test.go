@@ -11,7 +11,7 @@ import (
 )
 
 func TestWorkerRespawn(t *testing.T) {
-	pool := NewGoPool(1)
+	pool := NewGoPool("test", 1)
 
 	var wg sync.WaitGroup
 

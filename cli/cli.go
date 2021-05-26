@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 
 	"github.com/anycable/anycable-go/config"
@@ -191,6 +192,8 @@ func (r *Runner) Run() error {
 
 	r.shutdownables = append(r.shutdownables, appNode)
 
+	r.announceGoPools()
+
 	r.setupSignalHandlers()
 
 	// Wait for an error (or none)
@@ -274,6 +277,17 @@ func (r *Runner) initMRuby() string {
 	}
 
 	return ""
+}
+
+func (r *Runner) announceGoPools() {
+	configs := make([]string, 0)
+	pools := utils.AllPools()
+
+	for _, pool := range pools {
+		configs = append(configs, fmt.Sprintf("%s: %d", pool.Name(), pool.Size()))
+	}
+
+	log.WithField("context", "main").Debugf("Go pools initialized (%s)", strings.Join(configs, ", "))
 }
 
 func (r *Runner) setupSignalHandlers() {
