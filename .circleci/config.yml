@@ -252,16 +252,13 @@ jobs:
     - run: bundle install
     - run: env GO111MODULE=off go get github.com/anycable/websocket-bench
     - run: env GO111MODULE=off go get github.com/google/gops
-    - run: make build
     - run:
         name: Wait for Redis
         command: dockerize -wait tcp://localhost:6379 -timeout 1m
     - run:
         name: Run benchmarks
         command: |
-          ruby benchmarks/runner.rb benchmarks/broadcasts.benchfile
-          ruby benchmarks/runner.rb benchmarks/goroutines.benchfile
-
+          make benchmarks
 
   build_binary_for_conformance:
     executor: golang

@@ -36,8 +36,8 @@ class BenchRunner
     @log_level = ENV["DEBUG"] == "true" ? LOG_LEVEL_TO_NUM[:debug] : LOG_LEVEL_TO_NUM[:info]
   end
 
-  def load(script)
-    instance_eval script
+  def load(script, path)
+    instance_eval script, path, 0
   end
 
   def launch(name, cmd)
@@ -139,16 +139,20 @@ class BenchRunner
 end
 
 if ARGF
-  script = ARGF.read
-  runner = BenchRunner.new
+  scripts = ARGF.each.group_by { ARGF.filename }
+  scripts.each do |filename, lines|
+    puts "\n--- RUN: #{filename} ---\n\n" if scripts.size > 1
+    script = lines.join
+    runner = BenchRunner.new
 
-  begin
-    runner.load(script)
-    puts "All OK 👍"
-  rescue => e
-    $stderr.puts e.message
-    exit(1)
-  ensure
-    runner.shutdown
+    begin
+      runner.load(script, filename)
+      puts "All OK 👍"
+    rescue => e
+      $stderr.puts e.message
+      exit(1)
+    ensure
+      runner.shutdown
+    end
   end
 end

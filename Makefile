@@ -82,8 +82,7 @@ test:
 	go test -count=1 -timeout=30s -race -tags mrb ./...
 
 benchmarks: build
-	BUNDLE_GEMFILE=.circleci/Gemfile ruby benchmarks/runner.rb benchmarks/broadcasts.benchfile
-	BUNDLE_GEMFILE=.circleci/Gemfile ruby benchmarks/runner.rb benchmarks/goroutines.benchfile
+	BUNDLE_GEMFILE=.circleci/Gemfile ruby benchmarks/runner.rb benchmarks/*.benchfile
 
 tmp/anycable-go-test:
 	go build -tags mrb -o tmp/anycable-go-test cmd/anycable-go/main.go
