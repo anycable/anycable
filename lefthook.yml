@@ -3,14 +3,18 @@ pre-commit:
   commands:
     lint:
       glob: "*.go"
-      run: make lint
+      run: make lint && test "{staged_files}"
     vet:
       glob: "*.go"
-      run: make vet
+      run: make vet && test "{staged_files}"
 
 pre-push:
   commands:
     sec:
-      run: make sec
+      glob: "*.go"
+      files: "git diff --name-only HEAD @{push}"
+      run: make sec && test "{files}"
     test:
-      run: make test
+      glob: "*.go"
+      files: "git diff --name-only HEAD @{push}"
+      run: make test && test "{files}"
