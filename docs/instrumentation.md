@@ -84,7 +84,7 @@ anycable_go_data_sent_bytes_total 1232434334
 anycable_go_data_rcvd_bytes_total 434334
 ```
 
-## StatsD <img class='pro-badge' src='https://docs.anycable.io/assets/pro.svg' alt='pro' />
+<h2 id="statsd">StatsD <img class='pro-badge' src='https://docs.anycable.io/assets/pro.svg' alt='pro' /></h2>
 
 AnyCable Pro also supports emitting real-time metrics to [StatsD](https://github.com/statsd/statsd).
 
