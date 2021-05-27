@@ -2,6 +2,8 @@
 
 ## master
 
+- Refactored sessions to use Go pools and epoll/kqueue for messaging.
+
 - Added Protobuf encoding support.
 
 - Added Msgpack encoding support.
