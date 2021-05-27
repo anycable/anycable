@@ -185,7 +185,7 @@ func (n *Node) Authenticate(s *Session) (res *common.ConnectResult, err error) {
 		s.Identifiers = res.Identifier
 		s.Connected = true
 
-		n.hub.AddSession(s)
+		n.hub.addSession(s)
 	} else {
 		n.Metrics.Counter(metricsFailedAuths).Inc()
 	}
@@ -349,7 +349,7 @@ func (n *Node) handleCommandReply(s *Session, msg *common.Message, reply *common
 
 	if reply.Streams != nil {
 		for _, stream := range reply.Streams {
-			n.hub.AddSubscription(s.UID, msg.Identifier, stream)
+			n.hub.subscribeSession(s.UID, stream, msg.Identifier)
 		}
 	}
 

@@ -62,7 +62,7 @@ func (c *MockController) Subscribe(sid string, env *common.SessionEnv, id string
 		return res, nil
 	}
 
-	if channel == "stream" {
+	if channel == "with_stream" {
 		res.Streams = []string{"stream"}
 	}
 

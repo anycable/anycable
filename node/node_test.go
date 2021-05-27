@@ -13,6 +13,7 @@ func TestAuthenticate(t *testing.T) {
 	t.Run("Successful authentication", func(t *testing.T) {
 		session := NewMockSessionWithEnv("1", &node, "/cable", &map[string]string{"id": "test_id"})
 		_, err := node.Authenticate(session)
+		defer node.hub.removeSession(session)
 
 		assert.Nil(t, err, "Error must be nil")
 		assert.Equal(t, true, session.Connected, "Session must be marked as connected")
@@ -22,6 +23,8 @@ func TestAuthenticate(t *testing.T) {
 		assert.Nil(t, err)
 
 		assert.Equalf(t, []byte("welcome"), msg, "Sent message is invalid: %s", msg)
+
+		assert.Equal(t, 1, node.hub.Size())
 	})
 
 	t.Run("Failed authentication", func(t *testing.T) {
@@ -35,6 +38,7 @@ func TestAuthenticate(t *testing.T) {
 		assert.Nil(t, err)
 
 		assert.Equalf(t, []byte("unauthorized"), msg, "Sent message is invalid: %s", msg)
+		assert.Equal(t, 0, node.hub.Size())
 	})
 
 	t.Run("Error during authentication", func(t *testing.T) {
@@ -43,10 +47,12 @@ func TestAuthenticate(t *testing.T) {
 		_, err := node.Authenticate(session)
 
 		assert.NotNil(t, err, "Error must not be nil")
+		assert.Equal(t, 0, node.hub.Size())
 	})
 
 	t.Run("With connection state", func(t *testing.T) {
 		session := NewMockSessionWithEnv("1", &node, "/cable", &map[string]string{"x-session-test": "my_session", "id": "session_id"})
+		defer node.hub.removeSession(session)
 
 		_, err := node.Authenticate(session)
 
@@ -55,6 +61,8 @@ func TestAuthenticate(t *testing.T) {
 
 		assert.Len(t, *session.env.ConnectionState, 1)
 		assert.Equal(t, "my_session", (*session.env.ConnectionState)["_s_"])
+
+		assert.Equal(t, 1, node.hub.Size())
 	})
 }
 
@@ -76,29 +84,27 @@ func TestSubscribe(t *testing.T) {
 	})
 
 	t.Run("Subscription with a stream", func(t *testing.T) {
-		_, err := node.Subscribe(session, &common.Message{Identifier: "stream"})
+		node.hub.addSession(session)
+		defer node.hub.removeSession(session)
+
+		_, err := node.Subscribe(session, &common.Message{Identifier: "with_stream"})
 		assert.Nil(t, err, "Error must be nil")
 
 		// Adds subscription to session
-		assert.Contains(t, session.subscriptions, "stream", "Session subsription must be set")
-
-		var subscription HubSubscription
-
-		// Expected to subscribe session to hub
-		select {
-		case subscription = <-node.hub.subscribe:
-		default:
-			assert.Fail(t, "Expected hub to receive subscribe message but none was sent")
-		}
-
-		assert.Equalf(t, "14", subscription.session, "Session is invalid: %s", subscription.session)
-		assert.Equalf(t, "stream", subscription.identifier, "Channel is invalid: %s", subscription.identifier)
-		assert.Equalf(t, "stream", subscription.stream, "Stream is invalid: %s", subscription.stream)
+		assert.Contains(t, session.subscriptions, "with_stream", "Session subsription must be set")
 
 		msg, err := session.conn.Read()
 		assert.Nil(t, err)
 
-		assert.Equalf(t, []byte("14"), msg, "Sent message is invalid: %s", msg)
+		assert.Equalf(t, "14", string(msg), "Sent message is invalid: %s", msg)
+
+		// Make sure session is subscribed
+		node.hub.broadcastToStream("stream", "41")
+
+		msg, err = session.conn.Read()
+		assert.Nil(t, err)
+
+		assert.Equalf(t, "{\"identifier\":\"with_stream\",\"message\":41}", string(msg), "Broadcasted message is invalid: %s", msg)
 	})
 
 	t.Run("Error during subscription", func(t *testing.T) {

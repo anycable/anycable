@@ -65,8 +65,11 @@ type Hub struct {
 	// go pool
 	pool *utils.GoPool
 
-	// mutex
-	mu sync.RWMutex
+	// mutex for streams mappings
+	streamsMu sync.RWMutex
+
+	// mutex for sessions tracking
+	sessionsMu sync.RWMutex
 }
 
 // NewHub builds new hub instance
@@ -170,31 +173,31 @@ func (h *Hub) Shutdown() {
 
 // Size returns a number of active sessions
 func (h *Hub) Size() int {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
+	h.sessionsMu.RLock()
+	defer h.sessionsMu.RUnlock()
 
 	return len(h.sessions)
 }
 
 // UniqSize returns a number of uniq identifiers
 func (h *Hub) UniqSize() int {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
+	h.sessionsMu.RLock()
+	defer h.sessionsMu.RUnlock()
 
 	return len(h.identifiers)
 }
 
 // StreamsSize returns a number of uniq streams
 func (h *Hub) StreamsSize() int {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
+	h.streamsMu.RLock()
+	defer h.streamsMu.RUnlock()
 
 	return len(h.streams)
 }
 
 func (h *Hub) addSession(session *Session) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
+	h.sessionsMu.Lock()
+	defer h.sessionsMu.Unlock()
 
 	h.sessions[session.UID] = session
 
@@ -211,22 +214,28 @@ func (h *Hub) addSession(session *Session) {
 }
 
 func (h *Hub) removeSession(session *Session) {
+	h.sessionsMu.RLock()
 	if _, ok := h.sessions[session.UID]; !ok {
+		h.sessionsMu.RUnlock()
 		h.log.WithField("sid", session.UID).Warn("Session hasn't been registered")
 		return
 	}
+	h.sessionsMu.RUnlock()
 
 	h.unsubscribeSessionFromAllChannels(session.UID)
 
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
+	h.sessionsMu.Lock()
 	delete(h.sessions, session.UID)
+	h.sessionsMu.Unlock()
+
+	h.streamsMu.Lock()
 	delete(h.identifiers[session.Identifiers], session.UID)
 
 	if len(h.identifiers[session.Identifiers]) == 0 {
 		delete(h.identifiers, session.Identifiers)
 	}
+
+	h.streamsMu.Unlock()
 
 	h.log.WithField("sid", session.UID).Debug("Unregistered")
 }
@@ -244,8 +253,8 @@ func (h *Hub) unsubscribeSessionFromChannel(sid string, identifier string) {
 		return
 	}
 
-	h.mu.Lock()
-	defer h.mu.Unlock()
+	h.streamsMu.Lock()
+	defer h.streamsMu.Unlock()
 
 	for _, stream := range h.sessionsStreams[sid][identifier] {
 		delete(h.streams[stream][sid], identifier)
@@ -266,8 +275,8 @@ func (h *Hub) unsubscribeSessionFromChannel(sid string, identifier string) {
 }
 
 func (h *Hub) subscribeSession(sid string, stream string, identifier string) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
+	h.streamsMu.Lock()
+	defer h.streamsMu.Unlock()
 
 	if _, ok := h.streams[stream]; !ok {
 		h.streams[stream] = make(map[string]map[string]bool)
@@ -308,8 +317,8 @@ func (h *Hub) unsubscribeSession(sid string, stream string, identifier string) {
 		return
 	}
 
-	h.mu.Lock()
-	defer h.mu.Unlock()
+	h.streamsMu.Lock()
+	defer h.streamsMu.Unlock()
 
 	delete(h.streams[stream][sid], identifier)
 
@@ -325,21 +334,26 @@ func (h *Hub) broadcastToStream(stream string, data string) {
 
 	ctx.Debugf("Broadcast message: %s", data)
 
+	h.streamsMu.RLock()
+	defer h.streamsMu.RUnlock()
+
 	if _, ok := h.streams[stream]; !ok {
 		ctx.Debug("No sessions")
 		return
 	}
 
 	h.pool.Schedule(func() {
-		h.mu.RLock()
-		defer h.mu.RUnlock()
+		h.streamsMu.RLock()
+		defer h.streamsMu.RUnlock()
 
 		buf := make(map[string](encoders.EncodedMessage))
 
 		var bdata encoders.EncodedMessage
 
 		for sid, ids := range h.streams[stream] {
+			h.sessionsMu.RLock()
 			session, ok := h.sessions[sid]
+			h.sessionsMu.RUnlock()
 
 			if !ok {
 				continue
@@ -370,8 +384,8 @@ func (h *Hub) disconnectSessions(identifier string, reconnect bool) {
 	disconnectMessage := newDisconnectMessage(remoteDisconnectReason, reconnect)
 
 	h.pool.Schedule(func() {
-		h.mu.RLock()
-		defer h.mu.RUnlock()
+		h.sessionsMu.RLock()
+		defer h.sessionsMu.RUnlock()
 
 		for id := range ids {
 			if ses, ok := h.sessions[id]; ok {
