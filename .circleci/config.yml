@@ -307,10 +307,6 @@ jobs:
         at: /go/src/github.com/anycable/anycable-go/
     - build:
         os: linux
-        arch: "386"
-        postfix: linux-386
-    - build:
-        os: linux
         arch: amd64
         postfix: linux-amd64
     - build:
@@ -323,10 +319,6 @@ jobs:
         postfix: linux-arm64
     - build:
         os: windows
-        arch: "386"
-        postfix: win-386.exe
-    - build:
-        os: windows
         arch: amd64
         postfix: win-amd64.exe
     - build:
@@ -337,10 +329,6 @@ jobs:
         os: darwin
         arch: amd64
         postfix: darwin-amd64
-    - build:
-        os: freebsd
-        arch: "386"
-        postfix: freebsd-386
     - build:
         os: freebsd
         arch: amd64
