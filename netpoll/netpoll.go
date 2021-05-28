@@ -1,4 +1,6 @@
 /*
+Forked from: https://github.com/mailru/easygo
+
 Package netpoll provides a portable interface for network I/O event
 notification facility.
 
@@ -51,10 +53,6 @@ import (
 )
 
 var (
-	// ErrNotFiler is returned by Handle* functions to indicate that given
-	// net.Conn does not provide access to its file descriptor.
-	ErrNotFiler = fmt.Errorf("could not get file descriptor")
-
 	// ErrClosed is returned by Poller methods to indicate that instance is
 	// closed and operation could not be processed.
 	ErrClosed = fmt.Errorf("poller instance is closed")
@@ -76,13 +74,13 @@ type Event uint16
 // Event values that denote the type of events that caller want to receive.
 const (
 	EventRead  Event = 0x1
-	EventWrite       = 0x2
+	EventWrite Event = 0x2
 )
 
 // Event values that configure the Poller's behavior.
 const (
 	EventOneShot       Event = 0x4
-	EventEdgeTriggered       = 0x8
+	EventEdgeTriggered Event = 0x8
 )
 
 // Event values that could be passed to CallbackFn as additional information

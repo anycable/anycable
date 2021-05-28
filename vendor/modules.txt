@@ -45,9 +45,6 @@ github.com/google/gops/signal
 github.com/gorilla/websocket
 # github.com/kr/pretty v0.1.0
 ## explicit
-# github.com/mailru/easygo v0.0.0-20190618140210-3c14a0dc985f => github.com/detailyang/easygo v0.0.0-20190618140210-3c14a0dc985f
-## explicit
-github.com/mailru/easygo/netpoll
 # github.com/matoous/go-nanoid v1.3.0
 ## explicit
 github.com/matoous/go-nanoid
@@ -182,4 +179,3 @@ google.golang.org/protobuf/types/known/timestamppb
 ## explicit
 # gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
 gopkg.in/yaml.v3
-# github.com/mailru/easygo => github.com/detailyang/easygo v0.0.0-20190618140210-3c14a0dc985f

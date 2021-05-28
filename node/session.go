@@ -7,10 +7,10 @@ import (
 
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/encoders"
+	"github.com/anycable/anycable-go/netpoll"
 	"github.com/anycable/anycable-go/utils"
 	"github.com/anycable/anycable-go/ws"
 	"github.com/apex/log"
-	"github.com/mailru/easygo/netpoll"
 
 	gobwas "github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
@@ -142,16 +142,24 @@ func (s *Session) Serve(callback func()) error {
 
 // ServeWithPoll register the connection within a netpoll and subscribes to Read/Close events
 func (s *Session) ServeWithPoll(poller netpoll.Poller, callback func()) error {
-	desc, err := netpoll.HandleReadOnce(s.conn.Descriptor())
+	wsConn := s.conn.(*ws.Connection)
+	desc, err := netpoll.HandleReadOnce(wsConn.Fd())
 
 	if err != nil {
 		return err
 	}
 
+	s.Log.Debugf("Adding descriptor to poller %v", desc)
+
+	retried := false
+
+ADD:
 	err = poller.Start(desc, func(ev netpoll.Event) {
 		if ev&(netpoll.EventReadHup|netpoll.EventHup) != 0 {
-			s.Log.Debugf("Descriptor closed %v", ev)
+			s.Log.Debugf("Descriptor closed %v: %v", desc, ev)
 			poller.Stop(desc) // nolint:errcheck
+			desc.Close()
+			s.disconnectNow("Closed", ws.CloseNormalClosure)
 			callback()
 			return
 		}
@@ -166,8 +174,9 @@ func (s *Session) ServeWithPoll(poller netpoll.Poller, callback func()) error {
 			}
 
 			if rerr != nil {
-				s.Log.Debugf("WebSocket read failed: %v", rerr)
+				s.Log.Debugf("WebSocket read failed for descriptor %v: %v", desc, rerr)
 				poller.Stop(desc) // nolint:errcheck
+				desc.Close()
 				s.disconnectNow("Read error", ws.CloseAbnormalClosure)
 				callback()
 				return
@@ -179,6 +188,16 @@ func (s *Session) ServeWithPoll(poller netpoll.Poller, callback func()) error {
 			poller.Resume(desc) // nolint:errcheck
 		})
 	})
+
+	// There could be a race condition when we haven't removed the closed
+	// socket from the poller; in this case, we force-remove it and try adding
+	// the descriptor again
+	if err == netpoll.ErrRegistered && !retried {
+		retried = true
+		s.Log.Debugf("Retried to add fd: %v", desc)
+		poller.Stop(desc) // nolint:errcheck
+		goto ADD
+	}
 
 	return err
 }
