@@ -85,6 +85,4 @@ func TestSessionDisconnect(t *testing.T) {
 	// Close frame
 	_, err = session.conn.Read()
 	assert.Nil(t, err)
-
-	assert.True(t, session.closed)
 }
