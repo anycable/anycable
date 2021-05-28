@@ -15,6 +15,7 @@ import (
 	"github.com/anycable/anycable-go/encoders"
 	"github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/mrb"
+	"github.com/anycable/anycable-go/netpoll"
 	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/pubsub"
 	"github.com/anycable/anycable-go/server"
@@ -23,7 +24,6 @@ import (
 	"github.com/anycable/anycable-go/ws"
 	"github.com/apex/log"
 	"github.com/gorilla/websocket"
-	"github.com/mailru/easygo/netpoll"
 	"github.com/syossan27/tebata"
 )
 
