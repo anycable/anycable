@@ -1,14 +1,15 @@
 name: Lint Docs
 
 on:
-  push:
-    branches:
-    - pro-master
-    paths:
-    - "**/*.md"
-  pull_request:
-    paths:
-    - "**/*.md"
+  workflow_dispatch:
+  # push:
+  #   branches:
+  #   - pro-master
+  #   paths:
+  #   - "**/*.md"
+  # pull_request:
+  #   paths:
+  #   - "**/*.md"
 
 jobs:
   markdownlint:

@@ -6,8 +6,6 @@ requires_prepared_code: &requires_prepared_code
 
 common_tags_filter: &common_tags_filter
   filters:
-    tags:
-      only: /^v.*/
     branches:
       only: "master"
 
