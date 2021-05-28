@@ -100,12 +100,15 @@ jobs:
           tags: ${{ steps.meta-alpine.outputs.tags }}
           labels: ${{ steps.meta-alpine.outputs.labels }}
       - name: Build binary with MRuby
+        # Temporary disable buidling MRuby images
+        if: ${{ false }}
         env:
           CGO_ENABLED: "1"
         run: |
           env GOOS=linux GOARCH=amd64 go build -tags mrb -ldflags "-s -w -X github.com/anycable/anycable-go/version.version=${{ steps.version.outputs.VERSION }} -X github.com/anycable/anycable-go/version.sha=$(echo "$GITHUB_SHA" | cut -c -7)" -a -o .docker/anycable-go-linux-amd64 cmd/anycable-go/main.go
           .docker/anycable-go-linux-amd64 -v
       - name: Prepare Docker metadata and versions for mrb image
+        if: ${{ false }}
         id: meta-mrb
         uses: docker/metadata-action@v3
         with:
@@ -129,6 +132,7 @@ jobs:
             type=semver,pattern={{major}}
             type=edge,branch=pro-master
       - name: Build and push mrb images
+        if: ${{ false }}
         uses: docker/build-push-action@v2
         with:
           context: .
