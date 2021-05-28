@@ -5,6 +5,7 @@ on:
     branches:
     - pro-master
   pull_request:
+  workflow_dispatch:
 
 jobs:
   test:
@@ -40,6 +41,7 @@ jobs:
         path: dist/anycable-go
 
   test-macos:
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     strategy:
       matrix:
         go-version: [1.17.x]
@@ -71,11 +73,11 @@ jobs:
         path: dist/anycable-go
 
   test-conformance:
-    needs: [test, test-macos]
+    needs: [test]
     strategy:
       matrix:
-        adapter: ["http", "redis"]
-        ssl: ["ssl", ""]
+        adapter: ["redis"]
+        ssl: [""]
         exclude:
           - adapter: "redis"
             ssl: "ssl"
