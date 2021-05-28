@@ -2,8 +2,6 @@ module github.com/anycable/anycable-go
 
 go 1.16
 
-replace github.com/mailru/easygo => github.com/detailyang/easygo v0.0.0-20190618140210-3c14a0dc985f
-
 require (
 	github.com/FZambia/sentinel v1.1.0
 	github.com/apex/log v1.1.0
@@ -17,7 +15,6 @@ require (
 	github.com/google/gops v0.3.18
 	github.com/gorilla/websocket v1.4.2
 	github.com/kr/pretty v0.1.0 // indirect
-	github.com/mailru/easygo v0.0.0-20190618140210-3c14a0dc985f
 	github.com/matoous/go-nanoid v1.3.0
 	github.com/mattn/go-isatty v0.0.7
 	github.com/mitchellh/go-mruby v0.0.0-20181003231329-cd6a04a6ea57
@@ -28,7 +25,7 @@ require (
 	github.com/syossan27/tebata v0.0.0-20180602121909-b283fe4bc5ba
 	github.com/vmihailenco/msgpack/v5 v5.3.2
 	golang.org/x/net v0.0.0-20200506145744-7e3656a0809f
-	golang.org/x/sys v0.0.0-20210420205809-ac73e9fd8988 // indirect
+	golang.org/x/sys v0.0.0-20210420205809-ac73e9fd8988
 	google.golang.org/genproto v0.0.0-20200511104702-f5ebc3bea380 // indirect
 	google.golang.org/grpc v1.29.1
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect

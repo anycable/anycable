@@ -2,6 +2,7 @@ package ws
 
 import (
 	"net"
+	"reflect"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -66,6 +67,15 @@ func (ws Connection) Close(code int, reason string) {
 
 func (ws Connection) Descriptor() net.Conn {
 	return ws.conn.UnderlyingConn()
+}
+
+// From https://github.com/eranyanay/1m-go-websockets/blob/master/3_optimize_ws_goroutines/epoll.go
+func (ws Connection) Fd() int {
+	connVal := reflect.Indirect(reflect.ValueOf(ws.conn)).FieldByName("conn").Elem()
+	tcpConn := reflect.Indirect(connVal).FieldByName("conn")
+	fdVal := tcpConn.FieldByName("fd")
+	pfdVal := reflect.Indirect(fdVal).FieldByName("pfd")
+	return int(pfdVal.FieldByName("Sysfd").Int())
 }
 
 // CloseWithReason closes WebSocket connection with the specified close code and reason

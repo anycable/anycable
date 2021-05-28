@@ -4,6 +4,7 @@ package netpoll
 
 import (
 	"reflect"
+	"runtime"
 	"sync"
 	"unsafe"
 
@@ -263,7 +264,7 @@ func (k *Kqueue) Add(fd int, events Kevents, n int, cb KeventHandler) error {
 	}
 
 	arr := unsafe.Pointer(&kevs)
-	hdr := &reflect.SliceHeader{
+	hdr := &reflect.SliceHeader{ // nolint
 		Data: uintptr(arr),
 		Len:  n,
 		Cap:  n,
@@ -283,6 +284,7 @@ func (k *Kqueue) Add(fd int, events Kevents, n int, cb KeventHandler) error {
 
 	_, err := unix.Kevent(k.fd, changes, nil, nil)
 
+	runtime.KeepAlive(kevs)
 	return err
 }
 
@@ -294,7 +296,7 @@ func (k *Kqueue) Mod(fd int, events Kevents, n int) error {
 	}
 
 	arr := unsafe.Pointer(&kevs)
-	hdr := &reflect.SliceHeader{
+	hdr := &reflect.SliceHeader{ // nolint
 		Data: uintptr(arr),
 		Len:  n,
 		Cap:  n,
@@ -313,6 +315,7 @@ func (k *Kqueue) Mod(fd int, events Kevents, n int) error {
 
 	_, err := unix.Kevent(k.fd, changes, nil, nil)
 
+	runtime.KeepAlive(kevs)
 	return err
 }
 
