@@ -2,6 +2,8 @@
 
 ## master
 
+- Added `--max-conn` option to limit simultaneous server connections. ([@skryukov][])
+
 - Added `data_sent_bytes_total` and `data_rcvd_bytes_total` metrics. ([@palkan][])
 
 - Add `--allowed_origins` option to enable Origin check during the WebSocket upgrade. ([@skryukov][])

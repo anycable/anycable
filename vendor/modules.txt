@@ -65,6 +65,7 @@ golang.org/x/net/http2
 golang.org/x/net/http2/hpack
 golang.org/x/net/idna
 golang.org/x/net/internal/timeseries
+golang.org/x/net/netutil
 golang.org/x/net/trace
 # golang.org/x/sys v0.0.0-20210420205809-ac73e9fd8988
 ## explicit

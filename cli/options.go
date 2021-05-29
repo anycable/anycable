@@ -46,6 +46,7 @@ func init() {
 	// Config vars
 	fs.StringVar(&defaults.Host, "host", "localhost", "")
 	fs.IntVar(&defaults.Port, "port", portDefault, "")
+	fs.IntVar(&defaults.MaxConn, "max-conn", 0, "")
 	fs.StringVar(&defaults.Path, "path", "/cable", "")
 	fs.StringVar(&defaults.HealthPath, "health-path", "/health", "")
 
@@ -133,6 +134,7 @@ USAGE
 OPTIONS
   --host                                 Server host, default: localhost, env: ANYCABLE_HOST
   --port                                 Server port, default: 8080, env: ANYCABLE_PORT, PORT
+  --max-conn                             Limit simultaneous server connections (0 – without limit), default: 0, env: ANYCABLE_MAX_CONN
   --path                                 WebSocket endpoint path, default: /cable, env: ANYCABLE_PATH
   --health-path                          HTTP health endpoint path, default: /health, env: ANYCABLE_HEALTH_PATH
 

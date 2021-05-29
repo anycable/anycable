@@ -59,7 +59,7 @@ func FromConfig(config *Config) (*Metrics, error) {
 
 	if config.HTTPEnabled() {
 		if config.Host != "" && config.Host != server.Host {
-			srv, err := server.NewServer(config.Host, strconv.Itoa(config.Port), server.SSL)
+			srv, err := server.NewServer(config.Host, strconv.Itoa(config.Port), server.SSL, 0)
 			if err != nil {
 				return nil, err
 			}

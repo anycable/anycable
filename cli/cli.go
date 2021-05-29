@@ -57,6 +57,7 @@ func NewRunner(name string, config *config.Config) *Runner {
 	// Set global HTTP params as early as possible to make sure all servers use them
 	server.SSL = &config.SSL
 	server.Host = config.Host
+	server.MaxConn = config.MaxConn
 
 	return &Runner{name: name, config: config, shutdownables: []Shutdownable{}, errChan: make(chan error)}
 }

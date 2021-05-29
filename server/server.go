@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/apex/log"
+	"golang.org/x/net/netutil"
 )
 
 // HTTPServer is wrapper over http.Server
@@ -19,6 +20,7 @@ type HTTPServer struct {
 	secured  bool
 	shutdown bool
 	started  bool
+	maxConn  int
 	mu       sync.Mutex
 	log      *log.Entry
 
@@ -31,12 +33,14 @@ var (
 	Host string = "localhost"
 	// SSL is a default configuration for HTTP servers
 	SSL *SSLConfig
+	// MaxConn is a default configuration for maximum connections
+	MaxConn int
 )
 
 // ForPort creates new or returns the existing server for the specified port
 func ForPort(port string) (*HTTPServer, error) {
 	if _, ok := allServers[port]; !ok {
-		server, err := NewServer(Host, port, SSL)
+		server, err := NewServer(Host, port, SSL, MaxConn)
 		if err != nil {
 			return nil, err
 		}
@@ -47,7 +51,7 @@ func ForPort(port string) (*HTTPServer, error) {
 }
 
 // NewServer builds HTTPServer from config params
-func NewServer(host string, port string, ssl *SSLConfig) (*HTTPServer, error) {
+func NewServer(host string, port string, ssl *SSLConfig, maxConn int) (*HTTPServer, error) {
 	mux := http.NewServeMux()
 	addr := net.JoinHostPort(host, port)
 
@@ -72,6 +76,7 @@ func NewServer(host string, port string, ssl *SSLConfig) (*HTTPServer, error) {
 		secured:  secured,
 		shutdown: false,
 		started:  false,
+		maxConn:  maxConn,
 		log:      log.WithField("context", "http"),
 	}, nil
 }
@@ -87,11 +92,21 @@ func (s *HTTPServer) Start() error {
 	s.started = true
 	s.mu.Unlock()
 
-	if s.secured {
-		return s.server.ListenAndServeTLS("", "")
+	ln, err := net.Listen("tcp", s.addr)
+	if err != nil {
+		return err
+	}
+	defer ln.Close()
+
+	if s.maxConn > 0 {
+		ln = netutil.LimitListener(ln, s.maxConn)
 	}
 
-	return s.server.ListenAndServe()
+	if s.secured {
+		return s.server.ServeTLS(ln, "", "")
+	}
+
+	return s.server.Serve(ln)
 }
 
 // StartAndAnnounce prints server info and starts server

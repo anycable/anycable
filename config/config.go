@@ -17,6 +17,7 @@ type Config struct {
 	HTTPPubSub           pubsub.HTTPConfig
 	Host                 string
 	Port                 int
+	MaxConn              int
 	BroadcastAdapter     string
 	Path                 string
 	HealthPath           string
