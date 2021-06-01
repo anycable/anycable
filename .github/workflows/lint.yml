@@ -37,6 +37,7 @@ jobs:
       with:
         ruby-version: ${{ matrix.ruby }}
         bundler-cache: true
+        bundler: 2.2.15
     - name: Run Steep
       run: |
         bundle exec rake steep
