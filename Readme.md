@@ -39,7 +39,7 @@ go get -d -u -f github.com/anycable/anycable-go/cmd/anycable-go && (cd $GOPATH/s
 
 ## Upgrade
 
-For instructions on how to upgrade to a newer version see [upgrade notes](https://docs.anycable.io/#/upgrade-notes/0_6_0_to_1_0_0?id=anycable-go).
+For instructions on how to upgrade to a newer version see [upgrade notes](https://docs.anycable.io/#/upgrade-notes/Readme.md).
 
 ### Heroku
 
