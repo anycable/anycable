@@ -252,7 +252,7 @@ module AnyCable
       return if AnyCable.server_builder
 
       logger.error "AnyCable server builder must be configured. " \
-                   "Make sure you've required a gem (e.g. `anycable-grpc`) or " \
+                   "Make sure you've required a gem (e.g. `grpc`) or " \
                    "configured `AnyCable.server_builder` yourself"
       exit(1)
     end
