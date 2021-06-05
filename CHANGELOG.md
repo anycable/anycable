@@ -2,6 +2,12 @@
 
 ## master
 
+## 1.1.1 (2021-06-05)
+
+- Fixed error message when RPC implementation is missing. ([@palkan][])
+
+We haven't extracted `anycable-grpc` yet.
+
 ## 1.1.0 🚸 (2021-06-01)
 
 - No changes since 1.1.0.rc1.
