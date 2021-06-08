@@ -5,7 +5,7 @@
   If you are here for another reason, please, go to discussions: https://github.com/anycable/anycable/discussions
 
   Please, check the documentation website (https://docs.anycable.io/),
-  especially, the "Troubleshooting" section (https://docs.anycable.io/#/troubleshooting)
+  especially, the "Troubleshooting" section (https://docs.anycable.io/troubleshooting)
   before submiting the issue.
 -->
 
