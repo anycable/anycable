@@ -3,7 +3,7 @@
 [![CircleCI](https://img.shields.io/circleci/project/github/anycable/anycable-go.svg?label=CircleCI)](https://circleci.com/gh/anycable/anycable-go)
 [![Docker](https://img.shields.io/docker/pulls/anycable/anycable-go.svg)](https://hub.docker.com/r/anycable/anycable-go/)
 [![Gitter](https://img.shields.io/badge/gitter-join%20chat%20%E2%86%92-brightgreen.svg)](https://gitter.im/anycable/anycable-go)
-[![Documentation](https://img.shields.io/badge/docs-link-brightgreen.svg)](https://docs.anycable.io/#/anycable-go/getting_started)
+[![Documentation](https://img.shields.io/badge/docs-link-brightgreen.svg)](https://docs.anycable.io/anycable-go/getting_started)
 # AnyCable-Go WebSocket Server
 
 WebSocket server for [AnyCable](https://github.com/anycable/anycable).
@@ -39,7 +39,7 @@ go get -d -u -f github.com/anycable/anycable-go/cmd/anycable-go && (cd $GOPATH/s
 
 ## Upgrade
 
-For instructions on how to upgrade to a newer version see [upgrade notes](https://docs.anycable.io/#/upgrade-notes/Readme.md).
+For instructions on how to upgrade to a newer version see [upgrade notes](https://docs.anycable.io/upgrade-notes/Readme.md).
 
 ### Heroku
 
@@ -59,7 +59,7 @@ You can also provide configuration parameters through the corresponding environm
 
 For more information about available options run `anycable-go -h`.
 
-📑 [Documentation](https://docs.anycable.io/#/anycable-go/getting_started)
+📑 [Documentation](https://docs.anycable.io/anycable-go/getting_started)
 
 ## Build
 
