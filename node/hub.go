@@ -105,7 +105,7 @@ func (h *Hub) Run() {
 			if subinfo.event == "add" {
 				h.subscribeSession(subinfo.session, subinfo.stream, subinfo.identifier)
 			} else if subinfo.event == "removeAll" {
-				h.unsubscribeSessionFromChannel(subinfo.session, subinfo.identifier)
+				h.unsubscribeSessionFromChannel(subinfo.session, subinfo.identifier, false)
 			} else {
 				h.unsubscribeSession(subinfo.session, subinfo.stream, subinfo.identifier)
 			}
@@ -225,36 +225,39 @@ func (h *Hub) removeSession(session *Session) {
 	h.unsubscribeSessionFromAllChannels(session.UID)
 
 	h.sessionsMu.Lock()
-	delete(h.sessions, session.UID)
-	h.sessionsMu.Unlock()
 
-	h.streamsMu.Lock()
+	delete(h.sessions, session.UID)
 	delete(h.identifiers[session.Identifiers], session.UID)
 
 	if len(h.identifiers[session.Identifiers]) == 0 {
 		delete(h.identifiers, session.Identifiers)
 	}
 
-	h.streamsMu.Unlock()
+	h.sessionsMu.Unlock()
 
 	h.log.WithField("sid", session.UID).Debug("Unregistered")
 }
 
 func (h *Hub) unsubscribeSessionFromAllChannels(sid string) {
+	h.streamsMu.Lock()
+	defer h.streamsMu.Unlock()
+
 	for channel := range h.sessionsStreams[sid] {
-		h.unsubscribeSessionFromChannel(sid, channel)
+		h.unsubscribeSessionFromChannel(sid, channel, true)
 	}
 
 	delete(h.sessionsStreams, sid)
 }
 
-func (h *Hub) unsubscribeSessionFromChannel(sid string, identifier string) {
+func (h *Hub) unsubscribeSessionFromChannel(sid string, identifier string, locked bool) {
+	if !locked {
+		h.streamsMu.Lock()
+		defer h.streamsMu.Unlock()
+	}
+
 	if _, ok := h.sessionsStreams[sid]; !ok {
 		return
 	}
-
-	h.streamsMu.Lock()
-	defer h.streamsMu.Unlock()
 
 	for _, stream := range h.sessionsStreams[sid][identifier] {
 		delete(h.streams[stream][sid], identifier)
@@ -305,17 +308,23 @@ func (h *Hub) subscribeSession(sid string, stream string, identifier string) {
 }
 
 func (h *Hub) unsubscribeSession(sid string, stream string, identifier string) {
+	h.streamsMu.RLock()
 	if _, ok := h.streams[stream]; !ok {
+		h.streamsMu.RUnlock()
 		return
 	}
 
 	if _, ok := h.streams[stream][sid]; !ok {
+		h.streamsMu.RUnlock()
 		return
 	}
 
 	if _, ok := h.streams[stream][sid][identifier]; !ok {
+		h.streamsMu.RUnlock()
 		return
 	}
+
+	h.streamsMu.RUnlock()
 
 	h.streamsMu.Lock()
 	defer h.streamsMu.Unlock()
@@ -374,7 +383,9 @@ func (h *Hub) broadcastToStream(stream string, data string) {
 }
 
 func (h *Hub) disconnectSessions(identifier string, reconnect bool) {
+	h.sessionsMu.RLock()
 	ids, ok := h.identifiers[identifier]
+	h.sessionsMu.RUnlock()
 
 	if !ok {
 		h.log.Debugf("Can not disconnect sessions: unknown identifier %s", identifier)

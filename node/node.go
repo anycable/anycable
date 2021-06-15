@@ -139,16 +139,18 @@ func (n *Node) Shutdown() (err error) {
 	if n.hub != nil {
 		n.hub.Shutdown()
 
-		active := len(n.hub.sessions)
+		active := n.hub.Size()
 
 		if active > 0 {
 			n.log.Infof("Closing active connections: %d", active)
 			disconnectMessage := newDisconnectMessage(serverRestartReason, true)
 			// Close all registered sessions
+			n.hub.sessionsMu.RLock()
 			for _, session := range n.hub.sessions {
 				session.Send(disconnectMessage)
 				session.Disconnect("Shutdown", ws.CloseGoingAway)
 			}
+			n.hub.sessionsMu.RUnlock()
 
 			n.log.Info("All active connections closed")
 
