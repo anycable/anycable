@@ -1,6 +1,7 @@
 package node
 
 import (
+	"errors"
 	"fmt"
 	"runtime"
 	"time"
@@ -134,7 +135,12 @@ func (n *Node) HandlePubSub(raw []byte) {
 
 // Shutdown stops all services (hub, controller)
 func (n *Node) Shutdown() (err error) {
+	if n.shutdownCh == nil {
+		return errors.New("Already shut down")
+	}
+
 	close(n.shutdownCh)
+	n.shutdownCh = nil
 
 	if n.hub != nil {
 		n.hub.Shutdown()
