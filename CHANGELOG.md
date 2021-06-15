@@ -2,6 +2,10 @@
 
 ## master
 
+## 1.1.1 (2021-06-15)
+
+- Fixed potential concurrent read/write in hub. ([@palkan][])
+
 ## 1.1.0 🚸 (2021-06-01)
 
 - Added `--max-conn` option to limit simultaneous server connections. ([@skryukov][])
