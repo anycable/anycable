@@ -45,7 +45,7 @@ jobs:
         uses: docker/metadata-action@v3
         with:
           images: |
-            ghcr.io/palkan/anycable-go-pro
+            ghcr.io/anycable/anycable-go-pro
           labels: |
             maintainer=Vladimir Dementyev
             org.opencontainers.image.title=AnyCable-Go Pro
@@ -53,7 +53,7 @@ jobs:
             org.opencontainers.image.vendor=Evil Martians
             org.opencontainers.image.url=https://anycable.io
             org.opencontainers.image.documentation=https://docs.anycable.io
-            org.opencontainers.image.licenses=
+            org.opencontainers.image.licenses=EULA
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -77,7 +77,7 @@ jobs:
             prefix=
             suffix=-alpine
           images: |
-            ghcr.io/palkan/anycable-go-pro
+            ghcr.io/anycable/anycable-go-pro
           labels: |
             maintainer=Vladimir Dementyev
             org.opencontainers.image.title=AnyCable-Go Pro
@@ -85,7 +85,7 @@ jobs:
             org.opencontainers.image.vendor=Evil Martians
             org.opencontainers.image.url=https://anycable.io
             org.opencontainers.image.documentation=https://docs.anycable.io
-            org.opencontainers.image.licenses=
+            org.opencontainers.image.licenses=EULA
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -117,7 +117,7 @@ jobs:
             prefix=
             suffix=-mrb
           images: |
-            ghcr.io/palkan/anycable-go-pro
+            ghcr.io/anycable/anycable-go-pro
           labels: |
             maintainer=Vladimir Dementyev
             org.opencontainers.image.title=AnyCable-Go Pro
@@ -125,7 +125,7 @@ jobs:
             org.opencontainers.image.vendor=Evil Martians
             org.opencontainers.image.url=https://anycable.io
             org.opencontainers.image.documentation=https://docs.anycable.io
-            org.opencontainers.image.licenses=
+            org.opencontainers.image.licenses=EULA
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
