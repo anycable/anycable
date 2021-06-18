@@ -39,7 +39,18 @@ func TestGraphQLEncode(t *testing.T) {
 	t.Run("Disconnect", func(t *testing.T) {
 		msg := &common.DisconnectMessage{Type: "disconnect", Reason: "unauthorized", Reconnect: false}
 
-		expected := "{\"type\":\"conn_err\"}"
+		expected := "{\"type\":\"connection_error\"}"
+
+		actual, err := coder.Encode(msg)
+
+		assert.NoError(t, err)
+		assert.Equal(t, expected, string(actual.Payload))
+	})
+
+	t.Run("Unsubscribed", func(t *testing.T) {
+		msg := &common.Reply{Type: common.UnsubscribedType, Identifier: identifier}
+
+		expected := "{\"id\":\"abc2021\",\"type\":\"complete\"}"
 
 		actual, err := coder.Encode(msg)
 
@@ -82,7 +93,7 @@ func TestGraphQLEncodeTransmission(t *testing.T) {
 
 	t.Run("unsubscribed", func(t *testing.T) {
 		msg := toJSON(common.Reply{Identifier: identifier, Type: "unsubscribed"})
-		expected := "{\"id\":\"abc2021\",\"type\":\"stop\"}"
+		expected := "{\"id\":\"abc2021\",\"type\":\"complete\"}"
 
 		actual, err := coder.EncodeTransmission(string(msg))
 
@@ -92,6 +103,20 @@ func TestGraphQLEncodeTransmission(t *testing.T) {
 
 	t.Run("message", func(t *testing.T) {
 		msg := toJSON(common.Reply{Identifier: identifier, Message: "payload"})
+		expected := "{\"id\":\"abc2021\",\"type\":\"data\",\"payload\":\"payload\"}"
+
+		actual, err := coder.EncodeTransmission(string(msg))
+
+		assert.NoError(t, err)
+		assert.Equal(t, expected, string(actual.Payload))
+	})
+
+	t.Run("message with result", func(t *testing.T) {
+		var result interface{}
+
+		json.Unmarshal([]byte("{\"result\":\"payload\"}"), &result) // nolint:errcheck
+
+		msg := toJSON(common.Reply{Identifier: identifier, Message: result})
 		expected := "{\"id\":\"abc2021\",\"type\":\"data\",\"payload\":\"payload\"}"
 
 		actual, err := coder.EncodeTransmission(string(msg))
@@ -111,6 +136,16 @@ func TestGraphQLDecode(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.Equal(t, "connection_init", actual.Command)
+	})
+
+	t.Run("init with payload", func(t *testing.T) {
+		msg := []byte("{\"type\":\"connection_init\",\"payload\":{\"token\":\"secret\"}}")
+
+		actual, err := coder.Decode(msg)
+
+		assert.NoError(t, err)
+		assert.Equal(t, "connection_init", actual.Command)
+		assert.Equal(t, "{\"token\":\"secret\"}", actual.Data)
 	})
 
 	t.Run("start", func(t *testing.T) {

@@ -29,6 +29,17 @@ func TestHandleCommand(t *testing.T) {
 		n.AssertCalled(t, "Authenticate", session)
 	})
 
+	t.Run("connection_init with payload", func(t *testing.T) {
+		session := buildSession()
+		session.Connected = false
+		n.On("Authenticate", session).Return(nil, nil)
+
+		err := executor.HandleCommand(session, &common.Message{Command: GQL_CONNECTION_INIT, Data: "some_payload"})
+		assert.NoError(t, err)
+		n.AssertCalled(t, "Authenticate", session)
+		assert.Equal(t, "some_payload", (*session.GetEnv().Headers)["x-apollo-connection"])
+	})
+
 	t.Run("connection_init failure", func(t *testing.T) {
 		session := buildSession()
 		session.Connected = false
@@ -163,6 +174,7 @@ func buildSession() *node.Session {
 		Log:       log.WithField("context", "test"),
 	}
 	s.SetEncoder(Encoder{})
+	s.SetEnv(common.NewSessionEnv("ws://anycable.io/cable", nil))
 	return &s
 }
 

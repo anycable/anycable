@@ -15,7 +15,7 @@ const (
 	// Client sends this message after plain websocket connection to start the communication with the server
 	GQL_CONNECTION_INIT = "connection_init"
 	// The server may responses with this message to the GQL_CONNECTION_INIT from client, indicates the server rejected the connection.
-	GQL_CONNECTION_ERROR = "conn_err"
+	GQL_CONNECTION_ERROR = "connection_error"
 	// Client sends this message to execute GraphQL operation
 	GQL_START = "start"
 	// Client sends this message in order to stop a running GraphQL operation execution (for example: unsubscribe)
@@ -40,7 +40,7 @@ const (
 )
 
 const PingPayload = "{\"type\":\"ka\"}"
-const DisconnectPayload = "{\"type\":\"conn_err\"}"
+const DisconnectPayload = "{\"type\":\"connection_error\"}"
 
 type GraphqlOperation struct {
 	Id      string      `json:"id,omitempty"`
@@ -125,9 +125,17 @@ func (gql Encoder) Encode(msg encoders.EncodedMessage) (*ws.SentFrame, error) {
 	if r.Type == common.RejectedType {
 		operation.Type = GQL_ERROR
 	} else if r.Type == common.UnsubscribedType {
-		operation.Type = GQL_STOP
+		operation.Type = GQL_COMPLETE
 	} else {
 		operation.Type = GQL_DATA
+
+		// GraphqlChannel responds with `{result: ..., more:...}` but
+		// we only need the result here
+		if m, ok := operation.Payload.((map[string]interface{})); ok {
+			if r, k := m["result"]; k {
+				operation.Payload = r
+			}
+		}
 	}
 
 	return &ws.SentFrame{FrameType: ws.TextFrame, Payload: operation.ToJSON()}, nil
@@ -152,7 +160,18 @@ func (gql Encoder) Decode(raw []byte) (*common.Message, error) {
 
 	msg := &common.Message{Command: string(operation.Type)}
 
-	if operation.Type == GQL_CONNECTION_INIT || operation.Type == GQL_CONNECTION_TERMINATE {
+	if operation.Type == GQL_CONNECTION_INIT {
+		payload, err := operation.PayloadString()
+
+		if err != nil {
+			return nil, err
+		}
+
+		msg.Data = payload
+		return msg, nil
+	}
+
+	if operation.Type == GQL_CONNECTION_TERMINATE {
 		return msg, nil
 	}
 
