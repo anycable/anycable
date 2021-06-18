@@ -35,7 +35,7 @@ GraphQL Ruby channel action name (default: `"execute"`).
 
 ## Client configuration
 
-We test our implementaion against the official Apollo WebSocket link configuration described here: [Get real-time updates from your GraphQL server][apollo-subscriptions].
+We test our implementation against the official Apollo WebSocket link configuration described here: [Get real-time updates from your GraphQL server][apollo-subscriptions].
 
 ## Authentication
 
