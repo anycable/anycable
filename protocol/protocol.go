@@ -53,9 +53,16 @@ func ParseConnectResponse(response *pb.ConnectionResponse) (*common.ConnectResul
 
 	if response.Status.String() == "SUCCESS" {
 		reply.Identifier = response.Identifiers
+		reply.Status = common.SUCCESS
 		return &reply, nil
 	}
 
+	if response.Status.String() == "FAILURE" {
+		reply.Status = common.FAILURE
+		return &reply, fmt.Errorf("Forbidden: %s", response.ErrorMsg)
+	}
+
+	reply.Status = common.ERROR
 	return &reply, fmt.Errorf("Application error: %s", response.ErrorMsg)
 }
 
@@ -75,9 +82,16 @@ func ParseCommandResponse(response *pb.CommandResponse) (*common.CommandResult, 
 	}
 
 	if response.Status.String() == "SUCCESS" {
+		res.Status = common.SUCCESS
 		return res, nil
 	}
 
+	if response.Status.String() == "FAILURE" {
+		res.Status = common.FAILURE
+		return res, fmt.Errorf("Forbidden: %s", response.ErrorMsg)
+	}
+
+	res.Status = common.ERROR
 	return res, fmt.Errorf("Application error: %s", response.ErrorMsg)
 }
 

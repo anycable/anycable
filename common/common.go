@@ -6,6 +6,13 @@ import (
 	"fmt"
 )
 
+// Command result status
+const (
+	SUCCESS = iota
+	FAILURE
+	ERROR
+)
+
 // Outgoing message types (according to Action Cable protocol)
 const (
 	WelcomeType    = "welcome"
@@ -69,6 +76,17 @@ func (st *SessionEnv) MergeChannelState(id string, other *map[string]string) {
 	}
 }
 
+// SetHeader adds a header to the headers list
+func (st *SessionEnv) SetHeader(key string, val string) {
+	if st.Headers == nil {
+		headers := map[string]string{key: val}
+		st.Headers = &headers
+		return
+	}
+
+	(*st.Headers)[key] = val
+}
+
 // CallResult contains shared RPC result fields
 type CallResult struct {
 	Transmissions []string
@@ -84,6 +102,7 @@ type ConnectResult struct {
 	Broadcasts    []*StreamMessage
 	CState        map[string]string
 	IState        map[string]string
+	Status        int
 }
 
 // ToCallResult returns the corresponding CallResult
@@ -111,6 +130,7 @@ type CommandResult struct {
 	Broadcasts     []*StreamMessage
 	CState         map[string]string
 	IState         map[string]string
+	Status         int
 }
 
 // ToCallResult returns the corresponding CallResult

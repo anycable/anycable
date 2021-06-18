@@ -87,6 +87,14 @@ func (s *Session) SetExecutor(ex Executor) {
 	s.executor = ex
 }
 
+func (s *Session) GetEnv() *common.SessionEnv {
+	return s.env
+}
+
+func (s *Session) SetEnv(env *common.SessionEnv) {
+	s.env = env
+}
+
 // Serve enters a loop to read incoming data
 func (s *Session) Serve(callback func()) error {
 	go func() {

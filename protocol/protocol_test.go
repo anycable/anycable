@@ -101,7 +101,9 @@ func TestParseConnectResponse(t *testing.T) {
 		assert.Equal(t, "user=john", result.Identifier)
 		assert.Equal(t, []string{"welcome"}, result.Transmissions)
 		assert.Equal(t, map[string]string{"_s_": "test-session"}, result.CState)
+		assert.Equal(t, common.SUCCESS, result.Status)
 	})
+
 	t.Run("Failure", func(t *testing.T) {
 		res := pb.ConnectionResponse{
 			Transmissions: []string{"unauthorized"},
@@ -110,9 +112,23 @@ func TestParseConnectResponse(t *testing.T) {
 			ErrorMsg:      "Authentication failed",
 		}
 
-		_, err := ParseConnectResponse(&res)
+		result, err := ParseConnectResponse(&res)
 
 		assert.NotNil(t, err)
+		assert.Equal(t, common.FAILURE, result.Status)
+	})
+
+	t.Run("Error", func(t *testing.T) {
+		res := pb.ConnectionResponse{
+			Transmissions: []string{"unauthorized"},
+			Status:        pb.Status_ERROR,
+			ErrorMsg:      "Failed",
+		}
+
+		result, err := ParseConnectResponse(&res)
+
+		assert.NotNil(t, err)
+		assert.Equal(t, common.ERROR, result.Status)
 	})
 }
 
@@ -133,6 +149,7 @@ func TestParseCommandResponse(t *testing.T) {
 		assert.Equal(t, []string{"message_sent"}, result.Transmissions)
 		assert.Equal(t, true, result.StopAllStreams)
 		assert.Equal(t, []string{"chat_41"}, result.StoppedStreams)
+		assert.Equal(t, common.SUCCESS, result.Status)
 	})
 
 	t.Run("Success with connection and channel state", func(t *testing.T) {
@@ -158,9 +175,22 @@ func TestParseCommandResponse(t *testing.T) {
 			ErrorMsg: "Unknown command",
 		}
 
-		_, err := ParseCommandResponse(&res)
+		result, err := ParseCommandResponse(&res)
 
 		assert.NotNil(t, err)
+		assert.Equal(t, common.FAILURE, result.Status)
+	})
+
+	t.Run("Error", func(t *testing.T) {
+		res := pb.CommandResponse{
+			Status:   pb.Status_ERROR,
+			ErrorMsg: "Unknown command",
+		}
+
+		result, err := ParseCommandResponse(&res)
+
+		assert.NotNil(t, err)
+		assert.Equal(t, common.ERROR, result.Status)
 	})
 }
 
