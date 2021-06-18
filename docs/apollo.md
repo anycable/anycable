@@ -4,6 +4,8 @@ AnyCable can act as a _translator_ between [Apollo GraphQL][apollo-protocol] and
 
 That allows us to use the variety of tools compatible with Apollo: client-side libraries, IDEs (such as Apollo Studio).
 
+> See also the [demo](https://github.com/anycable/anycable_rails_demo/pull/18) of using AnyCable with Apollo GraphQL React Native application.
+
 ## Usage
 
 Run `anycable-go` with `apollo_path` option specified as follows:
