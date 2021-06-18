@@ -10,6 +10,10 @@ import (
 	"github.com/anycable/anycable-go/ws"
 )
 
+const (
+	payloadHeader = "x-apollo-connection"
+)
+
 // Handling Apollo commands and transforming them into Action Cable commands
 type Executor struct {
 	node node.AppNode
@@ -32,7 +36,18 @@ func (ex *Executor) HandleCommand(s *node.Session, msg *common.Message) error {
 		// Perform authentication
 		// We automatically transform welcome message into connection ack,
 		// so, no need to send it manually.
-		_, err := ex.node.Authenticate(s)
+		// Also, we should pass payload, 'cause it may contain authentication data
+
+		if msg.Data != "" {
+			s.GetEnv().SetHeader(payloadHeader, msg.Data)
+		}
+
+		res, err := ex.node.Authenticate(s)
+
+		if res != nil && res.Status == common.FAILURE {
+			return nil
+		}
+
 		return err
 	}
 
