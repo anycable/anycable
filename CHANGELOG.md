@@ -2,6 +2,8 @@
 
 ## master
 
+- Added `--rpc_enable_tls` option. ([@ryansch][])
+
 - Do not treat RPC failures as errors. ([@palkan][])
 
 Failure (e.g., subscription rejection) is an expected application behaviour and

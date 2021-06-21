@@ -20,6 +20,9 @@ import (
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/grpc/credentials"
+
+	"crypto/tls"
 )
 
 const (
@@ -122,23 +125,38 @@ func NewController(metrics *metrics.Metrics, config *Config) *Controller {
 func (c *Controller) Start() error {
 	host := c.config.Host
 	capacity := c.config.Concurrency
+	enableTLS := c.config.EnableTLS
 
 	kacp := keepalive.ClientParameters{
 		Time:                10 * time.Second, // send pings every 10 seconds if there is no activity
 		PermitWithoutStream: true,             // send pings even without active streams
 	}
 
-	conn, err := grpc.Dial(
-		host,
-		grpc.WithInsecure(),
+	dialOptions := []grpc.DialOption{
 		grpc.WithKeepaliveParams(kacp),
 		grpc.WithBalancerName("round_robin"), // nolint:staticcheck
+	}
+
+	if enableTLS {
+		tlsConfig := &tls.Config{
+			InsecureSkipVerify: false,
+			MinVersion: tls.VersionTLS12,
+		}
+
+		dialOptions = append(dialOptions, grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)))
+	} else {
+		dialOptions = append(dialOptions, grpc.WithInsecure())
+	}
+
+	conn, err := grpc.Dial(
+		host,
+		dialOptions...
 	)
 
 	c.initSemaphore(capacity)
 
 	if err == nil {
-		c.log.Infof("RPC controller initialized: %s (concurrency: %d, proto_versions: %s)", host, capacity, ProtoVersions)
+		c.log.Infof("RPC controller initialized: %s (concurrency: %d, enable_tls: %t, proto_versions: %s)", host, capacity, enableTLS, ProtoVersions)
 	}
 
 	c.conn = conn

@@ -8,9 +8,11 @@ type Config struct {
 	// Should be slightly less than the RPC server concurrency to avoid
 	// ResourceExhausted errors
 	Concurrency int
+	// Enable client-side TLS on RPC connections?
+	EnableTLS bool
 }
 
 // NewConfig builds a new config
 func NewConfig() Config {
-	return Config{Concurrency: 28}
+	return Config{Concurrency: 28, EnableTLS: false}
 }
