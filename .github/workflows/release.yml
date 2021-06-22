@@ -39,21 +39,13 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GHCR_TOKEN }}
       - name: Prepare Docker metadata and versions
         id: meta
         uses: docker/metadata-action@v3
         with:
           images: |
             ghcr.io/anycable/anycable-go-pro
-          labels: |
-            maintainer=Vladimir Dementyev
-            org.opencontainers.image.title=AnyCable-Go Pro
-            org.opencontainers.image.description=AnyCable WebSocket server (pro version)
-            org.opencontainers.image.vendor=Evil Martians
-            org.opencontainers.image.url=https://anycable.io
-            org.opencontainers.image.documentation=https://docs.anycable.io
-            org.opencontainers.image.licenses=EULA
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -67,7 +59,14 @@ jobs:
           file: .docker/Dockerfile.linux-amd64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          labels: |
+            maintainer=Vladimir Dementyev
+            org.opencontainers.image.description=AnyCable WebSocket server (pro version)
+            org.opencontainers.image.vendor=Evil Martians
+            org.opencontainers.image.url=https://anycable.io
+            org.opencontainers.image.source=https://github.com/anycable/anycable-go-pro-releases
+            org.opencontainers.image.documentation=https://docs.anycable.io
+            org.opencontainers.image.licenses=https://anycable.io/eula
       - name: Prepare Docker metadata and versions for alpine image
         id: meta-alpine
         uses: docker/metadata-action@v3
@@ -78,14 +77,6 @@ jobs:
             suffix=-alpine
           images: |
             ghcr.io/anycable/anycable-go-pro
-          labels: |
-            maintainer=Vladimir Dementyev
-            org.opencontainers.image.title=AnyCable-Go Pro
-            org.opencontainers.image.description=AnyCable WebSocket server (pro version)
-            org.opencontainers.image.vendor=Evil Martians
-            org.opencontainers.image.url=https://anycable.io
-            org.opencontainers.image.documentation=https://docs.anycable.io
-            org.opencontainers.image.licenses=EULA
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -98,7 +89,14 @@ jobs:
           file: .docker/Dockerfile.alpine-linux-amd64
           push: true
           tags: ${{ steps.meta-alpine.outputs.tags }}
-          labels: ${{ steps.meta-alpine.outputs.labels }}
+          labels: |
+            maintainer=Vladimir Dementyev
+            org.opencontainers.image.description=AnyCable WebSocket server (pro version)
+            org.opencontainers.image.vendor=Evil Martians
+            org.opencontainers.image.url=https://anycable.io
+            org.opencontainers.image.source=https://github.com/anycable/anycable-go-pro-releases
+            org.opencontainers.image.documentation=https://docs.anycable.io
+            org.opencontainers.image.licenses=https://anycable.io/eula
       - name: Build binary with MRuby
         # Temporary disable buidling MRuby images
         if: ${{ false }}
@@ -118,14 +116,6 @@ jobs:
             suffix=-mrb
           images: |
             ghcr.io/anycable/anycable-go-pro
-          labels: |
-            maintainer=Vladimir Dementyev
-            org.opencontainers.image.title=AnyCable-Go Pro
-            org.opencontainers.image.description=AnyCable WebSocket server (pro version) with MRuby support
-            org.opencontainers.image.vendor=Evil Martians
-            org.opencontainers.image.url=https://anycable.io
-            org.opencontainers.image.documentation=https://docs.anycable.io
-            org.opencontainers.image.licenses=EULA
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -139,7 +129,14 @@ jobs:
           file: .docker/Dockerfile.mrb-linux-amd64
           push: true
           tags: ${{ steps.meta-mrb.outputs.tags }}
-          labels: ${{ steps.meta-mrb.outputs.labels }}
+          labels: |
+            maintainer=Vladimir Dementyev
+            org.opencontainers.image.description=AnyCable WebSocket server (pro version)
+            org.opencontainers.image.vendor=Evil Martians
+            org.opencontainers.image.url=https://anycable.io
+            org.opencontainers.image.source=https://github.com/anycable/anycable-go-pro-releases
+            org.opencontainers.image.documentation=https://docs.anycable.io
+            org.opencontainers.image.licenses=https://anycable.io/eula
   upload_binaries:
     runs-on: ubuntu-latest
     env:
@@ -174,7 +171,7 @@ jobs:
           dist/anycable-go-mrb-linux-amd64 -v
       - uses: xresloader/upload-to-github-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GHCR_TOKEN }}
         with:
           file: "dist/anycable-go-*"
           update_latest_release: true
