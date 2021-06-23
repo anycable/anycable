@@ -76,11 +76,32 @@ func TestAuthenticate(t *testing.T) {
 			}, nil)
 
 		res, err := controller.Authenticate("42", &common.SessionEnv{URL: url, Headers: &headers})
-		assert.NotNil(t, err)
-		assert.Error(t, err, "Authentication failed")
+		assert.Nil(t, err)
 		assert.Equal(t, []string{"unauthorized"}, res.Transmissions)
 		assert.Equal(t, "", res.Identifier)
 		assert.Equal(t, map[string]string{"_s_": "test-session"}, res.CState)
+		assert.Empty(t, res.Broadcasts)
+	})
+
+	t.Run("Error", func(t *testing.T) {
+		url := "/cable-test"
+		headers := map[string]string{"cookie": "token=exceptional;"}
+
+		client.On("Connect", mock.Anything,
+			&pb.ConnectionRequest{
+				Env: &pb.Env{Url: url, Headers: headers},
+			}).Return(
+			&pb.ConnectionResponse{
+				Status:   pb.Status_ERROR,
+				ErrorMsg: "Exception",
+			}, nil)
+
+		res, err := controller.Authenticate("42", &common.SessionEnv{URL: url, Headers: &headers})
+		assert.NotNil(t, err)
+		assert.Error(t, err, "Exception")
+		assert.Nil(t, res.Transmissions)
+		assert.Equal(t, "", res.Identifier)
+		assert.Nil(t, res.CState)
 		assert.Empty(t, res.Broadcasts)
 	})
 }
@@ -122,6 +143,79 @@ func TestPerform(t *testing.T) {
 		assert.Equal(t, map[string]string{"_s_": "sentCount=1"}, res.CState)
 		assert.True(t, res.StopAllStreams)
 		assert.Equal(t, []string{"chat_42"}, res.Streams)
+		assert.Nil(t, res.StoppedStreams)
+		assert.Empty(t, res.Broadcasts)
+	})
+
+	t.Run("Failure", func(t *testing.T) {
+		url := "/cable-test"
+		headers := map[string]string{"cookie": "token=invalid;"}
+		cstate := map[string]string{"_s_": "id=42"}
+
+		client.On("Command", mock.Anything,
+			&pb.CommandMessage{
+				Command:               "message",
+				ConnectionIdentifiers: "ids",
+				Identifier:            "test_channel",
+				Data:                  "fail",
+				Env:                   &pb.Env{Url: url, Headers: headers, Cstate: cstate},
+			}).Return(
+			&pb.CommandResponse{
+				Status:        pb.Status_FAILURE,
+				Streams:       []string{"chat_42"},
+				StopStreams:   true,
+				Env:           &pb.EnvResponse{Cstate: map[string]string{"_s_": "sentCount=1"}},
+				Transmissions: []string{"message_sent"},
+				ErrorMsg:      "Forbidden",
+			}, nil)
+
+		res, err := controller.Perform(
+			"42",
+			&common.SessionEnv{URL: url, Headers: &headers, ConnectionState: &cstate},
+			"ids", "test_channel", "fail",
+		)
+
+		assert.Nil(t, err)
+		assert.Equal(t, common.FAILURE, res.Status)
+		assert.Equal(t, []string{"message_sent"}, res.Transmissions)
+		assert.Equal(t, map[string]string{"_s_": "sentCount=1"}, res.CState)
+		assert.True(t, res.StopAllStreams)
+		assert.Equal(t, []string{"chat_42"}, res.Streams)
+		assert.Nil(t, res.StoppedStreams)
+		assert.Empty(t, res.Broadcasts)
+	})
+
+	t.Run("Error", func(t *testing.T) {
+		url := "/cable-test"
+		headers := map[string]string{"cookie": "token=invalid;"}
+		cstate := map[string]string{"_s_": "id=42"}
+
+		client.On("Command", mock.Anything,
+			&pb.CommandMessage{
+				Command:               "message",
+				ConnectionIdentifiers: "ids",
+				Identifier:            "test_channel",
+				Data:                  "exception",
+				Env:                   &pb.Env{Url: url, Headers: headers, Cstate: cstate},
+			}).Return(
+			&pb.CommandResponse{
+				Status:      pb.Status_ERROR,
+				StopStreams: true,
+				ErrorMsg:    "Exception",
+			}, nil)
+
+		res, err := controller.Perform(
+			"42",
+			&common.SessionEnv{URL: url, Headers: &headers, ConnectionState: &cstate},
+			"ids", "test_channel", "exception",
+		)
+
+		assert.NotNil(t, err)
+		assert.Equal(t, common.ERROR, res.Status)
+		assert.Error(t, err, "Exception")
+		assert.Nil(t, res.Transmissions)
+		assert.True(t, res.StopAllStreams)
+		assert.Nil(t, res.Streams)
 		assert.Nil(t, res.StoppedStreams)
 		assert.Empty(t, res.Broadcasts)
 	})
@@ -266,11 +360,39 @@ func TestSubscribe(t *testing.T) {
 			"ids", "fail_channel",
 		)
 
-		assert.NotNil(t, err)
+		assert.Nil(t, err)
+		assert.Equal(t, common.FAILURE, res.Status)
 		assert.Equal(t, []string{"rejected"}, res.Transmissions)
 		assert.True(t, res.Disconnect)
 		assert.Nil(t, res.StoppedStreams)
 		assert.Empty(t, res.Broadcasts)
+	})
+
+	t.Run("Error", func(t *testing.T) {
+		url := "/cable-test"
+		headers := map[string]string{"cookie": "token=secret;"}
+		cstate := map[string]string{"_s_": "id=42"}
+
+		client.On("Command", mock.Anything,
+			&pb.CommandMessage{
+				Command:               "subscribe",
+				ConnectionIdentifiers: "ids",
+				Identifier:            "error_channel",
+				Env:                   &pb.Env{Url: url, Headers: headers, Cstate: cstate},
+			}).Return(
+			&pb.CommandResponse{
+				Status:   pb.Status_ERROR,
+				ErrorMsg: "Exception",
+			}, nil)
+
+		res, err := controller.Subscribe(
+			"42",
+			&common.SessionEnv{URL: url, Headers: &headers, ConnectionState: &cstate},
+			"ids", "error_channel",
+		)
+
+		assert.NotNil(t, err)
+		assert.Equal(t, common.ERROR, res.Status)
 	})
 }
 

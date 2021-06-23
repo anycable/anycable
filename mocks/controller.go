@@ -25,11 +25,11 @@ func (c *MockController) Start() error {
 // - otherwise returns value of headers['id'] as identifier
 func (c *MockController) Authenticate(sid string, env *common.SessionEnv) (*common.ConnectResult, error) {
 	if env.URL == "/failure" {
-		return &common.ConnectResult{Transmissions: []string{"unauthorized"}}, errors.New("Auth Failed")
+		return &common.ConnectResult{Status: common.FAILURE, Transmissions: []string{"unauthorized"}}, nil
 	}
 
 	if env.URL == "/error" {
-		return nil, errors.New("Unknown")
+		return &common.ConnectResult{Status: common.ERROR}, errors.New("Unknown")
 	}
 
 	res := common.ConnectResult{Identifier: (*env.Headers)["id"], Transmissions: []string{"welcome"}}
@@ -47,14 +47,15 @@ func (c *MockController) Authenticate(sid string, env *common.SessionEnv) (*comm
 // - if channel is equal to "stream" then add "stream" to result.Streams
 // - otherwise returns success result with one transmission equal to sid
 func (c *MockController) Subscribe(sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error) {
-	if channel == "failure" {
+	if channel == "error" {
 		return nil, errors.New("Subscription Failure")
 	}
 
 	res := NewMockResult(sid)
 
 	if channel == "failure" {
-		return nil, errors.New("Subscription failed")
+		res.Status = common.FAILURE
+		return res, nil
 	}
 
 	if channel == "disconnect" {

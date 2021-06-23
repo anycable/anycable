@@ -2,6 +2,11 @@
 
 ## master
 
+- Do not treat RPC failures as errors. ([@palkan][])
+
+Failure (e.g., subscription rejection) is an expected application behaviour and
+should not be treated as error (e.g., logged).
+
 ## 1.1.1 (2021-06-15)
 
 - Fixed potential concurrent read/write in hub. ([@palkan][])

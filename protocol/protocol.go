@@ -59,7 +59,7 @@ func ParseConnectResponse(response *pb.ConnectionResponse) (*common.ConnectResul
 
 	if response.Status.String() == "FAILURE" {
 		reply.Status = common.FAILURE
-		return &reply, fmt.Errorf("Forbidden: %s", response.ErrorMsg)
+		return &reply, nil
 	}
 
 	reply.Status = common.ERROR
@@ -88,7 +88,7 @@ func ParseCommandResponse(response *pb.CommandResponse) (*common.CommandResult, 
 
 	if response.Status.String() == "FAILURE" {
 		res.Status = common.FAILURE
-		return res, fmt.Errorf("Forbidden: %s", response.ErrorMsg)
+		return res, nil
 	}
 
 	res.Status = common.ERROR
@@ -97,7 +97,7 @@ func ParseCommandResponse(response *pb.CommandResponse) (*common.CommandResult, 
 
 // ParseDisconnectResponse takes protobuf DisconnectResponse struct and return error if any
 func ParseDisconnectResponse(response *pb.DisconnectResponse) error {
-	if response.Status.String() == "SUCCESS" {
+	if response.Status.String() != "ERROR" {
 		return nil
 	}
 

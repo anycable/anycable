@@ -189,22 +189,25 @@ func (n *Node) Shutdown() (err error) {
 func (n *Node) Authenticate(s *Session) (res *common.ConnectResult, err error) {
 	res, err = n.controller.Authenticate(s.UID, s.env)
 
-	if err == nil {
+	if err != nil {
+		s.Disconnect("Auth Error", ws.CloseInternalServerErr)
+		return
+	}
+
+	if res.Status == common.SUCCESS {
 		s.Identifiers = res.Identifier
 		s.Connected = true
 
 		n.hub.addSession(s)
 	} else {
-		n.Metrics.Counter(metricsFailedAuths).Inc()
+		if res.Status == common.FAILURE {
+			n.Metrics.Counter(metricsFailedAuths).Inc()
+		}
+
+		defer s.Disconnect("Auth Failed", ws.CloseNormalClosure)
 	}
 
-	if res != nil {
-		n.handleCallReply(s, res.ToCallResult())
-	}
-
-	if err != nil {
-		s.Disconnect("Auth Error", ws.CloseInternalServerErr)
-	}
+	n.handleCallReply(s, res.ToCallResult())
 
 	return
 }
@@ -222,7 +225,9 @@ func (n *Node) Subscribe(s *Session, msg *common.Message) (res *common.CommandRe
 	res, err = n.controller.Subscribe(s.UID, s.env, s.Identifiers, msg.Identifier)
 
 	if err != nil {
-		s.Log.Errorf("Subscribe error: %v", err)
+		if res == nil || res.Status == common.ERROR {
+			s.Log.Errorf("Subscribe error: %v", err)
+		}
 	} else {
 		s.subscriptions[msg.Identifier] = true
 		s.Log.Debugf("Subscribed to channel: %s", msg.Identifier)
@@ -250,7 +255,9 @@ func (n *Node) Unsubscribe(s *Session, msg *common.Message) (res *common.Command
 	res, err = n.controller.Unsubscribe(s.UID, s.env, s.Identifiers, msg.Identifier)
 
 	if err != nil {
-		s.Log.Errorf("Unsubscribe error: %v", err)
+		if res == nil || res.Status == common.ERROR {
+			s.Log.Errorf("Unsubscribe error: %v", err)
+		}
 	} else {
 		// Make sure to remove all streams subscriptions
 		res.StopAllStreams = true
@@ -284,7 +291,9 @@ func (n *Node) Perform(s *Session, msg *common.Message) (res *common.CommandResu
 	res, err = n.controller.Perform(s.UID, s.env, s.Identifiers, msg.Identifier, msg.Data)
 
 	if err != nil {
-		s.Log.Errorf("Perform error: %v", err)
+		if res == nil || res.Status == common.ERROR {
+			s.Log.Errorf("Perform error: %v", err)
+		}
 	} else {
 		s.Log.Debugf("Perform result: %v", res)
 	}

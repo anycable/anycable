@@ -114,7 +114,7 @@ func TestParseConnectResponse(t *testing.T) {
 
 		result, err := ParseConnectResponse(&res)
 
-		assert.NotNil(t, err)
+		assert.Nil(t, err)
 		assert.Equal(t, common.FAILURE, result.Status)
 	})
 
@@ -177,7 +177,7 @@ func TestParseCommandResponse(t *testing.T) {
 
 		result, err := ParseCommandResponse(&res)
 
-		assert.NotNil(t, err)
+		assert.Nil(t, err)
 		assert.Equal(t, common.FAILURE, result.Status)
 	})
 
@@ -204,9 +204,20 @@ func TestParseDisconnectResponse(t *testing.T) {
 
 		assert.Nil(t, err)
 	})
+
 	t.Run("Failure", func(t *testing.T) {
 		res := pb.DisconnectResponse{
 			Status: pb.Status_FAILURE,
+		}
+
+		err := ParseDisconnectResponse(&res)
+
+		assert.Nil(t, err)
+	})
+
+	t.Run("Error", func(t *testing.T) {
+		res := pb.DisconnectResponse{
+			Status: pb.Status_ERROR,
 		}
 
 		err := ParseDisconnectResponse(&res)

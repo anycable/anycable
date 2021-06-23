@@ -32,7 +32,7 @@ func TestAuthenticate(t *testing.T) {
 
 		_, err := node.Authenticate(session)
 
-		assert.NotNil(t, err, "Error must not be nil")
+		assert.Nil(t, err, "Error must be nil")
 
 		msg, err := session.conn.Read()
 		assert.Nil(t, err)
@@ -108,8 +108,15 @@ func TestSubscribe(t *testing.T) {
 	})
 
 	t.Run("Error during subscription", func(t *testing.T) {
-		_, err := node.Subscribe(session, &common.Message{Identifier: "failure"})
+		_, err := node.Subscribe(session, &common.Message{Identifier: "error"})
 		assert.NotNil(t, err, "Error must not be nil")
+	})
+
+	t.Run("Rejected subscription", func(t *testing.T) {
+		res, err := node.Subscribe(session, &common.Message{Identifier: "failure"})
+
+		assert.Equal(t, common.FAILURE, res.Status)
+		assert.Nil(t, err, "Error must be nil")
 	})
 }
 
