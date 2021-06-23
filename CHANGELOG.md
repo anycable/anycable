@@ -2,6 +2,8 @@
 
 ## master
 
+## 1.1.2 (2021-06-23)
+
 - Added `--rpc_enable_tls` option. ([@ryansch][])
 
 - Do not treat RPC failures as errors. ([@palkan][])
@@ -142,3 +144,4 @@ See [Changelog](https://github.com/anycable/anycable-go/blob/0-6-stable/CHANGELO
 [@gr8bit]: https://github.com/gr8bit
 [@prburgu]: https://github.com/prburgu
 [@skryukov]: https://github.com/skryukov
+[@ryansch]: https://github.com/ryansch
