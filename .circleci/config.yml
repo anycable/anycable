@@ -185,8 +185,7 @@ commands:
       - run: env GOOS=<< parameters.os >> GOARCH=<< parameters.arch >> go build -ldflags "-s -w -X github.com/anycable/anycable-go/version.version=${CIRCLE_TAG/v/''} -X github.com/anycable/anycable-go/version.sha=$(echo "$CIRCLE_SHA1" | cut -c -7)" -tags mrb -a -o "/tmp/dist/anycable-go-<< parameters.postfix >>" cmd/anycable-go/main.go
 
 orbs:
-  # Temporary fix for https://github.com/CircleCI-Public/ruby-orb/issues/71
-  ruby: josh-m-sharpe/ruby-orb@dev:alpha
+  ruby: circleci/ruby@1.1
 
 # Jobs definitions
 jobs:
