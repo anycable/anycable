@@ -8,6 +8,8 @@
 
 WebSocket server for [AnyCable](https://github.com/anycable/anycable).
 
+> [AnyCable Pro](https://docs.anycable.io/pro) has been launched 🚀
+
 ## Versioning
 
 **Important** Use the same major version of AnyCable-Go as your AnyCable gem.
