@@ -15,7 +15,7 @@ import (
 const (
 	metricsCalls = "gochannels_call_total"
 
-	identifier = "\"{\\\"channel\\\":\\\"BenchmarkChannel\\\"}\""
+	identifier = "{\"channel\":\"BenchmarkChannel\"}"
 
 	welcomeMessage      = "{\"type\":\"welcome\"}"
 	confirmationMessage = "{\"type\":\"confirm_subscription\",\"identifier\":\"{\\\"channel\\\":\\\"BenchmarkChannel\\\"}\"}"
@@ -111,11 +111,22 @@ func (c *Controller) Perform(sid string, env *common.SessionEnv, id string, chan
 
 	switch action := payload["action"].(string); action {
 	case "echo":
+		response, err := json.Marshal(
+			map[string]interface{}{
+				"message":    payload,
+				"identifier": identifier,
+			},
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
 		res = &common.CommandResult{
 			Disconnect:     false,
 			StopAllStreams: false,
 			Streams:        nil,
-			Transmissions:  []string{string(data)},
+			Transmissions:  []string{string(response)},
 		}
 	case "broadcast":
 		broadcastMsg, err := json.Marshal(&payload)
