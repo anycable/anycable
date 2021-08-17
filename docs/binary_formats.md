@@ -10,6 +10,18 @@ In order to initiate Msgpack-encoded connection, a client MUST use `"actioncable
 
 A client MUST encode outgoing and incoming messages using Msgpack.
 
+### Using with AnyCable JS client
+
+[AnyCable JavaScript client][anycable-client] supports Msgpack out-of-the-box:
+
+```js
+// cable.js
+import { createCable } from '@anycable/web'
+import { MsgpackEncoder } from '@anycable/msgpack-encoder'
+
+export default createCable({protocol: 'actioncable-v1-msgpack', encoder: new MsgpackEncoder()})
+```
+
 ### Action Cable JavaScript client patch
 
 Here is how you can patch the built-in Action Cable JavaScript client library to support Msgpack:
@@ -210,3 +222,4 @@ And the long one is:
 ```
 
 [websocket-bench]: https://github.com/anycable/websocket-bench
+[anycable-client]: https://github.com/anycable/anycable-client
