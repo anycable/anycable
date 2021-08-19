@@ -75,13 +75,13 @@ anycable_go_server_msg_total 453
 # TYPE anycable_go_failed_server_msg_total counter
 anycable_go_failed_server_msg_total 0
 
-# HELP anycable_go_data_sent_bytes_total The total amount of bytes sent to clients
-# TYPE anycable_go_data_sent_bytes_total counter
-anycable_go_data_sent_bytes_total 1232434334
+# HELP anycable_go_data_sent_total The total amount of bytes sent to clients
+# TYPE anycable_go_data_sent_total counter
+anycable_go_data_sent_total 1232434334
 
-# HELP anycable_go_data_rcvd_bytes_total The total amount of bytes received from clients
-# TYPE anycable_go_data_rcvd_bytes_total counter
-anycable_go_data_rcvd_bytes_total 434334
+# HELP anycable_go_data_rcvd_total The total amount of bytes received from clients
+# TYPE anycable_go_data_rcvd_total counter
+anycable_go_data_rcvd_total 434334
 ```
 
 <h2 id="statsd">StatsD <img class='pro-badge' src='https://docs.anycable.io/assets/pro.svg' alt='pro' /></h2>
