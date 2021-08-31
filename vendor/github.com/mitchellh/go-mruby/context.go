@@ -8,10 +8,9 @@ import "C"
 // CompileContexts keep track of things such as filenames, line numbers,
 // as well as some settings for how to parse and execute code.
 type CompileContext struct {
-	ctx           *C.mrbc_context
-	filename      string
-	mrb           *Mrb
-	captureErrors bool
+	ctx      *C.mrbc_context
+	filename string
+	mrb      *Mrb
 }
 
 // NewCompileContext constructs a *CompileContext from a *Mrb.

@@ -135,7 +135,7 @@ workflows:
 executors:
   golang:
     docker:
-      - image: circleci/golang:1.16-stretch
+      - image: circleci/golang:1.17-stretch
     working_directory: /go/src/github.com/anycable/anycable-go/
     environment:
       CGO_ENABLED: "0"
@@ -149,8 +149,8 @@ executors:
       CGO_ENABLED: "1"
       GO111MODULE: "on"
       GOFLAGS: "-mod=vendor"
-      GO_VERSION: 1.16.4
-      GO_SHA: 9f9b940d0f4b3ac764f0a33d78384a87b804aab29d1aacbdc9bca3a3480e9272
+      GO_VERSION: 1.17
+      GO_SHA: 8b6c8c0cccc8b685f857c50a511adb497a3a5cdd5b8970f03f95aa3f02bce404
     working_directory: /Users/distiller/go/src/github.com/anycable/anycable-go/
   docker:
     docker:
@@ -219,7 +219,7 @@ jobs:
     - persist_to_workspace:
         root: .
         paths:
-        - ./vendor/github.com/mitchellh/go-mruby/vendor/
+        - ./vendor/github.com/mitchellh/go-mruby/mruby-build/
         - ./vendor/github.com/mitchellh/go-mruby/libmruby.a
 
   test:
@@ -235,7 +235,7 @@ jobs:
 
   benchmark:
     docker:
-      - image: circleci/golang:1.16-stretch
+      - image: circleci/golang:1.17-stretch
       - image: circleci/redis:4.0.11-alpine3.8
     working_directory: /go/src/github.com/anycable/anycable-go/
     environment:

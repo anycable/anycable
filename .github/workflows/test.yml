@@ -10,7 +10,7 @@ jobs:
   test:
     strategy:
       matrix:
-        go-version: [1.16.x]
+        go-version: [1.17.x]
     runs-on: ubuntu-latest
     env:
       GO111MODULE: on
@@ -29,11 +29,11 @@ jobs:
     - name: Run tests
       run: go test -tags mrb ./...
     - name: Build
-      if: matrix['go-version'] == '1.16.x'
+      if: matrix['go-version'] == '1.17.x'
       run: |
         make build
     - name: Upload linux build
-      if: matrix['go-version'] == '1.16.x' && (github.ref == 'refs/head/master' || contains(github.event.pull_request.body, '[Build]'))
+      if: matrix['go-version'] == '1.17.x' && (github.ref == 'refs/head/master' || contains(github.event.pull_request.body, '[Build]'))
       uses: actions/upload-artifact@v1
       with:
         name: anycable-go-Linux-x86_64
@@ -42,7 +42,7 @@ jobs:
   test-macos:
     strategy:
       matrix:
-        go-version: [1.16.x]
+        go-version: [1.17.x]
     runs-on: macos-latest
     env:
       GO111MODULE: on
@@ -60,11 +60,11 @@ jobs:
     - name: Run tests
       run: go test -tags mrb ./...
     - name: Build
-      if: matrix['go-version'] == '1.16.x'
+      if: matrix['go-version'] == '1.17.x'
       run: |
         make build
     - name: Upload MacOS build
-      if: matrix['go-version'] == '1.16.x' && (github.ref == 'refs/head/master' || contains(github.event.pull_request.body, '[Build]'))
+      if: matrix['go-version'] == '1.17.x' && (github.ref == 'refs/head/master' || contains(github.event.pull_request.body, '[Build]'))
       uses: actions/upload-artifact@v1
       with:
         name: anycable-go-Darwin-x86_64

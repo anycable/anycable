@@ -7,8 +7,8 @@ import (
 	"math"
 )
 
+var defaultAlphabet = []rune("_-0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 const (
-	defaultAlphabet = "_-0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" // len=64
 	defaultSize     = 21
 	defaultMaskSize = 5
 )
@@ -34,7 +34,7 @@ func initMasks(params ...int) []uint {
 	return masks
 }
 
-func getMask(alphabet string, masks []uint) int {
+func getMask(alphabet []rune, masks []uint) int {
 	for i := 0; i < len(masks); i++ {
 		curr := int(masks[i])
 		if curr >= len(alphabet)-1 {
@@ -45,7 +45,9 @@ func getMask(alphabet string, masks []uint) int {
 }
 
 // Generate is a low-level function to change alphabet and ID size.
-func Generate(alphabet string, size int) (string, error) {
+func Generate(rawAlphabet string, size int) (string, error) {
+	alphabet := []rune(rawAlphabet)
+
 	if len(alphabet) == 0 || len(alphabet) > 255 {
 		return "", fmt.Errorf("alphabet must not empty and contain no more than 255 chars. Current len is %d", len(alphabet))
 	}
@@ -58,7 +60,7 @@ func Generate(alphabet string, size int) (string, error) {
 	ceilArg := 1.6 * float64(mask*size) / float64(len(alphabet))
 	step := int(math.Ceil(ceilArg))
 
-	id := make([]byte, size)
+	id := make([]rune, size)
 	bytes := make([]byte, step)
 	for j := 0; ; {
 		_, err := BytesGenerator(bytes)
@@ -97,7 +99,7 @@ func Nanoid(param ...int) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	id := make([]byte, size)
+	id := make([]rune, size)
 	for i := 0; i < size; i++ {
 		id[i] = defaultAlphabet[bytes[i]&63]
 	}
@@ -108,4 +110,22 @@ func Nanoid(param ...int) (string, error) {
 // Calling ID is shorter yet still clear `gonanoid.ID(20)` and it requires the lengths parameter by default.
 func ID(l int) (string, error) {
 	return Nanoid(l)
+}
+
+// MustID is the same as ID but panics on error.
+func MustID(l int) string {
+	id, err := Nanoid(l)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
+// MustGenerate is the same as Generate but panics on error.
+func MustGenerate(rawAlphabet string, size int) string {
+	id, err := Generate(rawAlphabet, size)
+	if err != nil {
+		panic(err)
+	}
+	return id
 }
