@@ -2,6 +2,8 @@
 
 AnyCable-Go provides useful statistical information about the service (such as the number of connected clients, received messages, etc.).
 
+> See the [demo](https://github.com/anycable/anycable_rails_demo/pull/22) of instrumenting AnyCable with Prometheus, Grafana and [Yabeda](https://github.com/yabeda-rb).
+
 ## Prometheus
 
 To enable a HTTP endpoint to serve [Prometheus](https://prometheus.io)-compatible metrics (disabled by default) you must specify `--metrics_http` option (e.g. `--metrics_http="/metrics"`).
