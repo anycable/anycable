@@ -11,6 +11,7 @@ import (
 	"syscall"
 
 	"github.com/anycable/anycable-go/config"
+	"github.com/anycable/anycable-go/identity"
 	"github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/mrb"
 	"github.com/anycable/anycable-go/node"
@@ -126,6 +127,12 @@ func (r *Runner) Run() error {
 
 	if err != nil {
 		return fmt.Errorf("!!! Failed to initialize controller !!!\n%v", err)
+	}
+
+	if config.JWT.Enabled() {
+		identifier := identity.NewJWTIdentifier(&config.JWT)
+		controller = identity.NewIdentifiableController(controller, identifier)
+		ctx.Infof("JWT identification is enabled (param: %s, enforced: %v)", config.JWT.Param, config.JWT.Force)
 	}
 
 	appNode := node.NewNode(controller, metrics, &config.App)

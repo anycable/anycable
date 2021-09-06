@@ -99,6 +99,10 @@ func init() {
 	fs.IntVar(&defaults.App.StatsRefreshInterval, "stats_refresh_interval", 5, "")
 	fs.IntVar(&defaults.App.HubGopoolSize, "hub_gopool_size", 16, "")
 
+	fs.StringVar(&defaults.JWT.Secret, "jwt_id_key", "", "")
+	fs.StringVar(&defaults.JWT.Param, "jwt_id_param", "jid", "")
+	fs.BoolVar(&defaults.JWT.Force, "jwt_id_enforce", false, "")
+
 	// CLI vars
 	fs.BoolVar(&showHelp, "h", false, "")
 	fs.BoolVar(&showVersion, "v", false, "")
@@ -189,6 +193,10 @@ OPTIONS
   --ping_interval                        Action Cable ping interval (in seconds), default: 3, env: ANYCABLE_PING_INTERVAL
   --ping_timestamp_precision             Precision for timestamps in ping messages (s, ms, ns), default: s, env: ANYCABLE_PING_TIMESTAMP_PRECISION
   --stats_refresh_interval               How often to refresh the server stats (in seconds), default: 5, env: ANYCABLE_STATS_REFRESH_INTERVAL
+
+  --jwt_id_key                           The encryption key used to verify JWT tokens, default: "" (disabled), env: ANYCABLE_JWT_ID_KEY
+  --jwt_id_param                         The name of a query string param or an HTTP header carrying a token, default: "jid" ("X-JID"), env: ANYCABLE_JWT_ID_PARAM
+  --jwt_id_enforce                       Whether to enforce token presence for all connections, default: false, env: ANYCABLE_JWT_ID_ENFORCE
 
   -h                       This help screen
   -v                       Show version
