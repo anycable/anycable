@@ -5,6 +5,11 @@ import (
 	"github.com/anycable/anycable-go/node"
 )
 
+const (
+	actionCableWelcomeMessage                = "{\"type\":\"welcome\"}"
+	actionCableDisconnectUnauthorizedMessage = "{\"type\":\"disconnect\",\"reason\":\"unauthorized\",\"reconnect\":false}"
+)
+
 type Identifier interface {
 	Identify(sid string, env *common.SessionEnv) (*common.ConnectResult, error)
 }

@@ -24,6 +24,9 @@ github.com/gobwas/ws/wsutil
 # github.com/golang-collections/go-datastructures v0.0.0-20150211160725-59788d5eb259
 ## explicit
 github.com/golang-collections/go-datastructures/queue
+# github.com/golang-jwt/jwt v3.2.2+incompatible
+## explicit
+github.com/golang-jwt/jwt
 # github.com/golang/protobuf v1.5.2
 ## explicit; go 1.9
 github.com/golang/protobuf/proto
@@ -71,6 +74,7 @@ github.com/stretchr/objx
 ## explicit; go 1.13
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/mock
+github.com/stretchr/testify/require
 # github.com/syossan27/tebata v0.0.0-20180602121909-b283fe4bc5ba
 ## explicit
 github.com/syossan27/tebata
