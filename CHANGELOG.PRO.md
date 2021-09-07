@@ -2,6 +2,12 @@
 
 ## master
 
+- Add JWT authentication/identification support.
+
+You can pass a properly structured token along the connection request to authorize the connection and set up _identifiers_ without peforming an RPC call.
+
+## 1.1.0.beta.1
+
 - Refactored sessions to use Go pools and epoll/kqueue for messaging.
 
 - Added Protobuf encoding support.
