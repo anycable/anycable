@@ -25,8 +25,12 @@ var (
 	defaultJWTAlgo = jwt.SigningMethodHS256
 )
 
-func NewJWTConfig(secret string) *JWTConfig {
-	return &JWTConfig{Secret: secret, Param: "jid", Algo: defaultJWTAlgo}
+func NewJWTConfig(secret string) JWTConfig {
+	return JWTConfig{Secret: secret, Param: "jid", Algo: defaultJWTAlgo}
+}
+
+func (c JWTConfig) Enabled() bool {
+	return c.Secret != ""
 }
 
 type JWTIdentifier struct {

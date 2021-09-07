@@ -2,6 +2,7 @@ package config
 
 import (
 	"github.com/anycable/anycable-go/apollo"
+	"github.com/anycable/anycable-go/identity"
 	"github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/pubsub"
@@ -32,6 +33,7 @@ type Config struct {
 	LogFormat            string
 	Metrics              metrics.Config
 	Apollo               apollo.Config
+	JWT                  identity.JWTConfig
 }
 
 // New returns a new empty config
@@ -46,5 +48,6 @@ func New() Config {
 	config.HTTPPubSub = pubsub.NewHTTPConfig()
 	config.DisconnectQueue = node.NewDisconnectQueueConfig()
 	config.Apollo = apollo.NewConfig()
+	config.JWT = identity.NewJWTConfig("")
 	return config
 }
