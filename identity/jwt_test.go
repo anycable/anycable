@@ -16,7 +16,8 @@ func TestJWTIdentifierIdentify(t *testing.T) {
 	algo := defaultJWTAlgo
 	ids := "{\"user_id\":\"15\"}"
 
-	subject := NewJWTIdentifier(NewJWTConfig(secret))
+	config := NewJWTConfig(secret)
+	subject := NewJWTIdentifier(&config)
 
 	t.Run("with valid token passed as query param", func(t *testing.T) {
 		token := jwt.NewWithClaims(algo, jwt.MapClaims{
@@ -149,7 +150,7 @@ func TestJWTIdentifierIdentify(t *testing.T) {
 		config := NewJWTConfig(secret)
 		config.Force = true
 
-		enforced := NewJWTIdentifier(config)
+		enforced := NewJWTIdentifier(&config)
 
 		env := common.NewSessionEnv("ws://demo.anycable.io/cable", nil)
 

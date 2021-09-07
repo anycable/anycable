@@ -108,6 +108,10 @@ func init() {
 	fs.StringVar(&defaults.Apollo.Channel, "apollo_channel", "GraphqlChannel", "")
 	fs.StringVar(&defaults.Apollo.Action, "apollo_action", "execute", "")
 
+	fs.StringVar(&defaults.JWT.Secret, "jwt_id_key", "", "")
+	fs.StringVar(&defaults.JWT.Param, "jwt_id_param", "jid", "")
+	fs.BoolVar(&defaults.JWT.Force, "jwt_id_enforce", false, "")
+
 	// CLI vars
 	fs.BoolVar(&showHelp, "h", false, "")
 	fs.BoolVar(&showVersion, "v", false, "")
@@ -208,6 +212,10 @@ OPTIONS
   --apollo_path                          Enable Apollo GraphQL proxy and mount at the specified path, default: "" (disabled), env: ANYCABLE_APOLLO_PATH
   --apollo_channel                       GraphQL Ruby channel class name, default: "GraphqlChannel", env: ANYCABLE_APOLLO_CHANNEL
   --apollo_action                        GraphQL Ruby channel action name, default: "execute", env: ANYCABLE_APOLLO_ACTION
+
+  --jwt_id_key                           The encryption key used to verify JWT tokens, default: "" (disabled), env: ANYCABLE_JWT_ID_KEY
+  --jwt_id_param                         The name of a query string param or an HTTP header carrying a token, default: "jid" ("X-JID"), env: ANYCABLE_JWT_ID_PARAM
+  --jwt_id_enforce                       Whether to enforce token presence for all connections, default: false, env: ANYCABLE_JWT_ID_ENFORCE
 
   -h                       This help screen
   -v                       Show version
