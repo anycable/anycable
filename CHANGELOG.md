@@ -2,6 +2,8 @@
 
 ## master
 
+## 1.1.2 (2021-09-10) 🤵👰
+
 - Improved gRPC server args support. ([@palkan][])
 
 Add ability to declare gRPC server args without namespacing (i.e., `"max_connection_age_ms"` instead of `"grpc.max_connection_age_ms"`). That makes it possible to use ENV vars to provide the gRPC configuration.
