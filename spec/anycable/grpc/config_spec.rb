@@ -29,4 +29,25 @@ describe AnyCable::Config do
       specify { expect(config.rpc_host).to eq("127.0.0.1:50051") }
     end
   end
+
+  describe "#to_grpc_params" do
+    around { |ex| with_env("ANYCABLE_RPC_SERVER_ARGS__LOADREPORTING" => "1", &ex) }
+
+    it "returns normalized server args" do
+      config = described_class.new("rpc_server_args" => {max_connection_age_ms: 30_000, "grpc.per_message_compression" => 1, "max_concurrent_streams" => 10}) # rubocop:disable Style/HashSyntax
+
+      server_args = config.to_grpc_params[:server_args]
+
+      expect(server_args).to eq({
+        "grpc.loadreporting" => 1,
+        "grpc.max_connection_age_ms" => 30_000,
+        "grpc.per_message_compression" => 1,
+        "grpc.max_concurrent_streams" => 10
+      })
+    end
+
+    it "returns empty hash if server_args is not a hash" do
+      expect(described_class.new(rpc_server_args: "foo").to_grpc_params[:server_args]).to eq({})
+    end
+  end
 end

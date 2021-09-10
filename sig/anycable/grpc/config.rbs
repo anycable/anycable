@@ -11,8 +11,8 @@ module AnyCable
       def rpc_poll_period=: (Integer) -> void
       def rpc_pool_keep_alive: () -> Integer
       def rpc_pool_keep_alive=: (Integer) -> void
-      def rpc_server_args: () -> Hash[Symbol, untyped]?
-      def rpc_server_args=: (Hash[Symbol, untyped]) -> void
+      def rpc_server_args: () -> Hash[Symbol | String, untyped]?
+      def rpc_server_args=: (Hash[Symbol | String, untyped]) -> void
       def log_grpc: () -> bool
       def log_grpc=: (bool) -> void
     end
@@ -27,8 +27,10 @@ module AnyCable
         max_waiting_requests: Integer,
         poll_period: Integer,
         pool_keep_alive: Integer,
-        server_args: Hash[Symbol, untyped]?
+        server_args: Hash[String, untyped]
       }
+
+      def normalized_grpc_server_args: () -> Hash[String, untyped]
     end
   end
 end

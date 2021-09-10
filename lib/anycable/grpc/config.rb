@@ -8,7 +8,7 @@ AnyCable::Config.attr_config(
   rpc_max_waiting_requests: ::GRPC::RpcServer::DEFAULT_MAX_WAITING_REQUESTS,
   rpc_poll_period: ::GRPC::RpcServer::DEFAULT_POLL_PERIOD,
   rpc_pool_keep_alive: ::GRPC::Pool::DEFAULT_KEEP_ALIVE,
-  # See https://github.com/grpc/grpc/blob/f526602bff029b8db50a8d57134d72da33d8a752/include/grpc/impl/codegen/grpc_types.h#L292-L315
+  # https://github.com/grpc/grpc/blob/f526602bff029b8db50a8d57134d72da33d8a752/include/grpc/impl/codegen/grpc_types.h#L141-L351
   rpc_server_args: {},
   log_grpc: false
 )
@@ -33,8 +33,18 @@ module AnyCable
           max_waiting_requests: rpc_max_waiting_requests,
           poll_period: rpc_poll_period,
           pool_keep_alive: rpc_pool_keep_alive,
-          server_args: rpc_server_args
+          server_args: normalized_grpc_server_args
         }
+      end
+
+      def normalized_grpc_server_args
+        val = rpc_server_args
+        return {} unless val.is_a?(Hash)
+
+        val.transform_keys do |key|
+          skey = key.to_s
+          skey.start_with?("grpc.") ? skey : "grpc.#{skey}"
+        end
       end
     end
   end
