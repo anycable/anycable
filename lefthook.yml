@@ -8,13 +8,13 @@ pre-commit:
       glob: "*.go"
       run: make vet && test "{staged_files}"
     mdl:
-      glob: "docs/**/*.md"
+      glob: "docs/*.md"
       run: mdl {staged_files}
     liche:
-      glob: "docs/**/*.md"
+      glob: "docs/*.md"
       run: liche -c 4 -r docs/* -x "(ruby|deployment)/" && test "{staged_files}"
     forspell:
-      glob: "docs/**/*.md"
+      glob: "docs/*.md"
       run: forspell {staged_files}
 
 pre-push:
