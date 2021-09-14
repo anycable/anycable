@@ -19,6 +19,8 @@ import (
 	"github.com/anycable/anycable-go/netpoll"
 	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/pubsub"
+	"github.com/anycable/anycable-go/rails"
+	"github.com/anycable/anycable-go/router"
 	"github.com/anycable/anycable-go/server"
 	"github.com/anycable/anycable-go/utils"
 	"github.com/anycable/anycable-go/version"
@@ -46,6 +48,7 @@ type Runner struct {
 	websocketHandler    websocketHandler
 
 	poller netpoll.Poller
+	router *router.RouterController
 
 	errChan       chan error
 	shutdownables []Shutdownable
@@ -160,6 +163,12 @@ func (r *Runner) Run() error {
 		identifier := identity.NewJWTIdentifier(&config.JWT)
 		controller = identity.NewIdentifiableController(controller, identifier)
 		ctx.Infof("JWT identification is enabled (param: %s, enforced: %v)", config.JWT.Param, config.JWT.Force)
+	}
+
+	if !r.Router().Empty() {
+		r.Router().SetDefault(controller)
+		controller = r.Router()
+		ctx.Infof("Using channels router: %s", strings.Join(r.Router().Routes(), ", "))
 	}
 
 	appNode := node.NewNode(controller, metrics, &config.App)
@@ -360,6 +369,34 @@ func (r *Runner) initMRuby() string {
 	}
 
 	return ""
+}
+
+func (r *Runner) Router() *router.RouterController {
+	if r.router == nil {
+		r.SetRouter(r.defaultRouter())
+	}
+
+	return r.router
+}
+
+func (r *Runner) SetRouter(router *router.RouterController) {
+	r.router = router
+}
+
+func (r *Runner) defaultRouter() *router.RouterController {
+	router := router.NewRouterController(nil)
+
+	if r.config.Rails.TurboRailsKey != "" {
+		turboController := rails.NewTurboController(r.config.Rails.TurboRailsKey)
+		router.Route("Turbo::StreamsChannel", turboController) // nolint:errcheck
+	}
+
+	if r.config.Rails.CableReadyKey != "" {
+		crController := rails.NewCableReadyController(r.config.Rails.CableReadyKey)
+		router.Route("CableReady::Stream", crController) // nolint:errcheck
+	}
+
+	return router
 }
 
 func (r *Runner) announceGoPools() {

@@ -6,6 +6,7 @@ import (
 	"github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/pubsub"
+	"github.com/anycable/anycable-go/rails"
 	"github.com/anycable/anycable-go/rpc"
 	"github.com/anycable/anycable-go/server"
 	"github.com/anycable/anycable-go/ws"
@@ -34,6 +35,7 @@ type Config struct {
 	Metrics              metrics.Config
 	Apollo               apollo.Config
 	JWT                  identity.JWTConfig
+	Rails                rails.Config
 }
 
 // New returns a new empty config
@@ -49,5 +51,6 @@ func New() Config {
 	config.DisconnectQueue = node.NewDisconnectQueueConfig()
 	config.Apollo = apollo.NewConfig()
 	config.JWT = identity.NewJWTConfig("")
+	config.Rails = rails.NewConfig()
 	return config
 }

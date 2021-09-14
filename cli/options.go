@@ -112,6 +112,9 @@ func init() {
 	fs.StringVar(&defaults.JWT.Param, "jwt_id_param", "jid", "")
 	fs.BoolVar(&defaults.JWT.Force, "jwt_id_enforce", false, "")
 
+	fs.StringVar(&defaults.Rails.TurboRailsKey, "turbo_rails_key", "", "")
+	fs.StringVar(&defaults.Rails.CableReadyKey, "cable_ready_key", "", "")
+
 	// CLI vars
 	fs.BoolVar(&showHelp, "h", false, "")
 	fs.BoolVar(&showVersion, "v", false, "")
@@ -216,6 +219,9 @@ OPTIONS
   --jwt_id_key                           The encryption key used to verify JWT tokens, default: "" (disabled), env: ANYCABLE_JWT_ID_KEY
   --jwt_id_param                         The name of a query string param or an HTTP header carrying a token, default: "jid" ("X-JID"), env: ANYCABLE_JWT_ID_PARAM
   --jwt_id_enforce                       Whether to enforce token presence for all connections, default: false, env: ANYCABLE_JWT_ID_ENFORCE
+
+  --turbo_rails_key                      Enable Turbo Streams fastlane with the specified signing key, default: "" (disabled), env: ANYCABLE_TURBO_RAILS_KEY
+  --cable_ready_key                      Enable CableReady fastlane with the specified signing key, default: "" (disabled), env: ANYCABLE_CABLE_READY_KEY
 
   -h                       This help screen
   -v                       Show version

@@ -2,6 +2,10 @@
 
 ## master
 
+- Add fastlane subscribing for Hotwire (Turbo Streams) and CableReady.
+
+Make it possible to terminate subscription requests at AnyCable Go without performing RPC calls.
+
 - Add JWT authentication/identification support.
 
 You can pass a properly structured token along the connection request to authorize the connection and set up _identifiers_ without peforming an RPC call.
