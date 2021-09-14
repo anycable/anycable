@@ -79,3 +79,11 @@ func TestPubSubMessageFromJSON(t *testing.T) {
 		assert.Equal(t, "test", casted.Data)
 	})
 }
+
+func TestConfirmationMessage(t *testing.T) {
+	assert.Equal(t, "{\"type\":\"confirm_subscription\",\"identifier\":\"test_channel\"}", ConfirmationMessage("test_channel"))
+}
+
+func TestRejectionMessage(t *testing.T) {
+	assert.Equal(t, "{\"type\":\"reject_subscription\",\"identifier\":\"test_channel\"}", RejectionMessage("test_channel"))
+}
