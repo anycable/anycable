@@ -229,3 +229,22 @@ func PubSubMessageFromJSON(raw []byte) (interface{}, error) {
 
 	return nil, fmt.Errorf("Unknown message: %s", raw)
 }
+
+// ConfirmationMessage returns a subscription confirmation message for a specified identifier
+func ConfirmationMessage(identifier string) string {
+	return string(toJSON(Reply{Identifier: identifier, Type: ConfirmedType}))
+}
+
+// RejectionMessage returns a subscription rejection message for a specified identifier
+func RejectionMessage(identifier string) string {
+	return string(toJSON(Reply{Identifier: identifier, Type: RejectedType}))
+}
+
+func toJSON(msg Reply) []byte {
+	b, err := json.Marshal(&msg)
+	if err != nil {
+		panic("Failed to build JSON 😲")
+	}
+
+	return b
+}
