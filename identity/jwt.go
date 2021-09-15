@@ -81,7 +81,7 @@ func (i *JWTIdentifier) Identify(sid string, env *common.SessionEnv) (*common.Co
 	}
 
 	if rawToken == "" {
-		i.log.Debugf("No token is found: %v", env)
+		i.log.Debugf("No token is found (url=%s, headers=%v)", env.URL, env.Headers)
 
 		if i.required {
 			return unauthorizedResponse(), nil
