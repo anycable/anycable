@@ -19,12 +19,14 @@ const (
 	serverRestartReason    = "server_restart"
 	remoteDisconnectReason = "remote"
 
-	metricsGoroutines      = "goroutines_num"
-	metricsMemSys          = "mem_sys_bytes"
-	metricsClientsNum      = "clients_num"
-	metricsUniqClientsNum  = "clients_uniq_num"
-	metricsStreamsNum      = "broadcast_streams_num"
-	metricsDisconnectQueue = "disconnect_queue_size"
+	metricsGoroutines          = "goroutines_num"
+	metricsMemSys              = "mem_sys_bytes"
+	metricsClientsNum          = "clients_num"
+	metricsUniqClientsNum      = "clients_uniq_num"
+	metricsStreamsNum          = "broadcast_streams_num"
+	metricsDisconnectQueue     = "disconnect_queue_size"
+	metricsWritePoolPendingNum = "write_pool_pending_num"
+	metricsReadPoolPendingNum  = "read_pool_pending_num"
 
 	metricsFailedAuths           = "failed_auths_total"
 	metricsReceivedMsg           = "client_msg_total"
@@ -442,6 +444,9 @@ func (n *Node) registerMetrics() {
 	n.Metrics.RegisterGauge(metricsUniqClientsNum, "The number of unique clients (with respect to connection identifiers)")
 	n.Metrics.RegisterGauge(metricsStreamsNum, "The number of active broadcasting streams")
 	n.Metrics.RegisterGauge(metricsDisconnectQueue, "The size of delayed disconnect")
+
+	n.Metrics.RegisterGauge(metricsReadPoolPendingNum, "The number of tasks pending in the read pool")
+	n.Metrics.RegisterGauge(metricsWritePoolPendingNum, "The number of tasks pending in the write pool")
 
 	n.Metrics.RegisterCounter(metricsFailedAuths, "The total number of failed authentication attempts")
 	n.Metrics.RegisterCounter(metricsReceivedMsg, "The total number of received messages from clients")

@@ -164,7 +164,10 @@ ADD:
 			return
 		}
 
+		s.node.Metrics.Gauge(metricsReadPoolPendingNum).Inc()
 		s.readPool.Schedule(func() {
+			s.node.Metrics.Gauge(metricsReadPoolPendingNum).Dec()
+
 			wsconn := s.conn.Descriptor()
 			message, op, rerr := wsutil.ReadClientData(wsconn)
 			if op == gobwas.OpClose {
@@ -458,7 +461,10 @@ func (s *Session) ensureWorkerRunning() {
 
 	s.wmu.Unlock()
 
+	s.node.Metrics.Gauge(metricsWritePoolPendingNum).Inc()
 	s.writePool.Schedule(func() {
+		s.node.Metrics.Gauge(metricsWritePoolPendingNum).Dec()
+
 		s.wmu.Lock()
 		if s.workerRunning {
 			s.wmu.Unlock()
