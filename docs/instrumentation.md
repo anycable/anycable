@@ -2,7 +2,11 @@
 
 AnyCable-Go provides useful statistical information about the service (such as the number of connected clients, received messages, etc.).
 
-> See the [demo](https://github.com/anycable/anycable_rails_demo/pull/22) of instrumenting AnyCable with Prometheus, Grafana and [Yabeda](https://github.com/yabeda-rb).
+<p style="text-align:center;">
+  <img width="70%" alt="AnyCable Grafana" src="/assets/images/grafana.png">
+</p>
+
+> Read the ["Real-time stress: AnyCable, k6, WebSockets, and Yabeda"](https://evilmartians.com/chronicles/real-time-stress-anycable-k6-websockets-and-yabeda) post to learn more about AnyCable observability and see example Grafana dashboards.
 
 ## Prometheus
 
