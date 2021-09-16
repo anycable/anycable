@@ -156,10 +156,18 @@ func (s *Session) ServeWithPoll(poller netpoll.Poller, callback func()) error {
 ADD:
 	err = poller.Start(desc, func(ev netpoll.Event) {
 		if ev&(netpoll.EventReadHup|netpoll.EventHup) != 0 {
-			s.Log.Debugf("Descriptor closed %v: %v", desc, ev)
 			poller.Stop(desc) // nolint:errcheck
 			desc.Close()
-			s.disconnectNow("Closed", ws.CloseNormalClosure)
+
+			if ev&(netpoll.EventErr) != 0 {
+				s.Log.Debugf("Descriptor closed with error: %v", desc)
+				s.node.Metrics.Counter(metricsAbnormalSocketClosure).Inc()
+				s.cleanup()
+			} else {
+				s.Log.Debugf("Descriptor closed %v: %v", desc, ev)
+				s.disconnectNow("Closed", ws.CloseNormalClosure)
+			}
+
 			callback()
 			return
 		}
@@ -291,12 +299,17 @@ func (s *Session) disconnectFromNode() {
 }
 
 func (s *Session) disconnectNow(reason string, code int) {
-	s.disconnectFromNode()
 	s.writeFrame(&ws.SentFrame{ // nolint:errcheck
 		FrameType:   ws.CloseFrame,
 		CloseReason: reason,
 		CloseCode:   code,
 	})
+
+	s.cleanup()
+}
+
+func (s *Session) cleanup() {
+	s.disconnectFromNode()
 
 	s.mu.Lock()
 	if s.sendCh != nil {
