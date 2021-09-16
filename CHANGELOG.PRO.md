@@ -2,6 +2,8 @@
 
 ## master
 
+## 1.1.0.beta.2
+
 - Add fastlane subscribing for Hotwire (Turbo Streams) and CableReady.
 
 Make it possible to terminate subscription requests at AnyCable Go without performing RPC calls.
