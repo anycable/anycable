@@ -2,6 +2,8 @@
 
 ## master
 
+## 1.1.3 (2021-09-16)
+
 - Fixed potential deadlocks in Hub. ([@palkan][])
 
 We noticed that Hub could become unresponsive due to a deadlock on `streamsMu` under a very high load,
