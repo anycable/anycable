@@ -344,22 +344,23 @@ func (h *Hub) broadcastToStream(stream string, data string) {
 	ctx.Debugf("Broadcast message: %s", data)
 
 	h.streamsMu.RLock()
-	defer h.streamsMu.RUnlock()
-
 	if _, ok := h.streams[stream]; !ok {
 		ctx.Debug("No sessions")
+		h.streamsMu.RUnlock()
 		return
 	}
+	h.streamsMu.RUnlock()
 
 	h.pool.Schedule(func() {
-		h.streamsMu.RLock()
-		defer h.streamsMu.RUnlock()
-
 		buf := make(map[string](encoders.EncodedMessage))
 
 		var bdata encoders.EncodedMessage
 
-		for sid, ids := range h.streams[stream] {
+		h.streamsMu.RLock()
+		streamSessions := streamSessionsSnapshot(h.streams[stream])
+		h.streamsMu.RUnlock()
+
+		for sid, ids := range streamSessions {
 			h.sessionsMu.RLock()
 			session, ok := h.sessions[sid]
 			h.sessionsMu.RUnlock()
@@ -368,7 +369,7 @@ func (h *Hub) broadcastToStream(stream string, data string) {
 				continue
 			}
 
-			for id := range ids {
+			for _, id := range ids {
 				if msg, ok := buf[id]; ok {
 					bdata = msg
 				} else {
@@ -414,4 +415,21 @@ func buildMessage(data string, identifier string) encoders.EncodedMessage {
 	json.Unmarshal([]byte(data), &msg) // nolint:errcheck
 
 	return NewCachedEncodedMessage(&common.Reply{Identifier: identifier, Message: msg})
+}
+
+func streamSessionsSnapshot(src map[string]map[string]bool) map[string][]string {
+	dest := make(map[string][]string)
+
+	for k, v := range src {
+		dest[k] = make([]string, len(v))
+
+		i := 0
+
+		for id := range v {
+			dest[k][i] = id
+			i++
+		}
+	}
+
+	return dest
 }

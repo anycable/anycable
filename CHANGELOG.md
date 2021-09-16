@@ -2,6 +2,11 @@
 
 ## master
 
+- Fixed potential deadlocks in Hub. ([@palkan][])
+
+We noticed that Hub could become unresponsive due to a deadlock on `streamsMu` under a very high load,
+so we make locking more granular and removed _nested_ locking.
+
 ## 1.1.2 (2021-06-23)
 
 - Added `--rpc_enable_tls` option. ([@ryansch][])
