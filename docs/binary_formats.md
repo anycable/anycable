@@ -116,8 +116,6 @@ const connectionEventsExtension = {
 };
 ```
 
-🚧 _The work on the AnyCable JavaScript library is in progress. Stay tuned!_
-
 > See the [demo](https://github.com/anycable/anycable_rails_demo/pull/17) of using Msgpack in a Rails project with AnyCable Rack server.
 
 ## Protobuf

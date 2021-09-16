@@ -8,3 +8,7 @@
 * [Health Checking](health_checking.md)
 * [Tracing](tracing.md)
 * [OS Tuning](os_tuning.md)
+* [Apollo GraphQL](apollo.md)
+* [Binary formats](binary_formats.md)
+* [JWT identification](jwt_identification.md)
+* [Signed streams (Hotwire, CableReady)](signed_streams.md)
