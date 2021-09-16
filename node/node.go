@@ -39,6 +39,8 @@ const (
 
 	metricsDataSent     = "data_sent_total"
 	metricsDataReceived = "data_rcvd_total"
+
+	metricsAbnormalSocketClosure = "abnormal_socket_closure_total"
 )
 
 // AppNode describes a basic node interface
@@ -459,6 +461,8 @@ func (n *Node) registerMetrics() {
 
 	n.Metrics.RegisterCounter(metricsDataSent, "The total amount of bytes sent to clients")
 	n.Metrics.RegisterCounter(metricsDataReceived, "The total amount of bytes received from clients")
+
+	n.Metrics.RegisterCounter(metricsAbnormalSocketClosure, "The total number of abnormaly closed sockets (network error, etc.)")
 }
 
 func subscriptionsList(m map[string]bool) []string {
