@@ -340,21 +340,10 @@ func (s *Session) sendFrame(message *ws.SentFrame) {
 		return
 	}
 
+	s.sendCh <- message
 	s.mu.Unlock()
 
-	select {
-	case s.sendCh <- message:
-		s.ensureWorkerRunning()
-	default:
-		s.mu.Lock()
-		if s.sendCh != nil {
-			close(s.sendCh)
-			defer s.Disconnect("Write failed", ws.CloseAbnormalClosure)
-		}
-
-		s.sendCh = nil
-		s.mu.Unlock()
-	}
+	s.ensureWorkerRunning()
 }
 
 func (s *Session) writeFrame(message *ws.SentFrame) error {
