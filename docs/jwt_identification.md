@@ -10,6 +10,8 @@ You can pass a properly structured token along the connection request to authori
 
 ## Usage
 
+> See the [demo](https://github.com/anycable/anycable_rails_demo/pull/23) of using JWT identification in a Rails app with [AnyCable JS client library][anycable-client].
+
 **NOTE**: Currently, we only support the HMAC signing algorithms.
 
 First, you must enable JWT identification support in `anycable-go` by configuring the following params:
@@ -30,7 +32,11 @@ The token MUST include the `ext` claim with the JSON-encoded connection identifi
 
 ## Generating tokens
 
-🚧 _The work on the `anycable-rails-jwt` gem is in progress. Stay tuned!_
+### Rails integration
+
+Use [anycable-rails-jwt][] gem to integration JWT identification into your Rails app.
+
+### Custom implementation
 
 Here is an example Ruby code to generate tokens:
 
@@ -56,4 +62,8 @@ puts JWT.encode payload, ENCRYPTION_KEY, "HS256"
 
 Whenever a server encounters a token that has expired, it rejects the connection and send the `disconnect` message with `reason: "token_expired"`. It's a client responsibility to handle this situation and refresh the token.
 
+See, for example, how [anycable-client handles this](https://github.com/anycable/anycable-client#refreshing-authentication-tokens).
+
 [jwt]: https://jwt.io
+[anycable-rails-jwt]: https://github.com/anycable/anycable-rails-jwt
+[anycable-client]: https://github.com/anycable/anycable-client

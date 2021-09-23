@@ -12,7 +12,7 @@ pre-commit:
       run: mdl {staged_files}
     liche:
       glob: "docs/*.md"
-      run: liche -c 4 -r docs/* -x "(ruby|deployment|assets)/" -d docs/ && test "{staged_files}"
+      run: liche -c 4 -r docs/* -x "((ruby|deployment|assets)/|cableready\.stimulusreflex)" -d docs/ && test "{staged_files}"
     forspell:
       glob: "docs/*.md"
       run: forspell {staged_files}

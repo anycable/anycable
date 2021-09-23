@@ -60,4 +60,4 @@ jobs:
     - name: Run liche
       run: |
         export PATH=$PATH:$(go env GOPATH)/bin
-        liche -c 4 -r docs/* -x "(ruby|deployment|assets)/" -d docs/ -v
+        liche -c 4 -r docs/* -x "((ruby|deployment|assets)/|cableready\.stimulusreflex)" -d docs/ -v
