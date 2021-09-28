@@ -100,16 +100,16 @@ func init() {
 	// CLI vars
 	fs.BoolVar(&showHelp, "h", false, "")
 	fs.BoolVar(&showVersion, "v", false, "")
-
-	if err := fs.Parse(os.Args[1:]); err != nil {
-		panic(err)
-	}
 }
 
 // Config returns CLI configuration
-func Config() *config.Config {
+func Config(args []string) (config.Config, error) {
+	if err := fs.Parse(args); err != nil {
+		return config.Config{}, err
+	}
+
 	prepareComplexDefaults()
-	return &defaults
+	return defaults, nil
 }
 
 // ShowVersion returns true if -v flag was provided

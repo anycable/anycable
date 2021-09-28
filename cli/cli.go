@@ -51,7 +51,13 @@ func NewRunner(name string, config *config.Config) *Runner {
 	}
 
 	if config == nil {
-		config = Config()
+		c, err := Config(os.Args[1:])
+
+		if err != nil {
+			panic(err)
+		}
+
+		config = &c
 	}
 
 	// Set global HTTP params as early as possible to make sure all servers use them
