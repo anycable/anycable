@@ -18,4 +18,6 @@ target :lib do
   library "monitor"
   library "json"
   library "uri"
+  library "optparse"
+  library "anyway_config"
 end

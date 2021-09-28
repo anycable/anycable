@@ -10,8 +10,6 @@ gem "grpc", "~> 1.37" unless ENV["GRPC"] == "false"
 
 eval_gemfile "gemfiles/rubocop.gemfile"
 
-gem "steep", github: "soutaro/steep"
-
 local_gemfile = "#{File.dirname(__FILE__)}/Gemfile.local"
 
 if File.exist?(local_gemfile)

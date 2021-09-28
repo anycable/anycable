@@ -19,13 +19,13 @@ module AnyCable
     attr_accessor url: String
     attr_accessor headers: protoMap
 
-    def initialize: (?url: String, ?headers: protoMap, ?cstate: protoMap, ?istate: protoMap) -> void
+    def initialize: (?url: String, ?headers: protoMap, ?cstate: protoMap?, ?istate: protoMap?) -> void
   end
 
   class EnvResponse
     include _WithEnvState
 
-    def initialize: (?cstate: protoMap, ?istate: protoMap) -> void
+    def initialize: (?cstate: protoMap?, ?istate: protoMap?) -> void
   end
 
   interface _ProtoMessage

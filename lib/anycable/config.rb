@@ -46,7 +46,9 @@ module AnyCable
       version_check_enabled: true
     )
 
-    alias_method :version_check_enabled?, :version_check_enabled
+    if respond_to?(:coerce_types)
+      coerce_types redis_sentinels: {type: nil, array: true}, debug: :boolean, version_check_enabled: :boolean
+    end
 
     flag_options :debug
 
