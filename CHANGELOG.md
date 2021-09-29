@@ -2,6 +2,10 @@
 
 ## master
 
+## 1.1.3 (2021-09-29)
+
+- Added support for type coercion from Anyway Config 2.2. ([@palkan][])
+
 ## 1.1.2 (2021-09-10) 🤵👰
 
 - Improved gRPC server args support. ([@palkan][])
