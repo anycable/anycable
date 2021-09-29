@@ -6,6 +6,10 @@ export GOFLAGS=-mod=vendor
 
 MODIFIER ?= ""
 
+ifndef ANYCABLE_DEBUG
+  export ANYCABLE_DEBUG=1
+endif
+
 ifdef VERSION
 	LD_FLAGS="-s -w -X github.com/anycable/anycable-go/version.version=$(VERSION) -X github.com/anycable/anycable-go/version.modifier=$(MODIFIER)"
 else
@@ -70,7 +74,7 @@ build-all: build-clean build-linux
 
 # Run server
 run:
-	go run ./cmd/anycable-go/main.go
+	go run -ldflags $(LD_FLAGS) -tags "mrb gops" ./cmd/anycable-go/main.go
 
 build-protos:
 	protoc --proto_path=./etc --go_out=plugins=grpc:./protos ./etc/rpc.proto
