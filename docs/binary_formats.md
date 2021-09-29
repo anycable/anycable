@@ -10,7 +10,7 @@ In order to initiate Msgpack-encoded connection, a client MUST use `"actioncable
 
 A client MUST encode outgoing and incoming messages using Msgpack.
 
-### Using with AnyCable JS client
+### Using Msgpack with AnyCable JS client
 
 [AnyCable JavaScript client][anycable-client] supports Msgpack out-of-the-box:
 
@@ -162,6 +162,20 @@ Both incoming and outgoing message MUST be encoded as `action_cable.Message` typ
 
 Note that `Message.message` field has the `bytes` type. This field carries the information sent from a server to clients,
 which could be of any form. We Msgpack to encode/decode this data. Thus, AnyCable Protobuf protocol is actually a mix of Protobufs and Msgpack.
+
+### Using Protobuf with AnyCable JS client
+
+[AnyCable JavaScript client][anycable-client] supports Protobuf encoding out-of-the-box:
+
+```js
+// cable.js
+import { createCable } from '@anycable/web'
+import { ProtobufEncoder } from '@anycable/protobuf-encoder'
+
+export default createCable({protocol: 'actioncable-v1-protobuf', encoder: new ProtobufEncoder()})
+```
+
+> See the [demo](https://github.com/anycable/anycable_rails_demo/pull/24) of using Protobuf encoder in a Rails project with AnyCable JS client.
 
 ## Formats comparison
 
