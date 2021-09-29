@@ -40,13 +40,13 @@ func (Protobuf) Encode(msg EncodedMessage) (*ws.SentFrame, error) {
 	}
 
 	if msg.GetType() == common.DisconnectType {
-		disconnect := msg.(*common.DisconnectMessage)
+		if disconnect, ok := msg.(*common.DisconnectMessage); ok {
+			buf.Type = pb.Type_disconnect
+			buf.Reason = disconnect.Reason
+			buf.Reconnect = disconnect.Reconnect
 
-		buf.Type = pb.Type_disconnect
-		buf.Reason = disconnect.Reason
-		buf.Reconnect = disconnect.Reconnect
-
-		goto END
+			goto END
+		}
 	}
 
 	if msg.GetType() == common.WelcomeType {
@@ -64,6 +64,14 @@ func (Protobuf) Encode(msg EncodedMessage) (*ws.SentFrame, error) {
 
 		if reply.Type == common.RejectedType {
 			buf.Type = pb.Type_reject_subscription
+		}
+
+		// Disconnect could be send either directly by server or via RPC,
+		// so we need to handle it here as well
+		if reply.Type == common.DisconnectType {
+			buf.Type = pb.Type_disconnect
+			buf.Reason = reply.Reason
+			buf.Reconnect = reply.Reconnect
 		}
 
 		if reply.Message != nil {

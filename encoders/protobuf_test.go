@@ -66,6 +66,18 @@ func TestProtobufEncoder(t *testing.T) {
 		assert.Equal(t, ws.BinaryFrame, actual.FrameType)
 	})
 
+	t.Run(".EncodeTransmission disconnect", func(t *testing.T) {
+		msg := "{\"type\":\"disconnect\",\"reason\":\"unauthorized\",\"reconnect\":false}"
+		command := &pb.Message{Type: pb.Type_disconnect, Reconnect: false, Reason: "unauthorized"}
+		expected, _ := proto.Marshal(command)
+
+		actual, err := coder.EncodeTransmission(msg)
+
+		assert.NoError(t, err)
+		assert.Equal(t, expected, actual.Payload)
+		assert.Equal(t, ws.BinaryFrame, actual.FrameType)
+	})
+
 	t.Run(".Decode", func(t *testing.T) {
 		command := &pb.Message{Command: pb.Command_message, Identifier: "test_channel", Data: "hello"}
 		msg, _ := proto.Marshal(command)
