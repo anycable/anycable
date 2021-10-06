@@ -288,7 +288,14 @@ func (n *Node) Perform(s *Session, msg *common.Message) (res *common.CommandResu
 
 	s.smu.Unlock()
 
-	res, err = n.controller.Perform(s.UID, s.env, s.Identifiers, msg.Identifier, msg.Data)
+	data, ok := msg.Data.(string)
+
+	if !ok {
+		err = fmt.Errorf("Perform data must be a string, got %v", msg.Data)
+		return
+	}
+
+	res, err = n.controller.Perform(s.UID, s.env, s.Identifiers, msg.Identifier, data)
 
 	if err != nil {
 		if res == nil || res.Status == common.ERROR {

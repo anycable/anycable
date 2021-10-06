@@ -147,9 +147,9 @@ func (c *CommandResult) ToCallResult() *CallResult {
 
 // Message represents incoming client message
 type Message struct {
-	Command    string `json:"command"`
-	Identifier string `json:"identifier"`
-	Data       string `json:"data"`
+	Command    string      `json:"command"`
+	Identifier string      `json:"identifier"`
+	Data       interface{} `json:"data"`
 }
 
 // StreamMessage represents a pub/sub message to be sent to stream
