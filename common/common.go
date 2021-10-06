@@ -76,6 +76,26 @@ func (st *SessionEnv) MergeChannelState(id string, other *map[string]string) {
 	}
 }
 
+// Returns a value for the specified key of the specified channel
+func (st *SessionEnv) GetChannelStateField(id string, field string) string {
+	cst, ok := (*st.ChannelStates)[id]
+
+	if !ok {
+		return ""
+	}
+
+	return cst[field]
+}
+
+// Returns a value for the specified connection state field
+func (st *SessionEnv) GetConnectionStateField(field string) string {
+	if st.ConnectionState == nil {
+		return ""
+	}
+
+	return (*st.ConnectionState)[field]
+}
+
 // SetHeader adds a header to the headers list
 func (st *SessionEnv) SetHeader(key string, val string) {
 	if st.Headers == nil {

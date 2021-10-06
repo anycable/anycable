@@ -39,6 +39,23 @@ func TestEnvMergeChannelState(t *testing.T) {
 	})
 }
 
+func TestEnvGetChannelStateField(t *testing.T) {
+	env := NewSessionEnv("", nil)
+	(*env.ChannelStates)["id"] = map[string]string{"a": "old"}
+
+	assert.Equal(t, "old", env.GetChannelStateField("id", "a"))
+	assert.Equal(t, "", env.GetChannelStateField("no_id", "a"))
+	assert.Equal(t, "", env.GetChannelStateField("id", "no_field"))
+}
+
+func TestEnvGetConnectionStateField(t *testing.T) {
+	env := NewSessionEnv("", nil)
+	(*env.ConnectionState)["a"] = "old"
+
+	assert.Equal(t, "old", env.GetConnectionStateField("a"))
+	assert.Equal(t, "", env.GetConnectionStateField("no_a"))
+}
+
 func TestPubSubMessageFromJSON(t *testing.T) {
 	t.Run("Remote disconnect message", func(t *testing.T) {
 		msg := []byte("{\"command\":\"disconnect\",\"payload\":{\"identifier\":\"14\",\"reconnect\":false}}")
