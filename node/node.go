@@ -40,6 +40,7 @@ const (
 // AppNode describes a basic node interface
 type AppNode interface {
 	HandlePubSub(msg []byte)
+	LookupSession(id string) *Session
 	Authenticate(s *Session) (*common.ConnectResult, error)
 	Subscribe(s *Session, msg *common.Message) (*common.CommandResult, error)
 	Unsubscribe(s *Session, msg *common.Message) (*common.CommandResult, error)
@@ -66,6 +67,8 @@ type Node struct {
 	shutdownCh   chan struct{}
 	log          *log.Entry
 }
+
+var _ AppNode = (*Node)(nil)
 
 // NewNode builds new node struct
 func NewNode(controller Controller, metrics *metrics.Metrics, config *Config) *Node {
@@ -131,6 +134,10 @@ func (n *Node) HandlePubSub(raw []byte) {
 	case common.RemoteDisconnectMessage:
 		n.RemoteDisconnect(&v)
 	}
+}
+
+func (n *Node) LookupSession(id string) *Session {
+	return n.hub.findByIdentifier(id)
 }
 
 // Shutdown stops all services (hub, controller)

@@ -53,6 +53,22 @@ func (_m *AppNode) HandlePubSub(msg []byte) {
 	_m.Called(msg)
 }
 
+// LookupSession provides a mock function with given fields: id
+func (_m *AppNode) LookupSession(id string) *node.Session {
+	ret := _m.Called(id)
+
+	var r0 *node.Session
+	if rf, ok := ret.Get(0).(func(string) *node.Session); ok {
+		r0 = rf(id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*node.Session)
+		}
+	}
+
+	return r0
+}
+
 // Perform provides a mock function with given fields: s, msg
 func (_m *AppNode) Perform(s *node.Session, msg *common.Message) (*common.CommandResult, error) {
 	ret := _m.Called(s, msg)

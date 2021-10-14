@@ -297,6 +297,21 @@ func TestHandlePubSubWithCommand(t *testing.T) {
 	assert.True(t, session.closed)
 }
 
+func TestLookupSession(t *testing.T) {
+	node := NewMockNode()
+
+	go node.hub.Run()
+	defer node.hub.Shutdown()
+
+	assert.Nil(t, node.LookupSession("{\"foo\":\"bar\"}"))
+
+	session := NewMockSession("14", &node)
+	session.Identifiers = "{\"foo\":\"bar\"}"
+	node.hub.addSession(session)
+
+	assert.Equal(t, session, node.LookupSession("{\"foo\":\"bar\"}"))
+}
+
 func TestSubscriptionsList(t *testing.T) {
 	t.Run("with different channels", func(t *testing.T) {
 		subscriptions := map[string]bool{

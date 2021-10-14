@@ -408,6 +408,25 @@ func (h *Hub) disconnectSessions(identifier string, reconnect bool) {
 	})
 }
 
+func (h *Hub) findByIdentifier(id string) *Session {
+	h.sessionsMu.RLock()
+	defer h.sessionsMu.RUnlock()
+
+	ids, ok := h.identifiers[id]
+
+	if !ok {
+		return nil
+	}
+
+	for id := range ids {
+		if ses, ok := h.sessions[id]; ok {
+			return ses
+		}
+	}
+
+	return nil
+}
+
 func buildMessage(data string, identifier string) encoders.EncodedMessage {
 	var msg interface{}
 
