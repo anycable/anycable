@@ -21,8 +21,8 @@ func main() {
 		return rpc.NewController(m, &c.RPC), nil
 	})
 
-	runner.SubscriberFactory(func(n *node.Node, c *config.Config) (pubsub.Subscriber, error) {
-		return pubsub.NewSubscriber(n, c.BroadcastAdapter, &c.Redis, &c.HTTPPubSub)
+	runner.SubscriberFactory(func(h pubsub.Handler, c *config.Config) (pubsub.Subscriber, error) {
+		return pubsub.NewSubscriber(h, c.BroadcastAdapter, &c.Redis, &c.HTTPPubSub)
 	})
 
 	err := runner.Run()

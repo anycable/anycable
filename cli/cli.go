@@ -26,7 +26,7 @@ import (
 
 type controllerFactory = func(*metrics.Metrics, *config.Config) (node.Controller, error)
 type disconnectorFactory = func(*node.Node, *config.Config) (node.Disconnector, error)
-type subscriberFactory = func(*node.Node, *config.Config) (pubsub.Subscriber, error)
+type subscriberFactory = func(pubsub.Handler, *config.Config) (pubsub.Subscriber, error)
 type websocketHandler = func(*node.Node, *config.Config) (http.Handler, error)
 
 type Shutdownable interface {

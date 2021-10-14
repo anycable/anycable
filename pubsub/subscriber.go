@@ -2,8 +2,6 @@ package pubsub
 
 import (
 	"fmt"
-
-	"github.com/anycable/anycable-go/node"
 )
 
 // Subscriber is responsible for receiving broadcast messages
@@ -13,8 +11,12 @@ type Subscriber interface {
 	Shutdown() error
 }
 
+type Handler interface {
+	HandlePubSub(json []byte)
+}
+
 // NewSubscriber creates an instance of the provided adapter
-func NewSubscriber(node node.AppNode, adapter string, redis *RedisConfig, http *HTTPConfig) (Subscriber, error) {
+func NewSubscriber(node Handler, adapter string, redis *RedisConfig, http *HTTPConfig) (Subscriber, error) {
 	switch adapter {
 	case "redis":
 		return NewRedisSubscriber(node, redis), nil

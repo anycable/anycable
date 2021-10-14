@@ -7,23 +7,23 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/anycable/anycable-go/node_mocks"
+	"github.com/anycable/anycable-go/mocks"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestHttpHandler(t *testing.T) {
-	node := &node_mocks.AppNode{}
+	handler := &mocks.Handler{}
 	config := HTTPConfig{}
 	secretConfig := HTTPConfig{Secret: "secret"}
-	subscriber := NewHTTPSubscriber(node, &config)
-	protectedSubscriber := NewHTTPSubscriber(node, &secretConfig)
+	subscriber := NewHTTPSubscriber(handler, &config)
+	protectedSubscriber := NewHTTPSubscriber(handler, &secretConfig)
 
 	payload, err := json.Marshal(map[string]string{"stream": "any_test", "data": "123_test"})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	node.On(
+	handler.On(
 		"HandlePubSub",
 		payload,
 	)

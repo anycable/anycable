@@ -11,7 +11,6 @@ import (
 
 	"github.com/FZambia/sentinel"
 
-	"github.com/anycable/anycable-go/node"
 	"github.com/apex/log"
 	"github.com/gomodule/redigo/redis"
 )
@@ -42,7 +41,7 @@ func NewRedisConfig() RedisConfig {
 
 // RedisSubscriber contains information about Redis pubsub connection
 type RedisSubscriber struct {
-	node                      node.AppNode
+	node                      Handler
 	url                       string
 	sentinels                 string
 	sentinelDiscoveryInterval time.Duration
@@ -53,7 +52,7 @@ type RedisSubscriber struct {
 }
 
 // NewRedisSubscriber returns new RedisSubscriber struct
-func NewRedisSubscriber(node node.AppNode, config *RedisConfig) *RedisSubscriber {
+func NewRedisSubscriber(node Handler, config *RedisConfig) *RedisSubscriber {
 	return &RedisSubscriber{
 		node:                      node,
 		url:                       config.URL,

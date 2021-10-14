@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/server"
 	"github.com/apex/log"
 )
@@ -32,12 +31,12 @@ type HTTPSubscriber struct {
 	path       string
 	authHeader string
 	server     *server.HTTPServer
-	node       node.AppNode
+	node       Handler
 	log        *log.Entry
 }
 
 // NewHTTPSubscriber builds a new HTTPSubscriber struct
-func NewHTTPSubscriber(node node.AppNode, config *HTTPConfig) *HTTPSubscriber {
+func NewHTTPSubscriber(node Handler, config *HTTPConfig) *HTTPSubscriber {
 	authHeader := ""
 
 	if config.Secret != "" {
