@@ -4,6 +4,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/ws"
 	"github.com/stretchr/testify/assert"
 )
@@ -85,4 +86,60 @@ func TestSessionDisconnect(t *testing.T) {
 	// Close frame
 	_, err = session.conn.Read()
 	assert.Nil(t, err)
+}
+
+func TestMergeEnv(t *testing.T) {
+	node := NewMockNode()
+	session := NewMockSession("123", &node)
+
+	istate := map[string]map[string]string{
+		"test_channel": {
+			"foo": "bar",
+			"a":   "z",
+		},
+	}
+	cstate := map[string]string{"_s_": "id=42"}
+	origEnv := common.SessionEnv{ChannelStates: &istate, ConnectionState: &cstate}
+
+	session.SetEnv(&origEnv)
+
+	istate2 := map[string]map[string]string{
+		"test_channel": {
+			"foo": "baz",
+		},
+		"another_channel": {
+			"wasting": "time",
+		},
+	}
+
+	env := common.SessionEnv{ChannelStates: &istate2}
+
+	cstate2 := map[string]string{"red": "end of silence"}
+
+	env2 := common.SessionEnv{ConnectionState: &cstate2}
+
+	var wg sync.WaitGroup
+
+	wg.Add(2)
+
+	go func() {
+		session.MergeEnv(&env)
+		wg.Done()
+	}()
+
+	go func() {
+		session.MergeEnv(&env2)
+		wg.Done()
+	}()
+
+	wg.Wait()
+
+	assert.Equal(t, &origEnv, session.GetEnv())
+
+	assert.Equal(t, "id=42", origEnv.GetConnectionStateField("_s_"))
+	assert.Equal(t, "end of silence", origEnv.GetConnectionStateField("red"))
+
+	assert.Equal(t, "baz", origEnv.GetChannelStateField("test_channel", "foo"))
+	assert.Equal(t, "z", origEnv.GetChannelStateField("test_channel", "a"))
+	assert.Equal(t, "time", origEnv.GetChannelStateField("another_channel", "wasting"))
 }

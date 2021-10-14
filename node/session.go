@@ -44,7 +44,9 @@ type Session struct {
 	UID         string
 	Identifiers string
 	Connected   bool
-	Log         *log.Entry
+	// Could be used to store arbitrary data within a session
+	InternalState map[string]interface{}
+	Log           *log.Entry
 }
 
 // NewSession build a new Session struct from ws connetion and http request
@@ -93,6 +95,24 @@ func (s *Session) GetEnv() *common.SessionEnv {
 
 func (s *Session) SetEnv(env *common.SessionEnv) {
 	s.env = env
+}
+
+// Merge connection and channel states into current env.
+// This method locks the state for writing (so, goroutine-safe)
+func (s *Session) MergeEnv(env *common.SessionEnv) {
+	s.smu.Lock()
+	defer s.smu.Unlock()
+
+	if env.ConnectionState != nil {
+		s.env.MergeConnectionState(env.ConnectionState)
+	}
+
+	if env.ChannelStates != nil {
+		states := *env.ChannelStates
+		for id, state := range states { // #nosec
+			s.env.MergeChannelState(id, &state)
+		}
+	}
 }
 
 // Serve enters a loop to read incoming data
