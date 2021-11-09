@@ -20,7 +20,15 @@ const ActionCableJSONProtocol = "actioncable-v1-json"
 const ActionCableMsgpackProtocol = "actioncable-v1-msgpack"
 const ActionCableProtobufProtocol = "actioncable-v1-protobuf"
 
-var subprotocols = []string{ActionCableJSONProtocol, ActionCableMsgpackProtocol, ActionCableProtobufProtocol}
+// From https://github.com/apollographql/subscriptions-transport-ws/blob/master/src/protocol.ts
+const GraphQLWSProtocol = "graphql-ws"
+
+var subprotocols = []string{
+	ActionCableJSONProtocol,
+	ActionCableMsgpackProtocol,
+	ActionCableProtobufProtocol,
+	GraphQLWSProtocol,
+}
 
 type RequestInfo struct {
 	UID     string
