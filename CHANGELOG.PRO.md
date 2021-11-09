@@ -2,6 +2,16 @@
 
 ## master
 
+## 1.1.1
+
+- Added `graphql-ws` subprotocol to the list of supported procotols.
+
+Fixes Apollo integration compatibility issues.
+
+## 1.1.0
+
+_No changes_
+
 ## 1.1.0.beta.2
 
 - Add fastlane subscribing for Hotwire (Turbo Streams) and CableReady.
