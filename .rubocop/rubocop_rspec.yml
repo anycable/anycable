@@ -1,6 +1,9 @@
 require:
   - rubocop-rspec
 
+RSpec:
+  Enabled: false
+
 RSpec/Focus:
   Enabled: true
 
