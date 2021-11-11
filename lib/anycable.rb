@@ -111,5 +111,8 @@ end
 # gRPC is the default for now, so, let's try to load it.
 begin
   require "anycable/grpc"
-rescue LoadError
+rescue LoadError => e
+  # Re-raise an exception if we failed to load grpc .so files
+  # (e.g., on Alpine Linux)
+  raise if e.message =~ /Error loading shared library/
 end
