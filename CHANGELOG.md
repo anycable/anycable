@@ -2,6 +2,10 @@
 
 ## master
 
+## 1.1.4 (2021-11-11)
+
+- Do not swallow `grpc` missing .so exceptions. ([@palkan][])
+
 ## 1.1.3 (2021-09-29)
 
 - Added support for type coercion from Anyway Config 2.2. ([@palkan][])
