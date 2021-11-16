@@ -13,7 +13,8 @@ import (
 )
 
 type MockState struct {
-	ready bool
+	ready  bool
+	closed bool
 }
 
 func (st MockState) Ready() error {
@@ -24,11 +25,15 @@ func (st MockState) Ready() error {
 	return errors.New("not ready")
 }
 
+func (st MockState) Close() {
+	st.closed = true
+}
+
 func NewTestController() *Controller {
 	config := NewConfig()
 	controller := NewController(metrics.NewMetrics(nil, 0), &config)
 	controller.initSemaphore(1)
-	controller.clientState = MockState{true}
+	controller.clientState = MockState{true, false}
 	return controller
 }
 

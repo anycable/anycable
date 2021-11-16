@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"math"
@@ -21,8 +22,6 @@ import (
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-
-	"crypto/tls"
 )
 
 const (
@@ -40,11 +39,7 @@ const (
 	metricsRPCPending  = "rpc_pending_num"
 )
 
-type clientState interface {
-	Ready() error
-}
-
-type grpcState struct {
+type grpcClientHelper struct {
 	conn       *grpc.ClientConn
 	recovering bool
 	mu         sync.Mutex
@@ -56,7 +51,7 @@ type grpcState struct {
 // See https://github.com/grpc/grpc/blob/master/doc/connectivity-semantics-and-api.md
 // and https://github.com/grpc/grpc/blob/master/doc/connection-backoff.md
 // See also https://github.com/cockroachdb/cockroach/blob/master/pkg/util/grpcutil/grpc_util.go
-func (st *grpcState) Ready() error {
+func (st *grpcClientHelper) Ready() error {
 	s := st.conn.GetState()
 
 	if s == connectivity.Shutdown {
@@ -74,7 +69,11 @@ func (st *grpcState) Ready() error {
 	return nil
 }
 
-func (st *grpcState) tryRecover() error {
+func (st *grpcClientHelper) Close() {
+	st.conn.Close()
+}
+
+func (st *grpcClientHelper) tryRecover() error {
 	st.mu.Lock()
 	defer st.mu.Unlock()
 
@@ -90,7 +89,7 @@ func (st *grpcState) tryRecover() error {
 	return nil
 }
 
-func (st *grpcState) reset() {
+func (st *grpcClientHelper) reset() {
 	st.mu.Lock()
 	defer st.mu.Unlock()
 
@@ -104,11 +103,10 @@ func (st *grpcState) reset() {
 type Controller struct {
 	config      *Config
 	sem         chan (struct{})
-	conn        *grpc.ClientConn
 	client      pb.RPCClient
 	metrics     *metrics.Metrics
 	log         *log.Entry
-	clientState clientState
+	clientState ClientHelper
 }
 
 // NewController builds new Controller
@@ -127,46 +125,15 @@ func (c *Controller) Start() error {
 	capacity := c.config.Concurrency
 	enableTLS := c.config.EnableTLS
 
-	kacp := keepalive.ClientParameters{
-		Time:                10 * time.Second, // send pings every 10 seconds if there is no activity
-		PermitWithoutStream: true,             // send pings even without active streams
-	}
+	var dialer Dialer
 
-	dialOptions := []grpc.DialOption{
-		grpc.WithKeepaliveParams(kacp),
-		grpc.WithBalancerName("round_robin"), // nolint:staticcheck
-	}
-
-	if enableTLS {
-		tlsConfig := &tls.Config{
-			InsecureSkipVerify: false,
-			MinVersion:         tls.VersionTLS12,
-		}
-
-		dialOptions = append(dialOptions, grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)))
+	if c.config.DialFun != nil {
+		dialer = c.config.DialFun
 	} else {
-		dialOptions = append(dialOptions, grpc.WithInsecure())
+		dialer = defaultDialer
 	}
 
-	var callOptions = []grpc.CallOption{}
-
-	// Zero is the default
-	if c.config.MaxRecvSize != 0 {
-		callOptions = append(callOptions, grpc.MaxCallRecvMsgSize(c.config.MaxRecvSize))
-	}
-
-	if c.config.MaxSendSize != 0 {
-		callOptions = append(callOptions, grpc.MaxCallSendMsgSize(c.config.MaxSendSize))
-	}
-
-	if len(callOptions) > 0 {
-		dialOptions = append(dialOptions, grpc.WithDefaultCallOptions(callOptions...))
-	}
-
-	conn, err := grpc.Dial(
-		host,
-		dialOptions...,
-	)
+	client, state, err := dialer(c.config)
 
 	c.initSemaphore(capacity)
 
@@ -174,19 +141,18 @@ func (c *Controller) Start() error {
 		c.log.Infof("RPC controller initialized: %s (concurrency: %d, enable_tls: %t, proto_versions: %s)", host, capacity, enableTLS, ProtoVersions)
 	}
 
-	c.conn = conn
-	c.client = pb.NewRPCClient(conn)
-	c.clientState = &grpcState{conn: conn}
+	c.client = client
+	c.clientState = state
 	return err
 }
 
 // Shutdown closes connections
 func (c *Controller) Shutdown() error {
-	if c.conn == nil {
+	if c.clientState == nil {
 		return nil
 	}
 
-	defer c.conn.Close()
+	defer c.clientState.Close()
 
 	busy := c.busy()
 
@@ -440,4 +406,59 @@ func (c *Controller) initSemaphore(capacity int) {
 func newContext(sessionID string) context.Context {
 	md := metadata.Pairs("sid", sessionID, "protov", ProtoVersions)
 	return metadata.NewOutgoingContext(context.Background(), md)
+}
+
+func defaultDialer(conf *Config) (client pb.RPCClient, state ClientHelper, err error) {
+	host := conf.Host
+	enableTLS := conf.EnableTLS
+
+	kacp := keepalive.ClientParameters{
+		Time:                10 * time.Second, // send pings every 10 seconds if there is no activity
+		PermitWithoutStream: true,             // send pings even without active streams
+	}
+
+	dialOptions := []grpc.DialOption{
+		grpc.WithKeepaliveParams(kacp),
+		grpc.WithBalancerName("round_robin"), // nolint:staticcheck
+	}
+
+	if enableTLS {
+		tlsConfig := &tls.Config{
+			InsecureSkipVerify: false,
+			MinVersion:         tls.VersionTLS12,
+		}
+
+		dialOptions = append(dialOptions, grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)))
+	} else {
+		dialOptions = append(dialOptions, grpc.WithInsecure())
+	}
+
+	var callOptions = []grpc.CallOption{}
+
+	// Zero is the default
+	if conf.MaxRecvSize != 0 {
+		callOptions = append(callOptions, grpc.MaxCallRecvMsgSize(conf.MaxRecvSize))
+	}
+
+	if conf.MaxSendSize != 0 {
+		callOptions = append(callOptions, grpc.MaxCallSendMsgSize(conf.MaxSendSize))
+	}
+
+	if len(callOptions) > 0 {
+		dialOptions = append(dialOptions, grpc.WithDefaultCallOptions(callOptions...))
+	}
+
+	conn, err := grpc.Dial(
+		host,
+		dialOptions...,
+	)
+
+	if err != nil {
+		return
+	}
+
+	client = pb.NewRPCClient(conn)
+	state = &grpcClientHelper{conn: conn}
+
+	return
 }

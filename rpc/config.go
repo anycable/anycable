@@ -1,5 +1,16 @@
 package rpc
 
+import pb "github.com/anycable/anycable-go/protos"
+
+// ClientHelepr provides additional methods to operate gRPC client
+type ClientHelper interface {
+	Ready() error
+	Close()
+}
+
+// Dialer is factory function to build a new client with its helper
+type Dialer = func(c *Config) (pb.RPCClient, ClientHelper, error)
+
 // Config contains RPC controller configuration
 type Config struct {
 	// RPC instance host
@@ -14,6 +25,8 @@ type Config struct {
 	MaxRecvSize int
 	// Max send msg size (bytes)
 	MaxSendSize int
+	// Alternative dialer implementation
+	DialFun Dialer
 }
 
 // NewConfig builds a new config
