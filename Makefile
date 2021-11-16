@@ -38,6 +38,13 @@ build:
 build-gobench:
 	go build -tags "mrb gops" -ldflags $(LD_FLAGS) -o $(GOBENCHDIST) cmd/gobench-cable/main.go
 
+vendor:
+	mv vendor/github.com/mitchellh/go-mruby/mruby-build tmp/
+	mv vendor/github.com/mitchellh/go-mruby/libmruby.a tmp/
+	go mod vendor
+	mv tmp/mruby-build vendor/github.com/mitchellh/go-mruby/
+	mv tmp/libmruby.a vendor/github.com/mitchellh/go-mruby/libmruby.a
+
 prepare-mruby:
 	cd vendor/github.com/mitchellh/go-mruby && \
 	MRUBY_COMMIT=$(MRUBY_VERSION) MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a || \
@@ -146,4 +153,4 @@ licenses: bin/go-licenses
 	@env GOFLAGS="-tags=mrb" $$(go env GOPATH)/bin/go-licenses csv github.com/anycable/anycable-go/cli 2>/dev/null | awk -F',' '{ print $$3 }' | sort | uniq | grep -v "Unknown"
 	@env GOFLAGS="-tags=mrb" $$(go env GOPATH)/bin/go-licenses csv github.com/anycable/anycable-go/cli 2>/dev/null | grep "Unknown" | grep -v "anycable-go" || echo "No unknown licenses 👌"
 
-.PHONY: tmp/anycable-go-test
+.PHONY: tmp/anycable-go-test vendor
