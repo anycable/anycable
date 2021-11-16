@@ -110,7 +110,7 @@ run-gobench:
 	go run -ldflags $(LD_FLAGS) -tags "mrb gops" ./cmd/gobench-cable/main.go
 
 build-protos:
-	protoc --proto_path=./etc --go_out=plugins=grpc:./protos ./etc/rpc.proto
+	protoc --proto_path=./etc --go_out=plugins=grpc:./protos --grpchan_out=./protos ./etc/rpc.proto
 
 bench:
 	go test -tags mrb -bench=. ./...

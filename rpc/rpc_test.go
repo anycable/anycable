@@ -10,6 +10,7 @@ import (
 	pb "github.com/anycable/anycable-go/protos"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 type MockState struct {
@@ -440,5 +441,40 @@ func TestDisconnect(t *testing.T) {
 			[]string{"chat_42"},
 		)
 		assert.Nil(t, err)
+	})
+}
+
+func TestCustomDialFun(t *testing.T) {
+	config := NewConfig()
+
+	service := mocks.RPCServer{}
+	stateHandler := MockState{true, false}
+
+	config.DialFun = NewInprocessServiceDialer(&service, stateHandler)
+
+	controller := NewController(metrics.NewMetrics(nil, 0), &config)
+	require.NoError(t, controller.Start())
+
+	t.Run("Connect", func(t *testing.T) {
+		url := "/cable-test"
+		headers := map[string]string{"cookie": "token=secret;"}
+
+		service.On("Connect", mock.Anything,
+			&pb.ConnectionRequest{
+				Env: &pb.Env{Url: url, Headers: headers},
+			}).Return(
+			&pb.ConnectionResponse{
+				Identifiers:   "user=john",
+				Transmissions: []string{"welcome"},
+				Status:        pb.Status_SUCCESS,
+				Env:           &pb.EnvResponse{Cstate: map[string]string{"_s_": "test-session"}},
+			}, nil)
+
+		res, err := controller.Authenticate("42", &common.SessionEnv{URL: url, Headers: &headers})
+		require.Nil(t, err)
+		assert.Equal(t, []string{"welcome"}, res.Transmissions)
+		assert.Equal(t, "user=john", res.Identifier)
+		assert.Equal(t, map[string]string{"_s_": "test-session"}, res.CState)
+		assert.Empty(t, res.Broadcasts)
 	})
 }

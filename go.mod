@@ -5,6 +5,8 @@ go 1.20
 require (
 	github.com/FZambia/sentinel v1.1.0
 	github.com/apex/log v1.9.0
+	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/fullstorydev/grpchan v1.0.2-0.20210924023933-8d2633e44524
 	github.com/go-chi/chi/v5 v5.0.8
 	github.com/golang-collections/go-datastructures v0.0.0-20150211160725-59788d5eb259
 	github.com/golang-jwt/jwt v3.2.2+incompatible
@@ -19,6 +21,7 @@ require (
 	github.com/mitchellh/go-mruby v0.0.0-20200315023956-207cedc21542
 	github.com/namsral/flag v1.7.4-pre
 	github.com/nats-io/nats.go v1.24.0
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/posthog/posthog-go v0.0.0-20221221115252-24dfed35d71a
 	github.com/redis/rueidis v1.0.10
 	github.com/smira/go-statsd v1.3.2
@@ -44,11 +47,10 @@ require (
 
 require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/jhump/protoreflect v1.5.0 // indirect
 	github.com/nats-io/nats-server/v2 v2.9.14
 	github.com/nats-io/nkeys v0.3.0 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
