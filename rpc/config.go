@@ -10,6 +10,10 @@ type Config struct {
 	Concurrency int
 	// Enable client-side TLS on RPC connections?
 	EnableTLS bool
+	// Max recieve msg size (bytes)
+	MaxRecvSize int
+	// Max send msg size (bytes)
+	MaxSendSize int
 }
 
 // NewConfig builds a new config

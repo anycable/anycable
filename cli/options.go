@@ -68,6 +68,8 @@ func init() {
 	fs.StringVar(&defaults.RPC.Host, "rpc_host", "localhost:50051", "")
 	fs.IntVar(&defaults.RPC.Concurrency, "rpc_concurrency", 28, "")
 	fs.BoolVar(&defaults.RPC.EnableTLS, "rpc_enable_tls", false, "")
+	fs.IntVar(&defaults.RPC.MaxRecvSize, "rpc_max_call_recv_size", 0, "")
+	fs.IntVar(&defaults.RPC.MaxSendSize, "rpc_max_call_send_size", 0, "")
 	fs.StringVar(&headers, "headers", "cookie", "")
 
 	fs.IntVar(&defaults.WS.ReadBufferSize, "read_buffer_size", 1024, "")
@@ -157,6 +159,8 @@ OPTIONS
   --rpc_host                             RPC service address, default: localhost:50051, env: ANYCABLE_RPC_HOST
   --rpc_concurrency                      Max number of concurrent RPC request; should be slightly less than the RPC server concurrency, default: 28, env: ANYCABLE_RPC_CONCURRENCY
   --rpc_enable_tls                       Enable client-side TLS with the RPC server, default: false, env: ANYCABLE_RPC_ENABLE_TLS
+  --rpc_max_call_recv_size               Override default MaxCallRecvMsgSize for RPC client (bytes), default: none, env: ANYCABLE_RPC_MAX_CALL_RECV_SIZE
+  --rpc_max_call_send_size               Override default MaxCallSendMsgSize for RPC client (bytes), default: none, env: ANYCABLE_RPC_MAX_CALL_SEND_SIZE
   --headers                              List of headers to proxy to RPC, default: cookie, env: ANYCABLE_HEADERS
 
   --disconnect_rate                      Max number of Disconnect calls per second, default: 100, env: ANYCABLE_DISCONNECT_RATE

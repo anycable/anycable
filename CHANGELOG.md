@@ -2,6 +2,8 @@
 
 ## master
 
+- Add `rpc_max_call_recv_size` and `rpc_max_call_send_size` options to allow modifying the corresponding limits for gRPC client connection. ([@palkan][])
+
 ## 1.1.3 (2021-09-16)
 
 - Fixed potential deadlocks in Hub. ([@palkan][])

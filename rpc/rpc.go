@@ -17,10 +17,10 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/connectivity"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	"google.golang.org/grpc/credentials"
 
 	"crypto/tls"
 )
@@ -140,7 +140,7 @@ func (c *Controller) Start() error {
 	if enableTLS {
 		tlsConfig := &tls.Config{
 			InsecureSkipVerify: false,
-			MinVersion: tls.VersionTLS12,
+			MinVersion:         tls.VersionTLS12,
 		}
 
 		dialOptions = append(dialOptions, grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)))
@@ -148,9 +148,24 @@ func (c *Controller) Start() error {
 		dialOptions = append(dialOptions, grpc.WithInsecure())
 	}
 
+	var callOptions = []grpc.CallOption{}
+
+	// Zero is the default
+	if c.config.MaxRecvSize != 0 {
+		callOptions = append(callOptions, grpc.MaxCallRecvMsgSize(c.config.MaxRecvSize))
+	}
+
+	if c.config.MaxSendSize != 0 {
+		callOptions = append(callOptions, grpc.MaxCallSendMsgSize(c.config.MaxSendSize))
+	}
+
+	if len(callOptions) > 0 {
+		dialOptions = append(dialOptions, grpc.WithDefaultCallOptions(callOptions...))
+	}
+
 	conn, err := grpc.Dial(
 		host,
-		dialOptions...
+		dialOptions...,
 	)
 
 	c.initSemaphore(capacity)
