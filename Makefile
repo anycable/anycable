@@ -10,6 +10,16 @@ ifndef ANYCABLE_DEBUG
   export ANYCABLE_DEBUG=1
 endif
 
+# If port 6379 is listening, we assume that this is a Redis instance,
+# so we can use a Redis broadcast adapter.
+# Otherwise we fallback to HTTP adapter.
+ifndef REDIS_URL
+	HAS_REDIS := $(shell lsof -Pi :6379 -sTCP:LISTEN -t >/dev/null; echo $$?)
+	ifneq ($(HAS_REDIS), 0)
+		export ANYCABLE_BROADCAST_ADAPTER=http
+	endif
+endif
+
 ifdef VERSION
 	LD_FLAGS="-s -w -X github.com/anycable/anycable-go/version.version=$(VERSION) -X github.com/anycable/anycable-go/version.modifier=$(MODIFIER)"
 else
