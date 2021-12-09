@@ -196,13 +196,13 @@ func (s *RedisSubscriber) listen() error {
 		return err
 	}
 
+	defer c.Close()
+
 	if s.sentinels != "" {
 		if !sentinel.TestRole(c, "master") {
 			return errors.New("Failed master role check")
 		}
 	}
-
-	defer c.Close()
 
 	psc := redis.PubSubConn{Conn: c}
 	if err = psc.Subscribe(s.channel); err != nil {
