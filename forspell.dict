@@ -46,3 +46,5 @@ Grafana
 Hotwire
 blazingly
 observability
+influxdb
+datadog

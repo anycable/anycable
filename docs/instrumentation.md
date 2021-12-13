@@ -102,6 +102,20 @@ anycable-go -statsd_host=localhost:8125
 
 Metrics are pushed with the `anycable_go.` prefix by default. You can override it by specifying the `statsd_prefix` parameter.
 
+<h2 id="metrics-tags">Default metrics tags <img class='pro-badge' src='https://docs.anycable.io/assets/pro.svg' alt='pro' /></h2>
+
+You can define global tags (added to every reported metric by default) for Prometheus (reported as labels)
+and StatsD. For example, we can add environment and node information:
+
+```sh
+anycable-go --metrics_tags=environment:production,node_id:xyz
+# or via environment variables
+ANYCABLE_METRICS_TAGS=environment:production,node_id:xyz anycable-go
+```
+
+For StatsD, you can specify tags format: "datadog" (default), "influxdb", or "graphite".
+Use the `statsd_tag_format` configuration parameter for that.
+
 ## Logging
 
 Another option is to periodically write stats to log (with `info` level).
