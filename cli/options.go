@@ -52,7 +52,7 @@ func WithCLICustomOptions(factory customOptionsFactory) cliOption {
 func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, bool) {
 	c := config.NewConfig()
 
-	var path, headers, cookieFilter string
+	var path, headers, cookieFilter, mtags string
 	var helpOrVersionWereShown bool = true
 	var metricsFilter string
 
@@ -71,7 +71,7 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 	flags = append(flags, rpcCLIFlags(&c, &headers, &cookieFilter)...)
 	flags = append(flags, disconnectorCLIFlags(&c)...)
 	flags = append(flags, logCLIFlags(&c)...)
-	flags = append(flags, metricsCLIFlags(&c, &metricsFilter)...)
+	flags = append(flags, metricsCLIFlags(&c, &metricsFilter, &mtags)...)
 	flags = append(flags, wsCLIFlags(&c)...)
 	flags = append(flags, pingCLIFlags(&c)...)
 	flags = append(flags, jwtCLIFlags(&c)...)
@@ -128,6 +128,10 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 
 	if c.Metrics.Port == 0 {
 		c.Metrics.Port = c.Port
+	}
+
+	if mtags != "" {
+		c.Metrics.Tags = parseTags(mtags)
 	}
 
 	if c.Metrics.LogInterval > 0 {
@@ -448,7 +452,7 @@ func logCLIFlags(c *config.Config) []cli.Flag {
 }
 
 // metricsCLIFlags returns CLI flags for metrics
-func metricsCLIFlags(c *config.Config, filter *string) []cli.Flag {
+func metricsCLIFlags(c *config.Config, filter *string, mtags *string) []cli.Flag {
 	return withDefaults(metricsCategoryDescription, []cli.Flag{
 		// Metrics
 		&cli.BoolFlag{
@@ -499,6 +503,12 @@ func metricsCLIFlags(c *config.Config, filter *string) []cli.Flag {
 			Name:        "metrics_port",
 			Usage:       "Server port for metrics endpoint, the same as for main server by default",
 			Destination: &c.Metrics.Port,
+		},
+
+		&cli.StringFlag{
+			Name:        "metrics_tags",
+			Usage:       "Comma-separated list of default (global) tags to add to every metric",
+			Destination: mtags,
 		},
 
 		&cli.IntFlag{
@@ -628,6 +638,12 @@ func statsdCLIFlags(c *config.Config) []cli.Flag {
 			Value:       c.Metrics.Statsd.MaxPacketSize,
 			Destination: &c.Metrics.Statsd.MaxPacketSize,
 		},
+		&cli.StringFlag{
+			Name:        "statsd_tags_format",
+			Usage:       `One of "datadog", "influxdb", or "graphite"`,
+			Value:       c.Metrics.Statsd.TagFormat,
+			Destination: &c.Metrics.Statsd.TagFormat,
+		},
 	})
 }
 
@@ -690,4 +706,17 @@ func nameToEnvVarName(name string) string {
 	}
 
 	return envPrefix + strings.Join(set, "_")
+}
+
+func parseTags(str string) map[string]string {
+	tags := strings.Split(str, ",")
+
+	res := make(map[string]string, len(tags))
+
+	for _, v := range tags {
+		parts := strings.Split(v, ":")
+		res[parts[0]] = parts[1]
+	}
+
+	return res
 }

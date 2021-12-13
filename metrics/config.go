@@ -11,6 +11,7 @@ type Config struct {
 	HTTP      string
 	Host      string
 	Port      int
+	Tags      map[string]string
 	Statsd    StatsdConfig
 }
 

@@ -37,6 +37,7 @@ type Metrics struct {
 	server         *server.HTTPServer
 	httpPath       string
 	rotateInterval time.Duration
+	tags           map[string]string
 	counters       map[string]*Counter
 	gauges         map[string]*Gauge
 	shutdownCh     chan struct{}
@@ -68,6 +69,10 @@ func NewFromConfig(config *Config) (*Metrics, error) {
 	}
 
 	instance := NewMetrics(writers, config.RotateInterval)
+
+	if config.Tags != nil {
+		instance.tags = config.Tags
+	}
 
 	if config.HTTPEnabled() {
 		if config.Host != "" && config.Host != server.Host {
@@ -103,6 +108,10 @@ func NewMetrics(writers []IntervalWriter, rotateIntervalSeconds int) *Metrics {
 		shutdownCh:     make(chan struct{}),
 		log:            log.WithField("context", "metrics"),
 	}
+}
+
+func (m *Metrics) DefaultTags(tags map[string]string) {
+	m.tags = tags
 }
 
 func (m *Metrics) RegisterWriter(w IntervalWriter) {

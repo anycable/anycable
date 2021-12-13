@@ -235,7 +235,7 @@ func (r *Runner) initMetrics(c *metricspkg.Config) (*metricspkg.Metrics, error) 
 	}
 
 	if c.Statsd.Enabled() {
-		sw := metricspkg.NewStatsdWriter(c.Statsd)
+		sw := metricspkg.NewStatsdWriter(c.Statsd, c.Tags)
 		m.RegisterWriter(sw)
 	}
 

@@ -2,6 +2,20 @@
 
 ## master
 
+- Added metrics default tags support for StatsD and Prometheus.
+
+You can define global tags (added to every reported metric by default) for Prometheus (reported as labels)
+and StatsD. For example, we can add environment and node information:
+
+```sh
+anycable-go --metrics_tags=environment:production,node_id:xyz
+# or via environment variables
+ANYCABLE_METRICS_TAGS=environment:production,node_id:xyz anycable-go
+```
+
+For StatsD, you can specify tags format: "datadog" (default), "influxdb", or "graphite".
+Use the `statsd_tag_format` configuration parameter for that.
+
 - Added Statsd support.
 
 You can send instrumentation data to Statsd.
