@@ -1,6 +1,6 @@
-# Signed streams (Hotwire, CableReady) <img class='pro-badge' src='https://docs.anycable.io/assets/pro.svg' alt='pro' />
+# Fastlane subscribing for Hotwire (Turbo Streams) and CableReady
 
-AnyCable PRO provides an ability to terminate Hotwire ([Turbo Streams](https://turbo.hotwired.dev/handbook/streams)) and [CableReady](https://cableready.stimulusreflex.com) (v5+) subscriptions at the WS server without performing RPC calls. Thus, you can make subscriptions blazingly fast and reduce the load on the RPC server.
+AnyCable provides an ability to terminate Hotwire ([Turbo Streams](https://turbo.hotwired.dev/handbook/streams)) and [CableReady](https://cableready.stimulusreflex.com) (v5+) subscriptions at the WS server without performing RPC calls. Thus, you can make subscriptions blazingly fast and reduce the load on the RPC server.
 
 In combination with [JWT identification](./jwt_identification.md), this feature makes it possible to avoid running RPC server at all in case you only need Hotwire/CableReady functionality.
 

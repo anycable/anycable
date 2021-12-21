@@ -2,6 +2,14 @@
 
 ## master
 
+- Add fastlane subscribing for Hotwire (Turbo Streams) and CableReady.
+
+Make it possible to terminate subscription requests at AnyCable Go without performing RPC calls.
+
+- Add JWT authentication/identification support.
+
+You can pass a properly structured token along the connection request to authorize the connection and set up _identifiers_ without peforming an RPC call.
+
 ## 1.1.4 (2021-11-16)
 
 - Add `rpc_max_call_recv_size` and `rpc_max_call_send_size` options to allow modifying the corresponding limits for gRPC client connection. ([@palkan][])

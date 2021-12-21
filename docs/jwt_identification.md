@@ -1,6 +1,6 @@
-# JWT identification <img class='pro-badge' src='https://docs.anycable.io/assets/pro.svg' alt='pro' />
+# JWT identification
 
-AnyCable Pro provides support for [JWT][jwt]-based authentication and identification.
+AnyCable provides support for [JWT][jwt]-based authentication and identification.
 
 You can pass a properly structured token along the connection request to authorize the connection and set up _identifiers_ (in terms of Action Cable). This approach brings the following benefits:
 
