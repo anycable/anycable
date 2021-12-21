@@ -1,4 +1,4 @@
-# Fastlane subscribing for Hotwire (Turbo Streams) and CableReady
+# Speedy Hotwire and CableReady streams
 
 AnyCable provides an ability to terminate Hotwire ([Turbo Streams](https://turbo.hotwired.dev/handbook/streams)) and [CableReady](https://cableready.stimulusreflex.com) (v5+) subscriptions at the WS server without performing RPC calls. Thus, you can make subscriptions blazingly fast and reduce the load on the RPC server.
 
