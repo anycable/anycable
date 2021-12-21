@@ -36,7 +36,7 @@ Run server:
 ```sh
 $ anycable-go
 
-=> INFO time context=main Starting AnyCable v1.0.0 (pid: 12902, open files limit: 524288)
+=> INFO time context=main Starting AnyCable v1.2.0 (pid: 12902, open files limit: 524288)
 ```
 
 By default, `anycable-go` tries to connect to an RPC server listening at `localhost:50051` (the default host for the Ruby gem). You can change this setting by providing `--rpc_host` option or `ANYCABLE_RPC_HOST` env variable (read more about [configuration](./configuration.md)).
