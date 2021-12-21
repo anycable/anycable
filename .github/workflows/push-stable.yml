@@ -5,6 +5,7 @@ on:
     tags:
       - v1.0.*
       - v1.1.*
+      - v1.2.*
   workflow_dispatch:
 
 jobs:
@@ -22,7 +23,7 @@ jobs:
         branch: 1-0-stable
         force: true
   push-1-1-stable:
-    if: ${{ contains(github.ref, 'refs/tags/v1.1.') }}
+    if: ${{ contains(github.ref, 'refs/tags/v1.1.') || contains(github.ref, 'refs/tags/v1.2.') || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
