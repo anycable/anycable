@@ -16,7 +16,7 @@ AllCops:
     - 'gemfiles/**/*'
   DisplayCopNames: true
   SuggestExtensions: false
-  TargetRubyVersion: 2.6
+  TargetRubyVersion: 2.7
 
 Standard/BlockSingleLineBraces:
   Enabled: false

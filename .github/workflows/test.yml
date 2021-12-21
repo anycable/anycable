@@ -17,13 +17,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ruby: ["2.7"]
-        anyway_config: ["~> 2.0"]
+        ruby: ["3.0"]
+        anyway_config: ["~> 2.2"]
         include:
-        - ruby: "2.6"
-          anyway_config: "~> 2.1.0"
-        - ruby: "3.0"
-          anyway_config: "~> 2.2"
+        - ruby: "2.7"
+          anyway_config: "~> 2.1"
     steps:
     - uses: actions/checkout@v2
     - uses: ruby/setup-ruby@v1

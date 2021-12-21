@@ -2,6 +2,8 @@
 
 ## master
 
+- Drop Ruby 2.6 support.
+
 ## 1.1.4 (2021-11-11)
 
 - Do not swallow `grpc` missing .so exceptions. ([@palkan][])

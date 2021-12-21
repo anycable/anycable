@@ -25,7 +25,7 @@ Gem::Specification.new do |spec|
   spec.files = %w[README.md MIT-LICENSE CHANGELOG.md]
   spec.require_paths = ["lib"]
 
-  spec.required_ruby_version = ">= 2.6.0"
+  spec.required_ruby_version = ">= 2.7.0"
 
   spec.add_dependency "anycable-core", AnyCable::VERSION
   spec.add_dependency "grpc", "~> 1.37"
