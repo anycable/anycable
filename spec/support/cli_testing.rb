@@ -35,7 +35,7 @@ module CLITesting
       line = nil
 
       loop do
-        res = IO.select([stdout], nil, nil, 0.2)
+        res = stdout.wait_readable(0.2)
 
         if res.nil?
           wait -= 0.2
