@@ -74,7 +74,7 @@ module AnyCable
 
       HTTP HEALTH CHECKER
           --http-health-port=port           Port to run HTTP health server on, default: <none> (disabled)
-          --http-health-path=path           Endpoint to server health cheks, default: "/health"
+          --http-health-path=path           Endpoint to serve health checks, default: "/health"
 
       REDIS PUB/SUB
           --redis-url=url                   Redis URL for pub/sub, default: REDIS_URL or "redis://localhost:6379/5"
