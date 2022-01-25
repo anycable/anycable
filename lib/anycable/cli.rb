@@ -119,7 +119,7 @@ module AnyCable
     def wait_till_terminated
       self_read = setup_signals
 
-      while readable_io = IO.select([self_read]) # rubocop:disable Lint/AssignmentInCondition
+      while readable_io = IO.select([self_read]) # rubocop:disable Lint/AssignmentInCondition,Lint/IncompatibleIoSelectWithFiberScheduler
         signal = readable_io.first[0].gets.strip
         raise Interrupt, "SIG#{signal} received"
       end
