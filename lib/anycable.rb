@@ -114,5 +114,5 @@ begin
 rescue LoadError => e
   # Re-raise an exception if we failed to load grpc .so files
   # (e.g., on Alpine Linux)
-  raise if /Error loading shared library/.match?(e.message)
+  raise if /(error loading shared library|incompatible architecture)/i.match?(e.message)
 end
