@@ -2,6 +2,8 @@
 
 ## master
 
+- Add empty (`''`) service to gRPC health check as "NOT_SERVING". ([@palkan][])
+
 ## 1.2.0 (2021-12-21) 🎄
 
 - Drop Ruby 2.6 support.

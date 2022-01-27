@@ -31,3 +31,5 @@ HTTP health check server can be used for readiness and liveness checks (e.g., in
 ## gRPC
 
 AnyCable includes a standard gRPC health checker (v1). See official [documentation](https://github.com/grpc/grpc/blob/master/doc/health-checking.md).
+
+Please, use the `anycable.RPC` service name for a health check (responds with `SERVING`). Omitting a service name would result in `NOT_SERVING` response.

@@ -18,6 +18,14 @@ describe "health checker" do
 
   context "without service" do
     specify do
+      expect(subject.status).to eq :NOT_SERVING
+    end
+  end
+
+  context "with unknown service" do
+    let(:params) { {service: "fake-service"} }
+
+    specify do
       expect { subject }.to raise_error(GRPC::NotFound)
     end
   end

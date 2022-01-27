@@ -96,6 +96,10 @@ module AnyCable
           "anycable.RPC",
           Grpc::Health::V1::HealthCheckResponse::ServingStatus::SERVING
         )
+        health_checker.add_status(
+          "",
+          Grpc::Health::V1::HealthCheckResponse::ServingStatus::NOT_SERVING
+        )
         health_checker
       end
     end
