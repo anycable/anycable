@@ -12,7 +12,15 @@ AnyCable.capture_exception do |ex, method, message|
   Honeybadger.notify(ex, component: "any_cable", action: method, params: message)
 end
 
-# with Raven (Sentry)
+# with Sentry (new SDK)...
+AnyCable.capture_exception do |ex, method, message|
+  Sentry.with_scope do |scope|
+    scope.set_tags transaction: "AnyCable#{method}", extra: message
+    Sentry.capture_exception(ex)
+  end
+end
+
+# ...or Raven (legacy Sentry SDK)
 AnyCable.capture_exception do |ex, method, message|
   Raven.capture_exception(ex, transaction: "AnyCable##{method}", extra: message)
 end
@@ -23,6 +31,17 @@ AnyCable.capture_exception do |ex, method, message|
     notice[:context][:component] = "any_cable"
     notice[:context][:action] = method
     notice[:params] = message
+  end
+end
+
+# with Datadog
+AnyCable.capture_exception do |ex, method, message|
+  Datadog.tracer.trace("any_cable") do |span|
+    span.set_error(ex)
+    span.set_tag("method", method)
+    span.set_tag("message", message)
+  ensure
+    span.finish
   end
 end
 ```
