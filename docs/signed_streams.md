@@ -2,7 +2,7 @@
 
 AnyCable provides an ability to terminate Hotwire ([Turbo Streams](https://turbo.hotwired.dev/handbook/streams)) and [CableReady](https://cableready.stimulusreflex.com) (v5+) subscriptions at the WS server without performing RPC calls. Thus, you can make subscriptions blazingly fast and reduce the load on the RPC server.
 
-In combination with [JWT identification](./jwt_identification.md), this feature makes it possible to avoid running RPC server at all in case you only need Hotwire/CableReady functionality.
+In combination with [JWT identification](./jwt_identification.md), this feature makes it possible to avoid running RPC server at all in case you only need Hotwire/CableReady functionality. **NOTE:** You should also disable disconnect calls (`anycable-go --disable_disconnect` or `ANYCABLE_DISABLE_DISCONNECT=1`).
 
 ## Usage with Hotwire / Turbo Streams
 
