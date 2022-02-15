@@ -6,7 +6,7 @@ The most important thing you should take into account is to set a big enough ope
 It defines how many file descriptors a process can keep open, and a socket is also a file descriptor.
 Thus, you cannot handle more connections than this limit (and event less, since the process uses a few file descriptors for its own purposes).
 
- AnyCable-Go prints the current open files limit on boot:
+AnyCable-Go prints the current open files limit on boot:
 
 ```sh
 $ anycable-go
@@ -17,6 +17,20 @@ INFO 2020-06-07T19:30:33.059Z context=main Starting AnyCable v1.2.0 (with mruby 
 Alternatively, you can run `ulimit -n` for the user which runs `anycable-go` or check the running process limits by `cat /proc/<process id>/limits`.
 
 Changing this limit depends on the OS and the way you deploy the server (e.g., for [systemd](../deployment/systemd.md) you can set a limit using `LimitNOFILE` directive).
+
+### Heroku
+
+Heroku sets the open files limit to 10k, and it's not possible to change it. See more [here](../deployment/heroku.md).
+
+### AWS ECS
+
+ECS has a default limit of 1024 open files. Make sure you configured [the `ulimit` setting](https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_Ulimit.html) in your task definition. For example:
+
+```yml
+HardLimit: 1048576
+Name: nofile
+SoftLimit: 1048576
+```
 
 ## TCP keepalive
 
