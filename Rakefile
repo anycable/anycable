@@ -31,4 +31,17 @@ namespace :steep do
   end
 end
 
-task default: %w[rubocop rubocop:md steep spec]
+namespace :spec do
+  desc "Run RSpec with RBS runtime tester enabled"
+  task :rbs do
+    rspec_args = ARGV.join.split("--", 2).last
+    sh <<~COMMAND
+      RBS_TEST_LOGLEVEL=error \
+      RBS_TEST_TARGET="AnyCable::*" \
+      rspec -rrbs/test/setup \
+      #{rspec_args}
+    COMMAND
+  end
+end
+
+task default: %w[rubocop rubocop:md steep spec spec:rbs]

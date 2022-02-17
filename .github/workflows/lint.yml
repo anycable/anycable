@@ -15,9 +15,8 @@ jobs:
     - uses: actions/checkout@v2
     - uses: ruby/setup-ruby@v1
       with:
-        ruby-version: 2.7
+        ruby-version: 3.1
         bundler-cache: true
-        bundler: 2.2.15
     - name: Lint Ruby code with RuboCop
       run: |
         bundle exec rubocop
@@ -30,14 +29,14 @@ jobs:
       CI: true
     strategy:
       matrix:
-        ruby: ["2.7"]
+        ruby: ["3.1"]
     steps:
     - uses: actions/checkout@v2
     - uses: ruby/setup-ruby@v1
       with:
         ruby-version: ${{ matrix.ruby }}
         bundler-cache: true
-        bundler: 2.2.15
     - name: Run Steep
       run: |
+        bundle exec rbs collection install
         bundle exec rake steep

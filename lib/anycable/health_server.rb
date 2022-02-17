@@ -65,7 +65,15 @@ module AnyCable
         AccessLog: []
       ).tap do |http_server|
         http_server.mount_proc path do |_, res|
-          res.status, res.body = server.running? ? SUCCESS_RESPONSE : FAILURE_RESPONSE
+          # Replace with mass assignment as soon as Steep added support
+          # https://github.com/soutaro/steep/issues/424
+          if server.running?
+            res.status = SUCCESS_RESPONSE.first
+            res.body = SUCCESS_RESPONSE.last
+          else
+            res.status = FAILURE_RESPONSE.first
+            res.body = FAILURE_RESPONSE.last
+          end
         end
       end
     end

@@ -2,12 +2,12 @@ module AnyCable
   class Socket
     class State
       attr_reader dirty_keys: Array[String]?
-      attr_reader source: protoMap
+      attr_reader source: Hash[String, String]
 
-      def initialize: (protoMap) -> void
+      def initialize: (Hash[String, String]) -> void
       def read: (String key) -> untyped
       def write: (String key, String val) -> void
-      def changed_fields: () -> protoMap?
+      def changed_fields: () -> Hash[String, String]?
 
       alias [] read
       alias []= write

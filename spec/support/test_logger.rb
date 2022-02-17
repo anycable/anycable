@@ -2,7 +2,7 @@
 
 require "logger"
 
-class TestLogger
+class TestLogger < Logger
   def initialize
     reset
   end

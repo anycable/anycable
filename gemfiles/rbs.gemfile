@@ -1,0 +1,4 @@
+source "https://rubygems.org" do
+  gem "rbs"
+  gem "steep", "~> 0.47.1"
+end

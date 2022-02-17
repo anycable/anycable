@@ -71,6 +71,8 @@ RSpec.configure do |config|
     metadata[:grpc] = true
   end
   config.filter_run_excluding(grpc: true) if NO_GRPC
+  # Igonore specs manually checking for argument types when running RBS runtime tester
+  config.filter_run_excluding(rbs: false) if defined?(::RBS::Test)
 
   config.before do
     Anyway.env.clear if defined?(Anyway::Config)

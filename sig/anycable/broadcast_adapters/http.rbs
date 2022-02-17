@@ -20,7 +20,7 @@ module AnyCable
 
       attr_reader uri: URI::Generic
       attr_reader queue: Thread::Queue
-      attr_reader thread: Thread
+      attr_reader thread: Thread?
 
       def ensure_thread_is_alive: () -> void
       def perform_request: (String payload) -> untyped

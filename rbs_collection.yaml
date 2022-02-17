@@ -1,0 +1,44 @@
+# Download sources
+sources:
+  - name: ruby/gem_rbs_collection
+    remote: https://github.com/ruby/gem_rbs_collection.git
+    revision: main
+    repo_dir: gems
+
+# A directory to install the downloaded RBSs
+path: .gem_rbs_collection
+
+gems:
+  - name: logger
+  - name: monitor
+  - name: optparse
+  - name: json
+  - name: uri
+  - name: pathname
+  - name: mutex_m
+  - name: date
+  - name: time
+  - name: set
+  - name: tempfile
+  - name: tsort
+  # Skip loading rbs gem's RBS.
+  # It's unnecessary if you don't use rbs as a library.
+  - name: rbs
+    ignore: true
+  - name: steep
+    ignore: true
+  - name: nokogiri
+    ignore: true
+  - name: parallel
+    ignore: true
+  - name: ast
+    ignore: true
+  - name: rainbow
+    ignore: true
+  - name: listen
+    ignore: true
+  - name: activesupport
+    ignore: true
+  # Ignore self to avoid deadlocks
+  - name: anycable-core
+    ignore: true

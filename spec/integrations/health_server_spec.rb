@@ -16,7 +16,7 @@ describe "health server" do
     @health_server.start
   end
 
-  after(:all) { @health_server.stop }
+  after(:all) { @health_server&.stop }
 
   context "when server is running" do
     before { allow(@server).to receive(:running?).and_return(true) }

@@ -116,22 +116,23 @@ module AnyCable
     # Build Rack env from request
     def build_rack_env
       uri = URI.parse(request_env.url)
+      headers = request_env.headers.to_h
 
       env = base_rack_env
       env.merge!({
         "PATH_INFO" => uri.path,
         "QUERY_STRING" => uri.query,
         "SERVER_NAME" => uri.host,
-        "SERVER_PORT" => uri.port,
+        "SERVER_PORT" => uri.port&.to_s,
         "HTTP_HOST" => uri.host,
-        "REMOTE_ADDR" => request_env.headers.delete("REMOTE_ADDR"),
+        "REMOTE_ADDR" => headers.delete("REMOTE_ADDR"),
         "rack.url_scheme" => uri.scheme&.sub(/^ws/, "http"),
         # AnyCable specific fields
         "anycable.raw_cstate" => request_env.cstate&.to_h,
         "anycable.raw_istate" => request_env.istate&.to_h
       }.delete_if { |_k, v| v.nil? })
 
-      env.merge!(build_headers(request_env.headers))
+      env.merge!(build_headers(headers))
     end
 
     def base_rack_env

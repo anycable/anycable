@@ -2,7 +2,9 @@
 
 require "spec_helper"
 
-describe AnyCable::MiddlewareChain do
+# We do not use real Requests/Response to unit-test this class,
+# so we skip it when RBS runtime testing is enabled
+describe AnyCable::MiddlewareChain, rbs: false do
   let(:chain) { described_class.new }
   let(:middleware_class) { Class.new(AnyCable::Middleware) }
 
