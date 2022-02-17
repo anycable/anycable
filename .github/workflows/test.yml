@@ -20,6 +20,8 @@ jobs:
         ruby: ["3.0"]
         anyway_config: ["~> 2.2"]
         include:
+        - ruby: "3.1"
+          anyway_config: "~> 2.2"
         - ruby: "2.7"
           anyway_config: "~> 2.1"
     steps:
@@ -29,7 +31,6 @@ jobs:
         ANYWAY_CONFIG_VERSION: ${{ matrix.anyway_config }}
       with:
         ruby-version: ${{ matrix.ruby }}
-        bundler: 2.2.15
         bundler-cache: true
     - name: Run RSpec
       run: |
@@ -39,3 +40,8 @@ jobs:
         GRPC: false
       run: |
         bundle exec rspec
+    - name: Run RSpec with RBS runtime tester
+      if: matrix.ruby == '3.1'
+      run: |
+        bundle exec rbs collection install
+        bundle exec rake spec:rbs -- --force-color

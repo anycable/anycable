@@ -4,7 +4,7 @@ module AnyCable
       def build_socket: (env: Env) -> Socket
       def build_env_response: (Socket socket) -> EnvResponse
       def logger: () -> Logger
-      def factory: () -> ^(Socket, ?identifiers: String, ?subscriptions: Array[String]) -> _Connection
+      def factory: () -> _ConnectionFactory
     end
 
     class Handler

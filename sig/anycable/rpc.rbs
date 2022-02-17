@@ -2,8 +2,14 @@ module AnyCable
   PROTO_VERSION: ::String
   SESSION_KEY: ::String
 
+  interface _ProtobufMap
+    def []: (String key) -> String
+    def []=: (String key, String val) -> String
+    def to_h: () -> Hash[String, String]
+  end
+
   type rpcStatus = 0 | 1 | 2
-  type protoMap = Hash[String, String]
+  type protoMap = _ProtobufMap
   type rpcMetadata = Hash[String, String]
 
   interface _WithEnvState
@@ -38,7 +44,7 @@ module AnyCable
   end
 
   module WithConnectionState : _WithEnv, _ProtoMessage
-    def initialize: (?session: untyped? session, **untyped other) -> untyped
+    %a{rbs:test:skip} def initialize: (?session: untyped? session, **untyped other) -> untyped
 
     def session=: (untyped val) -> untyped
     def session: () -> untyped
@@ -60,8 +66,8 @@ module AnyCable
   class ConnectionRequest
     include _WithEnv
 
-    def initialize: (?env: Env) -> void
-    def to_h: () -> Hash[String, untyped]
+    %a{rbs:test:skip} def initialize: (?env: Env) -> void
+    def to_h: () -> Hash[Symbol, untyped]
   end
 
   class ConnectionResponse
@@ -73,7 +79,7 @@ module AnyCable
     attr_accessor error_msg: String?
     attr_accessor env: EnvResponse
 
-    def initialize: (
+    %a{rbs:test:skip} def initialize: (
       status: rpcStatus,
       ?identifiers: String,
       ?transmissions: Array[String],
@@ -81,7 +87,7 @@ module AnyCable
       ?env: EnvResponse
     ) -> void
 
-    def to_h: () -> Hash[String, untyped]
+    def to_h: () -> Hash[Symbol, untyped]
   end
 
   class CommandMessage
@@ -92,14 +98,14 @@ module AnyCable
     attr_accessor connection_identifiers: String
     attr_accessor data: String
 
-    def initialize: (
+    %a{rbs:test:skip} def initialize: (
       command: String,
       identifier: String,
       ?connection_identifiers: String,
       ?env: Env
     ) -> void
 
-    def to_h: () -> Hash[String, untyped]
+    def to_h: () -> Hash[Symbol, untyped]
   end
 
   class CommandResponse
@@ -114,7 +120,7 @@ module AnyCable
     attr_accessor env: EnvResponse
     attr_accessor stopped_streams: Array[String]
 
-    def initialize: (
+    %a{rbs:test:skip} def initialize: (
       status: rpcStatus,
       ?disconnect: bool,
       ?stop_streams: bool,
@@ -125,7 +131,7 @@ module AnyCable
       ?env: EnvResponse
     ) -> void
 
-    def to_h: () -> Hash[String, untyped]
+    def to_h: () -> Hash[Symbol, untyped]
   end
 
   class DisconnectRequest
@@ -134,8 +140,8 @@ module AnyCable
     attr_accessor identifiers: String
     attr_accessor subscriptions: Array[String]
 
-    def initialize: (identifiers: String, ?subscriptions: Array[String], ?env: Env) -> void
-    def to_h: () -> Hash[String, untyped]
+    %a{rbs:test:skip} def initialize: (identifiers: String, ?subscriptions: Array[String], ?env: Env) -> void
+    def to_h: () -> Hash[Symbol, untyped]
   end
 
   class DisconnectResponse
@@ -144,8 +150,8 @@ module AnyCable
     attr_accessor status: rpcStatus
     attr_accessor error_msg: String?
 
-    def initialize: (status: rpcStatus, ?error_msg: String) -> void
-    def to_h: () -> Hash[String, untyped]
+    %a{rbs:test:skip} def initialize: (status: rpcStatus, ?error_msg: String) -> void
+    def to_h: () -> Hash[Symbol, untyped]
   end
 
   type rpcRequest = ConnectionRequest | DisconnectRequest | CommandMessage

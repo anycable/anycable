@@ -36,7 +36,7 @@ describe AnyCable do
 
   describe "#broadcast_adapter=" do
     before(:all) do
-      class AnyCable::BroadcastAdapters::MyCustomAdapter # rubocop:disable Lint/ConstantDefinitionInBlock
+      class AnyCable::BroadcastAdapters::MyCustomAdapter < AnyCable::BroadcastAdapters::Base # rubocop:disable Lint/ConstantDefinitionInBlock
         attr_reader :options
         def initialize(**options)
           @options = options
@@ -73,14 +73,14 @@ describe AnyCable do
       expect(AnyCable.broadcast_adapter.options).to eq(url: "example.com")
     end
 
-    specify "set by instance" do
+    specify "set by instance", rbs: false do
       adapter = double("adapter", broadcast: nil)
       AnyCable.broadcast_adapter = adapter
       AnyCable.broadcast "test", "abc"
       expect(adapter).to have_received(:broadcast).with("test", "abc")
     end
 
-    specify "raises error when adapter doesn't implement #broadcast method" do
+    specify "raises error when adapter doesn't implement #broadcast method", rbs: false do
       adapter = double("adapter")
       expect { AnyCable.broadcast_adapter = adapter }
         .to raise_error(ArgumentError, /must implement #broadcast/)

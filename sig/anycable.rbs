@@ -18,7 +18,11 @@ module AnyCable
 
   type serverBuilder = ^(Config) -> _Server
 
-  attr_accessor self.connection_factory: ^(Socket, ?identifiers: String, ?subscriptions: Array[String]) -> _Connection
+  interface _ConnectionFactory
+    def call: (Socket, ?identifiers: String, ?subscriptions: Array[String]) -> _Connection
+  end
+
+  attr_accessor self.connection_factory: _ConnectionFactory
   attr_accessor self.server_builder: serverBuilder
   attr_writer self.logger: Logger
   attr_writer self.rpc_handler: RPC::Handler

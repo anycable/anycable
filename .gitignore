@@ -38,3 +38,5 @@ Gemfile.local
 *.gem
 tmp/
 coverage/
+
+.gem_rbs_collection/

@@ -23,7 +23,7 @@ Gem::Specification.new do |spec|
 
   spec.executables = %w[anycable anycabled]
   spec.files = Dir.glob("lib/**/*") + Dir.glob("bin/*") + %w[README.md MIT-LICENSE CHANGELOG.md] +
-    Dir.glob("sig/anycable/*") + %w[sig/anycable.rbs]
+    Dir.glob("sig/anycable/**/*.rbs") + %w[sig/anycable.rbs]
   spec.require_paths = ["lib"]
 
   spec.required_ruby_version = ">= 2.7.0"
@@ -38,6 +38,4 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rspec", ">= 3.5"
   spec.add_development_dependency "webmock", "~> 3.8"
   spec.add_development_dependency "webrick"
-
-  spec.add_development_dependency "steep"
 end

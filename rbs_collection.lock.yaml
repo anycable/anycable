@@ -1,0 +1,76 @@
+---
+sources:
+- name: ruby/gem_rbs_collection
+  remote: https://github.com/ruby/gem_rbs_collection.git
+  revision: main
+  repo_dir: gems
+path: ".gem_rbs_collection"
+gems:
+- name: logger
+  version: '0'
+  source:
+    type: stdlib
+- name: monitor
+  version: '0'
+  source:
+    type: stdlib
+- name: optparse
+  version: '0'
+  source:
+    type: stdlib
+- name: json
+  version: '0'
+  source:
+    type: stdlib
+- name: uri
+  version: '0'
+  source:
+    type: stdlib
+- name: pathname
+  version: '0'
+  source:
+    type: stdlib
+- name: mutex_m
+  version: '0'
+  source:
+    type: stdlib
+- name: date
+  version: '0'
+  source:
+    type: stdlib
+- name: time
+  version: '0'
+  source:
+    type: stdlib
+- name: set
+  version: '0'
+  source:
+    type: stdlib
+- name: tempfile
+  version: '0'
+  source:
+    type: stdlib
+- name: tsort
+  version: '0'
+  source:
+    type: stdlib
+- name: anyway_config
+  version: 2.2.3
+  source:
+    type: rubygems
+- name: rack
+  version: 2.2.2
+  source:
+    type: git
+    name: ruby/gem_rbs_collection
+    revision: 5e006c8976e661f16b61ba9193acce07f82b4ec5
+    remote: https://github.com/ruby/gem_rbs_collection.git
+    repo_dir: gems
+- name: redis
+  version: '4.2'
+  source:
+    type: git
+    name: ruby/gem_rbs_collection
+    revision: 5e006c8976e661f16b61ba9193acce07f82b4ec5
+    remote: https://github.com/ruby/gem_rbs_collection.git
+    repo_dir: gems

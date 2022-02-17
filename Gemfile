@@ -12,6 +12,7 @@ gem "anyway_config", ENV.fetch("ANYWAY_CONFIG_VERSION", ">= 2.1.0")
 gem "grpc", "~> 1.37" unless ENV["GRPC"] == "false"
 
 eval_gemfile "gemfiles/rubocop.gemfile"
+eval_gemfile "gemfiles/rbs.gemfile"
 
 local_gemfile = "#{File.dirname(__FILE__)}/Gemfile.local"
 
