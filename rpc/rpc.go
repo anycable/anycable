@@ -210,7 +210,7 @@ func (c *Controller) Authenticate(sid string, env *common.SessionEnv) (*common.C
 
 	c.metrics.Counter(metricsRPCFailures).Inc()
 
-	return nil, errors.New("Failed to deserialize connection response")
+	return nil, errors.New("failed to deserialize connection response")
 }
 
 // Subscribe performs Command RPC call with "subscribe" command
@@ -305,7 +305,7 @@ func (c *Controller) Disconnect(sid string, env *common.SessionEnv, id string, s
 		return err
 	}
 
-	return errors.New("Failed to deserialize disconnect response")
+	return errors.New("failed to deserialize disconnect response")
 }
 
 func (c *Controller) parseCommandResponse(sid string, response interface{}, err error) (*common.CommandResult, error) {
@@ -327,7 +327,7 @@ func (c *Controller) parseCommandResponse(sid string, response interface{}, err 
 
 	c.metrics.Counter(metricsRPCFailures).Inc()
 
-	return nil, errors.New("Failed to deserialize command response")
+	return nil, errors.New("failed to deserialize command response")
 }
 
 func (c *Controller) busy() int {

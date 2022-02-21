@@ -35,7 +35,7 @@ go get -u -f github.com/anycable/anycable-go/cmd/anycable-go
 **NOTE:** right now it's not possible to build `anycable-go` with mruby support using the command above. To install `anycable-go` with mruby from source try:
 
 ```
-go get -d -u -f github.com/anycable/anycable-go/cmd/anycable-go && (cd $GOPATH/src/github.com/anycable/anycable-go && make prepare-mruby install-with-mruby)
+go get -d -u -f github.com/anycable/anycable-go/cmd/anycable-go && (cd $GOPATH/src/github.com/anycable/anycable-go && sudo make prepare-mruby && make install-with-mruby)
 ```
 
 ## Upgrade
@@ -66,6 +66,7 @@ For more information about available options run `anycable-go -h`.
 
 ```shell
 # first, prepare mruby (we embed it by default)
+# NOTE: Might require running with sudo, since we build artifacts within a Go module
 make prepare-mruby
 
 # then build the Go binary (will be available in dist/anycable-go)

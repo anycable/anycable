@@ -164,7 +164,7 @@ func (r *Runner) Run() error {
 	subscriber, err := r.initSubscriber(appNode, config)
 
 	if err != nil {
-		return fmt.Errorf("Couldn't configure pub/sub: %v", err)
+		return fmt.Errorf("couldn't configure pub/sub: %v", err)
 	}
 
 	r.shutdownables = append(r.shutdownables, subscriber)
@@ -237,7 +237,7 @@ func (r *Runner) initMetrics(c *metrics.Config) (*metrics.Metrics, error) {
 
 func (r *Runner) initController(m *metrics.Metrics, c *config.Config) (node.Controller, error) {
 	if r.controllerFactory == nil {
-		return nil, errors.New("Controller factory is not specified")
+		return nil, errors.New("controller factory is not specified")
 	}
 
 	return r.controllerFactory(m, c)
@@ -261,7 +261,7 @@ func (r *Runner) defaultDisconnector(n *node.Node, c *config.Config) (node.Disco
 
 func (r *Runner) initSubscriber(n *node.Node, c *config.Config) (pubsub.Subscriber, error) {
 	if r.subscriberFactory == nil {
-		return nil, errors.New("Subscriber factory is not specified")
+		return nil, errors.New("subscriber factory is not specified")
 	}
 
 	return r.subscriberFactory(n, c)

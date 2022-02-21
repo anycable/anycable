@@ -169,7 +169,7 @@ func (s *RedisSubscriber) Start() error {
 		s.reconnectAttempt++
 
 		if s.reconnectAttempt >= maxReconnectAttempts {
-			return errors.New("Redis reconnect attempts exceeded")
+			return errors.New("Redis reconnect attempts exceeded") //nolint:stylecheck
 		}
 
 		delay := nextRetry(s.reconnectAttempt)

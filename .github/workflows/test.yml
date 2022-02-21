@@ -21,8 +21,15 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install bison
+    - uses: actions/cache@v1
+      with:
+        path: vendor
+        key: vendor-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          vendor-
+    - run: go mod vendor
     - name: Build mruby
-      run: make prepare-mruby
+      run: bash -c '(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)'
     - uses: actions/setup-go@v2
       with:
         go-version: ${{ matrix.go-version }}
@@ -55,8 +62,15 @@ jobs:
     - name: Install system deps
       run: |
         brew install bison
+    - uses: actions/cache@v1
+      with:
+        path: vendor
+        key: vendor-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          vendor-
+    - run: go mod vendor
     - name: Build mruby
-      run: make prepare-mruby
+      run: bash -c '(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)'
     - name: Run tests
       run: go test -tags mrb ./...
     - name: Build
@@ -104,8 +118,15 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install bison
+    - uses: actions/cache@v1
+      with:
+        path: vendor
+        key: vendor-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          vendor-
+    - run: go mod vendor
     - name: Build mruby
-      run: make prepare-mruby
+      run: bash -c '(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)'
     - uses: actions/cache@v1
       with:
         path: /home/runner/bundle

@@ -2,7 +2,6 @@ OUTPUT ?= dist/anycable-go
 GOBENCHDIST ?= dist/gobench
 
 export GO111MODULE=on
-export GOFLAGS=-mod=vendor
 
 MODIFIER ?= ""
 
@@ -32,6 +31,9 @@ GOBUILD=go build -ldflags $(LD_FLAGS) -a
 
 MRUBY_VERSION=1.2.0
 
+current_dir = $(shell pwd)
+MRUBY_CONFIG ?= $(current_dir)/etc/build_config.rb
+
 # Standard build
 default: build
 
@@ -48,23 +50,19 @@ build:
 build-gobench:
 	go build -tags "mrb gops" -ldflags $(LD_FLAGS) -o $(GOBENCHDIST) cmd/gobench-cable/main.go
 
-vendor:
-	mv vendor/github.com/mitchellh/go-mruby/mruby-build tmp/
-	mv vendor/github.com/mitchellh/go-mruby/libmruby.a tmp/
-	go mod vendor
-	mv tmp/mruby-build vendor/github.com/mitchellh/go-mruby/
-	mv tmp/libmruby.a vendor/github.com/mitchellh/go-mruby/libmruby.a
+download-mruby:
+	go mod download github.com/mitchellh/go-mruby
 
-prepare-mruby:
-	cd vendor/github.com/mitchellh/go-mruby && \
-	MRUBY_COMMIT=$(MRUBY_VERSION) MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a || \
+prepare-mruby: download-mruby
+	cd $$(go list -m -f '{{.Dir}}' github.com/mitchellh/go-mruby) && \
+	MRUBY_COMMIT=$(MRUBY_VERSION) MRUBY_CONFIG=$(MRUBY_CONFIG) make libmruby.a || \
 	(sed -i '' 's/{ :verbose => $$verbose }/verbose: $$verbose/g' ./mruby-build/mruby/Rakefile && \
-		MRUBY_COMMIT=$(MRUBY_VERSION) MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)
+		MRUBY_COMMIT=$(MRUBY_VERSION) MRUBY_CONFIG=$(MRUBY_CONFIG) make libmruby.a)
 
 upgrade-mruby: clean-mruby prepare-mruby
 
 clean-mruby:
-	cd vendor/github.com/mitchellh/go-mruby && \
+	cd $$(go list -m -f '{{.Dir}}' github.com/mitchellh/go-mruby) && \
 	rm -rf vendor/mruby
 
 build-all-mruby:

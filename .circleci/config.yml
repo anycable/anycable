@@ -199,6 +199,10 @@ jobs:
         name: Cache latest master tag
         command: |
           echo $(git tag --merged master -l --sort=-version:refname "v*" | head -n1) > latest-tag.log
+    - run:
+        name: Download Go deps
+        command: |
+          go mod vendor
     - persist_to_workspace:
         root: .
         paths: .
@@ -286,6 +290,7 @@ jobs:
     - run:
         name: Add Go binaries to PATH
         command: echo 'export PATH="$GOPATH/bin:/usr/local/go/bin:$PATH"' >> $BASH_ENV
+    - run: go mod vendor
     - run:
         name: Prepare code for the build
         command: |

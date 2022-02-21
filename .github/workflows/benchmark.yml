@@ -18,7 +18,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GO111MODULE: on
-      GOFLAGS: "-mod=vendor"
       BUNDLE_GEMFILE: .circleci/Gemfile
       BUNDLE_PATH: /home/runner/bundle
       DEBUG: true
