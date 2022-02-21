@@ -6,7 +6,8 @@ wait_tcp 8080
 
 BENCHMARK_COMMAND = <<~CMD
   websocket-bench broadcast --concurrent 40 --sample-size 100 \
-  --step-size 200 --payload-padding 200 --total-steps 5 \
+  --step-size 200 --payload-padding 200 --total-steps 4 \
+  --wait-broadcasts 5 \
   ws://localhost:8080/cable --server-type=actioncable
 CMD
 
