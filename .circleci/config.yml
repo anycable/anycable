@@ -230,8 +230,6 @@ jobs:
     - attach_workspace:
         at: /go/src/github.com/anycable/anycable-go/
     - run: make test
-    - run: make vet
-    - run: make fmt
 
   benchmark:
     docker:

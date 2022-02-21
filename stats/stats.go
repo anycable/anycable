@@ -53,7 +53,7 @@ func (agg *ResAggregate) Max() time.Duration {
 	return agg.samples[len(agg.samples)-1]
 }
 
-// Percentile returns the p-th precentile
+// Percentile returns the p-th percentile
 func (agg *ResAggregate) Percentile(p int) time.Duration {
 	if p <= 0 {
 		panic("p must be greater than 0")

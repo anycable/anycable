@@ -4,9 +4,6 @@ pre-commit:
     lint:
       glob: "*.go"
       run: make lint && test "{staged_files}"
-    vet:
-      glob: "*.go"
-      run: make vet && test "{staged_files}"
     mdl:
       glob: "docs/*.md"
       run: mdl {staged_files}
@@ -19,10 +16,6 @@ pre-commit:
 
 pre-push:
   commands:
-    sec:
-      glob: "*.go"
-      files: "git diff --name-only HEAD @{push}"
-      run: make sec && test "{files}"
     test:
       glob: "*.go"
       files: "git diff --name-only HEAD @{push}"

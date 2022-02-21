@@ -232,7 +232,7 @@ func BenchmarkBroadcast(b *testing.B) {
 				for j := 0; j < config.streamsPerSession; j++ {
 					channel := fmt.Sprintf("test_channel%d", j)
 
-					stream := streams[rand.Intn(len(streams))]
+					stream := streams[rand.Intn(len(streams))] // nolint:gosec
 
 					hub.subscribeSession(sid, stream, channel)
 				}

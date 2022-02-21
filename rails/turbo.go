@@ -36,7 +36,7 @@ func (c *TurboController) Authenticate(sid string, env *common.SessionEnv) (*com
 
 func (c *TurboController) Subscribe(sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error) {
 	params := struct {
-		SignedStreamId string `json:"signed_stream_name"`
+		SignedStreamID string `json:"signed_stream_name"`
 	}{}
 
 	err := json.Unmarshal([]byte(channel), &params)
@@ -46,10 +46,10 @@ func (c *TurboController) Subscribe(sid string, env *common.SessionEnv, id strin
 		return nil, err
 	}
 
-	stream, err := c.verifier.Verified(params.SignedStreamId)
+	stream, err := c.verifier.Verified(params.SignedStreamID)
 
 	if err != nil {
-		c.log.WithField("identifier", channel).Debugf("verification failed for %s: %v", params.SignedStreamId, err)
+		c.log.WithField("identifier", channel).Debugf("verification failed for %s: %v", params.SignedStreamID, err)
 
 		return &common.CommandResult{
 				Status:        common.FAILURE,

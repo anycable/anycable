@@ -278,7 +278,7 @@ func (r *Runner) initWebSocketHandler(n *node.Node, c *config.Config) (http.Hand
 func (r *Runner) defaultWebSocketHandler(n *node.Node, c *config.Config) http.Handler {
 	return ws.WebsocketHandler(c.Headers, &c.WS, func(wsc *websocket.Conn, info *ws.RequestInfo, callback func()) error {
 		wrappedConn := ws.NewConnection(wsc)
-		session := node.NewSession(n, wrappedConn, info.Url, info.Headers, info.UID)
+		session := node.NewSession(n, wrappedConn, info.URL, info.Headers, info.UID)
 
 		_, err := n.Authenticate(session)
 

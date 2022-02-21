@@ -35,7 +35,7 @@ func (m *MessageVerifier) Verified(msg string) (string, error) {
 
 	var result string
 
-	if err = json.Unmarshal([]byte(jsonStr), &result); err != nil {
+	if err = json.Unmarshal(jsonStr, &result); err != nil {
 		return "", err
 	}
 
@@ -57,11 +57,11 @@ func (m *MessageVerifier) isValid(msg string) bool {
 	data := []byte(parts[0])
 	digest := []byte(parts[1])
 
-	h := hmac.New(sha256.New, []byte(m.key))
+	h := hmac.New(sha256.New, m.key)
 	h.Write(data)
 
 	actual := []byte(fmt.Sprintf("%x", h.Sum(nil)))
 
 	return subtle.ConstantTimeEq(int32(len(actual)), int32(len(digest))) == 1 &&
-		subtle.ConstantTimeCompare(actual[:], digest) == 1
+		subtle.ConstantTimeCompare(actual, digest) == 1
 }

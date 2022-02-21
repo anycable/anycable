@@ -15,13 +15,13 @@ type Dialer = func(c *Config) (pb.RPCClient, ClientHelper, error)
 type Config struct {
 	// RPC instance host
 	Host string
-	// The max number of simulteneous requests.
+	// The max number of simultaneous requests.
 	// Should be slightly less than the RPC server concurrency to avoid
 	// ResourceExhausted errors
 	Concurrency int
 	// Enable client-side TLS on RPC connections?
 	EnableTLS bool
-	// Max recieve msg size (bytes)
+	// Max receive msg size (bytes)
 	MaxRecvSize int
 	// Max send msg size (bytes)
 	MaxSendSize int

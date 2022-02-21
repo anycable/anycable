@@ -102,12 +102,19 @@ func (h *Hub) Run() {
 			}
 
 		case subinfo := <-h.subscribe:
-			if subinfo.event == "add" {
-				h.subscribeSession(subinfo.session, subinfo.stream, subinfo.identifier)
-			} else if subinfo.event == "removeAll" {
-				h.unsubscribeSessionFromChannel(subinfo.session, subinfo.identifier, false)
-			} else {
-				h.unsubscribeSession(subinfo.session, subinfo.stream, subinfo.identifier)
+			switch subinfo.event {
+			case "add":
+				{
+					h.subscribeSession(subinfo.session, subinfo.stream, subinfo.identifier)
+				}
+			case "removeAll":
+				{
+					h.unsubscribeSessionFromChannel(subinfo.session, subinfo.identifier, false)
+				}
+			default:
+				{
+					h.unsubscribeSession(subinfo.session, subinfo.stream, subinfo.identifier)
+				}
 			}
 
 		case message := <-h.broadcast:

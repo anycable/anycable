@@ -129,25 +129,9 @@ gen-ssl:
 	openssl genrsa -out tmp/ssl/server.key 2048
 	openssl req -new -x509 -sha256 -key tmp/ssl/server.key -out tmp/ssl/server.crt -days 3650
 
-
-bin/shadow:
-	@which shadow &> /dev/null || \
-		env GO111MODULE=off go get golang.org/x/tools/go/analysis/passes/shadow/cmd/shadow
-
 bin/golangci-lint:
 	@test -x $$(go env GOPATH)/bin/golangci-lint || \
-		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.39.0
-
-bin/gosec:
-	@test -x $$(go env GOPATH)/bin/gosec || \
-		curl -sfL https://raw.githubusercontent.com/securego/gosec/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v2.7.0
-
-vet: bin/shadow
-	go vet ./...
-	go vet -vettool=$$(which shadow) ./...
-
-sec: bin/gosec
-	$$(go env GOPATH)/bin/gosec -quiet -confidence=medium -severity=medium  ./...
+		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.44.0
 
 lint: bin/golangci-lint
 	$$(go env GOPATH)/bin/golangci-lint run

@@ -20,13 +20,20 @@ func InitLogger(format string, level string) error {
 
 	log.SetLevel(logLevel)
 
-	if format == "text" {
-		log.SetHandler(&LogHandler{writer: os.Stdout, tty: IsTTY()})
-	} else if format == "json" {
-		log.SetHandler(json.New(os.Stdout))
-	} else {
-		msg := fmt.Sprintf("Unknown log format: %s.\nAvaialable formats are: text, json", format)
-		return errors.New(msg)
+	switch format {
+	case "text":
+		{
+			log.SetHandler(&LogHandler{writer: os.Stdout, tty: IsTTY()})
+		}
+	case "json":
+		{
+			log.SetHandler(json.New(os.Stdout))
+		}
+	default:
+		{
+			msg := fmt.Sprintf("Unknown log format: %s.\nAvaialable formats are: text, json", format)
+			return errors.New(msg)
+		}
 	}
 
 	return nil

@@ -1,3 +1,4 @@
+//go:build (!darwin && !linux) || !mrb
 // +build !darwin,!linux !mrb
 
 package metrics

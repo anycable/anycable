@@ -26,7 +26,6 @@ func (st MockState) Ready() error {
 }
 
 func (st MockState) Close() {
-	st.closed = true
 }
 
 func NewTestController() *Controller {

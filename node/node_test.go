@@ -124,7 +124,7 @@ func TestUnsubscribe(t *testing.T) {
 	node := NewMockNode()
 	session := NewMockSession("14", &node)
 
-	t.Run("Sucessful unsubscribe", func(t *testing.T) {
+	t.Run("Successful unsubscribe", func(t *testing.T) {
 		session.subscriptions["test_channel"] = true
 
 		_, err := node.Unsubscribe(session, &common.Message{Identifier: "test_channel"})

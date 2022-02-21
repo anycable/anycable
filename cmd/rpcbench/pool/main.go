@@ -101,7 +101,7 @@ func main() {
 		p, err = grpcpool.NewChannelPool(options.initialCapacity, options.capacity, factory)
 
 		if err != nil {
-			log.Errorf("!!! Failed to intialize RPC pool !!!\n%v", err)
+			log.Errorf("!!! Failed to initialize RPC pool !!!\n%v", err)
 			os.Exit(1)
 		}
 
@@ -116,7 +116,7 @@ func main() {
 		)
 
 		if err != nil {
-			log.Errorf("!!! Failed to intialize RPC connection !!!\n%v", err)
+			log.Errorf("!!! Failed to initialize RPC connection !!!\n%v", err)
 			os.Exit(1)
 		}
 

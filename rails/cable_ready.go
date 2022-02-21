@@ -36,7 +36,7 @@ func (c *CableReadyController) Authenticate(sid string, env *common.SessionEnv) 
 
 func (c *CableReadyController) Subscribe(sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error) {
 	params := struct {
-		SignedStreamId string `json:"identifier"`
+		SignedStreamID string `json:"identifier"`
 	}{}
 
 	err := json.Unmarshal([]byte(channel), &params)
@@ -46,10 +46,10 @@ func (c *CableReadyController) Subscribe(sid string, env *common.SessionEnv, id 
 		return nil, err
 	}
 
-	stream, err := c.verifier.Verified(params.SignedStreamId)
+	stream, err := c.verifier.Verified(params.SignedStreamID)
 
 	if err != nil {
-		c.log.WithField("identifier", channel).Debugf("verification failed for %s: %v", params.SignedStreamId, err)
+		c.log.WithField("identifier", channel).Debugf("verification failed for %s: %v", params.SignedStreamID, err)
 
 		return &common.CommandResult{
 				Status:        common.FAILURE,

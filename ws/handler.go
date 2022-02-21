@@ -18,7 +18,7 @@ const remoteAddrHeader = "REMOTE_ADDR"
 
 type RequestInfo struct {
 	UID     string
-	Url     string
+	URL     string
 	Headers *map[string]string
 }
 
@@ -71,7 +71,7 @@ func WebsocketHandler(headersToFetch []string, config *Config, sessionHandler se
 			CloseWithReason(wsc, websocket.CloseAbnormalClosure, err.Error())
 			return
 		}
-		info.Url = url
+		info.URL = url
 
 		wsc.SetReadLimit(config.MaxMessageSize)
 

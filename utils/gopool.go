@@ -33,8 +33,8 @@ func AllPools() []*GoPool {
 // Start size defaults to 20% of the max size but not greater than 1024.
 // Queue size defaults to 50% of the max size.
 func NewGoPool(name string, size int) *GoPool {
-	spawn := int(size / 5)
-	queue := int(size / 2)
+	spawn := size / 5
+	queue := size / 2
 
 	if spawn <= 0 {
 		spawn = 1
