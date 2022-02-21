@@ -21,7 +21,7 @@ type Config struct {
 	Port                 int
 	MaxConn              int
 	BroadcastAdapter     string
-	Path                 string
+	Path                 []string
 	HealthPath           string
 	Headers              []string
 	SSL                  server.SSLConfig

@@ -193,9 +193,10 @@ func (r *Runner) Run() error {
 		return fmt.Errorf("!!! Failed to initialize WebSocket handler !!!\n%v", err)
 	}
 
-	wsServer.Mux.Handle(config.Path, wsHandler)
-
-	ctx.Infof("Handle WebSocket connections at %s%s", wsServer.Address(), config.Path)
+	for _, path := range config.Path {
+		wsServer.Mux.Handle(path, wsHandler)
+		ctx.Infof("Handle WebSocket connections at %s%s", wsServer.Address(), path)
+	}
 
 	wsServer.Mux.Handle(config.HealthPath, http.HandlerFunc(server.HealthHandler))
 	ctx.Infof("Handle health connections at %s%s", wsServer.Address(), config.HealthPath)

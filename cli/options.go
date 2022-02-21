@@ -16,6 +16,7 @@ var (
 	// Config represents the CLI config loaded from options and ENV
 	defaults    config.Config
 	headers     string
+	paths       string
 	showVersion bool
 	showHelp    bool
 	debugMode   bool
@@ -49,7 +50,7 @@ func init() {
 	fs.StringVar(&defaults.Host, "host", "localhost", "")
 	fs.IntVar(&defaults.Port, "port", portDefault, "")
 	fs.IntVar(&defaults.MaxConn, "max-conn", 0, "")
-	fs.StringVar(&defaults.Path, "path", "/cable", "")
+	fs.StringVar(&paths, "path", "/cable", "")
 	fs.StringVar(&defaults.HealthPath, "health-path", "/health", "")
 
 	fs.StringVar(&defaults.SSL.CertPath, "ssl_cert", "", "")
@@ -148,6 +149,7 @@ func PrintHelp() {
 
 func prepareComplexDefaults() {
 	defaults.Headers = parseHeaders(headers)
+	defaults.Path = strings.Split(paths, " ")
 
 	if debugMode {
 		defaults.LogLevel = "debug"
