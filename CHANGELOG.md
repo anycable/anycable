@@ -2,6 +2,10 @@
 
 ## master
 
+## 1.2.1 (2022-02-21)
+
+- Fix RBS signature. ([@palkan][])
+
 - Add empty (`''`) service to gRPC health check as "NOT_SERVING". ([@palkan][])
 
 ## 1.2.0 (2021-12-21) 🎄
