@@ -93,7 +93,7 @@ module CLITesting
     rescue Exception => e # rubocop:disable Lint/RescueException
       rspex = e
     ensure
-      Process.kill("SIGKILL", pid) if PTY.check(pid).nil?
+      Process.kill("SIGKILL", pid)
     end
   rescue PTY::ChildExited, Errno::ESRCH
     # no-op
