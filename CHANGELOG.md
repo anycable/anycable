@@ -2,6 +2,10 @@
 
 ## master
 
+## 1.2.2 (2022-03-04)
+
+- Allow Ruby 2.6.
+
 ## 1.2.1 (2022-02-21)
 
 - Fix RBS signature. ([@palkan][])
