@@ -19,7 +19,6 @@ jobs:
     env:
       GO111MODULE: on
       BUNDLE_GEMFILE: .circleci/Gemfile
-      BUNDLE_PATH: /home/runner/bundle
       DEBUG: true
     services:
       redis:
@@ -27,28 +26,28 @@ jobs:
         ports: ["6379:6379"]
         options: --health-cmd="redis-cli ping" --health-interval 1s --health-timeout 3s --health-retries 30
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
+    - uses: actions/setup-go@v3
+      with:
+        go-version: 1.17.x
     - name: Install system deps
       run: |
         sudo apt-get update
         sudo apt-get install bison
-    - name: Build mruby
-      run: make prepare-mruby
-    - uses: actions/setup-go@v2
-      with:
-        go-version: ${{ matrix.go-version }}
     - uses: ruby/setup-ruby@v1
       with:
+        # Use <3.0 since go-mruby's Rakefile has some problems with keyword arguments compatibility
         ruby-version: 2.7
-    - uses: actions/cache@v1
+        bundler-cache: true
+    - uses: actions/cache@v3
       with:
-        path: /home/runner/bundle
-        key: bundle-${{ hashFiles('**/.circle/Gemfile') }}
+        path: vendor
+        key: vendor-${{ hashFiles('**/go.sum') }}
         restore-keys: |
-          bundle-
-    - name: Install anyt
-      run: |
-        bundle install && bundle update
+          vendor-
+    - run: go mod vendor
+    - name: Build mruby
+      run: bash -c '(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)'
     - name: Install websocket-bench & gops
       env:
         GO111MODULE: off
@@ -60,5 +59,4 @@ jobs:
         make build
     - name: Run benchmarks
       run: |
-        ruby benchmarks/runner.rb benchmarks/broadcasts.benchfile
-        ruby benchmarks/runner.rb benchmarks/goroutines.benchfile
+        make benchmarks

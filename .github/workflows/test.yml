@@ -16,7 +16,7 @@ jobs:
       GO111MODULE: on
       GOFLAGS: "-mod=vendor"
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Install system deps
       run: |
         sudo apt-get update
@@ -30,11 +30,11 @@ jobs:
     - run: go mod vendor
     - name: Build mruby
       run: bash -c '(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)'
-    - uses: actions/setup-go@v2
+    - uses: actions/setup-go@v3
       with:
         go-version: ${{ matrix.go-version }}
     - name: Run tests
-      run: go test -tags mrb ./...
+      run: make test
     - name: Build
       if: matrix['go-version'] == '1.17.x'
       run: |
@@ -55,14 +55,14 @@ jobs:
       GO111MODULE: on
       GOFLAGS: "-mod=vendor"
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - uses: actions/setup-go@v2
       with:
         go-version: ${{ matrix.go-version }}
     - name: Install system deps
       run: |
         brew install bison
-    - uses: actions/cache@v1
+    - uses: actions/cache@v3
       with:
         path: vendor
         key: vendor-${{ hashFiles('**/go.sum') }}
@@ -72,7 +72,7 @@ jobs:
     - name: Build mruby
       run: bash -c '(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)'
     - name: Run tests
-      run: go test -tags mrb ./...
+      run: make test
     - name: Build
       if: matrix['go-version'] == '1.17.x'
       run: |
@@ -88,37 +88,38 @@ jobs:
     needs: [test, test-macos]
     strategy:
       matrix:
-        adapter: ["http", "redis"]
-        ssl: ["ssl", ""]
-        exclude:
-          - adapter: "redis"
-            ssl: "ssl"
+        test_command:
+          - test-conformance
+          - test-conformance-http
+          - test-conformance-ssl
     runs-on: ubuntu-latest
     env:
       GO111MODULE: on
       GOFLAGS: "-mod=vendor"
       BUNDLE_GEMFILE: .circleci/Gemfile
-      BUNDLE_PATH: /home/runner/bundle
-      ANYCABLE_BROADCAST_ADAPTER: ${{ matrix.adapter }}
-      ANYCABLE_HTTP_BROADCAST_SECRET: any_secret
+      BUNDLE_PATH: ./vendor/bundle
+      # Specify REDIS_URL explicitly, so Makefile doesn't check the presence of Redis
+      REDIS_URL: redis://localhost:6379/
     services:
       redis:
         image: redis:5.0-alpine
         ports: ["6379:6379"]
         options: --health-cmd="redis-cli ping" --health-interval 1s --health-timeout 3s --health-retries 30
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-go@v2
+    - uses: actions/checkout@v3
+    - uses: actions/setup-go@v3
       with:
-        go-version: 1.16.x
-    - uses: ruby/setup-ruby@v1
-      with:
-        ruby-version: 2.7
+        go-version: 1.17.x
     - name: Install system deps
       run: |
         sudo apt-get update
         sudo apt-get install bison
-    - uses: actions/cache@v1
+    - uses: ruby/setup-ruby@v1
+      with:
+        # Use <3.0 since go-mruby's Rakefile has some problems with keyword arguments compatibility
+        ruby-version: 2.7
+        bundler-cache: true
+    - uses: actions/cache@v3
       with:
         path: vendor
         key: vendor-${{ hashFiles('**/go.sum') }}
@@ -127,27 +128,7 @@ jobs:
     - run: go mod vendor
     - name: Build mruby
       run: bash -c '(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)'
-    - uses: actions/cache@v1
-      with:
-        path: /home/runner/bundle
-        key: bundle-${{ hashFiles('**/.circle/Gemfile') }}
-        restore-keys: |
-          bundle-
-    - name: Install anyt and deps
-      run: bundle install && bundle update
-    - name: Build test binary
-      run: go build -tags mrb -o tmp/anycable-go-test cmd/anycable-go/main.go
-    - name: Run anyt (with SSL)
-      if: ${{ matrix.ssl == 'ssl' }}
-      env:
-        ANYCABLE_HTTP_BROADCAST_URL: https://localhost:8090/_broadcast
+    - name: Run tests
       run: |
-        bundle exec anyt -c \
-        "tmp/anycable-go-test --headers=cookie,x-api-token --ssl_key=etc/ssl/server.key --ssl_cert=etc/ssl/server.crt --port=8443" \
-        --target-url="wss://localhost:8443/cable"
-    - name: Run anyt (without SSL)
-      if: ${{ matrix.ssl == '' }}
-      run: |
-        bundle exec anyt -c \
-        "tmp/anycable-go-test --headers=cookie,x-api-token" \
-        --target-url="ws://localhost:8080/cable"
+        bundle install
+        make ${{ matrix.test_command }}
