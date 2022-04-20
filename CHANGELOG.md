@@ -2,6 +2,10 @@
 
 ## master
 
+## 1.2.3 (2022-04-20)
+
+- Pass unique connection id (_session id_) in the `anycable.sid` Rack env field. ([@palkan][])
+
 ## 1.2.2 (2022-03-04)
 
 - Allow Ruby 2.6.
