@@ -43,7 +43,8 @@ module AnyCable
       http_health_path: "/health",
 
       ### Misc options
-      version_check_enabled: true
+      version_check_enabled: true,
+      sid_header_enabled: true
     )
 
     if respond_to?(:coerce_types)

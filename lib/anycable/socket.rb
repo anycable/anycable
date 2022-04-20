@@ -129,7 +129,8 @@ module AnyCable
         "rack.url_scheme" => uri.scheme&.sub(/^ws/, "http"),
         # AnyCable specific fields
         "anycable.raw_cstate" => request_env.cstate&.to_h,
-        "anycable.raw_istate" => request_env.istate&.to_h
+        "anycable.raw_istate" => request_env.istate&.to_h,
+        "anycable.sid" => request_env.sid
       }.delete_if { |_k, v| v.nil? })
 
       env.merge!(build_headers(headers))

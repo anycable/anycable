@@ -24,6 +24,7 @@ module AnyCable
 
     attr_accessor url: String
     attr_accessor headers: protoMap
+    attr_accessor sid: String?
 
     def initialize: (?url: String, ?headers: protoMap, ?cstate: protoMap?, ?istate: protoMap?) -> void
   end

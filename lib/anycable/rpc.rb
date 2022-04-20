@@ -88,4 +88,11 @@ module AnyCable
   class DisconnectResponse
     include StatusPredicates
   end
+
+  # TODO: Move sid to env in the future version of RPC proto
+  unless Env.instance_methods(false).include?(:sid)
+    class Env
+      attr_accessor :sid
+    end
+  end
 end

@@ -65,6 +65,8 @@ module AnyCable
 
       check_version!
 
+      configure_middleware!
+
       @server = AnyCable.server_builder.call(config)
 
       # Make sure middlewares are not adding after server has started
@@ -263,6 +265,12 @@ module AnyCable
       AnyCable.middleware.use(
         AnyCable::Middlewares::CheckVersion.new(AnyCable::PROTO_VERSION)
       )
+    end
+
+    def configure_middleware!
+      if config.sid_header_enabled?
+        AnyCable.middleware.use(AnyCable::Middlewares::EnvSid)
+      end
     end
 
     def parse_gem_options!(args)
