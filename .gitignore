@@ -39,3 +39,4 @@ Gemfile.local
 tmp/
 coverage/
 .gem_rbs_collection/
+rbs_collection.lock.yaml
