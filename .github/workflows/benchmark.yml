@@ -59,4 +59,5 @@ jobs:
         make build
     - name: Run benchmarks
       run: |
+        bundle install
         make benchmarks
