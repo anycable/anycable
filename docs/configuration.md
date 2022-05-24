@@ -29,7 +29,7 @@ Local address to run gRPC server on (default: `"[::]:50051"`, deprecated, will b
 
 [Broadcast adapter](./broadcast_adapters.md) to use. Available options out-of-the-box: `redis` (default), `http`.
 
-**redis_url** (`REDIS_URL`, `ANYCABLE_REDIS_URL`, `--redis-url`)
+**redis_url** (`REDIS_URL`, `ANYCABLE_REDIS_URL`, `--redis_url`)
 
 Redis URL for pub/sub (default: `"redis://localhost:6379/5"`).
 

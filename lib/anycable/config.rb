@@ -78,9 +78,9 @@ module AnyCable
           --http-health-path=path           Endpoint to serve health checks, default: "/health"
 
       REDIS PUB/SUB
-          --redis-url=url                   Redis URL for pub/sub, default: REDIS_URL or "redis://localhost:6379/5"
+          --redis_url=url                   Redis URL for pub/sub, default: REDIS_URL or "redis://localhost:6379/5"
           --redis_channel=name              Redis channel for broadcasting, default: "__anycable__"
-          --redis-sentinels=<...hosts>      Redis Sentinel followers addresses (as a comma-separated list), default: nil
+          --redis_sentinels=<...hosts>      Redis Sentinel followers addresses (as a comma-separated list), default: nil
 
       HTTP PUB/SUB
           --http-broadcast-url              HTTP pub/sub endpoint URL, default: "http://localhost:8090/_broadcast"
