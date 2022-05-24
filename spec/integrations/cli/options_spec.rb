@@ -35,7 +35,7 @@ describe "CLI options", :cli do
   specify "many options" do
     run_cli(
       "-r ../spec/dummies/app.rb " \
-      "--redis-channel _test_cable_ --debug " \
+      "--redis_channel _test_cable_ --debug " \
       "--http-health-port 9009 --http-health-path '/hc'"
     ) do |cli|
       expect(cli).to have_output_line(

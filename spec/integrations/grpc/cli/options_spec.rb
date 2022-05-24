@@ -24,7 +24,7 @@ describe "gRPC CLI options", :cli do
         "--rpc-host 0.0.0.0:50053 -r ../spec/dummies/app.rb " \
         "--rpc-pool-size 10 --rpc-max-waiting-requests 2 " \
         "--rpc-poll-period 0.2 --rpc-pool-keep-alive 0.5 " \
-        "--redis-channel _test_cable_ --debug "
+        "--redis_channel _test_cable_ --debug "
       ) do |cli|
         expect(cli).to have_output_line("RPC server is listening on 0.0.0.0:50053")
         expect(cli).to have_output_line("Broadcasting Redis channel: _test_cable_")

@@ -6,7 +6,7 @@ You can also pass configuration variables to CLI as options, e.g.:
 
 ```sh
 $ bundle exec anycable --rpc-host 0.0.0.0:50120 \
-                       --redis-channel my_redis_channel \
+                       --redis_channel my_redis_channel \
                        --log-level debug
 ```
 
@@ -33,7 +33,7 @@ Local address to run gRPC server on (default: `"[::]:50051"`, deprecated, will b
 
 Redis URL for pub/sub (default: `"redis://localhost:6379/5"`).
 
-**redis_channel** (`ANYCABLE_REDIS_CHANNEL`, `--redis-channel`)
+**redis_channel** (`ANYCABLE_REDIS_CHANNEL`, `--redis_channel`)
 
 Redis channel for broadcasting (default: `"__anycable__"`).
 
