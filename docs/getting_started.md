@@ -17,12 +17,6 @@ brew install anycable-go --HEAD
 
 Arch Linux users can install [anycable-go package from AUR](https://aur.archlinux.org/packages/anycable-go/).
 
-[GoFish](https://gofi.sh) users can install AnyCable-Go using the following command:
-
-```sh
-gofish install anycable-go
-```
-
 Of course, you can install it from source too:
 
 ```sh
