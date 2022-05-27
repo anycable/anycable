@@ -30,6 +30,7 @@ module AnyCable
         **options
       )
         options = AnyCable.config.to_redis_params.merge(options)
+        options[:driver] = :ruby
         @redis_conn = ::Redis.new(**options)
         @channel = channel
       end

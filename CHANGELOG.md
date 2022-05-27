@@ -2,6 +2,8 @@
 
 ## master
 
+- Setting the redis adapter to use the ruby driver. ([@smasry][])
+
 ## 1.2.3 (2022-04-20)
 
 - Pass unique connection id (_session id_) in the `anycable.sid` Rack env field. ([@palkan][])
@@ -124,3 +126,4 @@ See [Changelog](https://github.com/anycable/anycable/blob/0-6-stable/CHANGELOG.m
 [@palkan]: https://github.com/palkan
 [@sponomarev]: https://github.com/sponomarev
 [@bibendi]: https://github.com/bibendi
+[@smasry]: https://github.com/smasry

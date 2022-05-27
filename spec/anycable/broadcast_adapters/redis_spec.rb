@@ -23,14 +23,14 @@ describe AnyCable::BroadcastAdapters::Redis do
     adapter = described_class.new
     expect(adapter.channel).to eq "_test_"
     expect(Redis).to have_received(:new)
-      .with(url: "redis://redis-1:6478")
+      .with(url: "redis://redis-1:6478", driver: :ruby)
   end
 
   it "uses override config params" do
     adapter = described_class.new(url: "redis://local.redis:123", channel: "_zyx_")
     expect(adapter.channel).to eq "_zyx_"
     expect(Redis).to have_received(:new)
-      .with(url: "redis://local.redis:123")
+      .with(url: "redis://local.redis:123", driver: :ruby)
   end
 
   describe "#broadcast" do
