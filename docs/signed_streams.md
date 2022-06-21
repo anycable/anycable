@@ -4,6 +4,8 @@ AnyCable provides an ability to terminate Hotwire ([Turbo Streams](https://turbo
 
 In combination with [JWT identification](./jwt_identification.md), this feature makes it possible to avoid running RPC server at all in case you only need Hotwire/CableReady functionality. **NOTE:** You should also disable disconnect calls (`anycable-go --disable_disconnect` or `ANYCABLE_DISABLE_DISCONNECT=1`).
 
+> 🎥 Check out this [AnyCasts episode](https://anycable.io/blog/anycasts-rails-7-hotwire-and-anycable/) to learn how to use AnyCable with Hotwire Rails application in a RPC-less way.
+
 ## Usage with Hotwire / Turbo Streams
 
 We assume that you use an Action Cable integration provided by the [turbo-rails][] gem.

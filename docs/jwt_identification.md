@@ -60,6 +60,8 @@ puts JWT.encode payload, ENCRYPTION_KEY, "HS256"
 
 ### Handling expired tokens
 
+> 🎥 Check out this [AnyCasts episode](https://anycable.io/blog/anycasts-using-anycable-client/) to learn more about the expiration problem and how to solve it using [anycable-client](https://github.com/anycable/anycable-client).
+
 Whenever a server encounters a token that has expired, it rejects the connection and send the `disconnect` message with `reason: "token_expired"`. It's a client responsibility to handle this situation and refresh the token.
 
 See, for example, how [anycable-client handles this](https://github.com/anycable/anycable-client#refreshing-authentication-tokens).
