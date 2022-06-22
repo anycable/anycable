@@ -29,13 +29,7 @@ Arch Linux users can install [anycable-go package from AUR](https://aur.archlinu
 Of course, you can install it from source too:
 
 ```shell
-go get -u -f github.com/anycable/anycable-go/cmd/anycable-go
-```
-
-**NOTE:** right now it's not possible to build `anycable-go` with mruby support using the command above. To install `anycable-go` with mruby from source try:
-
-```
-go get -d -u -f github.com/anycable/anycable-go/cmd/anycable-go && (cd $GOPATH/src/github.com/anycable/anycable-go && sudo make prepare-mruby && make install-with-mruby)
+go install github.com/anycable/anycable-go/cmd/anycable-go@latest
 ```
 
 ## Upgrade
