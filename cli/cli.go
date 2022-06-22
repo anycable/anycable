@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -116,8 +117,9 @@ func (r *Runner) Run() error {
 	}
 
 	mrubySupport := r.initMRuby()
+	numProcs := runtime.GOMAXPROCS(0)
 
-	ctx.Infof("Starting %s %s%s (pid: %d, open file limit: %s)", r.name, version.Version(), mrubySupport, os.Getpid(), utils.OpenFileLimit())
+	ctx.Infof("Starting %s %s%s (pid: %d, open file limit: %s, gomaxprocs: %d)", r.name, version.Version(), mrubySupport, os.Getpid(), utils.OpenFileLimit(), numProcs)
 
 	metrics, err := r.initMetrics(&config.Metrics)
 
