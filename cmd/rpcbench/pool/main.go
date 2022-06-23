@@ -19,6 +19,7 @@ import (
 	"github.com/namsral/flag"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/status"
 )
@@ -93,7 +94,7 @@ func main() {
 	).Infof("Running RPC benchmark for %s", options.host)
 
 	factory := func() (*grpc.ClientConn, error) {
-		return grpc.Dial(options.host, grpc.WithInsecure(), grpc.WithKeepaliveParams(kacp))
+		return grpc.Dial(options.host, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithKeepaliveParams(kacp))
 	}
 
 	if options.pool {
@@ -110,9 +111,9 @@ func main() {
 		var conn *grpc.ClientConn
 		conn, err = grpc.Dial(
 			options.host,
-			grpc.WithInsecure(),
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
 			grpc.WithKeepaliveParams(kacp),
-			grpc.WithBalancerName("round_robin"), // nolint:staticcheck
+			grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy":"round_robin"}`),
 		)
 
 		if err != nil {

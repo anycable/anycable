@@ -19,6 +19,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -417,9 +418,11 @@ func defaultDialer(conf *Config) (client pb.RPCClient, state ClientHelper, err e
 		PermitWithoutStream: true,             // send pings even without active streams
 	}
 
+	const grpcServiceConfig = `{"loadBalancingPolicy":"round_robin"}`
+
 	dialOptions := []grpc.DialOption{
 		grpc.WithKeepaliveParams(kacp),
-		grpc.WithBalancerName("round_robin"), // nolint:staticcheck
+		grpc.WithDefaultServiceConfig(grpcServiceConfig),
 	}
 
 	if enableTLS {
@@ -430,7 +433,7 @@ func defaultDialer(conf *Config) (client pb.RPCClient, state ClientHelper, err e
 
 		dialOptions = append(dialOptions, grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)))
 	} else {
-		dialOptions = append(dialOptions, grpc.WithInsecure())
+		dialOptions = append(dialOptions, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	}
 
 	var callOptions = []grpc.CallOption{}
