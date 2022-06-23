@@ -55,6 +55,8 @@ jobs:
         go get -u github.com/anycable/websocket-bench
         go get -u github.com/google/gops
     - name: Build test binary
+      env:
+        BUILD_ARGS: "-race"
       run: |
         make build
     - name: Run benchmarks

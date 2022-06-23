@@ -241,6 +241,7 @@ jobs:
       GO111MODULE: "on"
       GOFLAGS: "-mod=vendor"
       CGO_ENABLED: "1"
+      BUILD_ARGS: "-race"
       BUNDLE_GEMFILE: .circleci/Gemfile
       ANYCABLE_RPC_HOST: "127.0.0.1:50051"
     steps:
@@ -268,7 +269,7 @@ jobs:
         at: .
     - run:
         name: Building Linux amd64 binary
-        command: go build -tags mrb -ldflags "-s -w" -a -o "/tmp/anycable-go-test" cmd/anycable-go/main.go
+        command: go build -tags mrb -ldflags "-s -w" -race -a -o "/tmp/anycable-go-test" cmd/anycable-go/main.go
     - save_cache:
         key: binary-for-conformance-{{ .Revision }}
         paths: /tmp/anycable-go-test
