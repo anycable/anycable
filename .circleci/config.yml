@@ -135,8 +135,7 @@ workflows:
 executors:
   golang:
     docker:
-      - image: circleci/golang:1.17-stretch
-    working_directory: /go/src/github.com/anycable/anycable-go/
+      - image: cimg/go:1.18.3
     environment:
       CGO_ENABLED: "0"
       GO111MODULE: "on"
@@ -149,9 +148,8 @@ executors:
       CGO_ENABLED: "1"
       GO111MODULE: "on"
       GOFLAGS: "-mod=vendor"
-      GO_VERSION: 1.17
-      GO_SHA: 8b6c8c0cccc8b685f857c50a511adb497a3a5cdd5b8970f03f95aa3f02bce404
-    working_directory: /Users/distiller/go/src/github.com/anycable/anycable-go/
+      GO_VERSION: 1.18.3
+      GO_SHA: a23a24c5528671d444328a36a98056902f699a5a211b6ad5db29ca0c012e0085
   docker:
     docker:
       - image: docker:18.06.0-ce
@@ -232,14 +230,13 @@ jobs:
       CGO_ENABLED: "1"
     steps:
     - attach_workspace:
-        at: /go/src/github.com/anycable/anycable-go/
+        at: .
     - run: make test
 
   benchmark:
     docker:
-      - image: circleci/golang:1.17-stretch
-      - image: circleci/redis:4.0.11-alpine3.8
-    working_directory: /go/src/github.com/anycable/anycable-go/
+      - image: cimg/go:1.18.3
+      - image: cimg/redis:6.2.6
     environment:
       GO111MODULE: "on"
       GOFLAGS: "-mod=vendor"
@@ -248,7 +245,7 @@ jobs:
       ANYCABLE_RPC_HOST: "127.0.0.1:50051"
     steps:
     - attach_workspace:
-        at: /go/src/github.com/anycable/anycable-go/
+        at: .
     - ruby/install:
         version: '2.7'
     - run: bundle install
@@ -268,7 +265,7 @@ jobs:
       CGO_ENABLED: "1"
     steps:
     - attach_workspace:
-        at: /go/src/github.com/anycable/anycable-go/
+        at: .
     - run:
         name: Building Linux amd64 binary
         command: go build -tags mrb -ldflags "-s -w" -a -o "/tmp/anycable-go-test" cmd/anycable-go/main.go
@@ -279,7 +276,6 @@ jobs:
   build_darwin_mruby:
     executor: osx
     steps:
-    - run: mkdir -p ${GOPATH}/src/github.com/anycable/anycable-go/
     - checkout
     - run:
         name: Installing Golang
@@ -307,7 +303,7 @@ jobs:
     executor: golang
     steps:
     - attach_workspace:
-        at: /go/src/github.com/anycable/anycable-go/
+        at: .
     - build:
         os: linux
         arch: amd64
@@ -350,7 +346,7 @@ jobs:
       CGO_ENABLED: "1"
     steps:
     - attach_workspace:
-        at: /go/src/github.com/anycable/anycable-go/
+        at: .
     - build-mruby:
         os: linux
         arch: amd64
@@ -362,7 +358,7 @@ jobs:
   conformance:
     docker:
     - image: cimg/ruby:2.7.1
-    - image: circleci/redis:4.0.11-alpine3.8
+    - image: cimg/redis:6.2.6
     environment:
       BUNDLE_GEMFILE: ".circleci/Gemfile"
     steps:

@@ -5,8 +5,9 @@ run:
     - "tmp"
 
 linters:
+  disable:
+    - structcheck
   enable:
-    - bodyclose
     - decorder
     - errname
     - gocritic
@@ -18,7 +19,6 @@ linters:
     - stylecheck
     - tenv
     - unconvert
-    - wastedassign
 
 linters-settings:
   gci:
