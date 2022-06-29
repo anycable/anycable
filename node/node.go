@@ -371,10 +371,10 @@ func (n *Node) handleCommandReply(s *Session, msg *common.Message, reply *common
 	}
 
 	if reply.StopAllStreams {
-		n.hub.RemoveAllSubscriptions(s.UID, msg.Identifier)
+		n.hub.unsubscribeSessionFromChannel(s.UID, msg.Identifier, false)
 	} else if reply.StoppedStreams != nil {
 		for _, stream := range reply.StoppedStreams {
-			n.hub.RemoveSubscription(s.UID, msg.Identifier, stream)
+			n.hub.unsubscribeSession(s.UID, stream, msg.Identifier)
 		}
 	}
 

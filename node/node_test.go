@@ -5,6 +5,7 @@ import (
 
 	"github.com/anycable/anycable-go/common"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAuthenticate(t *testing.T) {
@@ -70,6 +71,12 @@ func TestSubscribe(t *testing.T) {
 	node := NewMockNode()
 	session := NewMockSession("14", &node)
 
+	node.hub.addSession(session)
+	defer node.hub.removeSession(session)
+
+	go node.hub.Run()
+	defer node.hub.Shutdown()
+
 	t.Run("Successful subscription", func(t *testing.T) {
 		_, err := node.Subscribe(session, &common.Message{Identifier: "test_channel"})
 		assert.Nil(t, err, "Error must be nil")
@@ -84,9 +91,6 @@ func TestSubscribe(t *testing.T) {
 	})
 
 	t.Run("Subscription with a stream", func(t *testing.T) {
-		node.hub.addSession(session)
-		defer node.hub.removeSession(session)
-
 		_, err := node.Subscribe(session, &common.Message{Identifier: "with_stream"})
 		assert.Nil(t, err, "Error must be nil")
 
@@ -124,31 +128,32 @@ func TestUnsubscribe(t *testing.T) {
 	node := NewMockNode()
 	session := NewMockSession("14", &node)
 
+	node.hub.addSession(session)
+	defer node.hub.removeSession(session)
+
+	go node.hub.Run()
+	defer node.hub.Shutdown()
+
 	t.Run("Successful unsubscribe", func(t *testing.T) {
 		session.subscriptions["test_channel"] = true
+		node.hub.subscribeSession("14", "stream", "test_channel")
 
-		_, err := node.Unsubscribe(session, &common.Message{Identifier: "test_channel"})
+		node.hub.broadcastToStream("stream", `"before"`)
+		msg, err := session.conn.Read()
+		require.NoError(t, err)
+
+		assert.Equalf(t, `{"identifier":"test_channel","message":"before"}`, string(msg), "Broadcasted message is invalid: %s", msg)
+
+		_, err = node.Unsubscribe(session, &common.Message{Identifier: "test_channel"})
 		assert.Nil(t, err, "Error must be nil")
 
 		// Removes subscription from session
 		assert.NotContains(t, session.subscriptions, "test_channel", "Shouldn't contain test_channel")
 
-		var subscription HubSubscription
+		node.hub.broadcastToStream("stream", "after")
 
-		// Expected to subscribe session to hub
-		select {
-		case subscription = <-node.hub.subscribe:
-		default:
-			assert.Fail(t, "Expected hub to receive unsubscribe message but none was sent")
-		}
-
-		assert.Equalf(t, "14", subscription.session, "Session is invalid: %s", subscription.session)
-		assert.Equalf(t, "test_channel", subscription.identifier, "Channel is invalid: %s", subscription.identifier)
-
-		msg, err := session.conn.Read()
-		assert.Nil(t, err)
-
-		assert.Equalf(t, []byte("14"), msg, "Sent message is invalid: %s", msg)
+		msg, _ = session.conn.Read()
+		assert.Nil(t, msg)
 	})
 
 	t.Run("Error during unsubscription", func(t *testing.T) {
@@ -163,7 +168,13 @@ func TestPerform(t *testing.T) {
 	node := NewMockNode()
 	session := NewMockSession("14", &node)
 
+	node.hub.addSession(session)
+	defer node.hub.removeSession(session)
+
 	session.subscriptions["test_channel"] = true
+
+	go node.hub.Run()
+	defer node.hub.Shutdown()
 
 	t.Run("Successful perform", func(t *testing.T) {
 		_, err := node.Perform(session, &common.Message{Identifier: "test_channel", Data: "action"})
@@ -194,25 +205,22 @@ func TestPerform(t *testing.T) {
 	})
 
 	t.Run("With stopped streams", func(t *testing.T) {
-		_, err := node.Perform(session, &common.Message{Identifier: "test_channel", Data: "stop_stream"})
+		session.subscriptions["test_channel"] = true
+		node.hub.subscribeSession("14", "stop_stream", "test_channel")
+
+		node.hub.broadcastToStream("stop_stream", `"before"`)
+		msg, err := session.conn.Read()
+		require.NoError(t, err)
+
+		assert.Equalf(t, `{"identifier":"test_channel","message":"before"}`, string(msg), "Broadcasted message is invalid: %s", msg)
+
+		_, err = node.Perform(session, &common.Message{Identifier: "test_channel", Data: "stop_stream"})
 		assert.Nil(t, err)
 
-		var subscription HubSubscription
+		node.hub.broadcastToStream("stop_stream", `"after"`)
 
-		// Expected to subscribe session to hub
-		select {
-		case subscription = <-node.hub.subscribe:
-		default:
-			assert.Fail(t, "Expected hub to receive unsubscribe message but none was sent")
-			return
-		}
-
-		_, err = session.conn.Read()
-		assert.Nil(t, err)
-
-		assert.Equalf(t, "14", subscription.session, "Session is invalid: %s", subscription.session)
-		assert.Equalf(t, "test_channel", subscription.identifier, "Channel is invalid: %s", subscription.identifier)
-		assert.Equalf(t, "stop_stream", subscription.stream, "Stream is invalid: %s", subscription.stream)
+		msg, _ = session.conn.Read()
+		assert.Nil(t, msg)
 	})
 
 	t.Run("With channel state", func(t *testing.T) {
@@ -227,6 +235,30 @@ func TestPerform(t *testing.T) {
 		assert.Len(t, *session.env.ChannelStates, 1)
 		assert.Len(t, (*session.env.ChannelStates)["test_channel"], 1)
 		assert.Equal(t, "performed", (*session.env.ChannelStates)["test_channel"]["_c_"])
+	})
+}
+
+func TestStreamSubscriptionRaceConditions(t *testing.T) {
+	node := NewMockNode()
+	session := NewMockSession("14", &node)
+
+	node.hub.addSession(session)
+	session.subscriptions["test_channel"] = true
+	// We need a real hub here to catch a race condition
+	go node.hub.Run()
+	defer node.hub.Shutdown()
+
+	t.Run("stop and start streams race conditions", func(t *testing.T) {
+		_, err := node.Perform(session, &common.Message{Identifier: "test_channel", Data: "stop_and_start_streams"})
+		assert.Nil(t, err)
+
+		// Make sure session is subscribed to the stream
+		node.hub.broadcastToStream("all", "2022")
+
+		msg, err := session.conn.Read()
+		require.NoError(t, err)
+
+		assert.Equalf(t, "{\"identifier\":\"test_channel\",\"message\":2022}", string(msg), "Broadcasted message is invalid: %s", msg)
 	})
 }
 

@@ -77,6 +77,7 @@ func (c *MockController) Unsubscribe(sid string, env *common.SessionEnv, id stri
 	}
 
 	res := NewMockResult(sid)
+	res.Transmissions = nil
 	return res, nil
 }
 
@@ -95,6 +96,13 @@ func (c *MockController) Perform(sid string, env *common.SessionEnv, id string, 
 
 	if data == "stop_stream" {
 		res.StoppedStreams = []string{data}
+		res.Transmissions = nil
+	}
+
+	if data == "stop_and_start_streams" {
+		res.StopAllStreams = true
+		res.Streams = []string{"all"}
+		res.Transmissions = nil
 	}
 
 	if data == "channel_state" {

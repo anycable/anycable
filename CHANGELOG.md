@@ -2,6 +2,8 @@
 
 ## master
 
+- Fix race conditions when stopping and starting streams within the same command. ([@palkan][])
+
 ## 1.2.0 (2021-12-21) 🎄
 
 - Add fastlane subscribing for Hotwire (Turbo Streams) and CableReady.

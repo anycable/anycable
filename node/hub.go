@@ -130,29 +130,9 @@ func (h *Hub) Run() {
 	}
 }
 
-// AddSession enqueues sessions registration
-func (h *Hub) AddSession(s *Session) {
-	h.register <- HubRegistration{event: "add", session: s}
-}
-
 // RemoveSession enqueues session un-registration
 func (h *Hub) RemoveSession(s *Session) {
 	h.register <- HubRegistration{event: "remove", session: s}
-}
-
-// AddSubscription enqueues adding a subscription for session-identifier pair to the hub
-func (h *Hub) AddSubscription(sid string, identifier string, stream string) {
-	h.subscribe <- HubSubscription{event: "add", session: sid, identifier: identifier, stream: stream}
-}
-
-// RemoveSubscription enqueues removing a subscription for session-identifier pair from the hub
-func (h *Hub) RemoveSubscription(sid string, identifier string, stream string) {
-	h.subscribe <- HubSubscription{event: "remove", session: sid, identifier: identifier, stream: stream}
-}
-
-// RemoveAllSubscriptions enqueues removing all subscription for session-identifier pair from the hub
-func (h *Hub) RemoveAllSubscriptions(sid string, identifier string) {
-	h.subscribe <- HubSubscription{event: "removeAll", session: sid, identifier: identifier}
 }
 
 // Broadcast enqueues data broadcasting to a stream
