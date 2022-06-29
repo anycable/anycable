@@ -9,7 +9,9 @@ common_tags_filter: &common_tags_filter
     tags:
       only: /^v.*/
     branches:
-      only: "master"
+      only:
+        - "master"
+        - /^ci\//
 
 # Workflow definition
 workflows:
