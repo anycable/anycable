@@ -11,7 +11,7 @@ common_tags_filter: &common_tags_filter
     branches:
       only:
         - "master"
-        - /^ci\//
+        - /^ci\/.*/
 
 # Workflow definition
 workflows:
@@ -28,10 +28,6 @@ workflows:
         <<: *common_tags_filter
         requires:
         - prepare_mruby
-    - build_binary_for_conformance:
-        <<: *common_tags_filter
-        requires:
-          - prepare_mruby
     - build:
         <<: *requires_prepared_code
         <<: *common_tags_filter
@@ -42,7 +38,7 @@ workflows:
     - conformance:
         <<: *common_tags_filter
         requires:
-         - build_binary_for_conformance
+         - prepare_mruby
     - build_docker:
         name: build_docker_main
         requires:
@@ -360,15 +356,20 @@ jobs:
 
   conformance:
     docker:
-    - image: cimg/ruby:2.7.1
+    - image: cimg/go:1.18.3
     - image: cimg/redis:6.2.6
     environment:
       BUNDLE_GEMFILE: ".circleci/Gemfile"
+      GO111MODULE: "on"
+      GOFLAGS: "-mod=vendor"
+      CGO_ENABLED: "1"
+      BUILD_ARGS: "-race"
+      REDIS_URL: redis://localhost:6379/3
     steps:
     - attach_workspace:
         at: .
-    - restore_cache:
-        key: binary-for-conformance-{{ .Revision }}
+    - ruby/install:
+        version: '2.7'
     - run:
         name: Install deps
         command: bundle install
@@ -377,16 +378,13 @@ jobs:
         command: dockerize -wait tcp://localhost:6379 -timeout 1m
     - run:
         name: Default (Redis) pubsub test
-        command: bundle exec anyt -c "/tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable"
+        command: make test-conformance
     - run:
         name: SSL test
-        command: bundle exec anyt -c "/tmp/anycable-go-test --headers=cookie,x-api-token --ssl_key=etc/ssl/server.key --ssl_cert=etc/ssl/server.crt --port=8443" --target-url="wss://localhost:8443/cable"
+        command: make test-conformance-ssl
     - run:
-        environment:
-          ANYCABLE_BROADCAST_ADAPTER: http
-          ANYCABLE_HTTP_BROADCAST_SECRET: any_secret
         name: HTTP broadcast test
-        command: bundle exec anyt -c "/tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable"
+        command: make test-conformance-http
 
   build_docker:
     parameters:
@@ -431,7 +429,6 @@ jobs:
     - run:
         name: Push Docker image
         command: docker push anycable/anycable-go:<<parameters.version>>
-
   push_latest_docker:
     executor: docker
     steps:

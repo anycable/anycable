@@ -104,7 +104,7 @@ benchmarks: build
 	BUNDLE_GEMFILE=.circleci/Gemfile ruby benchmarks/runner.rb benchmarks/*.benchfile
 
 tmp/anycable-go-test:
-	go build -tags mrb -o tmp/anycable-go-test cmd/anycable-go/main.go
+	go build -tags mrb -race -o tmp/anycable-go-test cmd/anycable-go/main.go
 
 test-conformance: tmp/anycable-go-test
 	BUNDLE_GEMFILE=.circleci/Gemfile bundle exec anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable"
