@@ -240,6 +240,7 @@ jobs:
       GOFLAGS: "-mod=vendor"
       CGO_ENABLED: "1"
       BUILD_ARGS: "-race"
+      GORACE: "halt_on_error=1"
       BUNDLE_GEMFILE: .circleci/Gemfile
       ANYCABLE_RPC_HOST: "127.0.0.1:50051"
     steps:
@@ -364,6 +365,7 @@ jobs:
       GOFLAGS: "-mod=vendor"
       CGO_ENABLED: "1"
       BUILD_ARGS: "-race"
+      GORACE: "halt_on_error=1"
       REDIS_URL: redis://localhost:6379/3
     steps:
     - attach_workspace:

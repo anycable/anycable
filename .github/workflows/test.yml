@@ -97,6 +97,7 @@ jobs:
       GO111MODULE: on
       GOFLAGS: "-mod=vendor"
       BUILD_ARGS: "-race"
+      GORACE: "halt_on_error=1"
       BUNDLE_GEMFILE: .circleci/Gemfile
       BUNDLE_PATH: ./vendor/bundle
       # Specify REDIS_URL explicitly, so Makefile doesn't check the presence of Redis
