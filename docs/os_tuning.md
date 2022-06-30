@@ -10,7 +10,7 @@ AnyCable-Go prints the current open files limit on boot:
 
 ```sh
 $ anycable-go
-INFO 2020-06-07T19:30:33.059Z context=main Starting AnyCable v1.2.0 (with mruby 1.2.0 (2015-11-17)) (pid: 29333, open file limit: 524288)
+INFO 2022-06-07T19:30:33.059Z context=main Starting AnyCable v1.2.1 (with mruby 1.2.0 (2015-11-17)) (pid: 29333, open file limit: 524288, gomaxprocs: 8)
 ...
 ```
 
