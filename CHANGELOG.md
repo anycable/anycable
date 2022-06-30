@@ -2,6 +2,8 @@
 
 ## master
 
+- Use [automaxprocs](https://github.com/uber-go/automaxprocs) to configure the number of OS threads. ([@palkan][])
+
 - Fix race conditions when stopping and starting streams within the same command. ([@palkan][])
 
 ## 1.2.0 (2021-12-21) 🎄

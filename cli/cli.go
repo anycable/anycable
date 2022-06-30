@@ -26,6 +26,8 @@ import (
 	"github.com/apex/log"
 	"github.com/gorilla/websocket"
 	"github.com/syossan27/tebata"
+
+	"go.uber.org/automaxprocs/maxprocs"
 )
 
 type controllerFactory = func(*metrics.Metrics, *config.Config) (node.Controller, error)
@@ -105,6 +107,10 @@ func (r *Runner) Run() error {
 		PrintHelp()
 		return nil
 	}
+
+	// See https://github.com/uber-go/automaxprocs/issues/18
+	nopLog := func(string, ...interface{}) {}
+	maxprocs.Set(maxprocs.Logger(nopLog)) // nolint:errcheck
 
 	config := r.config
 

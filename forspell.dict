@@ -50,3 +50,5 @@ influxdb
 datadog
 fastlane
 misconfigured
+virtualized
+automaxprocs

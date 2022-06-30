@@ -108,3 +108,17 @@ Thus, the default configuration can handle a backlog of up to 500 calls. By incr
 If your application code doesn't rely on `disconnect` / `unsubscribe` callbacks, you can disable `Disconnect` calls completely (to avoid unnecessary load) by setting `--disable_disconnect` option or `ANYCABLE_DISABLE_DISCONNECT` env var.
 
 \* It's (almost) impossible to guarantee that `disconnect` callbacks would be called for 100%. There is always a chance of a server crash or `kill -9` or something worse. Consider an alternative approach to tracking client states (see [example](https://github.com/anycable/anycable/issues/99#issuecomment-611998267)).
+
+## GOMAXPROCS
+
+We use [automaxprocs][] to automatically set the number of OS threads to match Linux container CPU quota in a virtualized environment, not a number of _visible_ CPUs (which is usually much higher).
+
+This feature is enabled by default. You can opt-out by setting `GOMAXPROCS=0` (in this case, the default Go mechanism of defining the number of threads is used).
+
+You can find the actual value for GOMAXPROCS in the starting logs:
+
+```sh
+INFO 2022-06-30T03:31:21.848Z context=main Starting AnyCable 1.2.0-c4f1c6e (with mruby 1.2.0 (2015-11-17)) (pid: 39705, open file limit: 524288, gomaxprocs: 8)
+```
+
+[automaxprocs]: https://github.com/uber-go/automaxprocs
