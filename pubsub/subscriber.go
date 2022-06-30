@@ -7,7 +7,7 @@ import (
 // Subscriber is responsible for receiving broadcast messages
 // and sending them to hub
 type Subscriber interface {
-	Start() error
+	Start(done chan (error)) error
 	Shutdown() error
 }
 

@@ -71,7 +71,12 @@ func NewRunner(name string, config *config.Config) *Runner {
 	server.Host = config.Host
 	server.MaxConn = config.MaxConn
 
-	return &Runner{name: name, config: config, shutdownables: []Shutdownable{}, errChan: make(chan error)}
+	return &Runner{
+		name:          name,
+		config:        config,
+		shutdownables: []Shutdownable{},
+		errChan:       make(chan error),
+	}
 }
 
 func (r *Runner) ControllerFactory(fn controllerFactory) {
@@ -171,17 +176,13 @@ func (r *Runner) Run() error {
 
 	r.shutdownables = append(r.shutdownables, subscriber)
 
-	go func() {
-		if subscribeErr := subscriber.Start(); subscribeErr != nil {
-			r.errChan <- fmt.Errorf("!!! Subscriber failed !!!\n%v", subscribeErr)
-		}
-	}()
+	if subscribeErr := subscriber.Start(r.errChan); subscribeErr != nil {
+		return fmt.Errorf("!!! Subscriber failed !!!\n%v", subscribeErr)
+	}
 
-	go func() {
-		if contrErr := controller.Start(); contrErr != nil {
-			r.errChan <- fmt.Errorf("!!! RPC failed !!!\n%v", contrErr)
-		}
-	}()
+	if contrErr := controller.Start(); contrErr != nil {
+		return fmt.Errorf("!!! RPC failed !!!\n%v", contrErr)
+	}
 
 	wsServer, err := server.ForPort(strconv.Itoa(config.Port))
 	if err != nil {

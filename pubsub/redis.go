@@ -44,10 +44,12 @@ type RedisSubscriber struct {
 	node                      Handler
 	url                       string
 	sentinels                 string
+	sentinelClient            *sentinel.Sentinel
 	sentinelDiscoveryInterval time.Duration
 	pingInterval              time.Duration
 	channel                   string
 	reconnectAttempt          int
+	uri                       *url.URL
 	log                       *log.Entry
 }
 
@@ -67,15 +69,15 @@ func NewRedisSubscriber(node Handler, config *RedisConfig) *RedisSubscriber {
 
 // Start connects to Redis and subscribes to the pubsub channel
 // if sentinels is set it gets the the master address first
-func (s *RedisSubscriber) Start() error {
+func (s *RedisSubscriber) Start(done chan (error)) error {
 	// parse URL and check if it is correct
 	redisURL, err := url.Parse(s.url)
+
+	s.uri = redisURL
 
 	if err != nil {
 		return err
 	}
-
-	var sntnl *sentinel.Sentinel
 
 	if s.sentinels != "" {
 		masterName := redisURL.Hostname()
@@ -83,7 +85,7 @@ func (s *RedisSubscriber) Start() error {
 		s.log.Debug("Redis sentinel enabled")
 		s.log.Debugf("Redis sentinel parameters:  sentinels: %s,  masterName: %s", s.sentinels, masterName)
 		sentinels := strings.Split(s.sentinels, ",")
-		sntnl = &sentinel.Sentinel{
+		s.sentinelClient = &sentinel.Sentinel{
 			Addrs:      sentinels,
 			MasterName: masterName,
 			Dial: func(addr string) (redis.Conn, error) {
@@ -121,45 +123,55 @@ func (s *RedisSubscriber) Start() error {
 			},
 		}
 
-		defer sntnl.Close()
-
-		// Periodically discover new Sentinels.
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-
-		go func() {
-			err := sntnl.Discover()
-			if err != nil {
-				s.log.Warn("Failed to discover sentinels")
-			}
-			for {
-				select {
-				case <-ctx.Done():
-					return
-
-				case <-time.After(s.sentinelDiscoveryInterval * time.Second):
-					err := sntnl.Discover()
-					if err != nil {
-						s.log.Warn("Failed to discover sentinels")
-					}
-				}
-			}
-		}()
+		go s.discoverSentinels()
 	}
 
-	for {
+	go s.keepalive(done)
 
-		if s.sentinels != "" {
-			masterAddress, err := sntnl.MasterAddr()
+	return nil
+}
+
+func (s *RedisSubscriber) discoverSentinels() {
+	defer s.sentinelClient.Close()
+
+	// Periodically discover new Sentinels.
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		err := s.sentinelClient.Discover()
+		if err != nil {
+			s.log.Warn("Failed to discover sentinels")
+		}
+		for {
+			select {
+			case <-ctx.Done():
+				return
+
+			case <-time.After(s.sentinelDiscoveryInterval * time.Second):
+				err := s.sentinelClient.Discover()
+				if err != nil {
+					s.log.Warn("Failed to discover sentinels")
+				}
+			}
+		}
+	}()
+}
+
+func (s *RedisSubscriber) keepalive(done chan (error)) {
+	for {
+		if s.sentinelClient != nil {
+			masterAddress, err := s.sentinelClient.MasterAddr()
 
 			if err != nil {
 				s.log.Warn("Failed to get master address from sentinel.")
-				return err
+				done <- err
+				return
 			}
 			s.log.Debugf("Got master address from sentinel: %s", masterAddress)
 
-			redisURL.Host = masterAddress
-			s.url = redisURL.String()
+			s.uri.Host = masterAddress
+			s.url = s.uri.String()
 		}
 
 		if err := s.listen(); err != nil {
@@ -169,7 +181,8 @@ func (s *RedisSubscriber) Start() error {
 		s.reconnectAttempt++
 
 		if s.reconnectAttempt >= maxReconnectAttempts {
-			return errors.New("Redis reconnect attempts exceeded") //nolint:stylecheck
+			done <- errors.New("Redis reconnect attempts exceeded") //nolint:stylecheck
+			return
 		}
 
 		delay := nextRetry(s.reconnectAttempt)

@@ -53,7 +53,7 @@ func NewHTTPSubscriber(node Handler, config *HTTPConfig) *HTTPSubscriber {
 }
 
 // Start creates an HTTP server or attaches a handler to the existing one
-func (s *HTTPSubscriber) Start() error {
+func (s *HTTPSubscriber) Start(done chan (error)) error {
 	server, err := server.ForPort(strconv.Itoa(s.port))
 
 	if err != nil {
@@ -65,11 +65,14 @@ func (s *HTTPSubscriber) Start() error {
 
 	s.log.Infof("Accept broadcast requests at %s%s", s.server.Address(), s.path)
 
-	if err := s.server.StartAndAnnounce("Pub/Sub HTTP server"); err != nil {
-		if !s.server.Stopped() {
-			return fmt.Errorf("Pub/Sub HTTP server at %s stopped: %v", s.server.Address(), err)
+	go func() {
+		if err := s.server.StartAndAnnounce("Pub/Sub HTTP server"); err != nil {
+			if !s.server.Stopped() {
+				done <- fmt.Errorf("Pub/Sub HTTP server at %s stopped: %v", s.server.Address(), err)
+			}
 		}
-	}
+	}()
+
 	return nil
 }
 
