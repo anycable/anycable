@@ -320,9 +320,12 @@ func (s *Session) writeFrameWithDeadline(message *ws.SentFrame, deadline time.Ti
 }
 
 func (s *Session) sendPing() {
+	s.mu.Lock()
 	if s.closed {
+		s.mu.Unlock()
 		return
 	}
+	s.mu.Unlock()
 
 	deadline := time.Now().Add(s.pingInterval / 2)
 
