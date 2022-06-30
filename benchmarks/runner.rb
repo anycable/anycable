@@ -40,10 +40,11 @@ class BenchRunner
     instance_eval script, path, 0
   end
 
-  def launch(name, cmd)
+  def launch(name, cmd, debug: ENV["DEBUG"] == "true")
     log(:info) { "Launching background process: #{cmd}"}
 
     process = ChildProcess.build(*cmd.split(/\s+/))
+    process.io.inherit! if debug
     process.detach = true
 
     processes[name] = process
@@ -63,6 +64,8 @@ class BenchRunner
 
     process.start
 
+    w.close
+
     begin
       process.poll_for_exit(timeout)
     rescue ChildProcess::TimeoutError
@@ -73,8 +76,6 @@ class BenchRunner
 
     log(:info) { "Finished" }
     log(:debug) { "Output:\n#{stdout(name)}" }
-  ensure
-    w.close
   end
 
   def gops(pid)
