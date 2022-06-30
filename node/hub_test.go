@@ -19,9 +19,9 @@ func TestUnsubscribeRaceConditions(t *testing.T) {
 	go hub.Run()
 	defer hub.Shutdown()
 
-	session := NewMockSession("123", &node)
-	session2 := NewMockSession("321", &node)
-	session3 := NewMockSession("213", &node)
+	session := NewMockSession("123", node)
+	session2 := NewMockSession("321", node)
+	session3 := NewMockSession("213", node)
 
 	hub.addSession(session)
 	hub.subscribeSession("123", "test", "test_channel")
@@ -75,7 +75,7 @@ func TestUnsubscribeSession(t *testing.T) {
 	go hub.Run()
 	defer hub.Shutdown()
 
-	session := NewMockSession("123", &node)
+	session := NewMockSession("123", node)
 	hub.addSession(session)
 
 	hub.subscribeSession("123", "test", "test_channel")
@@ -115,7 +115,7 @@ func TestSubscribeSession(t *testing.T) {
 	go hub.Run()
 	defer hub.Shutdown()
 
-	session := NewMockSession("123", &node)
+	session := NewMockSession("123", node)
 	hub.addSession(session)
 
 	t.Run("Subscribe to a single channel", func(t *testing.T) {
@@ -208,7 +208,7 @@ func BenchmarkBroadcast(b *testing.B) {
 
 			for i := 0; i < config.totalSessions; i++ {
 				sid := fmt.Sprintf("%d", i)
-				session := NewMockSession(sid, &node)
+				session := NewMockSession(sid, node)
 
 				rand.Seed(time.Now().Unix())
 

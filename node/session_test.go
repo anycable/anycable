@@ -14,7 +14,7 @@ func TestSendRaceConditions(t *testing.T) {
 	var wg sync.WaitGroup
 
 	for i := 1; i <= 10; i++ {
-		session := NewMockSession("123", &node)
+		session := NewMockSession("123", node)
 
 		go func() {
 			for {
@@ -54,7 +54,7 @@ func TestSendRaceConditions(t *testing.T) {
 
 func TestSessionSend(t *testing.T) {
 	node := NewMockNode()
-	session := NewMockSession("123", &node)
+	session := NewMockSession("123", node)
 
 	go func() {
 		for i := 1; i <= 10; i++ {
@@ -70,7 +70,7 @@ func TestSessionSend(t *testing.T) {
 
 func TestSessionDisconnect(t *testing.T) {
 	node := NewMockNode()
-	session := NewMockSession("123", &node)
+	session := NewMockSession("123", node)
 	session.closed = false
 	session.Connected = true
 
@@ -90,7 +90,7 @@ func TestSessionDisconnect(t *testing.T) {
 
 func TestMergeEnv(t *testing.T) {
 	node := NewMockNode()
-	session := NewMockSession("123", &node)
+	session := NewMockSession("123", node)
 
 	istate := map[string]map[string]string{
 		"test_channel": {

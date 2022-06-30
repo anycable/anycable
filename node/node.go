@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/anycable/anycable-go/common"
@@ -65,6 +66,8 @@ type Node struct {
 	controller   Controller
 	disconnector Disconnector
 	shutdownCh   chan struct{}
+	shutdownMu   sync.Mutex
+	closed       bool
 	log          *log.Entry
 }
 
@@ -142,12 +145,16 @@ func (n *Node) LookupSession(id string) *Session {
 
 // Shutdown stops all services (hub, controller)
 func (n *Node) Shutdown() (err error) {
-	if n.shutdownCh == nil {
+	n.shutdownMu.Lock()
+	if n.closed {
+		n.shutdownMu.Unlock()
 		return errors.New("Already shut down")
 	}
 
 	close(n.shutdownCh)
-	n.shutdownCh = nil
+
+	n.closed = true
+	n.shutdownMu.Unlock()
 
 	if n.hub != nil {
 		n.hub.Shutdown()

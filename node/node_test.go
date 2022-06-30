@@ -12,7 +12,7 @@ func TestAuthenticate(t *testing.T) {
 	node := NewMockNode()
 
 	t.Run("Successful authentication", func(t *testing.T) {
-		session := NewMockSessionWithEnv("1", &node, "/cable", &map[string]string{"id": "test_id"})
+		session := NewMockSessionWithEnv("1", node, "/cable", &map[string]string{"id": "test_id"})
 		_, err := node.Authenticate(session)
 		defer node.hub.removeSession(session)
 
@@ -29,7 +29,7 @@ func TestAuthenticate(t *testing.T) {
 	})
 
 	t.Run("Failed authentication", func(t *testing.T) {
-		session := NewMockSessionWithEnv("1", &node, "/failure", &map[string]string{"id": "test_id"})
+		session := NewMockSessionWithEnv("1", node, "/failure", &map[string]string{"id": "test_id"})
 
 		_, err := node.Authenticate(session)
 
@@ -43,7 +43,7 @@ func TestAuthenticate(t *testing.T) {
 	})
 
 	t.Run("Error during authentication", func(t *testing.T) {
-		session := NewMockSessionWithEnv("1", &node, "/error", &map[string]string{"id": "test_id"})
+		session := NewMockSessionWithEnv("1", node, "/error", &map[string]string{"id": "test_id"})
 
 		_, err := node.Authenticate(session)
 
@@ -52,7 +52,7 @@ func TestAuthenticate(t *testing.T) {
 	})
 
 	t.Run("With connection state", func(t *testing.T) {
-		session := NewMockSessionWithEnv("1", &node, "/cable", &map[string]string{"x-session-test": "my_session", "id": "session_id"})
+		session := NewMockSessionWithEnv("1", node, "/cable", &map[string]string{"x-session-test": "my_session", "id": "session_id"})
 		defer node.hub.removeSession(session)
 
 		_, err := node.Authenticate(session)
@@ -69,7 +69,7 @@ func TestAuthenticate(t *testing.T) {
 
 func TestSubscribe(t *testing.T) {
 	node := NewMockNode()
-	session := NewMockSession("14", &node)
+	session := NewMockSession("14", node)
 
 	node.hub.addSession(session)
 	defer node.hub.removeSession(session)
@@ -126,7 +126,7 @@ func TestSubscribe(t *testing.T) {
 
 func TestUnsubscribe(t *testing.T) {
 	node := NewMockNode()
-	session := NewMockSession("14", &node)
+	session := NewMockSession("14", node)
 
 	node.hub.addSession(session)
 	defer node.hub.removeSession(session)
@@ -166,7 +166,7 @@ func TestUnsubscribe(t *testing.T) {
 
 func TestPerform(t *testing.T) {
 	node := NewMockNode()
-	session := NewMockSession("14", &node)
+	session := NewMockSession("14", node)
 
 	node.hub.addSession(session)
 	defer node.hub.removeSession(session)
@@ -240,7 +240,7 @@ func TestPerform(t *testing.T) {
 
 func TestStreamSubscriptionRaceConditions(t *testing.T) {
 	node := NewMockNode()
-	session := NewMockSession("14", &node)
+	session := NewMockSession("14", node)
 
 	node.hub.addSession(session)
 	session.subscriptions["test_channel"] = true
@@ -264,7 +264,7 @@ func TestStreamSubscriptionRaceConditions(t *testing.T) {
 
 func TestDisconnect(t *testing.T) {
 	node := NewMockNode()
-	session := NewMockSession("14", &node)
+	session := NewMockSession("14", node)
 
 	assert.Nil(t, node.Disconnect(session))
 
@@ -288,8 +288,8 @@ func TestHandlePubSub(t *testing.T) {
 	go node.hub.Run()
 	defer node.hub.Shutdown()
 
-	session := NewMockSession("14", &node)
-	session2 := NewMockSession("15", &node)
+	session := NewMockSession("14", node)
+	session2 := NewMockSession("15", node)
 
 	node.hub.addSession(session)
 	node.hub.subscribeSession("14", "test", "test_channel")
@@ -316,7 +316,7 @@ func TestHandlePubSubWithCommand(t *testing.T) {
 	go node.hub.Run()
 	defer node.hub.Shutdown()
 
-	session := NewMockSession("14", &node)
+	session := NewMockSession("14", node)
 	node.hub.addSession(session)
 
 	node.HandlePubSub([]byte("{\"command\":\"disconnect\",\"payload\":{\"identifier\":\"14\",\"reconnect\":false}}"))
@@ -337,7 +337,7 @@ func TestLookupSession(t *testing.T) {
 
 	assert.Nil(t, node.LookupSession("{\"foo\":\"bar\"}"))
 
-	session := NewMockSession("14", &node)
+	session := NewMockSession("14", node)
 	session.Identifiers = "{\"foo\":\"bar\"}"
 	node.hub.addSession(session)
 

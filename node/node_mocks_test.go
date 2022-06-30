@@ -14,7 +14,7 @@ import (
 )
 
 // NewMockNode build new node with mock controller
-func NewMockNode() Node {
+func NewMockNode() *Node {
 	controller := mocks.NewMockController()
 	config := NewConfig()
 	config.HubGopoolSize = 2
@@ -22,7 +22,7 @@ func NewMockNode() Node {
 	dconfig := NewDisconnectQueueConfig()
 	dconfig.Rate = 1
 	node.SetDisconnector(NewDisconnectQueue(node, &dconfig))
-	return *node
+	return node
 }
 
 type MockConnection struct {

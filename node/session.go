@@ -252,7 +252,7 @@ func (s *Session) close() {
 	}
 
 	s.closed = true
-	s.mu.Unlock()
+	defer s.mu.Unlock()
 
 	if s.pingTimer != nil {
 		s.pingTimer.Stop()
@@ -343,6 +343,9 @@ func (s *Session) sendPing() {
 }
 
 func (s *Session) addPing() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	s.pingTimer = time.AfterFunc(s.pingInterval, s.sendPing)
 }
 

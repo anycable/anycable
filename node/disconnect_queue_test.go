@@ -74,7 +74,7 @@ func newQueue() *DisconnectQueue {
 	node := NewMockNode()
 	config := NewDisconnectQueueConfig()
 	config.Rate = 1
-	q := NewDisconnectQueue(&node, &config)
+	q := NewDisconnectQueue(node, &config)
 
 	return q
 }

@@ -28,7 +28,8 @@ type HTTPServer struct {
 }
 
 var (
-	allServers map[string]*HTTPServer = make(map[string]*HTTPServer)
+	allServers   map[string]*HTTPServer = make(map[string]*HTTPServer)
+	allServersMu sync.Mutex
 	// Host is a default bind address for HTTP servers
 	Host string = "localhost"
 	// SSL is a default configuration for HTTP servers
@@ -39,6 +40,9 @@ var (
 
 // ForPort creates new or returns the existing server for the specified port
 func ForPort(port string) (*HTTPServer, error) {
+	allServersMu.Lock()
+	defer allServersMu.Unlock()
+
 	if _, ok := allServers[port]; !ok {
 		server, err := NewServer(Host, port, SSL, MaxConn)
 		if err != nil {
