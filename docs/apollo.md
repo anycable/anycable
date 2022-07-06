@@ -86,6 +86,22 @@ end
 
 Note that the header contains JSON-encoded connection params object.
 
+### Using with JWT identification
+
+You can use [JWT identification](./jwt_identification.md) along with Apollo integration by specifying the token either via query params (e.g., `ws://localhost:8080/graphql?jid=<token>`) or by passing it along with connection params like this:
+
+```js
+const wsLink = new WebSocketLink({
+  uri: 'ws://localhost:8080/graphql',
+  options: {
+    reconnect: true,
+    connectionParams: {
+      jid: '<token>',
+    },
+  }
+});
+```
+
 [apollo-protocol]: https://github.com/apollographql/subscriptions-transport-ws/blob/master/PROTOCOL.md#graphql-over-websocket-protocol
 [apollo-subscriptions]: https://www.apollographql.com/docs/react/data/subscriptions/
 [graphql-ruby]: https://graphql-ruby.org
