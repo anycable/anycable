@@ -4,7 +4,9 @@ FROM alpine:latest
 RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
 ADD .docker/passwd.nobody /etc/passwd
 
-ADD .docker/anycable-go-linux-amd64 /usr/local/bin/anycable-go
+ARG TARGETOS=linux
+ARG TARGETARCH=amd64
+ADD .docker/${TARGETOS}/${TARGETARCH}/anycable-go /usr/local/bin/anycable-go
 
 USER nobody
 

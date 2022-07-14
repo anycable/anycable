@@ -7,7 +7,9 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-ADD .docker/anycable-go-mrb-linux-amd64 /usr/local/bin/anycable-go
+ARG TARGETOS=linux
+ARG TARGETARCH=amd64
+ADD .docker/${TARGETOS}/${TARGETARCH}/anycable-go /usr/local/bin/anycable-go
 
 USER nobody
 

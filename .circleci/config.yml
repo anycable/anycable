@@ -41,6 +41,7 @@ workflows:
          - prepare_mruby
     - build_docker:
         name: build_docker_main
+        platform: linux/amd64,linux/arm64
         requires:
         - test
         - conformance
@@ -53,7 +54,8 @@ workflows:
     - build_docker:
         name: build_docker_alpine
         version: ${CIRCLE_TAG/v/''}-alpine
-        dockerfile: Dockerfile.alpine-linux-amd64
+        dockerfile: Dockerfile.alpine
+        platform: linux/amd64,linux/arm64
         requires:
         - test
         - conformance
@@ -80,6 +82,7 @@ workflows:
     - build_docker:
         name: build_docker_edge
         version: "edge"
+        platform: linux/amd64,linux/arm64
         requires:
         - test
         - conformance
@@ -150,8 +153,7 @@ executors:
       GO_SHA: a23a24c5528671d444328a36a98056902f699a5a211b6ad5db29ca0c012e0085
   docker:
     docker:
-      - image: docker:18.06.0-ce
-    working_directory: /root/project/
+      - image: cimg/base:stable
   ruby:
     docker:
       - image: cimg/ruby:2.7.1
@@ -322,7 +324,7 @@ jobs:
         postfix: win-amd64.exe
     - build:
         os: darwin
-        arch: "arm64"
+        arch: arm64
         postfix: darwin-arm64
     - build:
         os: darwin
@@ -392,7 +394,16 @@ jobs:
     parameters:
       dockerfile:
         type: string
-        default: "Dockerfile.linux-amd64"
+        default: Dockerfile.universal
+      binary_dir:
+        type: string
+        default: /tmp/dist
+      docker_binary_dir:
+        type: string
+        default: .docker
+      platform:
+        type: string
+        default: linux/amd64
       version:
         type: string
         default: ${CIRCLE_TAG/v/''}
@@ -402,16 +413,21 @@ jobs:
     executor: docker
     steps:
     - setup_remote_docker:
-        version: 18.06.0-ce
+        version: 20.10.14
     - attach_workspace:
         at: .
     - restore_cache:
         key: build-{{ .Revision }}
     - run:
-        name: Prepare files for Docker build
+        name: Create a new docker buildx builder instance
         command: |
-          cp /etc/ssl/certs/ca-certificates.crt ./.docker/ca-certificates.crt && \
-          cp /tmp/dist/anycable-go-linux-amd64 .docker/anycable-go-linux-amd64
+          docker run --privileged --rm tonistiigi/binfmt --install all
+          docker context create multiarch-builder
+          docker buildx create --use multiarch-builder
+    - run:
+        name: Buildx supported platforms
+        command: |
+          docker buildx ls
     - when:
         condition: <<parameters.mruby>>
         steps:
@@ -420,17 +436,21 @@ jobs:
           - run:
               name: Replace with mruby binary
               command: |
-                rm .docker/anycable-go-linux-amd64 && \
-                cp /tmp/dist/anycable-go-mrb-linux-amd64 .docker/anycable-go-mrb-linux-amd64
+                cp -f <<parameters.binary_dir>>/anycable-go-mrb-linux-amd64 <<parameters.binary_dir>>/anycable-go-linux-amd64
     - run:
-        name: Build Docker image
-        command: docker build -f .docker/<<parameters.dockerfile>> -t anycable/anycable-go:<<parameters.version>> ./
+        name: Prepare files for Docker build
+        command: |
+          cp /etc/ssl/certs/ca-certificates.crt ./.docker/ca-certificates.crt
+          mkdir -p <<parameters.docker_binary_dir>>/linux/amd64
+          mkdir -p <<parameters.docker_binary_dir>>/linux/arm64
+          cp <<parameters.binary_dir>>/anycable-go-linux-amd64 <<parameters.docker_binary_dir>>/linux/amd64/anycable-go
+          cp <<parameters.binary_dir>>/anycable-go-linux-arm64 <<parameters.docker_binary_dir>>/linux/arm64/anycable-go || true
     - run:
         name: Login to Docker registry
         command: docker login -u ${DOCKER_USER} -p ${DOCKER_PASS}
     - run:
-        name: Push Docker image
-        command: docker push anycable/anycable-go:<<parameters.version>>
+        name: Build Docker image
+        command: docker buildx build --platform=<<parameters.platform>> -f .docker/<<parameters.dockerfile>> -t anycable/anycable-go:<<parameters.version>> ./ --push
   push_latest_docker:
     executor: docker
     steps:
