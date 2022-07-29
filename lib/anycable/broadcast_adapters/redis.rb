@@ -14,7 +14,7 @@ module AnyCable
     #
     # Example:
     #
-    #   AnyCable.broadast_adapter = :redis
+    #   AnyCable.broadcast_adapter = :redis
     #
     # It uses Redis configuration from global AnyCable config
     # by default.

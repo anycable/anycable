@@ -10,7 +10,7 @@ module AnyCable
     #
     # Example:
     #
-    #   AnyCable.broadast_adapter = :http
+    #   AnyCable.broadcast_adapter = :http
     #
     # It uses configuration from global AnyCable config
     # by default.

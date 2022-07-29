@@ -25,7 +25,7 @@ Here is the list of the most commonly used configuration parameters and the way 
 
 Local address to run gRPC server on (default: `"[::]:50051"`, deprecated, will be changed to `"127.0.0.1:50051"` in future versions).
 
-**broadast_adapter** (`ANYCABLE_BROADCAST_ADAPTER`, `--broadcast-adapter`)
+**broadcast_adapter** (`ANYCABLE_BROADCAST_ADAPTER`, `--broadcast-adapter`)
 
 [Broadcast adapter](./broadcast_adapters.md) to use. Available options out-of-the-box: `redis` (default), `http`.
 
