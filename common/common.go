@@ -13,6 +13,14 @@ const (
 	ERROR
 )
 
+const (
+	ActionCableV1JSON = "actioncable-v1-json"
+)
+
+func ActionCableProtocols() []string {
+	return []string{ActionCableV1JSON}
+}
+
 // Outgoing message types (according to Action Cable protocol)
 const (
 	WelcomeType    = "welcome"

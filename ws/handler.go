@@ -36,13 +36,13 @@ func NewRequestInfo(r *http.Request, headersToFetch []string) (*RequestInfo, err
 type sessionHandler = func(conn *websocket.Conn, info *RequestInfo, callback func()) error
 
 // WebsocketHandler generate a new http handler for WebSocket connections
-func WebsocketHandler(headersToFetch []string, config *Config, sessionHandler sessionHandler) http.Handler {
+func WebsocketHandler(headersToFetch []string, subprotocols []string, config *Config, sessionHandler sessionHandler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := log.WithField("context", "ws")
 
 		upgrader := websocket.Upgrader{
 			CheckOrigin:       CheckOrigin(config.AllowedOrigins),
-			Subprotocols:      []string{"actioncable-v1-json"},
+			Subprotocols:      subprotocols,
 			ReadBufferSize:    config.ReadBufferSize,
 			WriteBufferSize:   config.WriteBufferSize,
 			EnableCompression: config.EnableCompression,
@@ -80,6 +80,12 @@ func WebsocketHandler(headersToFetch []string, config *Config, sessionHandler se
 		}
 
 		sessionCtx := log.WithField("sid", info.UID)
+
+		clientSubprotocol := r.Header.Get("Sec-Websocket-Protocol")
+
+		if wsc.Subprotocol() == "" && clientSubprotocol != "" {
+			sessionCtx.Debugf("No subprotocol negotiated: client wants %v, server supports %v", clientSubprotocol, subprotocols)
+		}
 
 		// Separate goroutine for better GC of caller's data.
 		go func() {
