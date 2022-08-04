@@ -2,6 +2,8 @@
 
 ## master
 
+- Add NATS pub/sub adapter. ([@palkan][])
+
 - Setting the redis adapter to use the ruby driver. ([@smasry][])
 
 ## 1.2.3 (2022-04-20)

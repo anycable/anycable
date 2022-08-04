@@ -93,6 +93,39 @@ describe AnyCable::Config do
     end
   end
 
+  describe "#to_nats_params" do
+    context "with multiple servers" do
+      before do
+        config.nats_servers = ["nats://one:4242", "nats://two:4242"]
+      end
+
+      specify do
+        expect(subject.to_nats_params).to eq(
+          servers: ["nats://one:4242", "nats://two:4242"],
+          dont_randomize_servers: false
+        )
+      end
+    end
+
+    context "with ANYCABLE_NATS_SERVERS and ANYCABLE_NATS_DONT_RANDOMIZE_SERVERS" do
+      around do |ex|
+        with_env({
+          "ANYCABLE_NATS_SERVERS" => "nats://uno:42, nats://duo:43",
+          "ANYCABLE_NATS_DONT_RANDOMIZE_SERVERS" => "1"
+        }, &ex)
+      end
+
+      subject(:config) { described_class.new }
+
+      specify do
+        expect(subject.to_nats_params).to eq(
+          servers: ["nats://uno:42", "nats://duo:43"],
+          dont_randomize_servers: true
+        )
+      end
+    end
+  end
+
   describe "defaults" do
     subject(:config) { described_class.new }
 

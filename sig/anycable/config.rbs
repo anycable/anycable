@@ -8,6 +8,14 @@ module AnyCable
     def redis_sentinels=: (Array[String]) -> void
     def redis_channel: () -> String
     def redis_channel=: (String) -> void
+    def nats_servers: () -> Array[String]
+    def nats_servers=: (Array[String]) -> void
+    def nats_channel: () -> String
+    def nats_channel=: (String) -> void
+    def nats_dont_randomize_servers: () -> bool
+    def nats_dont_randomize_servers=: (bool) -> void
+    def nats_options: () -> Hash[untyped, untyped]
+    def nats_options=: (Hash[untyped, untyped]) -> void
     def http_broadcast_url: () -> String
     def http_broadcast_url=: (String) -> void
     def http_broadcast_secret: () -> String?
@@ -38,6 +46,7 @@ module AnyCable
     def http_health_port_provided?: () -> bool
     def to_redis_params: () -> { url: String, sentinels: Array[untyped]?, ssl_params: Hash[Symbol, untyped]? }
     def to_http_health_params: () -> { port: Integer?, path: String }
+    def to_nats_params: () -> Hash[Symbol, untyped]
 
     private
 

@@ -29,6 +29,12 @@ module AnyCable
       redis_sentinels: nil,
       redis_channel: "__anycable__",
 
+      ### NATS options
+      nats_servers: "nats://localhost:4222",
+      nats_channel: "__anycable__",
+      nats_dont_randomize_servers: false,
+      nats_options: {},
+
       ### HTTP broadcasting options
       http_broadcast_url: "http://localhost:8090/_broadcast",
       http_broadcast_secret: nil,
@@ -48,10 +54,17 @@ module AnyCable
     )
 
     if respond_to?(:coerce_types)
-      coerce_types redis_sentinels: {type: nil, array: true}, debug: :boolean, version_check_enabled: :boolean
+      coerce_types(
+        redis_sentinels: {type: nil, array: true},
+        nats_servers: {type: nil, array: true},
+        nats_dont_randomize_servers: :boolean,
+        debug: :boolean,
+        version_check_enabled: :boolean
+      )
     end
 
-    flag_options :debug
+    flag_options :debug, :nats_dont_randomize_servers
+    ignore_options :nats_options
 
     on_load do
       # @type self : AnyCable::Config
@@ -82,6 +95,11 @@ module AnyCable
           --redis-channel=name              Redis channel for broadcasting, default: "__anycable__"
           --redis-sentinels=<...hosts>      Redis Sentinel followers addresses (as a comma-separated list), default: nil
 
+      NATS PUB/SUB
+          --nats-servers=<...addresses>     NATS servers for pub/sub, default: "nats://localhost:4222"
+          --nats-channel=name               NATS channel for broadcasting, default: "__anycable__"
+          --nats-dont-randomize-servers     Pass this option to disable NATS servers randomization during (re-)connect
+
       HTTP PUB/SUB
           --http-broadcast-url              HTTP pub/sub endpoint URL, default: "http://localhost:8090/_broadcast"
           --http-broadcast-secret           HTTP pub/sub authorization secret, default: <none> (disabled)
@@ -105,6 +123,14 @@ module AnyCable
 
         params[:ssl_params] = {verify_mode: OpenSSL::SSL::VERIFY_NONE}
       end
+    end
+
+    # Build options for NATS.connect
+    def to_nats_params
+      {
+        servers: Array(nats_servers),
+        dont_randomize_servers: nats_dont_randomize_servers
+      }.merge(nats_options)
     end
 
     # Build HTTP health server parameters
