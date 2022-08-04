@@ -20,6 +20,11 @@ type IntervalWriter interface {
 	Write(m *Metrics) error
 }
 
+type Instrumenter interface {
+	CounterIncrement(name string)
+	CounterAdd(name string, val uint64)
+}
+
 // Metrics stores some useful stats about node
 type Metrics struct {
 	mu             sync.RWMutex
@@ -32,6 +37,8 @@ type Metrics struct {
 	shutdownCh     chan struct{}
 	log            *log.Entry
 }
+
+var _ Instrumenter = (*Metrics)(nil)
 
 // FromConfig creates a new metrics instance from the prodived configuration
 func FromConfig(config *Config) (*Metrics, error) {
@@ -183,6 +190,16 @@ func (m *Metrics) RegisterGauge(name string, desc string) {
 // Counter returns counter by name
 func (m *Metrics) Counter(name string) *Counter {
 	return m.counters[name]
+}
+
+// CounterIncrement increments the given counter
+func (m *Metrics) CounterIncrement(name string) {
+	m.counters[name].Inc()
+}
+
+// CounterAdd adds a value to the given counter
+func (m *Metrics) CounterAdd(name string, val uint64) {
+	m.counters[name].Add(val)
 }
 
 // EachCounter applies function f(*Gauge) to each gauge in a set

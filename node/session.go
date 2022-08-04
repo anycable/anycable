@@ -7,6 +7,7 @@ import (
 
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/encoders"
+	"github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/ws"
 	"github.com/apex/log"
 )
@@ -18,14 +19,15 @@ const (
 // Executor handles incoming commands (messages)
 type Executor interface {
 	HandleCommand(*Session, *common.Message) error
+	Disconnect(*Session) error
 }
 
 // Session represents active client
 type Session struct {
-	node          *Node
 	conn          Connection
 	encoder       encoders.Encoder
 	executor      Executor
+	metrics       metrics.Instrumenter
 	env           *common.SessionEnv
 	subscriptions map[string]bool
 	closed        bool
@@ -52,8 +54,8 @@ type Session struct {
 // NewSession build a new Session struct from ws connetion and http request
 func NewSession(node *Node, conn Connection, url string, headers *map[string]string, uid string) *Session {
 	session := &Session{
-		node:                   node,
 		conn:                   conn,
+		metrics:                node.metrics,
 		env:                    common.NewSessionEnv(url, headers),
 		subscriptions:          make(map[string]bool),
 		sendCh:                 make(chan *ws.SentFrame, 256),
@@ -87,6 +89,10 @@ func (s *Session) SetEncoder(enc encoders.Encoder) {
 
 func (s *Session) SetExecutor(ex Executor) {
 	s.executor = ex
+}
+
+func (s *Session) SetMetrics(m *metrics.Metrics) {
+	s.metrics = m
 }
 
 func (s *Session) GetEnv() *common.SessionEnv {
@@ -153,22 +159,22 @@ func (s *Session) SendMessages() {
 		err := s.writeFrame(message)
 
 		if err != nil {
-			s.node.Metrics.Counter(metricsFailedSent).Inc()
+			s.metrics.CounterIncrement(metricsFailedSent)
 			return
 		}
 
-		s.node.Metrics.Counter(metricsSentMsg).Inc()
+		s.metrics.CounterIncrement(metricsSentMsg)
 	}
 }
 
 // ReadMessage reads messages from ws connection and send them to node
 func (s *Session) ReadMessage(message []byte) error {
-	s.node.Metrics.Counter(metricsDataReceived).Add(uint64(len(message)))
+	s.metrics.CounterAdd(metricsDataReceived, uint64(len(message)))
 
 	command, err := s.decodeMessage(message)
 
 	if err != nil {
-		s.node.Metrics.Counter(metricsFailedCommandReceived).Inc()
+		s.metrics.CounterIncrement(metricsFailedCommandReceived)
 		return err
 	}
 
@@ -176,10 +182,10 @@ func (s *Session) ReadMessage(message []byte) error {
 		return nil
 	}
 
-	s.node.Metrics.Counter(metricsReceivedMsg).Inc()
+	s.metrics.CounterIncrement(metricsReceivedMsg)
 
 	if err := s.executor.HandleCommand(s, command); err != nil {
-		s.node.Metrics.Counter(metricsFailedCommandReceived).Inc()
+		s.metrics.CounterIncrement(metricsFailedCommandReceived)
 		s.Log.Warnf("Failed to handle incoming message '%s' with error: %v", message, err)
 	}
 
@@ -219,7 +225,7 @@ func (s *Session) Disconnect(reason string, code int) {
 func (s *Session) disconnectFromNode() {
 	s.mu.Lock()
 	if s.Connected {
-		defer s.node.Disconnect(s) // nolint:errcheck
+		defer s.executor.Disconnect(s) // nolint:errcheck
 	}
 	s.Connected = false
 	s.mu.Unlock()
@@ -294,7 +300,7 @@ func (s *Session) writeFrame(message *ws.SentFrame) error {
 }
 
 func (s *Session) writeFrameWithDeadline(message *ws.SentFrame, deadline time.Time) error {
-	s.node.Metrics.Counter(metricsDataSent).Add(uint64(len(message.Payload)))
+	s.metrics.CounterAdd(metricsDataSent, uint64(len(message.Payload)))
 
 	switch message.FrameType {
 	case ws.TextFrame:

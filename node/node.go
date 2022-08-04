@@ -59,7 +59,7 @@ type Connection interface {
 
 // Node represents the whole application
 type Node struct {
-	Metrics *metrics.Metrics
+	metrics *metrics.Metrics
 
 	config       *Config
 	hub          *Hub
@@ -76,7 +76,7 @@ var _ AppNode = (*Node)(nil)
 // NewNode builds new node struct
 func NewNode(controller Controller, metrics *metrics.Metrics, config *Config) *Node {
 	node := &Node{
-		Metrics:    metrics,
+		metrics:    metrics,
 		config:     config,
 		controller: controller,
 		shutdownCh: make(chan struct{}),
@@ -85,7 +85,9 @@ func NewNode(controller Controller, metrics *metrics.Metrics, config *Config) *N
 
 	node.hub = NewHub(config.HubGopoolSize)
 
-	node.registerMetrics()
+	if metrics != nil {
+		node.registerMetrics()
+	}
 
 	return node
 }
@@ -126,7 +128,7 @@ func (n *Node) HandlePubSub(raw []byte) {
 	msg, err := common.PubSubMessageFromJSON(raw)
 
 	if err != nil {
-		n.Metrics.Counter(metricsUnknownBroadcast).Inc()
+		n.metrics.Counter(metricsUnknownBroadcast).Inc()
 		n.log.Warnf("Failed to parse pubsub message '%s' with error: %v", raw, err)
 		return
 	}
@@ -215,7 +217,7 @@ func (n *Node) Authenticate(s *Session) (res *common.ConnectResult, err error) {
 		n.hub.addSession(s)
 	} else {
 		if res.Status == common.FAILURE {
-			n.Metrics.Counter(metricsFailedAuths).Inc()
+			n.metrics.Counter(metricsFailedAuths).Inc()
 		}
 
 		defer s.Disconnect("Auth Failed", ws.CloseNormalClosure)
@@ -328,7 +330,7 @@ func (n *Node) Perform(s *Session, msg *common.Message) (res *common.CommandResu
 
 // Broadcast message to stream
 func (n *Node) Broadcast(msg *common.StreamMessage) {
-	n.Metrics.Counter(metricsBroadcastMsg).Inc()
+	n.metrics.Counter(metricsBroadcastMsg).Inc()
 	n.log.Debugf("Incoming pubsub message: %v", msg)
 	n.hub.BroadcastMessage(msg)
 }
@@ -361,7 +363,7 @@ func (n *Node) DisconnectNow(s *Session) error {
 
 // RemoteDisconnect find a session by identifier and closes it
 func (n *Node) RemoteDisconnect(msg *common.RemoteDisconnectMessage) {
-	n.Metrics.Counter(metricsBroadcastMsg).Inc()
+	n.metrics.Counter(metricsBroadcastMsg).Inc()
 	n.log.Debugf("Incoming pubsub command: %v", msg)
 	n.hub.RemoteDisconnect(msg)
 }
@@ -432,38 +434,38 @@ func (n *Node) collectStats() {
 }
 
 func (n *Node) collectStatsOnce() {
-	n.Metrics.Gauge(metricsGoroutines).Set(runtime.NumGoroutine())
+	n.metrics.Gauge(metricsGoroutines).Set(runtime.NumGoroutine())
 
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
-	n.Metrics.Gauge(metricsMemSys).Set64(m.Sys)
+	n.metrics.Gauge(metricsMemSys).Set64(m.Sys)
 
-	n.Metrics.Gauge(metricsClientsNum).Set(n.hub.Size())
-	n.Metrics.Gauge(metricsUniqClientsNum).Set(n.hub.UniqSize())
-	n.Metrics.Gauge(metricsStreamsNum).Set(n.hub.StreamsSize())
-	n.Metrics.Gauge(metricsDisconnectQueue).Set(n.disconnector.Size())
+	n.metrics.Gauge(metricsClientsNum).Set(n.hub.Size())
+	n.metrics.Gauge(metricsUniqClientsNum).Set(n.hub.UniqSize())
+	n.metrics.Gauge(metricsStreamsNum).Set(n.hub.StreamsSize())
+	n.metrics.Gauge(metricsDisconnectQueue).Set(n.disconnector.Size())
 }
 
 func (n *Node) registerMetrics() {
-	n.Metrics.RegisterGauge(metricsGoroutines, "The number of Go routines")
-	n.Metrics.RegisterGauge(metricsMemSys, "The total bytes of memory obtained from the OS")
+	n.metrics.RegisterGauge(metricsGoroutines, "The number of Go routines")
+	n.metrics.RegisterGauge(metricsMemSys, "The total bytes of memory obtained from the OS")
 
-	n.Metrics.RegisterGauge(metricsClientsNum, "The number of active clients")
-	n.Metrics.RegisterGauge(metricsUniqClientsNum, "The number of unique clients (with respect to connection identifiers)")
-	n.Metrics.RegisterGauge(metricsStreamsNum, "The number of active broadcasting streams")
-	n.Metrics.RegisterGauge(metricsDisconnectQueue, "The size of delayed disconnect")
+	n.metrics.RegisterGauge(metricsClientsNum, "The number of active clients")
+	n.metrics.RegisterGauge(metricsUniqClientsNum, "The number of unique clients (with respect to connection identifiers)")
+	n.metrics.RegisterGauge(metricsStreamsNum, "The number of active broadcasting streams")
+	n.metrics.RegisterGauge(metricsDisconnectQueue, "The size of delayed disconnect")
 
-	n.Metrics.RegisterCounter(metricsFailedAuths, "The total number of failed authentication attempts")
-	n.Metrics.RegisterCounter(metricsReceivedMsg, "The total number of received messages from clients")
-	n.Metrics.RegisterCounter(metricsFailedCommandReceived, "The total number of unrecognized messages received from clients")
-	n.Metrics.RegisterCounter(metricsBroadcastMsg, "The total number of messages received through PubSub (for broadcast)")
-	n.Metrics.RegisterCounter(metricsUnknownBroadcast, "The total number of unrecognized messages received through PubSub")
+	n.metrics.RegisterCounter(metricsFailedAuths, "The total number of failed authentication attempts")
+	n.metrics.RegisterCounter(metricsReceivedMsg, "The total number of received messages from clients")
+	n.metrics.RegisterCounter(metricsFailedCommandReceived, "The total number of unrecognized messages received from clients")
+	n.metrics.RegisterCounter(metricsBroadcastMsg, "The total number of messages received through PubSub (for broadcast)")
+	n.metrics.RegisterCounter(metricsUnknownBroadcast, "The total number of unrecognized messages received through PubSub")
 
-	n.Metrics.RegisterCounter(metricsSentMsg, "The total number of messages sent to clients")
-	n.Metrics.RegisterCounter(metricsFailedSent, "The total number of messages failed to send to clients")
+	n.metrics.RegisterCounter(metricsSentMsg, "The total number of messages sent to clients")
+	n.metrics.RegisterCounter(metricsFailedSent, "The total number of messages failed to send to clients")
 
-	n.Metrics.RegisterCounter(metricsDataSent, "The total amount of bytes sent to clients")
-	n.Metrics.RegisterCounter(metricsDataReceived, "The total amount of bytes received from clients")
+	n.metrics.RegisterCounter(metricsDataSent, "The total amount of bytes sent to clients")
+	n.metrics.RegisterCounter(metricsDataReceived, "The total amount of bytes received from clients")
 }
 
 func subscriptionsList(m map[string]bool) []string {
