@@ -4,7 +4,7 @@ Broadcast adapter is used to proxy messaged published by your application to Web
 
 That is, when you call `ActionCable.server.broadcast`, AnyCable first pushes the message to WebSocket server via broadcast adapter, and the actual _broadcasting_ is happening within a WS server.
 
-AnyCable ships with two broadcast adapters by default: HTTP and Redis (Redis is used by default).
+AnyCable ships with three broadcast adapters by default: Redis (default), [NATS][], and HTTP.
 
 ## HTTP adapter
 
@@ -40,6 +40,14 @@ If your sentinels are protected with passwords, use the following format: `:pass
 
 > See the [demo](https://github.com/anycable/anycable_rails_demo/pull/8) of using Redis with Sentinels in a local Docker dev environment.
 
+## NATS adapter
+
+**NOTE:** Make sure you added [`nats-pure` gem][nats-pure] to your Gemfile.
+
+NATS adapter uses [NATS publish/subscribe](https://docs.nats.io/nats-concepts/core-nats/pubsub) functionality and supports cluster features out-of-the-box.
+
+See [configuration](./configuration.md) for available NATS options.
+
 ## Custom adapters
 
 AnyCable allows you to use custom broadcasting adapters:
@@ -53,3 +61,6 @@ AnyCable.broadcast_adapter = MyAdapter.new
 ```
 
 Want to have a different adapter out-of-the-box? Join [the discussion](https://github.com/anycable/anycable/issues/2).
+
+[NATS]: https://nats.io
+[nats-pure]: https://github.com/nats-io/nats-pure.rb

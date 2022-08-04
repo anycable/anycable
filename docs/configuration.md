@@ -27,7 +27,15 @@ Local address to run gRPC server on (default: `"[::]:50051"`, deprecated, will b
 
 **broadcast_adapter** (`ANYCABLE_BROADCAST_ADAPTER`, `--broadcast-adapter`)
 
-[Broadcast adapter](./broadcast_adapters.md) to use. Available options out-of-the-box: `redis` (default), `http`.
+[Broadcast adapter](./broadcast_adapters.md) to use. Available options out-of-the-box: `redis` (default), `nats`, `http`.
+
+**nats_servers** (`ANYCABLE_NATS_SERVERS`, `--nats-servers`)
+
+A comma-separated list of NATS server addresses (default: `"nats://localhost:4222"`).
+
+**nats_channel** (`ANYCABLE_NATS_CHANNEL`, `--redis-channel`)
+
+NATS pus/sub channel for broadcasting (default: `"__anycable__"`).
 
 **redis_url** (`REDIS_URL`, `ANYCABLE_REDIS_URL`, `--redis-url`)
 

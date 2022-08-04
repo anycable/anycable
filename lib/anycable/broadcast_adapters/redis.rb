@@ -3,7 +3,7 @@
 begin
   require "redis"
 rescue LoadError
-  raise "Please, install redis gem to use Redis broadcast adapter"
+  raise "Please, install the redis gem to use Redis broadcast adapter"
 end
 
 require "json"

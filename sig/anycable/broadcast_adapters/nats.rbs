@@ -1,0 +1,10 @@
+module AnyCable
+  module BroadcastAdapters
+    class Nats < Base
+      attr_reader nats_conn: untyped
+      attr_reader channel: String
+
+      def initialize: (?channel: String channel, **untyped options) -> void
+    end
+  end
+end
