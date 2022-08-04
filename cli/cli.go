@@ -205,7 +205,7 @@ func (r *Runner) Run() error {
 
 		wsServer.SetupHandler(gqlPath, apolloHandler)
 
-		r.log.Info(fmt.Sprintf("Handle Apollo GraphQL WebSocket connections at %s%s", wsServer.Address(), gqlPath))
+		r.log.Info(fmt.Sprintf("Handle GraphQL WebSocket connections at %s%s", wsServer.Address(), gqlPath))
 	}
 
 	wsServer.SetupHandler(r.config.HealthPath, http.HandlerFunc(server.HealthHandler))
@@ -502,9 +502,21 @@ func (r *Runner) apolloWebsocketHandler(n *node.Node, c *config.Config) http.Han
 		wrappedConn := ws.NewConnection(wsc)
 
 		opts := []node.SessionOption{
-			node.WithEncoder(graphql.Encoder{}),
-			node.WithExecutor(graphql.NewExecutor(n, &c.GraphQL)),
 			node.WithHandshakeMessageDeadline(time.Now().Add(time.Duration(c.GraphQL.IdleTimeout) * time.Second)),
+		}
+
+		if wsc.Subprotocol() == graphql.GraphqlWsProtocol {
+			opts = append(
+				opts,
+				node.WithEncoder(graphql.Encoder{}),
+				node.WithExecutor(graphql.NewExecutor(n, &c.GraphQL)),
+			)
+		} else {
+			opts = append(
+				opts,
+				node.WithEncoder(graphql.LegacyEncoder{}),
+				node.WithExecutor(graphql.NewLegacyExecutor(n, &c.GraphQL)),
+			)
 		}
 
 		session := node.NewSession(n, wrappedConn, info.URL, info.Headers, info.UID, opts...)

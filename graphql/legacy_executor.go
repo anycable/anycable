@@ -8,14 +8,11 @@ import (
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/utils"
-)
-
-const (
-	payloadHeader = "x-apollo-connection"
+	"github.com/anycable/anycable-go/ws"
 )
 
 // Handling Apollo commands and transforming them into Action Cable commands
-type Executor struct {
+type LegacyExecutor struct {
 	node node.AppNode
 
 	channel string
@@ -23,18 +20,15 @@ type Executor struct {
 	jid     string
 }
 
-var _ node.Executor = (*Executor)(nil)
-
-func NewExecutor(node node.AppNode, config *Config) *Executor {
-	return &Executor{node: node, channel: config.Channel, action: config.Action, jid: config.JWTParam}
+func NewLegacyExecutor(node node.AppNode, config *Config) *LegacyExecutor {
+	return &LegacyExecutor{node: node, channel: config.Channel, action: config.Action, jid: config.JWTParam}
 }
 
-func (ex *Executor) HandleCommand(s *node.Session, msg *common.Message) error {
+func (ex *LegacyExecutor) HandleCommand(s *node.Session, msg *common.Message) error {
 	s.Log.Debug("incoming message", "data", msg)
 
-	if msg.Command == ConnectionInitType {
+	if msg.Command == GQL_CONNECTION_INIT {
 		if s.Connected {
-			s.Disconnect("Too many initialisation requests", 4429)
 			return errors.New("already connected")
 		}
 		// Perform authentication
@@ -71,23 +65,18 @@ func (ex *Executor) HandleCommand(s *node.Session, msg *common.Message) error {
 		return err
 	}
 
+	if msg.Command == GQL_CONNECTION_TERMINATE {
+		s.Disconnect("Terminate request", ws.CloseNormalClosure)
+		return nil
+	}
+
 	if !s.Connected {
-		s.Disconnect("Unauthorized", 4401)
 		return errors.New("connection hasn't been initialized")
-	}
-
-	if msg.Command == PongType {
-		return nil
-	}
-
-	if msg.Command == PingType {
-		s.Send(&common.Reply{Type: PongType})
-		return nil
 	}
 
 	identifier := IDToIdentifier(msg.Identifier, ex.channel)
 
-	if msg.Command == SubscribeType {
+	if msg.Command == GQL_START {
 		// 1. We need to perform two RPC calls: to create an Action Cable subscription,
 		// and to execute a query.
 		// 2. If query is not a subscription, we MUST remove the subscription and
@@ -157,40 +146,24 @@ func (ex *Executor) HandleCommand(s *node.Session, msg *common.Message) error {
 		return ex.completeRequest(s, identifier)
 	}
 
-	if msg.Command == CompleteType {
+	if msg.Command == GQL_STOP {
 		return ex.completeRequest(s, identifier)
 	}
 
-	s.Disconnect(fmt.Sprintf("Unknown command: %s", msg.Command), 4400)
 	return fmt.Errorf("unknown command: %s", msg.Command)
 }
 
-func (ex *Executor) Disconnect(s *node.Session) error {
+func (ex *LegacyExecutor) Disconnect(s *node.Session) error {
 	return ex.node.Disconnect(s)
 }
 
-func (ex *Executor) completeRequest(s *node.Session, identifier string) error {
+func (ex *LegacyExecutor) completeRequest(s *node.Session, identifier string) error {
 	_, err := ex.node.Unsubscribe(s, &common.Message{Identifier: identifier, Command: "unsubscribe"})
 
 	if err != nil {
 		return err
 	}
 
+	s.Send(&common.Reply{Type: common.UnsubscribedType, Identifier: identifier})
 	return nil
-}
-
-func extractJWTFromPayload(payloadStr string, key string) (token string) {
-	var payload map[string]interface{}
-
-	err := json.Unmarshal([]byte(payloadStr), &payload)
-
-	if err != nil {
-		return
-	}
-
-	if val, ok := payload[key]; ok {
-		token = val.(string)
-	}
-
-	return
 }

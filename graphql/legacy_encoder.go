@@ -6,10 +6,11 @@ import (
 
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/encoders"
+	"github.com/anycable/anycable-go/utils"
 	"github.com/anycable/anycable-go/ws"
 )
 
-const apolloEncoderID = "agql"
+const legacyEncoderID = "agql"
 
 // See https://github.com/apollographql/subscriptions-transport-ws/blob/master/PROTOCOL.md#graphql-over-websocket-protocol
 // nolint
@@ -41,60 +42,23 @@ const (
 	GQL_INTERNAL = "internal"
 )
 
-const PingPayload = "{\"type\":\"ka\"}"
+const LegacyPingPayload = "{\"type\":\"ka\"}"
 const DisconnectPayload = "{\"type\":\"connection_error\"}"
 
-type GraphqlOperation struct {
-	ID      string      `json:"id,omitempty"`
-	Type    string      `json:"type"`
-	Payload interface{} `json:"payload,omitempty"`
+type LegacyEncoder struct {
 }
 
-func (op *GraphqlOperation) ToJSON() []byte {
-	jsonStr, err := json.Marshal(&op)
-	if err != nil {
-		panic("Failed to build GraphQL JSON 😲")
-	}
-	return jsonStr
+var _ encoders.Encoder = (*LegacyEncoder)(nil)
+
+func (LegacyEncoder) ID() string {
+	return legacyEncoderID
 }
 
-type GraphqlQuery struct {
-	Query         string      `json:"query"`
-	Variables     interface{} `json:"variables,omitempty"`
-	OperationName string      `json:"operationName,omitempty"`
-	OperationID   string      `json:"operationId,omitempty"`
-	// Required for Action Cable compatibility
-	Action string `json:"action,omitempty"`
-}
-
-func (op *GraphqlQuery) ToJSON() []byte {
-	jsonStr, err := json.Marshal(&op)
-	if err != nil {
-		panic("Failed to build GraphQL JSON 😲")
-	}
-	return jsonStr
-}
-
-func (op *GraphqlOperation) PayloadString() (string, error) {
-	jsonStr, err := json.Marshal(&op.Payload)
-	if err != nil {
-		return "", err
-	}
-	return string(jsonStr), nil
-}
-
-type Encoder struct {
-}
-
-func (Encoder) ID() string {
-	return apolloEncoderID
-}
-
-func (gql Encoder) Encode(msg encoders.EncodedMessage) (*ws.SentFrame, error) {
+func (gql LegacyEncoder) Encode(msg encoders.EncodedMessage) (*ws.SentFrame, error) {
 	mtype := msg.GetType()
 
 	if mtype == common.PingType {
-		return &ws.SentFrame{FrameType: ws.TextFrame, Payload: []byte(PingPayload)}, nil
+		return &ws.SentFrame{FrameType: ws.TextFrame, Payload: []byte(LegacyPingPayload)}, nil
 	}
 
 	if mtype == common.DisconnectType {
@@ -104,7 +68,7 @@ func (gql Encoder) Encode(msg encoders.EncodedMessage) (*ws.SentFrame, error) {
 	r, ok := msg.(*common.Reply)
 
 	if !ok {
-		return nil, fmt.Errorf("Unknown message type: %v", msg)
+		return nil, fmt.Errorf("unknown message type: %v", msg)
 	}
 
 	if r.Type == common.ConfirmedType {
@@ -113,7 +77,7 @@ func (gql Encoder) Encode(msg encoders.EncodedMessage) (*ws.SentFrame, error) {
 
 	if r.Type == common.WelcomeType {
 		operation := GraphqlOperation{Type: GQL_CONNECTION_ACK}
-		return &ws.SentFrame{FrameType: ws.TextFrame, Payload: operation.ToJSON()}, nil
+		return &ws.SentFrame{FrameType: ws.TextFrame, Payload: utils.ToJSON(operation)}, nil
 	}
 
 	id, err := IdentifierToID(r.Identifier)
@@ -147,10 +111,10 @@ func (gql Encoder) Encode(msg encoders.EncodedMessage) (*ws.SentFrame, error) {
 		}
 	}
 
-	return &ws.SentFrame{FrameType: ws.TextFrame, Payload: operation.ToJSON()}, nil
+	return &ws.SentFrame{FrameType: ws.TextFrame, Payload: utils.ToJSON(operation)}, nil
 }
 
-func (gql Encoder) EncodeTransmission(raw string) (*ws.SentFrame, error) {
+func (gql LegacyEncoder) EncodeTransmission(raw string) (*ws.SentFrame, error) {
 	msg := common.Reply{}
 
 	if err := json.Unmarshal([]byte(raw), &msg); err != nil {
@@ -160,7 +124,7 @@ func (gql Encoder) EncodeTransmission(raw string) (*ws.SentFrame, error) {
 	return gql.Encode(&msg)
 }
 
-func (gql Encoder) Decode(raw []byte) (*common.Message, error) {
+func (gql LegacyEncoder) Decode(raw []byte) (*common.Message, error) {
 	operation := &GraphqlOperation{}
 
 	if err := json.Unmarshal(raw, &operation); err != nil {
@@ -201,33 +165,4 @@ func (gql Encoder) Decode(raw []byte) (*common.Message, error) {
 	}
 
 	return msg, nil
-}
-
-var _ encoders.Encoder = (*Encoder)(nil)
-
-func IdentifierToID(id string) (string, error) {
-	msg := struct {
-		ID string `json:"channelID"`
-	}{}
-
-	if err := json.Unmarshal([]byte(id), &msg); err != nil {
-		return "", err
-	}
-
-	return msg.ID, nil
-}
-
-func IDToIdentifier(id string, channel string) string {
-	msg := struct {
-		Channel   string `json:"channel"`
-		ChannelID string `json:"channelId"`
-	}{Channel: channel, ChannelID: id}
-
-	b, err := json.Marshal(msg)
-
-	if err != nil {
-		panic("Failed to build GraphQL identifier 😲")
-	}
-
-	return string(b)
 }

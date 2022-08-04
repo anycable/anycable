@@ -2,7 +2,6 @@ package graphql
 
 import (
 	"errors"
-	"fmt"
 	"log/slog"
 	"strconv"
 	"testing"
@@ -14,44 +13,42 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func TestHandleCommand(t *testing.T) {
+func TestLegacyHandleCommand(t *testing.T) {
 	n := &node_mocks.AppNode{}
 	c := NewConfig()
 	c.JWTParam = "jtoken"
-	executor := NewExecutor(n, &c)
-
-	n.On("Disconnect", mock.Anything).Return(nil)
+	executor := NewLegacyExecutor(n, &c)
 
 	t.Run("connection_init success", func(t *testing.T) {
-		session := buildSession(executor)
+		session := buildLegacySession()
 		session.Connected = false
 		n.On("Authenticate", session).Return(nil, nil)
 
-		err := executor.HandleCommand(session, &common.Message{Command: ConnectionInitType})
+		err := executor.HandleCommand(session, &common.Message{Command: GQL_CONNECTION_INIT})
 		assert.NoError(t, err)
 		n.AssertCalled(t, "Authenticate", session)
 	})
 
 	t.Run("connection_init with payload", func(t *testing.T) {
-		session := buildSession(executor)
+		session := buildLegacySession()
 		session.Connected = false
 		n.On("Authenticate", session).Return(nil, nil)
 
-		err := executor.HandleCommand(session, &common.Message{Command: ConnectionInitType, Data: "some_payload"})
+		err := executor.HandleCommand(session, &common.Message{Command: GQL_CONNECTION_INIT, Data: "some_payload"})
 		assert.NoError(t, err)
 		n.AssertCalled(t, "Authenticate", session)
 		assert.Equal(t, "some_payload", (*session.GetEnv().Headers)["x-apollo-connection"])
 	})
 
 	t.Run("connection_init with jwt token", func(t *testing.T) {
-		session := buildSession(executor)
+		session := buildLegacySession()
 		session.Connected = false
 		n.On("Authenticate", session).Return(nil, nil)
 
 		err := executor.HandleCommand(
 			session,
 			&common.Message{
-				Command: ConnectionInitType,
+				Command: GQL_CONNECTION_INIT,
 				Data:    `{"jtoken":"secret-token"}`,
 			},
 		)
@@ -61,55 +58,39 @@ func TestHandleCommand(t *testing.T) {
 	})
 
 	t.Run("connection_init failure", func(t *testing.T) {
-		session := buildSession(executor)
+		session := buildLegacySession()
 		session.Connected = false
 		expectedError := errors.New("Failed")
 		n.On("Authenticate", session).Return(nil, expectedError)
 
-		err := executor.HandleCommand(session, &common.Message{Command: ConnectionInitType})
+		err := executor.HandleCommand(session, &common.Message{Command: GQL_CONNECTION_INIT})
 		assert.Equal(t, expectedError, err)
 		n.AssertCalled(t, "Authenticate", session)
 	})
 
 	t.Run("connection_init when already connected", func(t *testing.T) {
-		session := buildSession(executor)
+		session := buildLegacySession()
 		session.Connected = true
 		n.On("Authenticate", session).Return(nil, nil)
 
-		err := executor.HandleCommand(session, &common.Message{Command: ConnectionInitType})
+		err := executor.HandleCommand(session, &common.Message{Command: GQL_CONNECTION_INIT})
 		assert.Error(t, err)
 		n.AssertNotCalled(t, "Authenticate", session)
 	})
 
-	t.Run("ping", func(t *testing.T) {
-		session := buildSession(executor)
-		session.Connected = true
-
-		err := executor.HandleCommand(session, &common.Message{Command: PingType})
-		assert.NoError(t, err)
-	})
-
-	t.Run("pong", func(t *testing.T) {
-		session := buildSession(executor)
-		session.Connected = true
-
-		err := executor.HandleCommand(session, &common.Message{Command: PongType})
-		assert.NoError(t, err)
-	})
-
 	t.Run("start when not connected", func(t *testing.T) {
-		session := buildSession(executor)
+		session := buildLegacySession()
 		session.Connected = false
 		n.On("Subscribe", session, mock.Anything).Return(nil, nil)
 
-		err := executor.HandleCommand(session, &common.Message{Command: SubscribeType})
+		err := executor.HandleCommand(session, &common.Message{Command: GQL_START})
 		assert.Error(t, err)
 		n.AssertNotCalled(t, "Subscribe", session, mock.Anything)
 	})
 
 	t.Run("start with subscription", func(t *testing.T) {
-		session := buildSession(executor)
-		gqlCommand := buildSubscribeCommand("{\"query\":\"User(id: 1){name}\"}")
+		session := buildLegacySession()
+		gqlCommand := buildLegacyStartCommand("{\"query\":\"User(id: 1){name}\"}")
 		command := common.Message{Command: "subscribe", Identifier: IDToIdentifier(gqlCommand.Identifier, "GraphqlChannel")}
 		perform := common.Message{Command: "message", Identifier: IDToIdentifier(gqlCommand.Identifier, "GraphqlChannel"), Data: "{\"query\":\"User(id: 1){name}\",\"action\":\"execute\"}"}
 		unsubscribe := common.Message{Command: "unsubscribe", Identifier: IDToIdentifier(gqlCommand.Identifier, "GraphqlChannel")}
@@ -131,10 +112,10 @@ func TestHandleCommand(t *testing.T) {
 		customConfig.Channel = "MyGraphqlChannel"
 		customConfig.Action = "run"
 
-		customExec := NewExecutor(n, &customConfig)
+		customExec := NewLegacyExecutor(n, &customConfig)
 
-		session := buildSession(customExec)
-		gqlCommand := buildSubscribeCommand("{\"query\":\"User(id: 1){name}\"}")
+		session := buildLegacySession()
+		gqlCommand := buildLegacyStartCommand("{\"query\":\"User(id: 1){name}\"}")
 		command := common.Message{Command: "subscribe", Identifier: IDToIdentifier(gqlCommand.Identifier, "MyGraphqlChannel")}
 		perform := common.Message{Command: "message", Identifier: IDToIdentifier(gqlCommand.Identifier, "MyGraphqlChannel"), Data: "{\"query\":\"User(id: 1){name}\",\"action\":\"run\"}"}
 		unsubscribe := common.Message{Command: "unsubscribe", Identifier: IDToIdentifier(gqlCommand.Identifier, "MyGraphqlChannel")}
@@ -152,8 +133,8 @@ func TestHandleCommand(t *testing.T) {
 	})
 
 	t.Run("start with subscription failure", func(t *testing.T) {
-		session := buildSession(executor)
-		gqlCommand := buildSubscribeCommand("{\"query\":\"User(id: 1){name}\"}")
+		session := buildLegacySession()
+		gqlCommand := buildLegacyStartCommand("{\"query\":\"User(id: 1){name}\"}")
 		command := common.Message{Command: "subscribe", Identifier: IDToIdentifier(gqlCommand.Identifier, "GraphqlChannel")}
 		expectedError := errors.New("Failure")
 		n.On("Subscribe", session, &command).Return(nil, expectedError)
@@ -166,8 +147,8 @@ func TestHandleCommand(t *testing.T) {
 	})
 
 	t.Run("start with request", func(t *testing.T) {
-		session := buildSession(executor)
-		gqlCommand := buildSubscribeCommand("{\"query\":\"User(id: 1){name}\"}")
+		session := buildLegacySession()
+		gqlCommand := buildLegacyStartCommand("{\"query\":\"User(id: 1){name}\"}")
 		command := common.Message{Command: "subscribe", Identifier: IDToIdentifier(gqlCommand.Identifier, "GraphqlChannel")}
 		perform := common.Message{Command: "message", Identifier: IDToIdentifier(gqlCommand.Identifier, "GraphqlChannel"), Data: "{\"query\":\"User(id: 1){name}\",\"action\":\"execute\"}"}
 		unsubscribe := common.Message{Command: "unsubscribe", Identifier: IDToIdentifier(gqlCommand.Identifier, "GraphqlChannel")}
@@ -184,9 +165,9 @@ func TestHandleCommand(t *testing.T) {
 		n.AssertCalled(t, "Unsubscribe", session, &unsubscribe)
 	})
 
-	t.Run("complete", func(t *testing.T) {
-		session := buildSession(executor)
-		gqlCommand := &common.Message{Command: CompleteType, Identifier: "stopMe"}
+	t.Run("stop", func(t *testing.T) {
+		session := buildLegacySession()
+		gqlCommand := &common.Message{Command: GQL_STOP, Identifier: "stopMe"}
 		unsubscribe := common.Message{Command: "unsubscribe", Identifier: IDToIdentifier(gqlCommand.Identifier, "GraphqlChannel")}
 
 		n.On("Unsubscribe", session, &unsubscribe).Return(&common.CommandResult{}, nil)
@@ -197,33 +178,23 @@ func TestHandleCommand(t *testing.T) {
 	})
 }
 
-var (
-	sessionCounter = 1
-	commandCounter = 1
-)
-
-func buildSession(executor node.Executor) *node.Session {
+func buildLegacySession() *node.Session {
 	sessionCounter++
 	s := node.Session{
 		Connected: true,
 		Log:       slog.With("context", "test"),
 	}
 	s.SetID(strconv.Itoa(sessionCounter))
-	node.WithEncoder(Encoder{})(&s)
-	node.WithExecutor(executor)(&s)
+	node.WithEncoder(LegacyEncoder{})(&s)
 	s.SetEnv(common.NewSessionEnv("ws://anycable.io/cable", nil))
 	return &s
 }
 
-func buildSubscribeCommand(query string) *common.Message {
+func buildLegacyStartCommand(query string) *common.Message {
 	commandCounter++
 	return &common.Message{
-		Command:    SubscribeType,
+		Command:    GQL_START,
 		Identifier: strconv.Itoa(commandCounter),
 		Data:       query,
 	}
-}
-
-func gqlTransmission(subscription bool) string {
-	return fmt.Sprintf("{\"identifier\":\"noop\",\"type\":\"message\",\"data\":{\"more\":%v}}", subscription)
 }

@@ -6,10 +6,11 @@ import (
 	"time"
 
 	"github.com/anycable/anycable-go/common"
+	"github.com/anycable/anycable-go/utils"
 	"github.com/stretchr/testify/assert"
 )
 
-const identifier = "{\"channel\":\"GraphqlChannel\",\"channelId\":\"abc2021\"}"
+const identifier = "{\"channel\":\"GraphqlChannel\",\"channelId\":\"abc2022\"}"
 
 func TestGraphQLEncode(t *testing.T) {
 	coder := Encoder{}
@@ -17,7 +18,7 @@ func TestGraphQLEncode(t *testing.T) {
 	t.Run("Reply", func(t *testing.T) {
 		msg := &common.Reply{Identifier: identifier, Message: "hello"}
 
-		expected := "{\"id\":\"abc2021\",\"type\":\"data\",\"payload\":\"hello\"}"
+		expected := "{\"id\":\"abc2022\",\"type\":\"next\",\"payload\":\"hello\"}"
 
 		actual, err := coder.Encode(msg)
 
@@ -28,7 +29,18 @@ func TestGraphQLEncode(t *testing.T) {
 	t.Run("Ping", func(t *testing.T) {
 		msg := &common.PingMessage{Type: "ping", Message: time.Now().Unix()}
 
-		expected := "{\"type\":\"ka\"}"
+		expected := "{\"type\":\"ping\"}"
+
+		actual, err := coder.Encode(msg)
+
+		assert.NoError(t, err)
+		assert.Equal(t, expected, string(actual.Payload))
+	})
+
+	t.Run("Pong", func(t *testing.T) {
+		msg := &common.Reply{Type: "pong"}
+
+		expected := "{\"type\":\"pong\"}"
 
 		actual, err := coder.Encode(msg)
 
@@ -39,18 +51,16 @@ func TestGraphQLEncode(t *testing.T) {
 	t.Run("Disconnect", func(t *testing.T) {
 		msg := &common.DisconnectMessage{Type: "disconnect", Reason: "unauthorized", Reconnect: false}
 
-		expected := "{\"type\":\"connection_error\"}"
-
 		actual, err := coder.Encode(msg)
 
 		assert.NoError(t, err)
-		assert.Equal(t, expected, string(actual.Payload))
+		assert.Nil(t, actual)
 	})
 
 	t.Run("Unsubscribed", func(t *testing.T) {
 		msg := &common.Reply{Type: common.UnsubscribedType, Identifier: identifier}
 
-		expected := "{\"id\":\"abc2021\",\"type\":\"complete\"}"
+		expected := "{\"id\":\"abc2022\",\"type\":\"complete\"}"
 
 		actual, err := coder.Encode(msg)
 
@@ -73,7 +83,7 @@ func TestGraphQLEncodeTransmission(t *testing.T) {
 	})
 
 	t.Run("confirm_subscription", func(t *testing.T) {
-		msg := toJSON(common.Reply{Identifier: identifier, Type: "confirm_subscription"})
+		msg := utils.ToJSON(common.Reply{Identifier: identifier, Type: "confirm_subscription"})
 
 		actual, err := coder.EncodeTransmission(string(msg))
 
@@ -82,8 +92,8 @@ func TestGraphQLEncodeTransmission(t *testing.T) {
 	})
 
 	t.Run("reject_subscription", func(t *testing.T) {
-		msg := toJSON(common.Reply{Identifier: identifier, Type: "reject_subscription"})
-		expected := "{\"id\":\"abc2021\",\"type\":\"error\"}"
+		msg := utils.ToJSON(common.Reply{Identifier: identifier, Type: "reject_subscription"})
+		expected := "{\"id\":\"abc2022\",\"type\":\"error\"}"
 
 		actual, err := coder.EncodeTransmission(string(msg))
 
@@ -92,8 +102,8 @@ func TestGraphQLEncodeTransmission(t *testing.T) {
 	})
 
 	t.Run("unsubscribed", func(t *testing.T) {
-		msg := toJSON(common.Reply{Identifier: identifier, Type: "unsubscribed"})
-		expected := "{\"id\":\"abc2021\",\"type\":\"complete\"}"
+		msg := utils.ToJSON(common.Reply{Identifier: identifier, Type: "unsubscribed"})
+		expected := "{\"id\":\"abc2022\",\"type\":\"complete\"}"
 
 		actual, err := coder.EncodeTransmission(string(msg))
 
@@ -102,8 +112,8 @@ func TestGraphQLEncodeTransmission(t *testing.T) {
 	})
 
 	t.Run("message", func(t *testing.T) {
-		msg := toJSON(common.Reply{Identifier: identifier, Message: "payload"})
-		expected := "{\"id\":\"abc2021\",\"type\":\"data\",\"payload\":\"payload\"}"
+		msg := utils.ToJSON(common.Reply{Identifier: identifier, Message: "payload"})
+		expected := "{\"id\":\"abc2022\",\"type\":\"next\",\"payload\":\"payload\"}"
 
 		actual, err := coder.EncodeTransmission(string(msg))
 
@@ -116,8 +126,8 @@ func TestGraphQLEncodeTransmission(t *testing.T) {
 
 		json.Unmarshal([]byte("{\"result\":\"payload\"}"), &result) // nolint:errcheck
 
-		msg := toJSON(common.Reply{Identifier: identifier, Message: result})
-		expected := "{\"id\":\"abc2021\",\"type\":\"data\",\"payload\":\"payload\"}"
+		msg := utils.ToJSON(common.Reply{Identifier: identifier, Message: result})
+		expected := "{\"id\":\"abc2022\",\"type\":\"next\",\"payload\":\"payload\"}"
 
 		actual, err := coder.EncodeTransmission(string(msg))
 
@@ -148,42 +158,24 @@ func TestGraphQLDecode(t *testing.T) {
 		assert.Equal(t, "{\"token\":\"secret\"}", actual.Data)
 	})
 
-	t.Run("start", func(t *testing.T) {
-		msg := []byte("{\"type\":\"start\",\"id\":\"abc2021\",\"payload\":{\"query\":\"Post { id }\"}}")
+	t.Run("subscribe", func(t *testing.T) {
+		msg := []byte("{\"type\":\"subscribe\",\"id\":\"abc2022\",\"payload\":{\"query\":\"Post { id }\"}}")
 
 		actual, err := coder.Decode(msg)
 
 		assert.NoError(t, err)
-		assert.Equal(t, "start", actual.Command)
-		assert.Equal(t, "abc2021", actual.Identifier)
+		assert.Equal(t, "subscribe", actual.Command)
+		assert.Equal(t, "abc2022", actual.Identifier)
 		assert.Equal(t, "{\"query\":\"Post { id }\"}", actual.Data)
 	})
 
-	t.Run("stop", func(t *testing.T) {
-		msg := []byte("{\"type\":\"stop\",\"id\":\"abc2021\"}")
+	t.Run("complete", func(t *testing.T) {
+		msg := []byte("{\"type\":\"complete\",\"id\":\"abc2022\"}")
 
 		actual, err := coder.Decode(msg)
 
 		assert.NoError(t, err)
-		assert.Equal(t, "stop", actual.Command)
-		assert.Equal(t, "abc2021", actual.Identifier)
+		assert.Equal(t, "complete", actual.Command)
+		assert.Equal(t, "abc2022", actual.Identifier)
 	})
-
-	t.Run("terminate", func(t *testing.T) {
-		msg := []byte("{\"type\":\"connection_terminate\"}")
-
-		actual, err := coder.Decode(msg)
-
-		assert.NoError(t, err)
-		assert.Equal(t, "connection_terminate", actual.Command)
-	})
-}
-
-func toJSON(msg common.Reply) []byte {
-	b, err := json.Marshal(&msg)
-	if err != nil {
-		panic("Failed to build JSON 😲")
-	}
-
-	return b
 }
