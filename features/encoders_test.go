@@ -36,8 +36,8 @@ func BenchmarkEncodersDecode(b *testing.B) {
 	longCmd := message{Command: "message", Identifier: longIdentifier, Message: baseMsg}
 	longMsg, _ := json.Marshal(&longCmd)
 
-	baseApolloMsg := []byte("{\"type\":\"start\",\"id\":\"abc2021\",\"payload\":{\"query\":\"Post { id }\"}}")
-	longApolloMsg := []byte(fmt.Sprintf("{\"type\":\"start\",\"id\":\"%s\",\"payload\":{\"query\":%s}}", strings.Repeat("abcd_efjhkl", 10), baseApolloMsg))
+	baseApolloMsg := []byte("{\"type\":\"subscribe\",\"id\":\"abc2021\",\"payload\":{\"query\":\"Post { id }\"}}")
+	longApolloMsg := []byte(fmt.Sprintf("{\"type\":\"subscribe\",\"id\":\"%s\",\"payload\":{\"query\":%s}}", strings.Repeat("abcd_efjhkl", 10), baseApolloMsg))
 
 	baseMsgpack, _ := msgpack.Marshal(&baseCmd)
 	longMsgpack, _ := msgpack.Marshal(&longCmd)

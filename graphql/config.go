@@ -19,12 +19,13 @@ type Config struct {
 }
 
 const (
+	GraphqlWsProtocol = "graphql-transport-ws"
 	// From https://github.com/apollographql/subscriptions-transport-ws/blob/master/src/protocol.ts
 	LegacyGraphQLProtocol = "graphql-ws"
 )
 
 func GraphqlProtocols() []string {
-	return []string{LegacyGraphQLProtocol}
+	return []string{LegacyGraphQLProtocol, GraphqlWsProtocol}
 }
 
 func NewConfig() Config {

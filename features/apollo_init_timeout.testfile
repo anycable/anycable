@@ -1,4 +1,4 @@
-launch :anycable, "./dist/anycable-go --apollo_path=/gql --disable_disconnect"
+launch :anycable, "./dist/anycable-go --graphql_path=/gql --disable_disconnect"
 wait_tcp 8080
 
 scenario = {

@@ -7,7 +7,7 @@ import (
 
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/node"
-	"github.com/anycable/anycable-go/ws"
+	"github.com/anycable/anycable-go/utils"
 )
 
 const (
@@ -32,8 +32,9 @@ func NewExecutor(node node.AppNode, config *Config) *Executor {
 func (ex *Executor) HandleCommand(s *node.Session, msg *common.Message) error {
 	s.Log.Debug("incoming message", "data", msg)
 
-	if msg.Command == GQL_CONNECTION_INIT {
-		if s.Connected {
+	if msg.Command == ConnectionInitType {
+		if s.IsConnected() {
+			s.Disconnect("Too many initialisation requests", 4429)
 			return errors.New("already connected")
 		}
 		// Perform authentication
@@ -70,18 +71,23 @@ func (ex *Executor) HandleCommand(s *node.Session, msg *common.Message) error {
 		return err
 	}
 
-	if msg.Command == GQL_CONNECTION_TERMINATE {
-		s.Disconnect("Terminate request", ws.CloseNormalClosure)
+	if !s.IsConnected() {
+		s.Disconnect("Unauthorized", 4401)
+		return errors.New("connection hasn't been initialized")
+	}
+
+	if msg.Command == PongType {
 		return nil
 	}
 
-	if !s.Connected {
-		return errors.New("connection hasn't been initialized")
+	if msg.Command == PingType {
+		s.Send(&common.Reply{Type: PongType})
+		return nil
 	}
 
 	identifier := IDToIdentifier(msg.Identifier, ex.channel)
 
-	if msg.Command == GQL_START {
+	if msg.Command == SubscribeType {
 		// 1. We need to perform two RPC calls: to create an Action Cable subscription,
 		// and to execute a query.
 		// 2. If query is not a subscription, we MUST remove the subscription and
@@ -113,7 +119,7 @@ func (ex *Executor) HandleCommand(s *node.Session, msg *common.Message) error {
 		msg := common.Message{
 			Command:    "message",
 			Identifier: identifier,
-			Data:       string(operation.ToJSON()),
+			Data:       string(utils.ToJSON(operation)),
 		}
 
 		s.Log.Debug("execute GraphQL query", "data", msg)
@@ -151,10 +157,11 @@ func (ex *Executor) HandleCommand(s *node.Session, msg *common.Message) error {
 		return ex.completeRequest(s, identifier)
 	}
 
-	if msg.Command == GQL_STOP {
+	if msg.Command == CompleteType {
 		return ex.completeRequest(s, identifier)
 	}
 
+	s.Disconnect(fmt.Sprintf("Unknown command: %s", msg.Command), 4400)
 	return fmt.Errorf("unknown command: %s", msg.Command)
 }
 
@@ -169,7 +176,6 @@ func (ex *Executor) completeRequest(s *node.Session, identifier string) error {
 		return err
 	}
 
-	s.Send(&common.Reply{Type: common.UnsubscribedType, Identifier: identifier})
 	return nil
 }
 

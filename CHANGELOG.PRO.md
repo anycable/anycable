@@ -2,6 +2,8 @@
 
 ## master
 
+- Add `graphql-ws` protocol support for GraphQL clients. ([@palkan][])
+
 - Disconnect idle Apollo clients if no connection_init has been sent in the specified period of time.
 
 - Support passing JWT token with connection params for Apollo clients.
