@@ -22,7 +22,7 @@ func main() {
 	})
 
 	runner.SubscriberFactory(func(h pubsub.Handler, c *config.Config) (pubsub.Subscriber, error) {
-		return pubsub.NewSubscriber(h, c.BroadcastAdapter, &c.Redis, &c.HTTPPubSub)
+		return pubsub.NewSubscriber(h, c.BroadcastAdapter, &c.Redis, &c.HTTPPubSub, &c.NATSPubSub)
 	})
 
 	err := runner.Run()

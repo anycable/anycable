@@ -25,6 +25,10 @@ OPTIONS
   --http_broadcast_path                  HTTP pub/sub endpoint path, default: /_broadcast, env: ANYCABLE_HTTP_BROADCAST_PATH
   --http_broadcast_secret                HTTP pub/sub authorization secret, default: "" (disabled), env: ANYCABLE_HTTP_BROADCAST_SECRET
 
+  --nats_servers                         Comma separated list of NATS cluster servers, default: "nats://localhost:4222", env: ANYCABLE_NATS_SERVERS
+  --nats_channel                         NATS channel for broadcasts, default: __anycable__, env: ANYCABLE_NATS_CHANNEL
+  --nats_dont_randomize_servers          Pass this option to disable NATS servers randomization during (re-)connect, default: false, env: ANYCABLE_NATS_DONT_RANDOMIZE_SERVERS
+
   --rpc_host                             RPC service address, default: localhost:50051, env: ANYCABLE_RPC_HOST
   --rpc_concurrency                      Max number of concurrent RPC request; should be slightly less than the RPC server concurrency, default: 28, env: ANYCABLE_RPC_CONCURRENCY
   --rpc_enable_tls                       Enable client-side TLS with the RPC server, default: false, env: ANYCABLE_RPC_ENABLE_TLS

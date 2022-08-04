@@ -68,6 +68,10 @@ func init() {
 	fs.StringVar(&defaults.HTTPPubSub.Path, "http_broadcast_path", "/_broadcast", "")
 	fs.StringVar(&defaults.HTTPPubSub.Secret, "http_broadcast_secret", "", "")
 
+	fs.StringVar(&defaults.NATSPubSub.Servers, "nats_servers", defaults.NATSPubSub.Servers, "")
+	fs.StringVar(&defaults.NATSPubSub.Channel, "nats_channel", defaults.NATSPubSub.Channel, "")
+	fs.BoolVar(&defaults.NATSPubSub.DontRandomizeServers, "nats_dont_randomize_servers", defaults.NATSPubSub.DontRandomizeServers, "")
+
 	fs.StringVar(&defaults.RPC.Host, "rpc_host", "localhost:50051", "")
 	fs.IntVar(&defaults.RPC.Concurrency, "rpc_concurrency", 28, "")
 	fs.BoolVar(&defaults.RPC.EnableTLS, "rpc_enable_tls", false, "")

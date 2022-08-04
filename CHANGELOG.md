@@ -2,6 +2,8 @@
 
 ## master
 
+- Add NATS pub/sub adapter. ([@palkan][])
+
 ## 1.2.1 (2022-06-30)
 
 - Use [automaxprocs](https://github.com/uber-go/automaxprocs) to configure the number of OS threads. ([@palkan][])

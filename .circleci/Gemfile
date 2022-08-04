@@ -1,6 +1,8 @@
 # Gemfile for running conformance tests with Anyt
 source "https://rubygems.org"
 
+gem "nats-pure"
+
 if File.directory?(File.join(__dir__, "../../anycable"))
   $stdout.puts "\n=== Using local gems for Anyt ===\n\n"
   gem "anycable", path: "../../anycable"

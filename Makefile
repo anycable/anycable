@@ -12,10 +12,12 @@ endif
 # If port 6379 is listening, we assume that this is a Redis instance,
 # so we can use a Redis broadcast adapter.
 # Otherwise we fallback to HTTP adapter.
-ifndef REDIS_URL
-	HAS_REDIS := $(shell lsof -Pi :6379 -sTCP:LISTEN -t >/dev/null; echo $$?)
-	ifneq ($(HAS_REDIS), 0)
-		export ANYCABLE_BROADCAST_ADAPTER=http
+ifndef ANYCABLE_BROADCAST_ADAPTER
+	ifndef REDIS_URL
+		HAS_REDIS := $(shell lsof -Pi :6379 -sTCP:LISTEN -t >/dev/null; echo $$?)
+		ifneq ($(HAS_REDIS), 0)
+			export ANYCABLE_BROADCAST_ADAPTER=http
+		endif
 	endif
 endif
 
@@ -114,6 +116,9 @@ test-conformance-ssl: tmp/anycable-go-test
 
 test-conformance-http: tmp/anycable-go-test
 	BUNDLE_GEMFILE=.circleci/Gemfile ANYCABLE_BROADCAST_ADAPTER=http ANYCABLE_HTTP_BROADCAST_SECRET=any_secret bundle exec anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable"
+
+test-conformance-nats: tmp/anycable-go-test
+	BUNDLE_GEMFILE=.circleci/Gemfile ANYCABLE_BROADCAST_ADAPTER=nats bundle exec anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable"
 
 test-conformance-all: test-conformance test-conformance-ssl test-conformance-http
 

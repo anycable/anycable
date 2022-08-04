@@ -37,7 +37,7 @@ Supports wildcards, e.g., `--allowed_origins=*.evilmartians.io,www.evilmartians.
 
 **--broadcast_adapter** (`ANYCABLE_BROADCAST_ADAPTER`, default: `redis`)
 
-[Broadcasting adapter](../ruby/broadcast_adapters.md) to use. Available options: `redis` (default), `http`.
+[Broadcasting adapter](../ruby/broadcast_adapters.md) to use. Available options: `redis` (default), `nats`, and `http`.
 
 When HTTP adapter is used, AnyCable-Go accepts broadcasting requests on `:8090/_broadcast`.
 
@@ -56,6 +56,14 @@ Redis URL for pub/sub (default: `"redis://localhost:6379/5"`).
 **--redis_channel** (`ANYCABLE_REDIS_CHANNEL`)
 
 Redis channel for broadcasting (default: `"__anycable__"`).
+
+**--nats_servers** (`ANYCABLE_NATS_SERVERS`)
+
+The list of [NATS][] servers to connect to (default: `"nats://localhost:4222"`).
+
+**--nats_channel** (`ANYCABLE_NATS_CHANNEL`)
+
+NATS channel for broadcasting (default: `"__anycable__"`).
 
 **--log_level** (`ANYCABLE_LOG_LEVEL`)
 
@@ -122,3 +130,4 @@ INFO 2022-06-30T03:31:21.848Z context=main Starting AnyCable 1.2.0-c4f1c6e (with
 ```
 
 [automaxprocs]: https://github.com/uber-go/automaxprocs
+[NATS]: https://nats.io

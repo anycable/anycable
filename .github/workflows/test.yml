@@ -91,6 +91,7 @@ jobs:
         test_command:
           - test-conformance
           - test-conformance-http
+          - test-conformance-nats
           - test-conformance-ssl
     runs-on: ubuntu-latest
     env:
@@ -107,6 +108,9 @@ jobs:
         image: redis:5.0-alpine
         ports: ["6379:6379"]
         options: --health-cmd="redis-cli ping" --health-interval 1s --health-timeout 3s --health-retries 30
+      nats:
+        image: nats:alpine
+        ports: ["4222:4222"]
     steps:
     - uses: actions/checkout@v3
     - uses: actions/setup-go@v3

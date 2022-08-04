@@ -17,6 +17,7 @@ type Config struct {
 	RPC                  rpc.Config
 	Redis                pubsub.RedisConfig
 	HTTPPubSub           pubsub.HTTPConfig
+	NATSPubSub           pubsub.NATSConfig
 	Host                 string
 	Port                 int
 	MaxConn              int
@@ -46,6 +47,7 @@ func New() Config {
 	config.RPC = rpc.NewConfig()
 	config.Redis = pubsub.NewRedisConfig()
 	config.HTTPPubSub = pubsub.NewHTTPConfig()
+	config.NATSPubSub = pubsub.NewNATSConfig()
 	config.DisconnectQueue = node.NewDisconnectQueueConfig()
 	config.JWT = identity.NewJWTConfig("")
 	config.Rails = rails.NewConfig()
