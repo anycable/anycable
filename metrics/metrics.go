@@ -23,6 +23,11 @@ type IntervalWriter interface {
 type Instrumenter interface {
 	CounterIncrement(name string)
 	CounterAdd(name string, val uint64)
+	GaugeIncrement(name string)
+	GaugeDecrement(name string)
+	GaugeSet(name string, val uint64)
+	RegisterCounter(name string, desc string)
+	RegisterGauge(name string, desc string)
 }
 
 // Metrics stores some useful stats about node
@@ -185,6 +190,21 @@ func (m *Metrics) RegisterGauge(name string, desc string) {
 	defer m.mu.Unlock()
 
 	m.gauges[name] = NewGauge(name, desc)
+}
+
+// GaugeIncrement increments the given gauge
+func (m *Metrics) GaugeIncrement(name string) {
+	m.gauges[name].Inc()
+}
+
+// GaugeDecrement increments the given gauge
+func (m *Metrics) GaugeDecrement(name string) {
+	m.gauges[name].Dec()
+}
+
+// GaugeSet sets the given gauge
+func (m *Metrics) GaugeSet(name string, val uint64) {
+	m.gauges[name].Set64(val)
 }
 
 // Counter returns counter by name

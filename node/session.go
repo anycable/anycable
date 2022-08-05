@@ -91,7 +91,7 @@ func (s *Session) SetExecutor(ex Executor) {
 	s.executor = ex
 }
 
-func (s *Session) SetMetrics(m *metrics.Metrics) {
+func (s *Session) SetMetrics(m metrics.Instrumenter) {
 	s.metrics = m
 }
 

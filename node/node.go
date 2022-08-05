@@ -59,7 +59,7 @@ type Connection interface {
 
 // Node represents the whole application
 type Node struct {
-	metrics *metrics.Metrics
+	metrics metrics.Instrumenter
 
 	config       *Config
 	hub          *Hub
@@ -128,7 +128,7 @@ func (n *Node) HandlePubSub(raw []byte) {
 	msg, err := common.PubSubMessageFromJSON(raw)
 
 	if err != nil {
-		n.metrics.Counter(metricsUnknownBroadcast).Inc()
+		n.metrics.CounterIncrement(metricsUnknownBroadcast)
 		n.log.Warnf("Failed to parse pubsub message '%s' with error: %v", raw, err)
 		return
 	}
@@ -217,7 +217,7 @@ func (n *Node) Authenticate(s *Session) (res *common.ConnectResult, err error) {
 		n.hub.addSession(s)
 	} else {
 		if res.Status == common.FAILURE {
-			n.metrics.Counter(metricsFailedAuths).Inc()
+			n.metrics.CounterIncrement(metricsFailedAuths)
 		}
 
 		defer s.Disconnect("Auth Failed", ws.CloseNormalClosure)
@@ -330,7 +330,7 @@ func (n *Node) Perform(s *Session, msg *common.Message) (res *common.CommandResu
 
 // Broadcast message to stream
 func (n *Node) Broadcast(msg *common.StreamMessage) {
-	n.metrics.Counter(metricsBroadcastMsg).Inc()
+	n.metrics.CounterIncrement(metricsBroadcastMsg)
 	n.log.Debugf("Incoming pubsub message: %v", msg)
 	n.hub.BroadcastMessage(msg)
 }
@@ -363,7 +363,7 @@ func (n *Node) DisconnectNow(s *Session) error {
 
 // RemoteDisconnect find a session by identifier and closes it
 func (n *Node) RemoteDisconnect(msg *common.RemoteDisconnectMessage) {
-	n.metrics.Counter(metricsBroadcastMsg).Inc()
+	n.metrics.CounterIncrement(metricsBroadcastMsg)
 	n.log.Debugf("Incoming pubsub command: %v", msg)
 	n.hub.RemoteDisconnect(msg)
 }
@@ -434,16 +434,16 @@ func (n *Node) collectStats() {
 }
 
 func (n *Node) collectStatsOnce() {
-	n.metrics.Gauge(metricsGoroutines).Set(runtime.NumGoroutine())
+	n.metrics.GaugeSet(metricsGoroutines, uint64(runtime.NumGoroutine()))
 
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
-	n.metrics.Gauge(metricsMemSys).Set64(m.Sys)
+	n.metrics.GaugeSet(metricsMemSys, m.Sys)
 
-	n.metrics.Gauge(metricsClientsNum).Set(n.hub.Size())
-	n.metrics.Gauge(metricsUniqClientsNum).Set(n.hub.UniqSize())
-	n.metrics.Gauge(metricsStreamsNum).Set(n.hub.StreamsSize())
-	n.metrics.Gauge(metricsDisconnectQueue).Set(n.disconnector.Size())
+	n.metrics.GaugeSet(metricsClientsNum, uint64(n.hub.Size()))
+	n.metrics.GaugeSet(metricsUniqClientsNum, uint64(n.hub.UniqSize()))
+	n.metrics.GaugeSet(metricsStreamsNum, uint64(n.hub.StreamsSize()))
+	n.metrics.GaugeSet(metricsDisconnectQueue, uint64(n.disconnector.Size()))
 }
 
 func (n *Node) registerMetrics() {

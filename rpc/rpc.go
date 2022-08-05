@@ -105,13 +105,13 @@ type Controller struct {
 	config      *Config
 	sem         chan (struct{})
 	client      pb.RPCClient
-	metrics     *metrics.Metrics
+	metrics     metrics.Instrumenter
 	log         *log.Entry
 	clientState ClientHelper
 }
 
 // NewController builds new Controller
-func NewController(metrics *metrics.Metrics, config *Config) *Controller {
+func NewController(metrics metrics.Instrumenter, config *Config) *Controller {
 	metrics.RegisterCounter(metricsRPCCalls, "The total number of RPC calls")
 	metrics.RegisterCounter(metricsRPCRetries, "The total number of RPC call retries")
 	metrics.RegisterCounter(metricsRPCFailures, "The total number of failed RPC calls")
@@ -178,10 +178,10 @@ func (c *Controller) Shutdown() error {
 
 // Authenticate performs Connect RPC call
 func (c *Controller) Authenticate(sid string, env *common.SessionEnv) (*common.ConnectResult, error) {
-	c.metrics.Gauge(metricsRPCPending).Inc()
+	c.metrics.GaugeIncrement(metricsRPCPending)
 	<-c.sem
 	defer func() { c.sem <- struct{}{} }()
-	c.metrics.Gauge(metricsRPCPending).Dec()
+	c.metrics.GaugeDecrement(metricsRPCPending)
 
 	op := func() (interface{}, error) {
 		return c.client.Connect(
@@ -190,12 +190,12 @@ func (c *Controller) Authenticate(sid string, env *common.SessionEnv) (*common.C
 		)
 	}
 
-	c.metrics.Counter(metricsRPCCalls).Inc()
+	c.metrics.CounterIncrement(metricsRPCCalls)
 
 	response, err := c.retry(sid, op)
 
 	if err != nil {
-		c.metrics.Counter(metricsRPCFailures).Inc()
+		c.metrics.CounterIncrement(metricsRPCFailures)
 
 		return nil, err
 	}
@@ -209,17 +209,17 @@ func (c *Controller) Authenticate(sid string, env *common.SessionEnv) (*common.C
 		return reply, err
 	}
 
-	c.metrics.Counter(metricsRPCFailures).Inc()
+	c.metrics.CounterIncrement(metricsRPCFailures)
 
 	return nil, errors.New("failed to deserialize connection response")
 }
 
 // Subscribe performs Command RPC call with "subscribe" command
 func (c *Controller) Subscribe(sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error) {
-	c.metrics.Gauge(metricsRPCPending).Inc()
+	c.metrics.GaugeIncrement(metricsRPCPending)
 	<-c.sem
 	defer func() { c.sem <- struct{}{} }()
-	c.metrics.Gauge(metricsRPCPending).Dec()
+	c.metrics.GaugeDecrement(metricsRPCPending)
 
 	op := func() (interface{}, error) {
 		return c.client.Command(
@@ -235,10 +235,10 @@ func (c *Controller) Subscribe(sid string, env *common.SessionEnv, id string, ch
 
 // Unsubscribe performs Command RPC call with "unsubscribe" command
 func (c *Controller) Unsubscribe(sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error) {
-	c.metrics.Gauge(metricsRPCPending).Inc()
+	c.metrics.GaugeIncrement(metricsRPCPending)
 	<-c.sem
 	defer func() { c.sem <- struct{}{} }()
-	c.metrics.Gauge(metricsRPCPending).Dec()
+	c.metrics.GaugeDecrement(metricsRPCPending)
 
 	op := func() (interface{}, error) {
 		return c.client.Command(
@@ -254,10 +254,10 @@ func (c *Controller) Unsubscribe(sid string, env *common.SessionEnv, id string, 
 
 // Perform performs Command RPC call with "perform" command
 func (c *Controller) Perform(sid string, env *common.SessionEnv, id string, channel string, data string) (*common.CommandResult, error) {
-	c.metrics.Gauge(metricsRPCPending).Inc()
+	c.metrics.GaugeIncrement(metricsRPCPending)
 	<-c.sem
 	defer func() { c.sem <- struct{}{} }()
-	c.metrics.Gauge(metricsRPCPending).Dec()
+	c.metrics.GaugeDecrement(metricsRPCPending)
 
 	op := func() (interface{}, error) {
 		return c.client.Command(
@@ -273,10 +273,10 @@ func (c *Controller) Perform(sid string, env *common.SessionEnv, id string, chan
 
 // Disconnect performs disconnect RPC call
 func (c *Controller) Disconnect(sid string, env *common.SessionEnv, id string, subscriptions []string) error {
-	c.metrics.Gauge(metricsRPCPending).Inc()
+	c.metrics.GaugeIncrement(metricsRPCPending)
 	<-c.sem
 	defer func() { c.sem <- struct{}{} }()
-	c.metrics.Gauge(metricsRPCPending).Dec()
+	c.metrics.GaugeDecrement(metricsRPCPending)
 
 	op := func() (interface{}, error) {
 		return c.client.Disconnect(
@@ -285,12 +285,12 @@ func (c *Controller) Disconnect(sid string, env *common.SessionEnv, id string, s
 		)
 	}
 
-	c.metrics.Counter(metricsRPCCalls).Inc()
+	c.metrics.CounterIncrement(metricsRPCCalls)
 
 	response, err := c.retry(sid, op)
 
 	if err != nil {
-		c.metrics.Counter(metricsRPCFailures).Inc()
+		c.metrics.CounterIncrement(metricsRPCFailures)
 		return err
 	}
 
@@ -300,7 +300,7 @@ func (c *Controller) Disconnect(sid string, env *common.SessionEnv, id string, s
 		err = protocol.ParseDisconnectResponse(r)
 
 		if err != nil {
-			c.metrics.Counter(metricsRPCFailures).Inc()
+			c.metrics.CounterIncrement(metricsRPCFailures)
 		}
 
 		return err
@@ -310,10 +310,10 @@ func (c *Controller) Disconnect(sid string, env *common.SessionEnv, id string, s
 }
 
 func (c *Controller) parseCommandResponse(sid string, response interface{}, err error) (*common.CommandResult, error) {
-	c.metrics.Counter(metricsRPCCalls).Inc()
+	c.metrics.CounterIncrement(metricsRPCCalls)
 
 	if err != nil {
-		c.metrics.Counter(metricsRPCFailures).Inc()
+		c.metrics.CounterIncrement(metricsRPCFailures)
 
 		return nil, err
 	}
@@ -326,7 +326,7 @@ func (c *Controller) parseCommandResponse(sid string, response interface{}, err 
 		return res, err
 	}
 
-	c.metrics.Counter(metricsRPCFailures).Inc()
+	c.metrics.CounterIncrement(metricsRPCFailures)
 
 	return nil, errors.New("failed to deserialize command response")
 }
@@ -389,7 +389,7 @@ func (c *Controller) retry(sid string, callback func() (interface{}, error)) (re
 
 		retryAge += delayMS
 
-		c.metrics.Counter(metricsRPCRetries).Inc()
+		c.metrics.CounterIncrement(metricsRPCRetries)
 
 		time.Sleep(delay * time.Millisecond)
 
