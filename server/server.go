@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/apex/log"
 	"golang.org/x/net/netutil"
@@ -59,7 +60,7 @@ func NewServer(host string, port string, ssl *SSLConfig, maxConn int) (*HTTPServ
 	mux := http.NewServeMux()
 	addr := net.JoinHostPort(host, port)
 
-	server := &http.Server{Addr: addr, Handler: mux}
+	server := &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}
 
 	secured := (ssl != nil) && ssl.Available()
 

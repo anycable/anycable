@@ -2,7 +2,7 @@ package pubsub
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strconv"
 
@@ -100,7 +100,7 @@ func (s *HTTPSubscriber) Handler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 
 	if err != nil {
 		s.log.Error("Failed to read request body")

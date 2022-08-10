@@ -134,7 +134,7 @@ gen-ssl:
 
 bin/golangci-lint:
 	@test -x $$(go env GOPATH)/bin/golangci-lint || \
-		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.46.2
+		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.48.0
 
 lint: bin/golangci-lint
 	$$(go env GOPATH)/bin/golangci-lint run
