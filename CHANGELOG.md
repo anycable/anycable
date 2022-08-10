@@ -2,6 +2,8 @@
 
 ## master
 
+## 1.2.2 (2022-08-10)
+
 - Add NATS pub/sub adapter. ([@palkan][])
 
 ## 1.2.1 (2022-06-30)
