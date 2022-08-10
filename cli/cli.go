@@ -1,375 +1,94 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
-	"net/http"
 	"os"
-	"os/signal"
-	"runtime"
-	"strconv"
 	"strings"
-	"syscall"
 
-	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/config"
-	"github.com/anycable/anycable-go/identity"
-	"github.com/anycable/anycable-go/metrics"
-	"github.com/anycable/anycable-go/mrb"
-	"github.com/anycable/anycable-go/node"
-	"github.com/anycable/anycable-go/pubsub"
-	"github.com/anycable/anycable-go/rails"
-	"github.com/anycable/anycable-go/router"
-	"github.com/anycable/anycable-go/server"
-	"github.com/anycable/anycable-go/utils"
 	"github.com/anycable/anycable-go/version"
-	"github.com/anycable/anycable-go/ws"
-	"github.com/apex/log"
-	"github.com/gorilla/websocket"
-	"github.com/syossan27/tebata"
-
-	"go.uber.org/automaxprocs/maxprocs"
+	"github.com/urfave/cli/v2"
 )
 
-type controllerFactory = func(*metrics.Metrics, *config.Config) (node.Controller, error)
-type disconnectorFactory = func(*node.Node, *config.Config) (node.Disconnector, error)
-type subscriberFactory = func(pubsub.Handler, *config.Config) (pubsub.Subscriber, error)
-type websocketHandler = func(*node.Node, *config.Config) (http.Handler, error)
+// NewConfigFromCLI reads config from os.Args. It returns config, error (if any) and a bool value
+// indicating that the usage message or version was shown, no further action required.
+func NewConfigFromCLI() (*config.Config, error, bool) {
+	c := config.NewConfig()
 
-type Shutdownable interface {
-	Shutdown() error
-}
+	var path, headers string
+	var helpOrVersionWereShown bool = true
 
-type Runner struct {
-	name                string
-	config              *config.Config
-	controllerFactory   controllerFactory
-	disconnectorFactory disconnectorFactory
-	subscriberFactory   subscriberFactory
-	websocketHandler    websocketHandler
-
-	router *router.RouterController
-
-	errChan       chan error
-	shutdownables []Shutdownable
-}
-
-func NewRunner(name string, config *config.Config) *Runner {
-	if name == "" {
-		name = "AnyCable"
+	// Print raw version without prefix
+	cli.VersionPrinter = func(cCtx *cli.Context) {
+		_, _ = fmt.Fprintf(cCtx.App.Writer, "%v\n", cCtx.App.Version)
 	}
 
-	if config == nil {
-		c, err := Config(os.Args[1:])
+	flags := []cli.Flag{}
+	flags = append(flags, serverCLIFlags(&c, &path)...)
+	flags = append(flags, sslCLIFlags(&c)...)
+	flags = append(flags, broadcastCLIFlags(&c)...)
+	flags = append(flags, redisCLIFlags(&c)...)
+	flags = append(flags, httpCLIFlags(&c)...)
+	flags = append(flags, natsCLIFlags(&c)...)
+	flags = append(flags, rpcCLIFlags(&c, &headers)...)
+	flags = append(flags, disconnectCLIFlags(&c)...)
+	flags = append(flags, logCLIFlags(&c)...)
+	flags = append(flags, metricsCLIFlags(&c)...)
+	flags = append(flags, wsCLIFlags(&c)...)
+	flags = append(flags, pingCLIFlags(&c)...)
+	flags = append(flags, jwtCLIFlags(&c)...)
+	flags = append(flags, miscCLIFlags(&c)...)
 
-		if err != nil {
-			panic(err)
-		}
-
-		config = &c
+	app := &cli.App{
+		Name:            "anycable-go",
+		Version:         version.Version(),
+		Usage:           "AnyCable-Go, The WebSocket server for https://anycable.io",
+		HideHelpCommand: true,
+		Flags:           flags,
+		Action: func(nc *cli.Context) error {
+			helpOrVersionWereShown = false
+			return nil
+		},
 	}
 
-	// Set global HTTP params as early as possible to make sure all servers use them
-	server.SSL = &config.SSL
-	server.Host = config.Host
-	server.MaxConn = config.MaxConn
-
-	return &Runner{
-		name:          name,
-		config:        config,
-		shutdownables: []Shutdownable{},
-		errChan:       make(chan error),
-	}
-}
-
-func (r *Runner) ControllerFactory(fn controllerFactory) {
-	r.controllerFactory = fn
-}
-
-func (r *Runner) DisconnectorFactory(fn disconnectorFactory) {
-	r.disconnectorFactory = fn
-}
-
-func (r *Runner) SubscriberFactory(fn subscriberFactory) {
-	r.subscriberFactory = fn
-}
-
-func (r *Runner) WebsocketHandler(fn websocketHandler) {
-	r.websocketHandler = fn
-}
-
-func (r *Runner) Run() error {
-	if ShowVersion() {
-		fmt.Println(version.Version())
-		return nil
-	}
-
-	if ShowHelp() {
-		PrintHelp()
-		return nil
-	}
-
-	// See https://github.com/uber-go/automaxprocs/issues/18
-	nopLog := func(string, ...interface{}) {}
-	maxprocs.Set(maxprocs.Logger(nopLog)) // nolint:errcheck
-
-	config := r.config
-
-	// init logging
-	err := utils.InitLogger(config.LogFormat, config.LogLevel)
-
+	err := app.Run(os.Args)
 	if err != nil {
-		return fmt.Errorf("!!! Failed to initialize logger !!!\n%v", err)
+		return &config.Config{}, err, false
 	}
 
-	ctx := log.WithFields(log.Fields{"context": "main"})
-
-	if DebugMode() {
-		ctx.Debug("🔧 🔧 🔧 Debug mode is on 🔧 🔧 🔧")
+	// helpOrVersionWereShown = false indicates that the default action has been run.
+	// true means that help/version message was displayed.
+	//
+	// Unfortunately, cli module does not support another way of detecting if or which
+	// command was run.
+	if helpOrVersionWereShown {
+		return &config.Config{}, nil, true
 	}
 
-	mrubySupport := r.initMRuby()
-	numProcs := runtime.GOMAXPROCS(0)
-
-	ctx.Infof("Starting %s %s%s (pid: %d, open file limit: %s, gomaxprocs: %d)", r.name, version.Version(), mrubySupport, os.Getpid(), utils.OpenFileLimit(), numProcs)
-
-	metrics, err := r.initMetrics(&config.Metrics)
-
-	if err != nil {
-		return fmt.Errorf("!!! Failed to initialize metrics writer !!!\n%v", err)
+	if path != "" {
+		c.Path = strings.Split(path, " ")
 	}
 
-	r.shutdownables = append(r.shutdownables, metrics)
+	c.Headers = strings.Split(strings.ToLower(headers), ",")
 
-	controller, err := r.initController(metrics, config)
-
-	if err != nil {
-		return fmt.Errorf("!!! Failed to initialize controller !!!\n%v", err)
+	if c.Debug {
+		c.LogLevel = "debug"
+		c.LogFormat = "text"
 	}
 
-	if config.JWT.Enabled() {
-		identifier := identity.NewJWTIdentifier(&config.JWT)
-		controller = identity.NewIdentifiableController(controller, identifier)
-		ctx.Infof("JWT identification is enabled (param: %s, enforced: %v)", config.JWT.Param, config.JWT.Force)
+	if c.Metrics.Port == 0 {
+		c.Metrics.Port = c.Port
 	}
 
-	if !r.Router().Empty() {
-		r.Router().SetDefault(controller)
-		controller = r.Router()
-		ctx.Infof("Using channels router: %s", strings.Join(r.Router().Routes(), ", "))
-	}
+	if c.Metrics.LogInterval > 0 {
+		fmt.Println(`DEPRECATION WARNING: metrics_log_interval option is deprecated
+and will be deleted in the next major release of anycable-go.
+Use metrics_rotate_interval instead.`)
 
-	appNode := node.NewNode(controller, metrics, &config.App)
-	err = appNode.Start()
-
-	if err != nil {
-		return fmt.Errorf("!!! Failed to initialize application !!!\n%v", err)
-	}
-
-	disconnector, err := r.initDisconnector(appNode, config)
-
-	if err != nil {
-		return fmt.Errorf("!!! Failed to initialize disconnector !!!\n%v", err)
-	}
-
-	go disconnector.Run() // nolint:errcheck
-	appNode.SetDisconnector(disconnector)
-
-	subscriber, err := r.initSubscriber(appNode, config)
-
-	if err != nil {
-		return fmt.Errorf("couldn't configure pub/sub: %v", err)
-	}
-
-	r.shutdownables = append(r.shutdownables, subscriber)
-
-	if subscribeErr := subscriber.Start(r.errChan); subscribeErr != nil {
-		return fmt.Errorf("!!! Subscriber failed !!!\n%v", subscribeErr)
-	}
-
-	if contrErr := controller.Start(); contrErr != nil {
-		return fmt.Errorf("!!! RPC failed !!!\n%v", contrErr)
-	}
-
-	wsServer, err := server.ForPort(strconv.Itoa(config.Port))
-	if err != nil {
-		return fmt.Errorf("!!! Failed to initialize WebSocket server at %s:%s !!!\n%v", err, config.Host, config.Port)
-	}
-
-	r.shutdownables = append(r.shutdownables, wsServer)
-
-	wsHandler, err := r.initWebSocketHandler(appNode, config)
-	if err != nil {
-		return fmt.Errorf("!!! Failed to initialize WebSocket handler !!!\n%v", err)
-	}
-
-	for _, path := range config.Path {
-		wsServer.Mux.Handle(path, wsHandler)
-		ctx.Infof("Handle WebSocket connections at %s%s", wsServer.Address(), path)
-	}
-
-	wsServer.Mux.Handle(config.HealthPath, http.HandlerFunc(server.HealthHandler))
-	ctx.Infof("Handle health connections at %s%s", wsServer.Address(), config.HealthPath)
-
-	go func() {
-		if err = wsServer.StartAndAnnounce("WebSocket server"); err != nil {
-			if !wsServer.Stopped() {
-				r.errChan <- fmt.Errorf("WebSocket server at %s stopped: %v", wsServer.Address(), err)
-			}
-		}
-	}()
-
-	go func() {
-		if err := metrics.Run(); err != nil {
-			r.errChan <- fmt.Errorf("!!! Metrics module failed to start !!!\n%v", err)
-		}
-	}()
-
-	r.shutdownables = append(r.shutdownables, appNode)
-
-	r.announceGoPools()
-
-	r.setupSignalHandlers()
-
-	// Wait for an error (or none)
-	return <-r.errChan
-}
-
-func (r *Runner) initMetrics(c *metrics.Config) (*metrics.Metrics, error) {
-	m, err := metrics.FromConfig(c)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return m, nil
-}
-
-func (r *Runner) initController(m *metrics.Metrics, c *config.Config) (node.Controller, error) {
-	if r.controllerFactory == nil {
-		return nil, errors.New("controller factory is not specified")
-	}
-
-	return r.controllerFactory(m, c)
-}
-
-func (r *Runner) initDisconnector(n *node.Node, c *config.Config) (node.Disconnector, error) {
-	if r.disconnectorFactory == nil {
-		return r.defaultDisconnector(n, c)
-	}
-
-	return r.disconnectorFactory(n, c)
-}
-
-func (r *Runner) defaultDisconnector(n *node.Node, c *config.Config) (node.Disconnector, error) {
-	if c.DisconnectorDisabled {
-		return node.NewNoopDisconnector(), nil
-	} else {
-		return node.NewDisconnectQueue(n, &c.DisconnectQueue), nil
-	}
-}
-
-func (r *Runner) initSubscriber(n *node.Node, c *config.Config) (pubsub.Subscriber, error) {
-	if r.subscriberFactory == nil {
-		return nil, errors.New("subscriber factory is not specified")
-	}
-
-	return r.subscriberFactory(n, c)
-}
-
-func (r *Runner) initWebSocketHandler(n *node.Node, c *config.Config) (http.Handler, error) {
-	if r.websocketHandler == nil {
-		return r.defaultWebSocketHandler(n, c), nil
-	}
-
-	return r.websocketHandler(n, c)
-}
-
-func (r *Runner) defaultWebSocketHandler(n *node.Node, c *config.Config) http.Handler {
-	return ws.WebsocketHandler(c.Headers, common.ActionCableProtocols(), &c.WS, func(wsc *websocket.Conn, info *ws.RequestInfo, callback func()) error {
-		wrappedConn := ws.NewConnection(wsc)
-		session := node.NewSession(n, wrappedConn, info.URL, info.Headers, info.UID)
-
-		_, err := n.Authenticate(session)
-
-		if err != nil {
-			return err
-		}
-
-		return session.Serve(callback)
-	})
-}
-
-func (r *Runner) initMRuby() string {
-	if mrb.Supported() {
-		var mrbv string
-		mrbv, err := mrb.Version()
-		if err != nil {
-			log.Errorf("mruby failed to initialize: %v", err)
-		} else {
-			return " (with " + mrbv + ")"
+		if c.Metrics.RotateInterval == 0 {
+			c.Metrics.RotateInterval = c.Metrics.LogInterval
 		}
 	}
 
-	return ""
-}
-
-func (r *Runner) Router() *router.RouterController {
-	if r.router == nil {
-		r.SetRouter(r.defaultRouter())
-	}
-
-	return r.router
-}
-
-func (r *Runner) SetRouter(router *router.RouterController) {
-	r.router = router
-}
-
-func (r *Runner) defaultRouter() *router.RouterController {
-	router := router.NewRouterController(nil)
-
-	if r.config.Rails.TurboRailsKey != "" {
-		turboController := rails.NewTurboController(r.config.Rails.TurboRailsKey)
-		router.Route("Turbo::StreamsChannel", turboController) // nolint:errcheck
-	}
-
-	if r.config.Rails.CableReadyKey != "" {
-		crController := rails.NewCableReadyController(r.config.Rails.CableReadyKey)
-		router.Route("CableReady::Stream", crController) // nolint:errcheck
-	}
-
-	return router
-}
-
-func (r *Runner) announceGoPools() {
-	configs := make([]string, 0)
-	pools := utils.AllPools()
-
-	for _, pool := range pools {
-		configs = append(configs, fmt.Sprintf("%s: %d", pool.Name(), pool.Size()))
-	}
-
-	log.WithField("context", "main").Debugf("Go pools initialized (%s)", strings.Join(configs, ", "))
-}
-
-func (r *Runner) setupSignalHandlers() {
-	t := tebata.New(syscall.SIGINT, syscall.SIGTERM)
-
-	t.Reserve(func() { // nolint:errcheck
-		log.Infof("Shutting down... (hit Ctrl-C to stop immediately)")
-		go func() {
-			termSig := make(chan os.Signal, 1)
-			signal.Notify(termSig, syscall.SIGINT, syscall.SIGTERM)
-			<-termSig
-			log.Warnf("Immediate termination requested. Stopped")
-			r.errChan <- nil
-		}()
-	})
-
-	for _, shutdownable := range r.shutdownables {
-		t.Reserve(shutdownable.Shutdown) // nolint:errcheck
-	}
-
-	t.Reserve(func() { r.errChan <- nil }) // nolint:errcheck
+	return &c, nil, false
 }

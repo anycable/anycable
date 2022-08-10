@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/anycable/anycable-go/cli"
@@ -10,25 +11,28 @@ import (
 	"github.com/anycable/anycable-go/gobench"
 	"github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/node"
-	"github.com/anycable/anycable-go/pubsub"
 )
 
 func main() {
-	// Default runner
-	runner := cli.NewRunner("GoBenchCable", nil)
-
-	runner.ControllerFactory(func(m *metrics.Metrics, c *config.Config) (node.Controller, error) {
-		return gobench.NewController(m), nil
-	})
-
-	runner.SubscriberFactory(func(h pubsub.Handler, c *config.Config) (pubsub.Subscriber, error) {
-		return pubsub.NewSubscriber(h, c.BroadcastAdapter, &c.Redis, &c.HTTPPubSub, &c.NATSPubSub)
-	})
-
-	err := runner.Run()
-
+	c, err, ok := cli.NewConfigFromCLI()
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Fatalf("%v", err)
+	}
+	if ok {
+		os.Exit(0)
+	}
+
+	opts := []cli.Option{
+		cli.WithName("GoBenchCable"),
+		cli.WithController(func(m *metrics.Metrics, c *config.Config) (node.Controller, error) {
+			return gobench.NewController(m), nil
+		}),
+		cli.WithDefaultSubscriber(),
+	}
+
+	err = cli.NewRunner(c, opts).Run()
+	if err != nil {
+		fmt.Printf("%+v\n", err)
 		os.Exit(1)
 	}
 }

@@ -32,24 +32,35 @@ type Config struct {
 	DisconnectQueue      node.DisconnectQueueConfig
 	LogLevel             string
 	LogFormat            string
+	Debug                bool
 	Metrics              metrics.Config
 	JWT                  identity.JWTConfig
 	Rails                rails.Config
 }
 
-// New returns a new empty config
-func New() Config {
-	config := Config{}
-	config.App = node.NewConfig()
-	config.SSL = server.NewSSLConfig()
-	config.WS = ws.NewConfig()
-	config.Metrics = metrics.NewConfig()
-	config.RPC = rpc.NewConfig()
-	config.Redis = pubsub.NewRedisConfig()
-	config.HTTPPubSub = pubsub.NewHTTPConfig()
-	config.NATSPubSub = pubsub.NewNATSConfig()
-	config.DisconnectQueue = node.NewDisconnectQueueConfig()
-	config.JWT = identity.NewJWTConfig("")
-	config.Rails = rails.NewConfig()
+// NewConfig returns a new empty config
+func NewConfig() Config {
+	config := Config{
+		Host:             "localhost",
+		Port:             8080,
+		Path:             []string{"/cable"},
+		HealthPath:       "/health",
+		BroadcastAdapter: "redis",
+		Headers:          []string{"cookie"},
+		LogLevel:         "info",
+		LogFormat:        "text",
+		App:              node.NewConfig(),
+		SSL:              server.NewSSLConfig(),
+		WS:               ws.NewConfig(),
+		Metrics:          metrics.NewConfig(),
+		RPC:              rpc.NewConfig(),
+		Redis:            pubsub.NewRedisConfig(),
+		HTTPPubSub:       pubsub.NewHTTPConfig(),
+		NATSPubSub:       pubsub.NewNATSConfig(),
+		DisconnectQueue:  node.NewDisconnectQueueConfig(),
+		JWT:              identity.NewJWTConfig(""),
+		Rails:            rails.NewConfig(),
+	}
+
 	return config
 }

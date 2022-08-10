@@ -11,5 +11,5 @@ type Config struct {
 
 // NewConfig build a new Config struct
 func NewConfig() Config {
-	return Config{}
+	return Config{ReadBufferSize: 1024, WriteBufferSize: 1024, MaxMessageSize: 65536}
 }

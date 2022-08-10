@@ -45,8 +45,8 @@ type Metrics struct {
 
 var _ Instrumenter = (*Metrics)(nil)
 
-// FromConfig creates a new metrics instance from the prodived configuration
-func FromConfig(config *Config) (*Metrics, error) {
+// NewFromConfig creates a new metrics instance from the prodived configuration
+func NewFromConfig(config *Config) (*Metrics, error) {
 	var metricsPrinter IntervalWriter
 
 	writers := []IntervalWriter{}

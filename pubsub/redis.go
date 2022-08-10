@@ -16,8 +16,11 @@ import (
 )
 
 const (
-	maxReconnectAttempts     = 5
-	defaultKeepaliveInterval = 30
+	maxReconnectAttempts                  = 5
+	defaultKeepaliveInterval              = 30
+	defaultRedisURL                       = "redis://localhost:6379/5"
+	defaultRedisChannel                   = "__anycable__"
+	defaultRedisSentinelDiscoveryInterval = 30
 )
 
 // RedisConfig contains Redis pubsub adapter configuration
@@ -36,7 +39,12 @@ type RedisConfig struct {
 
 // NewRedisConfig builds a new config for Redis pubsub
 func NewRedisConfig() RedisConfig {
-	return RedisConfig{KeepalivePingInterval: defaultKeepaliveInterval}
+	return RedisConfig{
+		KeepalivePingInterval:     defaultKeepaliveInterval,
+		URL:                       defaultRedisURL,
+		Channel:                   defaultRedisChannel,
+		SentinelDiscoveryInterval: defaultRedisSentinelDiscoveryInterval,
+	}
 }
 
 // RedisSubscriber contains information about Redis pubsub connection

@@ -13,7 +13,9 @@ type Config struct {
 
 // NewConfig creates an empty Config struct
 func NewConfig() Config {
-	return Config{}
+	return Config{
+		RotateInterval: 15,
+	}
 }
 
 // LogEnabled returns true iff any log option is specified

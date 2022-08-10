@@ -10,6 +10,11 @@ import (
 	"github.com/apex/log"
 )
 
+const (
+	defaultHTTPPort = 8090
+	defaultHTTPPath = "/_broadcast"
+)
+
 // HTTPConfig contains HTTP pubsub adapter configuration
 type HTTPConfig struct {
 	// Port to listen on
@@ -22,7 +27,10 @@ type HTTPConfig struct {
 
 // NewHTTPConfig builds a new config for HTTP pub/sub
 func NewHTTPConfig() HTTPConfig {
-	return HTTPConfig{}
+	return HTTPConfig{
+		Port: defaultHTTPPort,
+		Path: defaultHTTPPath,
+	}
 }
 
 // HTTPSubscriber represents HTTP pub/sub

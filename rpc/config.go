@@ -2,6 +2,10 @@ package rpc
 
 import pb "github.com/anycable/anycable-go/protos"
 
+const (
+	defaultRPCHost = "localhost:50051"
+)
+
 // ClientHelepr provides additional methods to operate gRPC client
 type ClientHelper interface {
 	Ready() error
@@ -31,5 +35,5 @@ type Config struct {
 
 // NewConfig builds a new config
 func NewConfig() Config {
-	return Config{Concurrency: 28, EnableTLS: false}
+	return Config{Concurrency: 28, EnableTLS: false, Host: defaultRPCHost}
 }

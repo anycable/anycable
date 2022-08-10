@@ -80,6 +80,7 @@ make prepare
 make test-conformance
 
 # Run integration benchmarks
+go install github.com/anycable/websocket-bench@latest
 make benchmarks
 ```
 
