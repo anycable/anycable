@@ -517,6 +517,7 @@ func (s *Session) ReadMessage(message []byte) error {
 	command, err := s.decodeMessage(message)
 
 	if err != nil {
+		s.Log.Debug("Websocket read error", "err", err)
 		s.metrics.CounterIncrement(metricsFailedCommandReceived)
 		return err
 	}

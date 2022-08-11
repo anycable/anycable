@@ -29,7 +29,7 @@ func NewExecutor(node node.AppNode, config *Config) *Executor {
 }
 
 func (ex *Executor) HandleCommand(s *node.Session, msg *common.Message) error {
-	s.Log.Debugf("Incoming message: %v", msg)
+	s.Log.Debug("incoming message", "data", msg)
 
 	if msg.Command == GQL_CONNECTION_INIT {
 		if s.Connected {
@@ -106,7 +106,7 @@ func (ex *Executor) HandleCommand(s *node.Session, msg *common.Message) error {
 			Data:       string(operation.ToJSON()),
 		}
 
-		s.Log.Debugf("Execute GraphQL query: %v", msg)
+		s.Log.Debug("execute GraphQL query", "data", msg)
 
 		res, err := ex.node.Perform(s, &msg)
 

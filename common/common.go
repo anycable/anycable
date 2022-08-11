@@ -32,12 +32,14 @@ func StatusName(status int) string {
 }
 
 const (
-	ActionCableV1JSON    = "actioncable-v1-json"
-	ActionCableV1ExtJSON = "actioncable-v1-ext-json"
+	ActionCableV1JSON     = "actioncable-v1-json"
+	ActionCableV1ExtJSON  = "actioncable-v1-ext-json"
+	ActionCableV1Msgpack  = "actioncable-v1-msgpack"
+	ActionCableV1Protobuf = "actioncable-v1-protobuf"
 )
 
 func ActionCableProtocols() []string {
-	return []string{ActionCableV1JSON, ActionCableV1ExtJSON}
+	return []string{ActionCableV1JSON, ActionCableV1ExtJSON, ActionCableV1Msgpack, ActionCableV1Protobuf}
 }
 
 func ActionCableExtendedProtocols() []string {
@@ -46,6 +48,34 @@ func ActionCableExtendedProtocols() []string {
 
 func IsExtendedActionCableProtocol(protocol string) bool {
 	for _, p := range ActionCableExtendedProtocols() {
+		if p == protocol {
+			return true
+		}
+	}
+
+	return false
+}
+
+func MsgpackProtocols() []string {
+	return []string{ActionCableV1Msgpack}
+}
+
+func ProtobufProtocols() []string {
+	return []string{ActionCableV1Protobuf}
+}
+
+func IsMsgpackProtocol(protocol string) bool {
+	for _, p := range MsgpackProtocols() {
+		if p == protocol {
+			return true
+		}
+	}
+
+	return false
+}
+
+func IsProtobufProtocol(protocol string) bool {
+	for _, p := range ProtobufProtocols() {
 		if p == protocol {
 			return true
 		}

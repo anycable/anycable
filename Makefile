@@ -159,6 +159,7 @@ bin/protoc-gen-grpchan:
 
 build-protos: bin/protoc-gen-go bin/protoc-gen-go-grpc bin/protoc-gen-grpchan
 	protoc --proto_path=./etc --go_out=./ --go-grpc_out=./ ./etc/rpc.proto
+	protoc --proto_path=./etc --go_out=./ ./etc/action_cable.proto
 	mockery --dir ./protos  --name RPCServer --output "./mocks" --outpkg mocks
 	mockery --dir ./protos  --name RPCClient --output "./mocks" --outpkg mocks
 	# replace protos.UnimplementedRPCServer to the mocks.RPCServer struct
