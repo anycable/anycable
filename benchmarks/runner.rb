@@ -18,6 +18,7 @@ end
 
 require "socket"
 require "time"
+require "json"
 
 class BenchRunner
   LOG_LEVEL_TO_NUM = {
@@ -58,6 +59,7 @@ class BenchRunner
 
     process = ChildProcess.build(*cmd.split(/\s+/))
     process.io.stdout = w
+    process.io.stderr = w
 
     processes[name] = process
     pipes[name] = {r: r, w: w}

@@ -122,6 +122,10 @@ test-conformance-nats: tmp/anycable-go-test
 
 test-conformance-all: test-conformance test-conformance-ssl test-conformance-http
 
+TESTFILE ?= benchmarks/*.testfile
+test-wsdirector: build
+	BUNDLE_GEMFILE=.circleci/Gemfile ruby benchmarks/runner.rb $(TESTFILE)
+
 test-ci: prepare prepare-mruby test test-conformance
 
 prepare:

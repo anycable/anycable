@@ -89,6 +89,7 @@ jobs:
     strategy:
       matrix:
         test_command:
+          - test-wsdirector
           - test-conformance
           - test-conformance-http
           - test-conformance-nats

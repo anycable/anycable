@@ -8,8 +8,10 @@ if File.directory?(File.join(__dir__, "../../anycable"))
   gem "anycable", path: "../../anycable"
   gem "anycable-rails", path: "../../anycable-rails"
   gem "anyt", path: "../../anyt"
+  gem "wsdirector-cli", path: "../../wsdirector"
 else
   gem "anycable", github: "anycable/anycable"
   gem "anycable-rails", github: "anycable/anycable-rails"
   gem "anyt", github: "anycable/anyt"
+  gem "wsdirector-cli", github: "palkan/wsdirector", branch: "v1-dev"
 end
