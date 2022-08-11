@@ -142,20 +142,24 @@ class BenchRunner
 end
 
 if ARGF
-  scripts = ARGF.each.group_by { ARGF.filename }
-  scripts.each do |filename, lines|
-    puts "\n--- RUN: #{filename} ---\n\n" if scripts.size > 1
-    script = lines.join
-    runner = BenchRunner.new
+  begin
+    scripts = ARGF.each.group_by { ARGF.filename }
+    scripts.each do |filename, lines|
+      puts "\n--- RUN: #{filename} ---\n\n" if scripts.size > 1
+      script = lines.join
+      runner = BenchRunner.new
 
-    begin
-      runner.load(script, filename)
-      puts "All OK 👍"
-    rescue => e
-      $stderr.puts e.message
-      exit(1)
-    ensure
-      runner.shutdown
+      begin
+        runner.load(script, filename)
+        puts "All OK 👍"
+      rescue => e
+        $stderr.puts e.message
+        exit(1)
+      ensure
+        runner.shutdown
+      end
     end
+  rescue Errno::ENOENT
+    puts "\n--- NOTHINIG TO EXECUTE ---\n\n"
   end
 end
