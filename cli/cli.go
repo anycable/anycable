@@ -479,9 +479,13 @@ func (r *Runner) apolloWebsocketHandler(n *node.Node, c *config.Config) http.Han
 	return ws.WebsocketHandler(graphql.GraphqlProtocols(), &extractor, &c.WS, r.log, func(wsc *websocket.Conn, info *server.RequestInfo, callback func()) error {
 		wrappedConn := ws.NewConnection(wsc)
 
-		session := node.NewSession(n, wrappedConn, info.URL, info.Headers, info.UID)
-		session.SetEncoder(graphql.Encoder{})
-		session.SetExecutor(graphql.NewExecutor(n, &c.GraphQL))
+		opts := []node.SessionOption{
+			node.WithEncoder(graphql.Encoder{}),
+			node.WithExecutor(graphql.NewExecutor(n, &c.GraphQL)),
+		}
+
+		session := node.NewSession(n, wrappedConn, info.URL, info.Headers, info.UID, opts...)
+
 		return session.Serve(callback)
 	})
 }

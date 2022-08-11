@@ -123,6 +123,7 @@ run-embedded:
 
 build-protos:
 	protoc --proto_path=./etc --go_out=plugins=grpc:./protos --grpchan_out=./protos ./etc/rpc.proto
+	protoc --proto_path=./etc --go_out=./ac_protos ./etc/action_cable.proto
 
 bench:
 	go test -tags mrb -bench=. ./...

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/anycable/anycable-go/common"
+	"github.com/anycable/anycable-go/encoders"
 	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/server"
 )
@@ -26,6 +27,14 @@ func (r *Runner) sessionOptionsFromProtocol(protocol string) []node.SessionOptio
 		if r.config.App.PongTimeout > 0 {
 			opts = append(opts, node.WithPongTimeout(time.Duration(r.config.App.PongTimeout)*time.Second))
 		}
+	}
+
+	if common.IsMsgpackProtocol(protocol) {
+		opts = append(opts, node.WithEncoder(encoders.Msgpack{}))
+	}
+
+	if common.IsProtobufProtocol(protocol) {
+		opts = append(opts, node.WithEncoder(encoders.Protobuf{}))
 	}
 
 	return opts

@@ -173,7 +173,7 @@ func buildSession() *node.Session {
 		Log:       log.WithField("context", "test"),
 	}
 	s.SetID(strconv.Itoa(sessionCounter))
-	s.SetEncoder(Encoder{})
+	node.WithEncoder(Encoder{})(&s)
 	s.SetEnv(common.NewSessionEnv("ws://anycable.io/cable", nil))
 	return &s
 }
