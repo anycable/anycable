@@ -103,6 +103,26 @@ func (s *Session) SetEnv(env *common.SessionEnv) {
 	s.env = env
 }
 
+func (s *Session) SetIdleTimeout(val time.Duration) {
+	time.AfterFunc(val, s.maybeDisconnectIdle)
+}
+
+func (s *Session) maybeDisconnectIdle() {
+	s.mu.Lock()
+
+	if s.Connected {
+		s.mu.Unlock()
+		return
+	}
+
+	s.mu.Unlock()
+
+	s.Log.Warnf("Disconnecting idle session")
+
+	s.Send(newDisconnectMessage(idleTimeoutReason, false))
+	s.Disconnect("Idle Timeout", ws.CloseNormalClosure)
+}
+
 // Merge connection and channel states into current env.
 // This method locks the state for writing (so, goroutine-safe)
 func (s *Session) MergeEnv(env *common.SessionEnv) {

@@ -15,6 +15,8 @@ import (
 
 const (
 	// serverRestartReason is the disconnect reason on shutdown
+	unauthorizedReason     = "unathorized" // nolint:deadcode,varcheck
+	idleTimeoutReason      = "idle_timeout"
 	serverRestartReason    = "server_restart"
 	remoteDisconnectReason = "remote"
 
