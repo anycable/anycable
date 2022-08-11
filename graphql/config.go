@@ -7,6 +7,10 @@ type Config struct {
 	Channel string
 	// Action Cable channel action name
 	Action string
+	// JWT token param name
+	JWTParam string
+	// For how long to wait for connection_init msg (in seconds)
+	IdleTimeout int
 }
 
 const (
@@ -19,7 +23,7 @@ func GraphqlProtocols() []string {
 }
 
 func NewConfig() Config {
-	return Config{Channel: "GraphqlChannel", Action: "execute"}
+	return Config{Channel: "GraphqlChannel", Action: "execute", IdleTimeout: 2}
 }
 
 func (c Config) Enabled() bool {

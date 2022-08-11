@@ -504,6 +504,7 @@ func (r *Runner) apolloWebsocketHandler(n *node.Node, c *config.Config) http.Han
 		opts := []node.SessionOption{
 			node.WithEncoder(graphql.Encoder{}),
 			node.WithExecutor(graphql.NewExecutor(n, &c.GraphQL)),
+			node.WithHandshakeMessageDeadline(time.Now().Add(time.Duration(c.GraphQL.IdleTimeout) * time.Second)),
 		}
 
 		session := node.NewSession(n, wrappedConn, info.URL, info.Headers, info.UID, opts...)

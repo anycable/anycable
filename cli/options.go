@@ -350,6 +350,10 @@ Use graphql_action instead.`)
 		c.GraphQL.Action = c.LegacyGraphQL.Action
 	}
 
+	if c.JWT.Enabled() {
+		c.GraphQL.JWTParam = c.JWT.Param
+	}
+
 	return &c, nil, false
 }
 
@@ -1281,6 +1285,12 @@ func graphqlCLIFlags(c *config.Config) []cli.Flag {
 			Usage:       "GraphQL Ruby channel action (method) name",
 			Value:       c.GraphQL.Action,
 			Destination: &c.GraphQL.Action,
+		},
+		&cli.IntFlag{
+			Name:        "graphql_idle_timeout",
+			Usage:       `Defines for how long to wait for a client to send "connection_init" message (in seconds)`,
+			Value:       c.GraphQL.IdleTimeout,
+			Destination: &c.GraphQL.IdleTimeout,
 		},
 		&cli.StringFlag{
 			Name:        "apollo_path",

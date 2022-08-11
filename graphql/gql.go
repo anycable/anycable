@@ -11,6 +11,7 @@ import (
 
 const apolloEncoderID = "agql"
 
+// See https://github.com/apollographql/subscriptions-transport-ws/blob/master/PROTOCOL.md#graphql-over-websocket-protocol
 // nolint
 const (
 	// Client sends this message after plain websocket connection to start the communication with the server
