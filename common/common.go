@@ -224,6 +224,8 @@ type Reply struct {
 	Type       string      `json:"type,omitempty"`
 	Identifier string      `json:"identifier"`
 	Message    interface{} `json:"message,omitempty"`
+	Reason     string      `json:"reason,omitempty"`
+	Reconnect  bool        `json:"reconnect,omitempty"`
 }
 
 func (r *Reply) GetType() string {
