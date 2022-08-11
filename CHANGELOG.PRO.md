@@ -2,6 +2,12 @@
 
 ## master
 
+## 1.2.2 (2022-12-01)
+
+- Sync with OSS [v1.2.3](https://github.com/anycable/anycable-go/releases/tag/v1.2.3).
+
+## 1.2.1 (2022-08-10)
+
 - Add `graphql-ws` protocol support for GraphQL clients. ([@palkan][])
 
 - Disconnect idle Apollo clients if no connection_init has been sent in the specified period of time.
