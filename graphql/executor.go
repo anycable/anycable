@@ -20,12 +20,13 @@ type Executor struct {
 
 	channel string
 	action  string
+	jid     string
 }
 
 var _ node.Executor = (*Executor)(nil)
 
 func NewExecutor(node node.AppNode, config *Config) *Executor {
-	return &Executor{node: node, channel: config.Channel, action: config.Action}
+	return &Executor{node: node, channel: config.Channel, action: config.Action, jid: config.JWTParam}
 }
 
 func (ex *Executor) HandleCommand(s *node.Session, msg *common.Message) error {
@@ -48,6 +49,15 @@ func (ex *Executor) HandleCommand(s *node.Session, msg *common.Message) error {
 
 			if data != "" {
 				s.GetEnv().SetHeader(payloadHeader, data)
+
+				// Set JWT token if any
+				if ex.jid != "" {
+					token := extractJWTFromPayload(data, ex.jid)
+
+					if token != "" {
+						s.GetEnv().SetHeader(fmt.Sprintf("x-%s", ex.jid), token)
+					}
+				}
 			}
 		}
 
@@ -161,4 +171,20 @@ func (ex *Executor) completeRequest(s *node.Session, identifier string) error {
 
 	s.Send(&common.Reply{Type: common.UnsubscribedType, Identifier: identifier})
 	return nil
+}
+
+func extractJWTFromPayload(payloadStr string, key string) (token string) {
+	var payload map[string]interface{}
+
+	err := json.Unmarshal([]byte(payloadStr), &payload)
+
+	if err != nil {
+		return
+	}
+
+	if val, ok := payload[key]; ok {
+		token = val.(string)
+	}
+
+	return
 }

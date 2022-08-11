@@ -17,6 +17,7 @@ import (
 func TestHandleCommand(t *testing.T) {
 	n := &node_mocks.AppNode{}
 	c := NewConfig()
+	c.JWTParam = "jtoken"
 	executor := NewExecutor(n, &c)
 
 	t.Run("connection_init success", func(t *testing.T) {
@@ -38,6 +39,23 @@ func TestHandleCommand(t *testing.T) {
 		assert.NoError(t, err)
 		n.AssertCalled(t, "Authenticate", session)
 		assert.Equal(t, "some_payload", (*session.GetEnv().Headers)["x-apollo-connection"])
+	})
+
+	t.Run("connection_init with jwt token", func(t *testing.T) {
+		session := buildSession()
+		session.Connected = false
+		n.On("Authenticate", session).Return(nil, nil)
+
+		err := executor.HandleCommand(
+			session,
+			&common.Message{
+				Command: GQL_CONNECTION_INIT,
+				Data:    `{"jtoken":"secret-token"}`,
+			},
+		)
+		assert.NoError(t, err)
+		n.AssertCalled(t, "Authenticate", session)
+		assert.Equal(t, "secret-token", (*session.GetEnv().Headers)["x-jtoken"])
 	})
 
 	t.Run("connection_init failure", func(t *testing.T) {

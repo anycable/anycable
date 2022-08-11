@@ -12,6 +12,10 @@ type Config struct {
 	Channel string `toml:"action_cable_channel"`
 	// Action Cable channel action name
 	Action string `toml:"channel_action"`
+	// JWT token param name
+	JWTParam string
+	// For how long to wait for connection_init msg (in seconds)
+	IdleTimeout int
 }
 
 const (
@@ -24,7 +28,7 @@ func GraphqlProtocols() []string {
 }
 
 func NewConfig() Config {
-	return Config{Channel: "GraphqlChannel", Action: "execute"}
+	return Config{Channel: "GraphqlChannel", Action: "execute", IdleTimeout: 2}
 }
 
 func (c Config) Enabled() bool {
@@ -42,6 +46,16 @@ func (c Config) ToToml() string {
 
 	result.WriteString("# Action Cable channel action name\n")
 	result.WriteString(fmt.Sprintf("channel_action = \"%s\"\n", c.Action))
+
+	result.WriteString("# JWT token param name\n")
+	if c.JWTParam == "" {
+		result.WriteString("# jwt_param = \"\"\n")
+	} else {
+		result.WriteString(fmt.Sprintf("jwt_param = \"%s\"\n", c.JWTParam))
+	}
+
+	result.WriteString("# For how long to wait for connection_init msg (in seconds)\n")
+	result.WriteString(fmt.Sprintf("idle_timeout = %d\n", c.IdleTimeout))
 
 	result.WriteString("\n")
 
