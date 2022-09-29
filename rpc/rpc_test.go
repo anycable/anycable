@@ -30,8 +30,9 @@ func (st MockState) Close() {
 
 func NewTestController() *Controller {
 	config := NewConfig()
-	controller := NewController(metrics.NewMetrics(nil, 0), &config)
-	controller.initSemaphore(1)
+	metrics := metrics.NewMetrics(nil, 0)
+	controller := NewController(metrics, &config)
+	controller.barrier = NewFixedSizeBarrier(1, metrics)
 	controller.clientState = MockState{true, false}
 	return controller
 }
