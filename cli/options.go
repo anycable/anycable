@@ -11,20 +11,20 @@ import (
 // Flags ordering issue: https://github.com/urfave/cli/pull/1430
 
 const (
-	serverCategoryDescription     = "ANYCABLE-GO SERVER:"
-	sslCategoryDescription        = "SSL:"
-	adapterCategoryDescription    = "ADAPTER:"
-	redisCategoryDescription      = "REDIS:"
-	httpCategoryDescription       = "HTTP:"
-	natsCategoryDescription       = "NATS:"
-	rpcCategoryDescription        = "RPC:"
-	disconnectCategoryDescription = "DISCONNECT OPTIONS:"
-	logCategoryDescription        = "LOG:"
-	metricsCategoryDescription    = "METRICS:"
-	wsCategoryDescription         = "WEBSOCKET:"
-	pingCategoryDescription       = "PING:"
-	jwtCategoryDescription        = "JWT:"
-	miscCategoryDescription       = "MISCELLANEOUS:"
+	serverCategoryDescription        = "ANYCABLE-GO SERVER:"
+	sslCategoryDescription           = "SSL:"
+	broadcastCategoryDescription     = "BROADCASTING:"
+	redisCategoryDescription         = "REDIS:"
+	httpBroadcastCategoryDescription = "HTTP BROADCAST:"
+	natsCategoryDescription          = "NATS:"
+	rpcCategoryDescription           = "RPC:"
+	disconnectorCategoryDescription  = "DISCONNECTOR:"
+	logCategoryDescription           = "LOG:"
+	metricsCategoryDescription       = "METRICS:"
+	wsCategoryDescription            = "WEBSOCKETS:"
+	pingCategoryDescription          = "PING:"
+	jwtCategoryDescription           = "JWT:"
+	signedStreamsCategoryDescription = "SIGNED STREAMS:"
 
 	envPrefix = "ANYCABLE_"
 )
@@ -92,12 +92,19 @@ func sslCLIFlags(c *config.Config) []cli.Flag {
 
 // broadcastCLIFlags returns broadcast_adapter flag
 func broadcastCLIFlags(c *config.Config) []cli.Flag {
-	return withDefaults(adapterCategoryDescription, []cli.Flag{
+	return withDefaults(broadcastCategoryDescription, []cli.Flag{
 		&cli.StringFlag{
 			Name:        "broadcast_adapter",
 			Usage:       "Broadcasting adapter to use (redis, http or nats)",
 			Value:       c.BroadcastAdapter,
 			Destination: &c.BroadcastAdapter,
+		},
+
+		&cli.IntFlag{
+			Name:        "hub_gopool_size",
+			Usage:       "The size of the goroutines pool to broadcast messages",
+			Value:       c.App.HubGopoolSize,
+			Destination: &c.App.HubGopoolSize,
 		},
 	})
 }
@@ -141,9 +148,9 @@ func redisCLIFlags(c *config.Config) []cli.Flag {
 	})
 }
 
-// httpCLIFlags returns HTTP CLI flags
-func httpCLIFlags(c *config.Config) []cli.Flag {
-	return withDefaults(httpCategoryDescription, []cli.Flag{
+// httpBroadcastCLIFlags returns HTTP CLI flags
+func httpBroadcastCLIFlags(c *config.Config) []cli.Flag {
+	return withDefaults(httpBroadcastCategoryDescription, []cli.Flag{
 		&cli.IntFlag{
 			Name:        "http_broadcast_port",
 			Usage:       "HTTP pub/sub server port",
@@ -238,8 +245,8 @@ func rpcCLIFlags(c *config.Config, headers *string) []cli.Flag {
 }
 
 // rpcCLIFlags returns CLI flags for disconnect options
-func disconnectCLIFlags(c *config.Config) []cli.Flag {
-	return withDefaults(disconnectCategoryDescription, []cli.Flag{
+func disconnectorCLIFlags(c *config.Config) []cli.Flag {
+	return withDefaults(disconnectorCategoryDescription, []cli.Flag{
 		&cli.IntFlag{
 			Name:        "disconnect_rate",
 			Usage:       "Max number of Disconnect calls per second",
@@ -334,6 +341,13 @@ func metricsCLIFlags(c *config.Config) []cli.Flag {
 			Usage:       "Server port for metrics endpoint, the same as for main server by default",
 			Destination: &c.Metrics.Port,
 		},
+
+		&cli.IntFlag{
+			Name:        "stats_refresh_interval",
+			Usage:       "How often to refresh the server stats (in seconds)",
+			Value:       c.App.StatsRefreshInterval,
+			Destination: &c.App.StatsRefreshInterval,
+		},
 	})
 }
 
@@ -367,13 +381,6 @@ func wsCLIFlags(c *config.Config) []cli.Flag {
 			Destination: &c.WS.EnableCompression,
 		},
 
-		&cli.IntFlag{
-			Name:        "hub_gopool_size",
-			Usage:       "The size of the goroutines pool to broadcast messages",
-			Value:       c.App.HubGopoolSize,
-			Destination: &c.App.HubGopoolSize,
-		},
-
 		&cli.StringFlag{
 			Name:        "allowed_origins",
 			Usage:       `Accept requests only from specified origins, e.g., "www.example.com,*example.io". No check is performed if empty`,
@@ -397,13 +404,6 @@ func pingCLIFlags(c *config.Config) []cli.Flag {
 			Usage:       "Precision for timestamps in ping messages (s, ms, ns)",
 			Value:       c.App.PingTimestampPrecision,
 			Destination: &c.App.PingTimestampPrecision,
-		},
-
-		&cli.IntFlag{
-			Name:        "stats_refresh_interval",
-			Usage:       "How often to refresh the server stats (in seconds)",
-			Value:       c.App.StatsRefreshInterval,
-			Destination: &c.App.StatsRefreshInterval,
 		},
 	})
 }
@@ -432,19 +432,19 @@ func jwtCLIFlags(c *config.Config) []cli.Flag {
 	})
 }
 
-// miscCLIFlags returns misc CLI flags
-func miscCLIFlags(c *config.Config) []cli.Flag {
-	return withDefaults(miscCategoryDescription, []cli.Flag{
+// signedStreamsCLIFlags returns misc CLI flags
+func signedStreamsCLIFlags(c *config.Config) []cli.Flag {
+	return withDefaults(signedStreamsCategoryDescription, []cli.Flag{
 		&cli.StringFlag{
 			Name:        "turbo_rails_key",
-			Category:    miscCategoryDescription,
+			Category:    signedStreamsCategoryDescription,
 			Usage:       "Enable Turbo Streams fastlane with the specified signing key",
 			Destination: &c.Rails.TurboRailsKey,
 		},
 
 		&cli.StringFlag{
 			Name:        "cable_ready_key",
-			Category:    miscCategoryDescription,
+			Category:    signedStreamsCategoryDescription,
 			Usage:       "Enable CableReady fastlane with the specified signing key",
 			Destination: &c.Rails.CableReadyKey,
 		},

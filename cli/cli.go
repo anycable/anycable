@@ -28,16 +28,16 @@ func NewConfigFromCLI() (*config.Config, error, bool) {
 	flags = append(flags, sslCLIFlags(&c)...)
 	flags = append(flags, broadcastCLIFlags(&c)...)
 	flags = append(flags, redisCLIFlags(&c)...)
-	flags = append(flags, httpCLIFlags(&c)...)
+	flags = append(flags, httpBroadcastCLIFlags(&c)...)
 	flags = append(flags, natsCLIFlags(&c)...)
 	flags = append(flags, rpcCLIFlags(&c, &headers)...)
-	flags = append(flags, disconnectCLIFlags(&c)...)
+	flags = append(flags, disconnectorCLIFlags(&c)...)
 	flags = append(flags, logCLIFlags(&c)...)
 	flags = append(flags, metricsCLIFlags(&c)...)
 	flags = append(flags, wsCLIFlags(&c)...)
 	flags = append(flags, pingCLIFlags(&c)...)
 	flags = append(flags, jwtCLIFlags(&c)...)
-	flags = append(flags, miscCLIFlags(&c)...)
+	flags = append(flags, signedStreamsCLIFlags(&c)...)
 
 	app := &cli.App{
 		Name:            "anycable-go",
