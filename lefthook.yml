@@ -1,22 +1,35 @@
-pre-commit:
-  parallel: true
-  commands:
-    lint:
-      glob: "*.go"
-      run: make lint && test "{staged_files}"
-    mdl:
-      glob: "docs/*.md"
-      run: mdl {staged_files}
-    liche:
-      glob: "docs/*.md"
-      run: liche -c 4 -r docs/* -x "((ruby|deployment|assets)/|cableready\.stimulusreflex)" -d docs/ && test "{staged_files}"
-    forspell:
-      glob: "docs/*.md"
-      run: forspell {staged_files}
-
-pre-push:
-  commands:
-    test:
-      glob: "*.go"
-      files: "git diff --name-only HEAD @{push}"
-      run: make test && test "{files}"
+# EXAMPLE USAGE:
+#
+#   Refer for explanation to following link:
+#   https://github.com/evilmartians/lefthook/blob/master/docs/full_guide.md
+#
+# pre-push:
+#   commands:
+#     packages-audit:
+#       tags: frontend security
+#       run: yarn audit
+#     gems-audit:
+#       tags: backend security
+#       run: bundle audit
+#
+# pre-commit:
+#   parallel: true
+#   commands:
+#     eslint:
+#       glob: "*.{js,ts,jsx,tsx}"
+#       run: yarn eslint {staged_files}
+#     rubocop:
+#       tags: backend style
+#       glob: "*.rb"
+#       exclude: "application.rb|routes.rb"
+#       run: bundle exec rubocop --force-exclusion {all_files}
+#     govet:
+#       tags: backend style
+#       files: git ls-files -m
+#       glob: "*.go"
+#       run: go vet {files}
+#   scripts:
+#     "hello.js":
+#       runner: node
+#     "any.go":
+#       runner: go run

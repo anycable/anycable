@@ -43,21 +43,14 @@ jobs:
     - name: Run Forspell
       run: forspell docs/
 
-  liche:
+  lychee:
     runs-on: ubuntu-latest
-    env:
-      GO111MODULE: on
     steps:
     - uses: actions/checkout@v2
-    - name: Set up Go
-      uses: actions/setup-go@v1
+    - name: Link Checker
+      id: lychee
+      uses: lycheeverse/lychee-action@v1.5.1
+      env:
+        GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
       with:
-        go-version: 1.13.x
-    - name: Install liche
-      run: |
-        export PATH=$PATH:$(go env GOPATH)/bin
-        go get -u github.com/raviqqe/liche
-    - name: Run liche
-      run: |
-        export PATH=$PATH:$(go env GOPATH)/bin
-        liche -c 4 -r docs/* -x "((ruby|deployment|assets)/|cableready\.stimulusreflex)" -d docs/ -v
+        args: docs/* --exclude "(ruby|deployment|assets)/"
