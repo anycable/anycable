@@ -101,55 +101,6 @@ func (st *grpcClientHelper) reset() {
 	}
 }
 
-type Barrier interface {
-	Acquire()
-	Release()
-	BusyCount() int
-	Capacity() int
-	TrackExhausted()
-}
-
-type FixedSizeBarrier struct {
-	capacity int
-	sem      chan (struct{})
-	metrics  metrics.Instrumenter
-}
-
-func NewFixedSizeBarrier(capacity int, metrics metrics.Instrumenter) *FixedSizeBarrier {
-	sem := make(chan struct{}, capacity)
-
-	for i := 0; i < capacity; i++ {
-		sem <- struct{}{}
-	}
-
-	metrics.GaugeSet(metricsRPCCapacity, uint64(capacity))
-
-	return &FixedSizeBarrier{capacity: capacity, sem: sem, metrics: metrics}
-}
-
-func (b *FixedSizeBarrier) Acquire() {
-	b.metrics.GaugeIncrement(metricsRPCPending)
-	<-b.sem
-	b.metrics.GaugeDecrement(metricsRPCPending)
-}
-
-func (b *FixedSizeBarrier) Release() {
-	b.sem <- struct{}{}
-}
-
-func (b *FixedSizeBarrier) BusyCount() int {
-	// The number of in-flight request is the
-	// the number of initial capacity "tickets" (concurrency)
-	// minus the size of the semaphore channel
-	return b.capacity - len(b.sem)
-}
-
-func (b *FixedSizeBarrier) Capacity() int {
-	return b.capacity
-}
-
-func (FixedSizeBarrier) TrackExhausted() {}
-
 // Controller implements node.Controller interface for gRPC
 type Controller struct {
 	config      *Config
@@ -169,7 +120,8 @@ func NewController(metrics metrics.Instrumenter, config *Config) *Controller {
 	metrics.RegisterGauge(metricsRPCCapacity, "The max number of concurrent RPC calls allowed")
 
 	capacity := config.Concurrency
-	barrier := NewFixedSizeBarrier(capacity, metrics)
+	barrier := NewFixedSizeBarrier(capacity)
+	metrics.GaugeSet(metricsRPCCapacity, uint64(capacity))
 
 	return &Controller{log: log.WithField("context", "rpc"), metrics: metrics, config: config, barrier: barrier}
 }
@@ -190,7 +142,7 @@ func (c *Controller) Start() error {
 	client, state, err := dialer(c.config)
 
 	if err == nil {
-		c.log.Infof("RPC controller initialized: %s (concurrency: %d, enable_tls: %t, proto_versions: %s)", host, c.barrier.Capacity(), enableTLS, ProtoVersions)
+		c.log.Infof("RPC controller initialized: %s (concurrency: %s, enable_tls: %t, proto_versions: %s)", host, c.barrier.CapacityInfo(), enableTLS, ProtoVersions)
 	}
 
 	c.client = client
@@ -229,7 +181,10 @@ func (c *Controller) Shutdown() error {
 
 // Authenticate performs Connect RPC call
 func (c *Controller) Authenticate(sid string, env *common.SessionEnv) (*common.ConnectResult, error) {
+	c.metrics.GaugeIncrement(metricsRPCPending)
 	c.barrier.Acquire()
+	c.metrics.GaugeDecrement(metricsRPCPending)
+
 	defer c.barrier.Release()
 
 	op := func() (interface{}, error) {
@@ -265,7 +220,10 @@ func (c *Controller) Authenticate(sid string, env *common.SessionEnv) (*common.C
 
 // Subscribe performs Command RPC call with "subscribe" command
 func (c *Controller) Subscribe(sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error) {
+	c.metrics.GaugeIncrement(metricsRPCPending)
 	c.barrier.Acquire()
+	c.metrics.GaugeDecrement(metricsRPCPending)
+
 	defer c.barrier.Release()
 
 	op := func() (interface{}, error) {
@@ -282,7 +240,10 @@ func (c *Controller) Subscribe(sid string, env *common.SessionEnv, id string, ch
 
 // Unsubscribe performs Command RPC call with "unsubscribe" command
 func (c *Controller) Unsubscribe(sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error) {
+	c.metrics.GaugeIncrement(metricsRPCPending)
 	c.barrier.Acquire()
+	c.metrics.GaugeDecrement(metricsRPCPending)
+
 	defer c.barrier.Release()
 
 	op := func() (interface{}, error) {
@@ -299,7 +260,10 @@ func (c *Controller) Unsubscribe(sid string, env *common.SessionEnv, id string, 
 
 // Perform performs Command RPC call with "perform" command
 func (c *Controller) Perform(sid string, env *common.SessionEnv, id string, channel string, data string) (*common.CommandResult, error) {
+	c.metrics.GaugeIncrement(metricsRPCPending)
 	c.barrier.Acquire()
+	c.metrics.GaugeDecrement(metricsRPCPending)
+
 	defer c.barrier.Release()
 
 	op := func() (interface{}, error) {
@@ -316,7 +280,10 @@ func (c *Controller) Perform(sid string, env *common.SessionEnv, id string, chan
 
 // Disconnect performs disconnect RPC call
 func (c *Controller) Disconnect(sid string, env *common.SessionEnv, id string, subscriptions []string) error {
+	c.metrics.GaugeIncrement(metricsRPCPending)
 	c.barrier.Acquire()
+	c.metrics.GaugeDecrement(metricsRPCPending)
+
 	defer c.barrier.Release()
 
 	op := func() (interface{}, error) {
@@ -417,7 +384,7 @@ func (c *Controller) retry(sid string, callback func() (interface{}, error)) (re
 				attempt = 0
 				wasExhausted = true
 			}
-			c.barrier.TrackExhausted()
+			c.barrier.Exhausted()
 		} else if wasExhausted {
 			wasExhausted = false
 			attempt = 0

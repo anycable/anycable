@@ -32,7 +32,7 @@ func NewTestController() *Controller {
 	config := NewConfig()
 	metrics := metrics.NewMetrics(nil, 0)
 	controller := NewController(metrics, &config)
-	controller.barrier = NewFixedSizeBarrier(1, metrics)
+	controller.barrier = NewFixedSizeBarrier(5)
 	controller.clientState = MockState{true, false}
 	return controller
 }
