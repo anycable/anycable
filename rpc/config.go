@@ -56,6 +56,8 @@ type Config struct {
 	RequestTimeout int
 	// SecretBase is a secret used to generate authentication token
 	SecretBase string
+	// Adaptive concurrency settings
+	Smart SmartBarrierConfig
 }
 
 // NewConfig builds a new config
@@ -67,6 +69,7 @@ func NewConfig() Config {
 		Host:           defaultRPCHost,
 		Implementation: "",
 		RequestTimeout: 3000,
+		Smart:          NewSmartBarrierConfig(),
 	}
 }
 

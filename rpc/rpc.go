@@ -172,10 +172,18 @@ func NewController(metrics metrics.Instrumenter, config *Config, l *slog.Logger)
 	metrics.RegisterGauge(metricsRPCPending, "The number of pending RPC calls")
 
 	capacity := config.Concurrency
-	barrier, err := NewFixedSizeBarrier(capacity)
 
-	if err != nil {
-		return nil, err
+	var barrier Barrier
+
+	if capacity == 0 {
+		barrier = NewSmartBarrier(config.Smart, l.With("context", "rpc"))
+	} else {
+		var err error
+		barrier, err = NewFixedSizeBarrier(capacity)
+
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if barrier.HasDynamicCapacity() {

@@ -777,9 +777,30 @@ func rpcCLIFlags(c *config.Config, headers, cookieFilter *string, isNone *bool) 
 
 		&cli.IntFlag{
 			Name:        "rpc_concurrency",
-			Usage:       "Max number of concurrent RPC request; should be slightly less than the RPC server concurrency",
+			Usage:       "Max number of concurrent RPC requests (set to 0 to enable adaptive concurrency)",
 			Value:       c.RPC.Concurrency,
 			Destination: &c.RPC.Concurrency,
+		},
+
+		&cli.IntFlag{
+			Name:        "rpc_concurrency_initial",
+			Usage:       "Initial concurrency (when adaptive concurrency is enabled)",
+			Value:       c.RPC.Smart.InitialConcurrency,
+			Destination: &c.RPC.Smart.InitialConcurrency,
+		},
+
+		&cli.IntFlag{
+			Name:        "rpc_concurrency_max",
+			Usage:       "Max concurrency (when adaptive concurrency is enabled)",
+			Value:       c.RPC.Smart.MaxConcurrency,
+			Destination: &c.RPC.Smart.MaxConcurrency,
+		},
+
+		&cli.IntFlag{
+			Name:        "rpc_concurrency_min",
+			Usage:       "Min concurrency (when adaptive concurrency is enabled)",
+			Value:       c.RPC.Smart.MinConcurrency,
+			Destination: &c.RPC.Smart.MinConcurrency,
 		},
 
 		&cli.BoolFlag{
