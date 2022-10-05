@@ -68,6 +68,8 @@ type Config struct {
 	HTTPRequestTimeout int `toml:"http_request_timeout"`
 	// SecretBase is a secret used to generate authentication token
 	SecretBase string
+	// Adaptive concurrency settings
+	Smart SmartBarrierConfig `toml:"adaptive_concurrency"`
 }
 
 // NewConfig builds a new config
@@ -84,6 +86,7 @@ func NewConfig() Config {
 		HTTPRequestTimeout: 0,
 		CommandTimeout:     3000,
 		WaitTimeout:        -1, // defaults to CommandTimeout
+		Smart:              NewSmartBarrierConfig(),
 	}
 }
 
@@ -196,8 +199,14 @@ func (c Config) ToToml() string {
 		result.WriteString("# proxy_cookies = [\"_session_id\"]\n")
 	}
 
-	result.WriteString("# RPC concurrency (max number of concurrent RPC requests)\n")
+	result.WriteString("# RPC concurrency (max number of concurrent RPC requests); if 0 then adaptive concurrency is enabled\n")
 	result.WriteString(fmt.Sprintf("concurrency = %d\n", c.Concurrency))
+
+	if c.Concurrency != 0 {
+		result.WriteString("# adaptive_concurrency = { ... }\n")
+	} else {
+		result.WriteString(c.Smart.ToTomlChanges("adaptive_concurrency."))
+	}
 
 	result.WriteString("# Enable client-side TLS on RPC connections\n")
 	if c.EnableTLS {

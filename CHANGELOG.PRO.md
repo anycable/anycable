@@ -2,13 +2,27 @@
 
 ## master
 
+- Implement adaptive RPC concurrency.
+
+New options available:
+
+```sh
+$ anycable-go \
+  --rpc_concurrency=0 \
+  --rpc_concurrency_initial=30 \
+  --rpc_concurrency_max=50 \
+  --rpc_concurrency_min=5
+```
+
+The value 0 for `rpc_concurrency` activates the adaptive mode.
+
 ## 1.2.2 (2022-12-01)
 
 - Sync with OSS [v1.2.3](https://github.com/anycable/anycable-go/releases/tag/v1.2.3).
 
 ## 1.2.1 (2022-08-10)
 
-- Add `graphql-ws` protocol support for GraphQL clients. ([@palkan][])
+- Add `graphql-ws` protocol support for GraphQL clients.
 
 - Disconnect idle Apollo clients if no connection_init has been sent in the specified period of time.
 

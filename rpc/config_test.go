@@ -42,21 +42,25 @@ func TestConfig_Impl(t *testing.T) {
 func TestConfig__ToToml(t *testing.T) {
 	conf := NewConfig()
 	conf.Host = "rpc.test"
-	conf.Concurrency = 10
+	conf.Concurrency = 0
 	conf.Implementation = "http"
 	conf.ProxyHeaders = []string{"Cookie", "X-Api-Key"}
 	conf.ProxyCookies = []string{"_session_id", "_csrf_token"}
+	conf.Smart.MaxConcurrency = 20
 
 	tomlStr := conf.ToToml()
 
 	assert.Contains(t, tomlStr, "implementation = \"http\"")
 	assert.Contains(t, tomlStr, "host = \"rpc.test\"")
-	assert.Contains(t, tomlStr, "concurrency = 10")
+	assert.Contains(t, tomlStr, "concurrency = 0")
 	assert.Contains(t, tomlStr, "proxy_headers = [\"Cookie\", \"X-Api-Key\"]")
 	assert.Contains(t, tomlStr, "proxy_cookies = [\"_session_id\", \"_csrf_token\"]")
+	assert.Contains(t, tomlStr, "adaptive_concurrency.max_concurrency = 20")
 
-	// Round-trip test (config files are decoded on top of the defaults)
+	// Round-trip test
 	conf2 := NewConfig()
+	defaultSmartConfig := NewSmartBarrierConfig()
+	conf2.Smart = defaultSmartConfig
 
 	_, err := toml.Decode(tomlStr, &conf2)
 	require.NoError(t, err)
