@@ -8,18 +8,13 @@ import (
 	"time"
 
 	"github.com/anycable/anycable-go/common"
+	"github.com/anycable/anycable-go/hub"
 	"github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/ws"
 	"github.com/apex/log"
 )
 
 const (
-	// serverRestartReason is the disconnect reason on shutdown
-	unauthorizedReason     = "unathorized" // nolint:deadcode,varcheck
-	idleTimeoutReason      = "idle_timeout"
-	serverRestartReason    = "server_restart"
-	remoteDisconnectReason = "remote"
-
 	metricsGoroutines      = "goroutines_num"
 	metricsMemSys          = "mem_sys_bytes"
 	metricsClientsNum      = "clients_num"
@@ -64,7 +59,7 @@ type Node struct {
 	metrics metrics.Instrumenter
 
 	config       *Config
-	hub          *Hub
+	hub          *hub.Hub
 	controller   Controller
 	disconnector Disconnector
 	shutdownCh   chan struct{}
@@ -85,7 +80,7 @@ func NewNode(controller Controller, metrics *metrics.Metrics, config *Config) *N
 		log:        log.WithFields(log.Fields{"context": "node"}),
 	}
 
-	node.hub = NewHub(config.HubGopoolSize)
+	node.hub = hub.NewHub(config.HubGopoolSize)
 
 	if metrics != nil {
 		node.registerMetrics()
@@ -110,7 +105,7 @@ func (n *Node) SetDisconnector(d Disconnector) {
 // HandleCommand parses incoming message from client and
 // execute the command (if recognized)
 func (n *Node) HandleCommand(s *Session, msg *common.Message) (err error) {
-	s.Log.Debugf("Incoming message: %s", msg)
+	s.Log.Debugf("Incoming message: %v", msg)
 	switch msg.Command {
 	case "subscribe":
 		_, err = n.Subscribe(s, msg)
@@ -144,7 +139,9 @@ func (n *Node) HandlePubSub(raw []byte) {
 }
 
 func (n *Node) LookupSession(id string) *Session {
-	return n.hub.findByIdentifier(id)
+	hubSession := n.hub.FindByIdentifier(id)
+	session, _ := hubSession.(*Session)
+	return session
 }
 
 // Shutdown stops all services (hub, controller)
@@ -167,14 +164,9 @@ func (n *Node) Shutdown() (err error) {
 
 		if active > 0 {
 			n.log.Infof("Closing active connections: %d", active)
-			disconnectMessage := newDisconnectMessage(serverRestartReason, true)
-			// Close all registered sessions
-			n.hub.sessionsMu.RLock()
-			for _, session := range n.hub.sessions {
-				session.Send(disconnectMessage)
-				session.Disconnect("Shutdown", ws.CloseGoingAway)
-			}
-			n.hub.sessionsMu.RUnlock()
+			disconnectMessage := common.NewDisconnectMessage(common.SERVER_RESTART_REASON, true)
+
+			n.hub.DisconnectSesssions(disconnectMessage, common.SERVER_RESTART_REASON)
 
 			n.log.Info("All active connections closed")
 
@@ -205,7 +197,7 @@ func (n *Node) Shutdown() (err error) {
 // Authenticate calls controller to perform authentication.
 // If authentication is successful, session is registered with a hub.
 func (n *Node) Authenticate(s *Session) (res *common.ConnectResult, err error) {
-	res, err = n.controller.Authenticate(s.UID, s.env)
+	res, err = n.controller.Authenticate(s.GetID(), s.env)
 
 	if err != nil {
 		s.Disconnect("Auth Error", ws.CloseInternalServerErr)
@@ -213,10 +205,10 @@ func (n *Node) Authenticate(s *Session) (res *common.ConnectResult, err error) {
 	}
 
 	if res.Status == common.SUCCESS {
-		s.Identifiers = res.Identifier
+		s.SetIdentifiers(res.Identifier)
 		s.Connected = true
 
-		n.hub.addSession(s)
+		n.hub.AddSession(s)
 	} else {
 		if res.Status == common.FAILURE {
 			n.metrics.CounterIncrement(metricsFailedAuths)
@@ -234,20 +226,20 @@ func (n *Node) Authenticate(s *Session) (res *common.ConnectResult, err error) {
 func (n *Node) Subscribe(s *Session, msg *common.Message) (res *common.CommandResult, err error) {
 	s.smu.Lock()
 
-	if _, ok := s.subscriptions[msg.Identifier]; ok {
+	if ok := s.subscriptions.HasChannel(msg.Identifier); ok {
 		s.smu.Unlock()
 		err = fmt.Errorf("Already subscribed to %s", msg.Identifier)
 		return
 	}
 
-	res, err = n.controller.Subscribe(s.UID, s.env, s.Identifiers, msg.Identifier)
+	res, err = n.controller.Subscribe(s.GetID(), s.env, s.GetIdentifiers(), msg.Identifier)
 
 	if err != nil {
 		if res == nil || res.Status == common.ERROR {
 			s.Log.Errorf("Subscribe error: %v", err)
 		}
 	} else {
-		s.subscriptions[msg.Identifier] = true
+		s.subscriptions.AddChannel(msg.Identifier)
 		s.Log.Debugf("Subscribed to channel: %s", msg.Identifier)
 	}
 
@@ -264,13 +256,13 @@ func (n *Node) Subscribe(s *Session, msg *common.Message) (res *common.CommandRe
 func (n *Node) Unsubscribe(s *Session, msg *common.Message) (res *common.CommandResult, err error) {
 	s.smu.Lock()
 
-	if _, ok := s.subscriptions[msg.Identifier]; !ok {
+	if ok := s.subscriptions.HasChannel(msg.Identifier); !ok {
 		s.smu.Unlock()
 		err = fmt.Errorf("Unknown subscription %s", msg.Identifier)
 		return
 	}
 
-	res, err = n.controller.Unsubscribe(s.UID, s.env, s.Identifiers, msg.Identifier)
+	res, err = n.controller.Unsubscribe(s.GetID(), s.env, s.GetIdentifiers(), msg.Identifier)
 
 	if err != nil {
 		if res == nil || res.Status == common.ERROR {
@@ -280,7 +272,7 @@ func (n *Node) Unsubscribe(s *Session, msg *common.Message) (res *common.Command
 		// Make sure to remove all streams subscriptions
 		res.StopAllStreams = true
 
-		delete(s.subscriptions, msg.Identifier)
+		s.subscriptions.RemoveChannel(msg.Identifier)
 
 		s.Log.Debugf("Unsubscribed from channel: %s", msg.Identifier)
 	}
@@ -298,7 +290,7 @@ func (n *Node) Unsubscribe(s *Session, msg *common.Message) (res *common.Command
 func (n *Node) Perform(s *Session, msg *common.Message) (res *common.CommandResult, err error) {
 	s.smu.Lock()
 
-	if _, ok := s.subscriptions[msg.Identifier]; !ok {
+	if ok := s.subscriptions.HasChannel(msg.Identifier); !ok {
 		s.smu.Unlock()
 		err = fmt.Errorf("Unknown subscription %s", msg.Identifier)
 		return
@@ -313,7 +305,7 @@ func (n *Node) Perform(s *Session, msg *common.Message) (res *common.CommandResu
 		return
 	}
 
-	res, err = n.controller.Perform(s.UID, s.env, s.Identifiers, msg.Identifier, data)
+	res, err = n.controller.Perform(s.GetID(), s.env, s.GetIdentifiers(), msg.Identifier, data)
 
 	if err != nil {
 		if res == nil || res.Status == common.ERROR {
@@ -339,20 +331,22 @@ func (n *Node) Broadcast(msg *common.StreamMessage) {
 
 // Disconnect adds session to disconnector queue and unregister session from hub
 func (n *Node) Disconnect(s *Session) error {
-	n.hub.RemoveSession(s)
+	n.hub.RemoveSessionLater(s)
 	return n.disconnector.Enqueue(s)
 }
 
 // DisconnectNow execute disconnect on controller
 func (n *Node) DisconnectNow(s *Session) error {
-	sessionSubscriptions := subscriptionsList(s.subscriptions)
+	sessionSubscriptions := s.subscriptions.Channels()
 
-	s.Log.Debugf("Disconnect %s %s %v %v", s.Identifiers, s.env.URL, s.env.Headers, sessionSubscriptions)
+	ids := s.GetIdentifiers()
+
+	s.Log.Debugf("Disconnect %s %s %v %v", ids, s.env.URL, s.env.Headers, sessionSubscriptions)
 
 	err := n.controller.Disconnect(
-		s.UID,
+		s.GetID(),
 		s.env,
-		s.Identifiers,
+		ids,
 		sessionSubscriptions,
 	)
 
@@ -376,36 +370,55 @@ func transmit(s *Session, transmissions []string) {
 	}
 }
 
-func (n *Node) handleCommandReply(s *Session, msg *common.Message, reply *common.CommandResult) {
+func (n *Node) handleCommandReply(s *Session, msg *common.Message, reply *common.CommandResult) bool {
+	// Returns true if any of the subscriptions/channel/connections state has changed
+	isDirty := false
+
 	if reply.Disconnect {
 		defer s.Disconnect("Command Failed", ws.CloseAbnormalClosure)
 	}
 
+	uid := s.GetID()
+
 	if reply.StopAllStreams {
-		n.hub.unsubscribeSessionFromChannel(s.UID, msg.Identifier, false)
+		n.hub.UnsubscribeSessionFromChannel(uid, msg.Identifier)
+		s.subscriptions.RemoveChannelStreams(msg.Identifier)
 	} else if reply.StoppedStreams != nil {
+		isDirty = true
+
 		for _, stream := range reply.StoppedStreams {
-			n.hub.unsubscribeSession(s.UID, stream, msg.Identifier)
+			n.hub.UnsubscribeSession(uid, stream, msg.Identifier)
+			s.subscriptions.RemoveChannelStream(msg.Identifier, stream)
 		}
 	}
 
 	if reply.Streams != nil {
+		isDirty = true
+
 		for _, stream := range reply.Streams {
-			n.hub.subscribeSession(s.UID, stream, msg.Identifier)
+			n.hub.SubscribeSession(uid, stream, msg.Identifier)
+			s.subscriptions.AddChannelStream(msg.Identifier, stream)
 		}
 	}
 
 	if reply.IState != nil {
+		isDirty = true
+
 		s.smu.Lock()
 		s.env.MergeChannelState(msg.Identifier, &reply.IState)
 		s.smu.Unlock()
 	}
 
-	n.handleCallReply(s, reply.ToCallResult())
+	isConnectionDirty := n.handleCallReply(s, reply.ToCallResult())
+	return isDirty || isConnectionDirty
 }
 
-func (n *Node) handleCallReply(s *Session, reply *common.CallResult) {
+func (n *Node) handleCallReply(s *Session, reply *common.CallResult) bool {
+	isDirty := false
+
 	if reply.CState != nil {
+		isDirty = true
+
 		s.smu.Lock()
 		s.env.MergeConnectionState(&reply.CState)
 		s.smu.Unlock()
@@ -420,6 +433,8 @@ func (n *Node) handleCallReply(s *Session, reply *common.CallResult) {
 	if reply.Transmissions != nil {
 		transmit(s, reply.Transmissions)
 	}
+
+	return isDirty
 }
 
 func (n *Node) collectStats() {
@@ -468,19 +483,4 @@ func (n *Node) registerMetrics() {
 
 	n.metrics.RegisterCounter(metricsDataSent, "The total amount of bytes sent to clients")
 	n.metrics.RegisterCounter(metricsDataReceived, "The total amount of bytes received from clients")
-}
-
-func subscriptionsList(m map[string]bool) []string {
-	keys := make([]string, len(m))
-	i := 0
-
-	for k := range m {
-		keys[i] = k
-		i++
-	}
-	return keys
-}
-
-func newDisconnectMessage(reason string, reconnect bool) *common.DisconnectMessage {
-	return &common.DisconnectMessage{Type: "disconnect", Reason: reason, Reconnect: reconnect}
 }

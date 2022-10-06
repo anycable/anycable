@@ -34,4 +34,4 @@ linters-settings:
     confedence: medium
 
   stylecheck:
-    checks: ["all", "-ST1005"]
+    checks: ["all", "-ST1005", "-ST1003"]

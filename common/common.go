@@ -28,15 +28,25 @@ const (
 	DisconnectType = "disconnect"
 	ConfirmedType  = "confirm_subscription"
 	RejectedType   = "reject_subscription"
-	// Not suppurted by Action Cable currently
+	// Not supported by Action Cable currently
 	UnsubscribedType = "unsubscribed"
 )
 
+// Disconnect reasons
+const (
+	SERVER_RESTART_REASON    = "server_restart"
+	REMOTE_DISCONNECT_REASON = "remote"
+	IDLE_TIMEOUT_REASON      = "idle_timeout"
+	UNAUTHORIZED_REASON      = "unauthorized"
+)
+
 // SessionEnv represents the underlying HTTP connection data:
-// URL and request headers
+// URL and request headers.
+// It also carries channel and connection state information used by the RPC app.
 type SessionEnv struct {
 	URL             string
 	Headers         *map[string]string
+	Identifiers     string
 	ConnectionState *map[string]string
 	ChannelStates   *map[string]map[string]string
 }
@@ -185,6 +195,24 @@ type StreamMessage struct {
 	Data   string `json:"data"`
 }
 
+func (sm *StreamMessage) ToReplyFor(identifier string) *Reply {
+	data := sm.Data
+
+	var msg interface{}
+
+	// We ignore JSON deserialization failures and consider the message to be a string
+	json.Unmarshal([]byte(data), &msg) // nolint:errcheck
+
+	if msg == nil {
+		msg = sm.Data
+	}
+
+	return &Reply{
+		Identifier: identifier,
+		Message:    msg,
+	}
+}
+
 // RemoteCommandMessage represents a pub/sub message with a remote command (e.g., disconnect)
 type RemoteCommandMessage struct {
 	Command string          `json:"command,omitempty"`
@@ -216,6 +244,10 @@ type DisconnectMessage struct {
 
 func (d *DisconnectMessage) GetType() string {
 	return DisconnectType
+}
+
+func NewDisconnectMessage(reason string, reconnect bool) *DisconnectMessage {
+	return &DisconnectMessage{Type: "disconnect", Reason: reason, Reconnect: reconnect}
 }
 
 // Reply represents an outgoing client message

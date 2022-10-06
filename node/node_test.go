@@ -1,24 +1,28 @@
 package node
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/anycable/anycable-go/common"
+	"github.com/anycable/anycable-go/encoders"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestAuthenticate(t *testing.T) {
 	node := NewMockNode()
+	go node.hub.Run()
+	defer node.hub.Shutdown()
 
 	t.Run("Successful authentication", func(t *testing.T) {
 		session := NewMockSessionWithEnv("1", node, "/cable", &map[string]string{"id": "test_id"})
 		_, err := node.Authenticate(session)
-		defer node.hub.removeSession(session)
+		defer node.hub.RemoveSession(session)
 
 		assert.Nil(t, err, "Error must be nil")
 		assert.Equal(t, true, session.Connected, "Session must be marked as connected")
-		assert.Equalf(t, "test_id", session.Identifiers, "Identifiers must be equal to %s", "test_id")
+		assert.Equalf(t, "test_id", session.GetIdentifiers(), "Identifiers must be equal to %s", "test_id")
 
 		msg, err := session.conn.Read()
 		assert.Nil(t, err)
@@ -53,7 +57,7 @@ func TestAuthenticate(t *testing.T) {
 
 	t.Run("With connection state", func(t *testing.T) {
 		session := NewMockSessionWithEnv("1", node, "/cable", &map[string]string{"x-session-test": "my_session", "id": "session_id"})
-		defer node.hub.removeSession(session)
+		defer node.hub.RemoveSession(session)
 
 		_, err := node.Authenticate(session)
 
@@ -71,8 +75,8 @@ func TestSubscribe(t *testing.T) {
 	node := NewMockNode()
 	session := NewMockSession("14", node)
 
-	node.hub.addSession(session)
-	defer node.hub.removeSession(session)
+	node.hub.AddSession(session)
+	defer node.hub.RemoveSession(session)
 
 	go node.hub.Run()
 	defer node.hub.Shutdown()
@@ -82,7 +86,7 @@ func TestSubscribe(t *testing.T) {
 		assert.Nil(t, err, "Error must be nil")
 
 		// Adds subscription to session
-		assert.Contains(t, session.subscriptions, "test_channel", "Session subscription must be set")
+		assert.Truef(t, session.subscriptions.HasChannel("test_channel"), "Session subscription must be set")
 
 		msg, err := session.conn.Read()
 		assert.Nil(t, err)
@@ -94,8 +98,9 @@ func TestSubscribe(t *testing.T) {
 		_, err := node.Subscribe(session, &common.Message{Identifier: "with_stream"})
 		assert.Nil(t, err, "Error must be nil")
 
-		// Adds subscription to session
-		assert.Contains(t, session.subscriptions, "with_stream", "Session subsription must be set")
+		// Adds subscription and stream to session
+		assert.Truef(t, session.subscriptions.HasChannel("with_stream"), "Session subsription must be set")
+		assert.Equal(t, []string{"stream"}, session.subscriptions.StreamsFor("with_stream"))
 
 		msg, err := session.conn.Read()
 		assert.Nil(t, err)
@@ -103,7 +108,7 @@ func TestSubscribe(t *testing.T) {
 		assert.Equalf(t, "14", string(msg), "Sent message is invalid: %s", msg)
 
 		// Make sure session is subscribed
-		node.hub.broadcastToStream("stream", "41")
+		node.hub.BroadcastMessage(&common.StreamMessage{Stream: "stream", Data: "41"})
 
 		msg, err = session.conn.Read()
 		assert.Nil(t, err)
@@ -113,14 +118,14 @@ func TestSubscribe(t *testing.T) {
 
 	t.Run("Error during subscription", func(t *testing.T) {
 		_, err := node.Subscribe(session, &common.Message{Identifier: "error"})
-		assert.NotNil(t, err, "Error must not be nil")
+		assert.Error(t, err)
 	})
 
 	t.Run("Rejected subscription", func(t *testing.T) {
 		res, err := node.Subscribe(session, &common.Message{Identifier: "failure"})
 
 		assert.Equal(t, common.FAILURE, res.Status)
-		assert.Nil(t, err, "Error must be nil")
+		assert.NoError(t, err)
 	})
 }
 
@@ -128,17 +133,17 @@ func TestUnsubscribe(t *testing.T) {
 	node := NewMockNode()
 	session := NewMockSession("14", node)
 
-	node.hub.addSession(session)
-	defer node.hub.removeSession(session)
+	node.hub.AddSession(session)
+	defer node.hub.RemoveSession(session)
 
 	go node.hub.Run()
 	defer node.hub.Shutdown()
 
 	t.Run("Successful unsubscribe", func(t *testing.T) {
-		session.subscriptions["test_channel"] = true
-		node.hub.subscribeSession("14", "stream", "test_channel")
+		session.subscriptions.AddChannel("test_channel")
+		node.hub.SubscribeSession("14", "streamo", "test_channel")
 
-		node.hub.broadcastToStream("stream", `"before"`)
+		node.hub.Broadcast("streamo", `"before"`)
 		msg, err := session.conn.Read()
 		require.NoError(t, err)
 
@@ -148,19 +153,20 @@ func TestUnsubscribe(t *testing.T) {
 		assert.Nil(t, err, "Error must be nil")
 
 		// Removes subscription from session
-		assert.NotContains(t, session.subscriptions, "test_channel", "Shouldn't contain test_channel")
+		assert.Falsef(t, session.subscriptions.HasChannel("test_channel"), "Shouldn't contain test_channel")
 
-		node.hub.broadcastToStream("stream", "after")
+		node.hub.BroadcastMessage(&common.StreamMessage{Stream: "streamo", Data: "41"})
 
-		msg, _ = session.conn.Read()
+		msg, err = session.conn.Read()
 		assert.Nil(t, msg)
+		assert.Error(t, err, "Session hasn't received any messages")
 	})
 
 	t.Run("Error during unsubscription", func(t *testing.T) {
-		session.subscriptions["failure"] = true
+		session.subscriptions.AddChannel("failure")
 
 		_, err := node.Unsubscribe(session, &common.Message{Identifier: "failure"})
-		assert.NotNil(t, err, "Error must not be nil")
+		assert.Error(t, err)
 	})
 }
 
@@ -168,10 +174,10 @@ func TestPerform(t *testing.T) {
 	node := NewMockNode()
 	session := NewMockSession("14", node)
 
-	node.hub.addSession(session)
-	defer node.hub.removeSession(session)
+	node.hub.AddSession(session)
+	defer node.hub.RemoveSession(session)
 
-	session.subscriptions["test_channel"] = true
+	session.subscriptions.AddChannel("test_channel")
 
 	go node.hub.Run()
 	defer node.hub.Shutdown()
@@ -198,29 +204,34 @@ func TestPerform(t *testing.T) {
 	})
 
 	t.Run("Error during perform", func(t *testing.T) {
-		session.subscriptions["failure"] = true
+		session.subscriptions.AddChannel("failure")
 
 		_, err := node.Perform(session, &common.Message{Identifier: "failure", Data: "test"})
 		assert.NotNil(t, err, "Error must not be nil")
 	})
 
 	t.Run("With stopped streams", func(t *testing.T) {
-		session.subscriptions["test_channel"] = true
-		node.hub.subscribeSession("14", "stop_stream", "test_channel")
+		session.subscriptions.AddChannelStream("test_channel", "stop_stream")
+		node.hub.SubscribeSession("14", "stop_stream", "test_channel")
 
-		node.hub.broadcastToStream("stop_stream", `"before"`)
-		msg, err := session.conn.Read()
-		require.NoError(t, err)
+		node.hub.BroadcastMessage(&common.StreamMessage{Stream: "stop_stream", Data: "40"})
 
-		assert.Equalf(t, `{"identifier":"test_channel","message":"before"}`, string(msg), "Broadcasted message is invalid: %s", msg)
+		msg, _ := session.conn.Read()
+		assert.NotNil(t, msg)
+
+		_, err := node.Perform(session, &common.Message{Identifier: "test_channel", Data: "stop_stream"})
+		assert.Nil(t, err)
+
+		assert.Empty(t, session.subscriptions.StreamsFor("test_channel"))
 
 		_, err = node.Perform(session, &common.Message{Identifier: "test_channel", Data: "stop_stream"})
 		assert.Nil(t, err)
 
-		node.hub.broadcastToStream("stop_stream", `"after"`)
+		node.hub.BroadcastMessage(&common.StreamMessage{Stream: "stop_stream", Data: "41"})
 
-		msg, _ = session.conn.Read()
+		msg, err = session.conn.Read()
 		assert.Nil(t, msg)
+		assert.Error(t, err, "Session hasn't received any messages")
 	})
 
 	t.Run("With channel state", func(t *testing.T) {
@@ -242,8 +253,9 @@ func TestStreamSubscriptionRaceConditions(t *testing.T) {
 	node := NewMockNode()
 	session := NewMockSession("14", node)
 
-	node.hub.addSession(session)
-	session.subscriptions["test_channel"] = true
+	node.hub.AddSession(session)
+	session.subscriptions.AddChannel("test_channel")
+
 	// We need a real hub here to catch a race condition
 	go node.hub.Run()
 	defer node.hub.Shutdown()
@@ -253,7 +265,7 @@ func TestStreamSubscriptionRaceConditions(t *testing.T) {
 		assert.Nil(t, err)
 
 		// Make sure session is subscribed to the stream
-		node.hub.broadcastToStream("all", "2022")
+		node.hub.Broadcast("all", "2022")
 
 		msg, err := session.conn.Read()
 		require.NoError(t, err)
@@ -264,22 +276,18 @@ func TestStreamSubscriptionRaceConditions(t *testing.T) {
 
 func TestDisconnect(t *testing.T) {
 	node := NewMockNode()
+	go node.hub.Run()
+	defer node.hub.Shutdown()
 	session := NewMockSession("14", node)
 
 	assert.Nil(t, node.Disconnect(session))
-
-	// Expected to unregister session
-	select {
-	case info := <-node.hub.register:
-		assert.Equal(t, session, info.session, "Expected to disconnect session")
-	default:
-		assert.Fail(t, "Expected hub to receive unregister message but none was sent")
-	}
 
 	assert.Equal(t, node.disconnector.Size(), 1, "Expected disconnect to have 1 task in a queue")
 
 	task := <-node.disconnector.(*DisconnectQueue).disconnect
 	assert.Equal(t, session, task, "Expected to disconnect session")
+
+	assert.Equal(t, node.hub.Size(), 0)
 }
 
 func TestHandlePubSub(t *testing.T) {
@@ -291,11 +299,11 @@ func TestHandlePubSub(t *testing.T) {
 	session := NewMockSession("14", node)
 	session2 := NewMockSession("15", node)
 
-	node.hub.addSession(session)
-	node.hub.subscribeSession("14", "test", "test_channel")
+	node.hub.AddSession(session)
+	node.hub.SubscribeSession("14", "test", "test_channel")
 
-	node.hub.addSession(session2)
-	node.hub.subscribeSession("15", "test", "test_channel")
+	node.hub.AddSession(session2)
+	node.hub.SubscribeSession("15", "test", "test_channel")
 
 	node.HandlePubSub([]byte("{\"stream\":\"test\",\"data\":\"\\\"abc123\\\"\"}"))
 
@@ -317,11 +325,11 @@ func TestHandlePubSubWithCommand(t *testing.T) {
 	defer node.hub.Shutdown()
 
 	session := NewMockSession("14", node)
-	node.hub.addSession(session)
+	node.hub.AddSession(session)
 
 	node.HandlePubSub([]byte("{\"command\":\"disconnect\",\"payload\":{\"identifier\":\"14\",\"reconnect\":false}}"))
 
-	expected := string(toJSON(newDisconnectMessage("remote", false)))
+	expected := string(toJSON(common.NewDisconnectMessage("remote", false)))
 
 	msg, err := session.conn.Read()
 	assert.Nil(t, err)
@@ -338,56 +346,17 @@ func TestLookupSession(t *testing.T) {
 	assert.Nil(t, node.LookupSession("{\"foo\":\"bar\"}"))
 
 	session := NewMockSession("14", node)
-	session.Identifiers = "{\"foo\":\"bar\"}"
-	node.hub.addSession(session)
+	session.SetIdentifiers("{\"foo\":\"bar\"}")
+	node.hub.AddSession(session)
 
 	assert.Equal(t, session, node.LookupSession("{\"foo\":\"bar\"}"))
 }
 
-func TestSubscriptionsList(t *testing.T) {
-	t.Run("with different channels", func(t *testing.T) {
-		subscriptions := map[string]bool{
-			"{\"channel\":\"SystemNotificationChannel\"}":              true,
-			"{\"channel\":\"ClassSectionTableChannel\",\"id\":288528}": true,
-			"{\"channel\":\"ScheduleChannel\",\"id\":23376}":           true,
-			"{\"channel\":\"DressageChannel\",\"id\":23376}":           true,
-			"{\"channel\":\"TimekeepingChannel\",\"id\":23376}":        true,
-			"{\"channel\":\"ClassSectionChannel\",\"id\":288528}":      true,
-		}
+func toJSON(msg encoders.EncodedMessage) []byte {
+	b, err := json.Marshal(&msg)
+	if err != nil {
+		panic("Failed to build JSON 😲")
+	}
 
-		expected := []string{
-			"{\"channel\":\"SystemNotificationChannel\"}",
-			"{\"channel\":\"ClassSectionTableChannel\",\"id\":288528}",
-			"{\"channel\":\"ScheduleChannel\",\"id\":23376}",
-			"{\"channel\":\"DressageChannel\",\"id\":23376}",
-			"{\"channel\":\"TimekeepingChannel\",\"id\":23376}",
-			"{\"channel\":\"ClassSectionChannel\",\"id\":288528}",
-		}
-
-		actual := subscriptionsList(subscriptions)
-
-		for _, key := range expected {
-			assert.Contains(t, actual, key)
-		}
-	})
-
-	t.Run("with the same channel", func(t *testing.T) {
-		subscriptions := map[string]bool{
-			"{\"channel\":\"GraphqlChannel\",\"channelId\":\"165d8949069\"}": true,
-			"{\"channel\":\"GraphqlChannel\",\"channelId\":\"165d8941e62\"}": true,
-			"{\"channel\":\"GraphqlChannel\",\"channelId\":\"165d8942db1\"}": true,
-		}
-
-		expected := []string{
-			"{\"channel\":\"GraphqlChannel\",\"channelId\":\"165d8949069\"}",
-			"{\"channel\":\"GraphqlChannel\",\"channelId\":\"165d8941e62\"}",
-			"{\"channel\":\"GraphqlChannel\",\"channelId\":\"165d8942db1\"}",
-		}
-
-		actual := subscriptionsList(subscriptions)
-
-		for _, key := range expected {
-			assert.Contains(t, actual, key)
-		}
-	})
+	return b
 }

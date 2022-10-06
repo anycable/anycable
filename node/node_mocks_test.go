@@ -106,16 +106,16 @@ func NewMockSession(uid string, node *Node) *Session {
 	session := Session{
 		executor:      node,
 		closed:        true,
-		UID:           uid,
-		Identifiers:   uid,
+		uid:           uid,
 		Log:           log.WithField("sid", uid),
-		subscriptions: make(map[string]bool),
+		subscriptions: NewSubscriptionState(),
 		env:           common.NewSessionEnv("/cable-test", &map[string]string{}),
 		sendCh:        make(chan *ws.SentFrame, 256),
 		encoder:       encoders.JSON{},
 		metrics:       metrics.NoopMetrics{},
 	}
 
+	session.SetIdentifiers(uid)
 	session.conn = NewMockConnection(&session)
 
 	return &session

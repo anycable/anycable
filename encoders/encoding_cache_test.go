@@ -1,9 +1,8 @@
-package node
+package encoders
 
 import (
 	"testing"
 
-	"github.com/anycable/anycable-go/encoders"
 	"github.com/anycable/anycable-go/ws"
 	"github.com/stretchr/testify/assert"
 )
@@ -22,7 +21,7 @@ func TestEncodingCache(t *testing.T) {
 
 	c := NewEncodingCache()
 
-	callback := func(msg encoders.EncodedMessage) (*ws.SentFrame, error) {
+	callback := func(msg EncodedMessage) (*ws.SentFrame, error) {
 		if m, ok := msg.(*MockMessage); ok {
 			m.Encoded++
 			return &ws.SentFrame{FrameType: ws.TextFrame, Payload: []byte(m.Value)}, nil

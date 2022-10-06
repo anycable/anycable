@@ -22,15 +22,141 @@ type Executor interface {
 	Disconnect(*Session) error
 }
 
+type SubscriptionState struct {
+	channels map[string]map[string]struct{}
+	mu       sync.RWMutex
+}
+
+func NewSubscriptionState() *SubscriptionState {
+	return &SubscriptionState{channels: make(map[string]map[string]struct{})}
+}
+
+func (st *SubscriptionState) HasChannel(id string) bool {
+	st.mu.RLock()
+	defer st.mu.RUnlock()
+
+	_, ok := st.channels[id]
+	return ok
+}
+
+func (st *SubscriptionState) AddChannel(id string) {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+
+	st.channels[id] = make(map[string]struct{})
+}
+
+func (st *SubscriptionState) RemoveChannel(id string) {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+
+	delete(st.channels, id)
+}
+
+func (st *SubscriptionState) Channels() []string {
+	st.mu.RLock()
+	defer st.mu.RUnlock()
+
+	keys := make([]string, len(st.channels))
+	i := 0
+
+	for k := range st.channels {
+		keys[i] = k
+		i++
+	}
+	return keys
+}
+
+func (st *SubscriptionState) ToMap() map[string][]string {
+	st.mu.RLock()
+	defer st.mu.RUnlock()
+
+	res := make(map[string][]string, len(st.channels))
+
+	for k, v := range st.channels {
+		streams := make([]string, len(v))
+
+		i := 0
+		for name := range v {
+			streams[i] = name
+			i++
+		}
+
+		res[k] = streams
+	}
+
+	return res
+}
+
+func (st *SubscriptionState) AddChannelStream(id string, stream string) {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+
+	if _, ok := st.channels[id]; ok {
+		st.channels[id][stream] = struct{}{}
+	}
+}
+
+func (st *SubscriptionState) RemoveChannelStream(id string, stream string) {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+
+	if _, ok := st.channels[id]; ok {
+		delete(st.channels[id], stream)
+	}
+}
+
+func (st *SubscriptionState) RemoveChannelStreams(id string) []string {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+
+	if streamNames, ok := st.channels[id]; ok {
+		st.channels[id] = make(map[string]struct{})
+
+		streams := make([]string, len(streamNames))
+
+		i := 0
+		for key := range streamNames {
+			streams[i] = key
+			i++
+		}
+
+		return streams
+	}
+
+	return nil
+}
+
+func (st *SubscriptionState) StreamsFor(id string) []string {
+	st.mu.RLock()
+	defer st.mu.RUnlock()
+
+	if streamNames, ok := st.channels[id]; ok {
+		streams := make([]string, len(streamNames))
+
+		i := 0
+		for key := range streamNames {
+			streams[i] = key
+			i++
+		}
+
+		return streams
+	}
+
+	return nil
+}
+
 // Session represents active client
 type Session struct {
 	conn          Connection
+	uid           string
 	encoder       encoders.Encoder
 	executor      Executor
 	metrics       metrics.Instrumenter
 	env           *common.SessionEnv
-	subscriptions map[string]bool
+	subscriptions *SubscriptionState
 	closed        bool
+
 	// Main mutex (for read/write and important session updates)
 	mu sync.Mutex
 	// Mutex for protocol-related state (env, subscriptions)
@@ -43,9 +169,7 @@ type Session struct {
 
 	pingTimestampPrecision string
 
-	UID         string
-	Identifiers string
-	Connected   bool
+	Connected bool
 	// Could be used to store arbitrary data within a session
 	InternalState map[string]interface{}
 	Log           *log.Entry
@@ -57,7 +181,7 @@ func NewSession(node *Node, conn Connection, url string, headers *map[string]str
 		conn:                   conn,
 		metrics:                node.metrics,
 		env:                    common.NewSessionEnv(url, headers),
-		subscriptions:          make(map[string]bool),
+		subscriptions:          NewSubscriptionState(),
 		sendCh:                 make(chan *ws.SentFrame, 256),
 		closed:                 false,
 		Connected:              false,
@@ -69,10 +193,10 @@ func NewSession(node *Node, conn Connection, url string, headers *map[string]str
 		executor: node,
 	}
 
-	session.UID = uid
+	session.uid = uid
 
 	ctx := node.log.WithFields(log.Fields{
-		"sid": session.UID,
+		"sid": session.uid,
 	})
 
 	session.Log = ctx
@@ -119,8 +243,20 @@ func (s *Session) maybeDisconnectIdle() {
 
 	s.Log.Warnf("Disconnecting idle session")
 
-	s.Send(newDisconnectMessage(idleTimeoutReason, false))
+	s.Send(common.NewDisconnectMessage(common.IDLE_TIMEOUT_REASON, false))
 	s.Disconnect("Idle Timeout", ws.CloseNormalClosure)
+}
+
+func (s *Session) GetID() string {
+	return s.uid
+}
+
+func (s *Session) GetIdentifiers() string {
+	return s.env.Identifiers
+}
+
+func (s *Session) SetIdentifiers(ids string) {
+	s.env.Identifiers = ids
 }
 
 // Merge connection and channel states into current env.
@@ -240,6 +376,23 @@ func (s *Session) Disconnect(reason string, code int) {
 	s.disconnectFromNode()
 	s.sendClose(reason, code)
 	s.close()
+}
+
+func (s *Session) DisconnectWithMessage(msg encoders.EncodedMessage, code string) {
+	s.Send(msg)
+
+	reason := ""
+	wsCode := ws.CloseNormalClosure
+
+	switch code {
+	case common.SERVER_RESTART_REASON:
+		reason = "Server restart"
+		wsCode = ws.CloseGoingAway
+	case common.REMOTE_DISCONNECT_REASON:
+		reason = "Closed remotely"
+	}
+
+	s.Disconnect(reason, wsCode)
 }
 
 func (s *Session) disconnectFromNode() {
@@ -394,7 +547,7 @@ func newPingMessage(format string) *common.PingMessage {
 }
 
 func (s *Session) encodeMessage(msg encoders.EncodedMessage) (*ws.SentFrame, error) {
-	if cm, ok := msg.(*CachedEncodedMessage); ok {
+	if cm, ok := msg.(*encoders.CachedEncodedMessage); ok {
 		return cm.Fetch(
 			s.encoder.ID(),
 			func(m encoders.EncodedMessage) (*ws.SentFrame, error) {

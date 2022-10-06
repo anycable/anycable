@@ -1,10 +1,9 @@
-package node
+package encoders
 
 import (
 	"encoding/json"
 	"errors"
 
-	"github.com/anycable/anycable-go/encoders"
 	"github.com/anycable/anycable-go/ws"
 )
 
@@ -13,14 +12,14 @@ type EncodingCache struct {
 	encodedBytes map[string]*ws.SentFrame
 }
 
-type EncodingFunction = func(encoders.EncodedMessage) (*ws.SentFrame, error)
+type EncodingFunction = func(EncodedMessage) (*ws.SentFrame, error)
 
 func NewEncodingCache() *EncodingCache {
 	return &EncodingCache{make(map[string]*ws.SentFrame)}
 }
 
 func (m *EncodingCache) Fetch(
-	msg encoders.EncodedMessage,
+	msg EncodedMessage,
 	encoder string,
 	callback EncodingFunction,
 ) (*ws.SentFrame, error) {
@@ -42,11 +41,11 @@ func (m *EncodingCache) Fetch(
 }
 
 type CachedEncodedMessage struct {
-	target encoders.EncodedMessage
+	target EncodedMessage
 	cache  *EncodingCache
 }
 
-func NewCachedEncodedMessage(msg encoders.EncodedMessage) *CachedEncodedMessage {
+func NewCachedEncodedMessage(msg EncodedMessage) *CachedEncodedMessage {
 	return &CachedEncodedMessage{target: msg, cache: NewEncodingCache()}
 }
 
