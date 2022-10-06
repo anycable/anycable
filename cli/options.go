@@ -2,7 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"os"
 	"regexp"
 	"strings"
 
@@ -13,7 +12,7 @@ import (
 
 // NewConfigFromCLI reads config from os.Args. It returns config, error (if any) and a bool value
 // indicating that the usage message or version was shown, no further action required.
-func NewConfigFromCLI() (*config.Config, error, bool) {
+func NewConfigFromCLI(args []string) (*config.Config, error, bool) {
 	c := config.NewConfig()
 
 	var path, headers string
@@ -52,7 +51,7 @@ func NewConfigFromCLI() (*config.Config, error, bool) {
 		},
 	}
 
-	err := app.Run(os.Args)
+	err := app.Run(args)
 	if err != nil {
 		return &config.Config{}, err, false
 	}

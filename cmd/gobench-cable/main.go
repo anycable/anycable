@@ -14,7 +14,7 @@ import (
 )
 
 func main() {
-	c, err, ok := cli.NewConfigFromCLI()
+	c, err, ok := cli.NewConfigFromCLI(os.Args)
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
