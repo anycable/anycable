@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/anycable/anycable-go/broker"
 	"github.com/anycable/anycable-go/config"
 	"github.com/anycable/anycable-go/version"
 	"github.com/nats-io/nats.go"
@@ -68,6 +69,7 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 	flags = append(flags, serverCLIFlags(&c, &path)...)
 	flags = append(flags, sslCLIFlags(&c)...)
 	flags = append(flags, broadcastCLIFlags(&c)...)
+	flags = append(flags, brokerCLIFlags(&c)...)
 	flags = append(flags, redisCLIFlags(&c)...)
 	flags = append(flags, httpBroadcastCLIFlags(&c)...)
 	flags = append(flags, natsCLIFlags(&c)...)
@@ -121,6 +123,11 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 	}
 
 	c.Headers = strings.Split(strings.ToLower(headers), ",")
+
+	// Read session ID header if using a broker
+	if c.BrokerAdapter != "" {
+		c.Headers = append(c.Headers, broker.SESSION_ID_HEADER)
+	}
 
 	if len(cookieFilter) > 0 {
 		c.Cookies = strings.Split(cookieFilter, ",")
@@ -193,6 +200,7 @@ const (
 	statsdCategoryDescription        = "STATSD:"
 	embeddedNatsCategoryDescription  = "EMBEDDED NATS:"
 	miscCategoryDescription          = "MISC:"
+	brokerCategoryDescription        = "BROKER:"
 
 	envPrefix = "ANYCABLE_"
 )
@@ -267,12 +275,41 @@ func broadcastCLIFlags(c *config.Config) []cli.Flag {
 			Value:       c.BroadcastAdapter,
 			Destination: &c.BroadcastAdapter,
 		},
-
+		&cli.StringFlag{
+			Name:        "broker",
+			Usage:       "Broker engine to use (memory)",
+			Value:       c.BrokerAdapter,
+			Destination: &c.BrokerAdapter,
+		},
 		&cli.IntFlag{
 			Name:        "hub_gopool_size",
 			Usage:       "The size of the goroutines pool to broadcast messages",
 			Value:       c.App.HubGopoolSize,
 			Destination: &c.App.HubGopoolSize,
+		},
+	})
+}
+
+// brokerCLIFlags returns broker related flags
+func brokerCLIFlags(c *config.Config) []cli.Flag {
+	return withDefaults(brokerCategoryDescription, []cli.Flag{
+		&cli.IntFlag{
+			Name:        "history_limit",
+			Usage:       "Max number of messages to keep in the stream's history",
+			Value:       c.Broker.HistoryLimit,
+			Destination: &c.Broker.HistoryLimit,
+		},
+		&cli.Int64Flag{
+			Name:        "history_ttl",
+			Usage:       "TTL for messages in streams history (seconds)",
+			Value:       c.Broker.HistoryTTL,
+			Destination: &c.Broker.HistoryTTL,
+		},
+		&cli.Int64Flag{
+			Name:        "sessions_ttl",
+			Usage:       "TTL for expired/disconnected sessions (seconds)",
+			Value:       c.Broker.SessionsTTL,
+			Destination: &c.Broker.SessionsTTL,
 		},
 	})
 }

@@ -2,11 +2,14 @@ package node
 
 import (
 	"encoding/json"
+	"errors"
 	"testing"
 
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/encoders"
+	"github.com/anycable/anycable-go/mocks"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -278,6 +281,7 @@ func TestDisconnect(t *testing.T) {
 	node := NewMockNode()
 	go node.hub.Run()
 	defer node.hub.Shutdown()
+
 	session := NewMockSession("14", node)
 
 	assert.Nil(t, node.Disconnect(session))
@@ -288,6 +292,345 @@ func TestDisconnect(t *testing.T) {
 	assert.Equal(t, session, task, "Expected to disconnect session")
 
 	assert.Equal(t, node.hub.Size(), 0)
+}
+
+func TestHistory(t *testing.T) {
+	node := NewMockNode()
+
+	broker := &mocks.Broker{}
+	node.SetBroker(broker)
+
+	broker.
+		On("CommitSession", mock.Anything, mock.Anything).
+		Return(nil)
+
+	go node.hub.Run()
+	defer node.hub.Shutdown()
+
+	session := NewMockSession("14", node)
+
+	session.subscriptions.AddChannel("test_channel")
+	session.subscriptions.AddChannelStream("test_channel", "streamo")
+	session.subscriptions.AddChannelStream("test_channel", "emptissimo")
+
+	stream := []common.StreamMessage{
+		{
+			Stream: "streamo",
+			Data:   "ciao",
+			Offset: 22,
+			Epoch:  "test",
+		},
+		{
+			Stream: "streamo",
+			Data:   "buona sera",
+			Offset: 23,
+			Epoch:  "test",
+		},
+	}
+
+	var ts int64
+
+	t.Run("Successful history with only Since", func(t *testing.T) {
+		ts = 100200
+
+		broker.
+			On("HistorySince", "streamo", ts).
+			Return(stream, nil)
+		broker.
+			On("HistorySince", "emptissimo", ts).
+			Return(nil, nil)
+
+		err := node.History(
+			session,
+			&common.Message{
+				Identifier: "test_channel",
+				History: common.HistoryRequest{
+					Since: ts,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		history := []string{
+			"{\"identifier\":\"test_channel\",\"message\":\"ciao\",\"stream_id\":\"streamo\",\"epoch\":\"test\",\"offset\":22}",
+			"{\"identifier\":\"test_channel\",\"message\":\"buona sera\",\"stream_id\":\"streamo\",\"epoch\":\"test\",\"offset\":23}",
+		}
+
+		for _, msg := range history {
+			received, herr := session.conn.Read()
+			require.NoError(t, herr)
+
+			require.Equalf(
+				t,
+				msg,
+				string(received),
+				"Sent message is invalid: %s", received,
+			)
+		}
+
+		_, err = session.conn.Read()
+		require.Error(t, err)
+	})
+
+	t.Run("Successful history with Since and Offset", func(t *testing.T) {
+		ts = 100300
+
+		broker.
+			On("HistoryFrom", "streamo", "test", uint64(20)).
+			Return(stream, nil)
+		broker.
+			On("HistorySince", "emptissimo", ts).
+			Return([]common.StreamMessage{{
+				Stream: "emptissimo",
+				Data:   "zer0",
+				Offset: 2,
+				Epoch:  "test_zero",
+			}}, nil)
+
+		err := node.History(
+			session,
+			&common.Message{
+				Identifier: "test_channel",
+				History: common.HistoryRequest{
+					Since: ts,
+					Streams: map[string]common.HistoryPosition{
+						"streamo": {Epoch: "test", Offset: 20},
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		history := []string{
+			"{\"identifier\":\"test_channel\",\"message\":\"ciao\",\"stream_id\":\"streamo\",\"epoch\":\"test\",\"offset\":22}",
+			"{\"identifier\":\"test_channel\",\"message\":\"buona sera\",\"stream_id\":\"streamo\",\"epoch\":\"test\",\"offset\":23}",
+			"{\"identifier\":\"test_channel\",\"message\":\"zer0\",\"stream_id\":\"emptissimo\",\"epoch\":\"test_zero\",\"offset\":2}",
+		}
+
+		// The order of streams is non-deterministic, so
+		// we're collecting messages first and checking for inclusion later
+		received := []string{}
+
+		for range history {
+			data, herr := session.conn.Read()
+			require.NoError(t, herr)
+
+			received = append(received, string(data))
+		}
+
+		for _, msg := range history {
+			require.Contains(
+				t,
+				received,
+				msg,
+			)
+		}
+
+		_, err = session.conn.Read()
+		require.Error(t, err)
+	})
+
+	t.Run("Fetching history with Subscribe", func(t *testing.T) {
+		ts = 100400
+
+		broker.
+			On("HistoryFrom", "streamo", "test", uint64(21)).
+			Return(stream, nil)
+		broker.
+			On("HistorySince", "s1", ts).
+			Return([]common.StreamMessage{{
+				Stream: "s1",
+				Data:   "{\"foo\":\"bar\"}",
+				Offset: 10,
+				Epoch:  "test",
+			}}, nil)
+		broker.
+			On("Subscribe", "stream").
+			Return("s1")
+
+		_, err := node.Subscribe(
+			session,
+			&common.Message{
+				Identifier: "with_stream",
+				History: common.HistoryRequest{
+					Since: ts,
+					Streams: map[string]common.HistoryPosition{
+						"streamo": {Epoch: "test", Offset: 21},
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		msg, err := session.conn.Read()
+		require.NoError(t, err)
+
+		require.Equalf(t, "14", string(msg), "Sent message is invalid: %s", msg)
+
+		history := []string{
+			"{\"identifier\":\"with_stream\",\"message\":{\"foo\":\"bar\"},\"stream_id\":\"s1\",\"epoch\":\"test\",\"offset\":10}",
+		}
+
+		for _, msg := range history {
+			received, herr := session.conn.Read()
+			require.NoError(t, herr)
+
+			require.Equalf(
+				t,
+				msg,
+				string(received),
+				"Sent message is invalid: %s", received,
+			)
+		}
+
+		_, err = session.conn.Read()
+		require.Error(t, err)
+	})
+
+	t.Run("Error retrieving history", func(t *testing.T) {
+		ts = 200100
+
+		broker.
+			On("HistorySince", "streamo", ts).
+			Return(nil, errors.New("Couldn't restore history"))
+		broker.
+			On("HistorySince", "emptissimo", ts).
+			Return(stream, nil)
+
+		err := node.History(
+			session,
+			&common.Message{
+				Identifier: "test_channel",
+				History: common.HistoryRequest{
+					Since: ts,
+				},
+			},
+		)
+
+		assert.Error(t, err, "Couldn't restore history")
+	})
+}
+
+func TestRestoreSession(t *testing.T) {
+	node := NewMockNode()
+
+	broker := &mocks.Broker{}
+	node.SetBroker(broker)
+
+	go node.hub.Run()
+	defer node.hub.Shutdown()
+
+	prev_session := NewMockSession("114", node)
+	prev_session.subscriptions.AddChannel("fruits_channel")
+	prev_session.subscriptions.AddChannelStream("fruits_channel", "arancia")
+	prev_session.subscriptions.AddChannelStream("fruits_channel", "limoni")
+	prev_session.env.MergeConnectionState(&(map[string]string{"tenant_id": "71"}))
+	prev_session.env.MergeChannelState("fruits_channel", &(map[string]string{"gardini": "ischia"}))
+
+	cached, err := prev_session.ToCacheEntry()
+	require.NoError(t, err)
+
+	broker.
+		On("RestoreSession", "114").
+		Return(cached, nil)
+	broker.
+		On("CommitSession", mock.Anything, mock.Anything).
+		Return(nil)
+	broker.
+		On("Subscribe", mock.Anything).
+		Return(func(name string) string { return name })
+
+	session := NewMockSession("214", node)
+
+	t.Run("Successful restore via header", func(t *testing.T) {
+		session.env.SetHeader("X-ANYCABLE-RESTORE-SID", "114")
+
+		res, err := node.Authenticate(session)
+		require.NoError(t, err)
+		assert.Equal(t, common.SUCCESS, res.Status)
+
+		assert.Contains(t, session.subscriptions.StreamsFor("fruits_channel"), "arancia")
+		assert.Contains(t, session.subscriptions.StreamsFor("fruits_channel"), "limoni")
+
+		assert.Equal(t, "71", session.env.GetConnectionStateField("tenant_id"))
+		assert.Equal(t, "ischia", session.env.GetChannelStateField("fruits_channel", "gardini"))
+
+		welcome, err := session.conn.Read()
+		require.NoError(t, err)
+
+		require.Equalf(
+			t,
+			`{"type":"welcome","sid":"214","restored":true}`,
+			string(welcome),
+			"Sent message is invalid: %s", welcome,
+		)
+
+		node.hub.Broadcast("arancia", "delissimo")
+
+		msg, err := session.conn.Read()
+		require.NoError(t, err)
+
+		require.Equalf(
+			t,
+			`{"identifier":"fruits_channel","message":"delissimo"}`,
+			string(msg),
+			"Sent message is invalid: %s", msg,
+		)
+
+		node.hub.Broadcast("limoni", "acido")
+
+		msg, err = session.conn.Read()
+		require.NoError(t, err)
+
+		require.Equalf(
+			t,
+			`{"identifier":"fruits_channel","message":"acido"}`,
+			string(msg),
+			"Sent message is invalid: %s", msg,
+		)
+	})
+
+	t.Run("Successful restore via url", func(t *testing.T) {
+		session.env.URL = "/cable-test?sid=114"
+
+		res, err := node.Authenticate(session)
+		require.NoError(t, err)
+		assert.Equal(t, common.SUCCESS, res.Status)
+
+		welcome, err := session.conn.Read()
+		require.NoError(t, err)
+
+		require.Equalf(
+			t,
+			`{"type":"welcome","sid":"214","restored":true}`,
+			string(welcome),
+			"Sent message is invalid: %s", welcome,
+		)
+	})
+
+	t.Run("Failed to restore", func(t *testing.T) {
+		broker.
+			On("RestoreSession", "114").
+			Return(nil, nil)
+
+		session.env.SetHeader("-anycable-restore-sid", "114")
+
+		session = NewMockSession("154", node)
+
+		res, err := node.Authenticate(session)
+		require.NoError(t, err)
+		assert.Equal(t, common.SUCCESS, res.Status)
+
+		welcome, err := session.conn.Read()
+		require.NoError(t, err)
+
+		require.Equalf(
+			t,
+			"welcome",
+			string(welcome),
+			"Sent message is invalid: %s", welcome,
+		)
+	})
 }
 
 func TestHandlePubSub(t *testing.T) {

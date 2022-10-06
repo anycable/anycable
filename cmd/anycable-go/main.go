@@ -21,6 +21,7 @@ func main() {
 	opts := []cli.Option{
 		cli.WithName("AnyCable"),
 		cli.WithDefaultRPCController(),
+		cli.WithDefaultBroker(),
 		cli.WithDefaultSubscriber(),
 	}
 

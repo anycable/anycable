@@ -37,7 +37,7 @@ func TestJWTIdentifierIdentify(t *testing.T) {
 		require.NotNil(t, res)
 		assert.Equal(t, ids, res.Identifier)
 		assert.Equal(t, common.SUCCESS, res.Status)
-		assert.Equal(t, []string{"{\"type\":\"welcome\"}"}, res.Transmissions)
+		assert.Equal(t, []string{`{"type":"welcome","sid":"12"}`}, res.Transmissions)
 	})
 
 	t.Run("with valid token passed as a header", func(t *testing.T) {
@@ -58,7 +58,7 @@ func TestJWTIdentifierIdentify(t *testing.T) {
 		require.NotNil(t, res)
 		assert.Equal(t, ids, res.Identifier)
 		assert.Equal(t, common.SUCCESS, res.Status)
-		assert.Equal(t, []string{"{\"type\":\"welcome\"}"}, res.Transmissions)
+		assert.Equal(t, []string{`{"type":"welcome","sid":"12"}`}, res.Transmissions)
 	})
 
 	t.Run("with invalid token", func(t *testing.T) {

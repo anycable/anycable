@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"github.com/anycable/anycable-go/broker"
 	"github.com/anycable/anycable-go/config"
 	"github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/node"
@@ -64,6 +65,17 @@ func WithShutdownable(instance Shutdownable) Option {
 	}
 }
 
+// WithBroker is an Option to set Runner broker
+func WithBroker(fn brokerFactory) Option {
+	return func(r *Runner) error {
+		if r.brokerFactory != nil {
+			return errorx.IllegalArgument.New("Broker has been already assigned")
+		}
+		r.brokerFactory = fn
+		return nil
+	}
+}
+
 // WithWebSocketHandler is an Option to set a custom websocket handler
 func WithWebSocketHandler(fn websocketHandler) Option {
 	return func(r *Runner) error {
@@ -79,4 +91,21 @@ func WithWebSocketEndpoint(path string, fn websocketHandler) Option {
 		r.websocketEndpoints[path] = fn
 		return nil
 	}
+}
+
+// WithDefaultBroker is an Option to set Runner broker to default broker from config
+func WithDefaultBroker() Option {
+	return WithBroker(func(h broker.Broadcaster, c *config.Config) (broker.Broker, error) {
+		if c.BrokerAdapter == "" {
+			return broker.NewLegacyBroker(h), nil
+		}
+
+		switch c.BrokerAdapter {
+		case "memory":
+			b := broker.NewMemoryBroker(h, &c.Broker)
+			return b, nil
+		default:
+			return nil, errorx.IllegalArgument.New("Unsupported broker adapter: %s", c.BrokerAdapter)
+		}
+	})
 }

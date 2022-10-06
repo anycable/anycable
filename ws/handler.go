@@ -14,7 +14,9 @@ import (
 	nanoid "github.com/matoous/go-nanoid"
 )
 
-const remoteAddrHeader = "REMOTE_ADDR"
+const (
+	remoteAddrHeader = "REMOTE_ADDR"
+)
 
 type RequestInfo struct {
 	UID     string
@@ -54,6 +56,7 @@ func (h *DefaultHeadersExtractor) FromRequest(r *http.Request) map[string]string
 		res[header] = value
 	}
 	res[remoteAddrHeader], _, _ = net.SplitHostPort(r.RemoteAddr)
+
 	return res
 }
 

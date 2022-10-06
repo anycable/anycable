@@ -1,12 +1,14 @@
 package identity
 
 import (
+	"fmt"
+
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/node"
 )
 
 const (
-	actionCableWelcomeMessage                = "{\"type\":\"welcome\"}"
+	actionCableWelcomeMessageTemplate        = "{\"type\":\"welcome\",\"sid\":\"%s\"}"
 	actionCableDisconnectUnauthorizedMessage = "{\"type\":\"disconnect\",\"reason\":\"unauthorized\",\"reconnect\":false}"
 )
 
@@ -61,4 +63,8 @@ func (c *IdentifiableController) Perform(sid string, env *common.SessionEnv, id 
 }
 func (c *IdentifiableController) Disconnect(sid string, env *common.SessionEnv, id string, subscriptions []string) error {
 	return c.controller.Disconnect(sid, env, id, subscriptions)
+}
+
+func actionCableWelcomeMessage(sid string) string {
+	return fmt.Sprintf(actionCableWelcomeMessageTemplate, sid)
 }

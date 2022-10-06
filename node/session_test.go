@@ -7,6 +7,7 @@ import (
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/ws"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSendRaceConditions(t *testing.T) {
@@ -208,4 +209,59 @@ func TestSubscriptionStreamsFor(t *testing.T) {
 	subscriptions.RemoveChannelStream("presence_1", "z")
 	subscriptions.RemoveChannelStream("presence_1", "t")
 	assert.Equal(t, []string{"y"}, subscriptions.StreamsFor("presence_1"))
+}
+
+func TestCacheEntry(t *testing.T) {
+	session := Session{}
+
+	session.subscriptions = NewSubscriptionState()
+	session.subscriptions.AddChannel("chat_1")
+	session.subscriptions.AddChannel("presence_1")
+
+	session.subscriptions.AddChannelStream("chat_1", "a")
+	session.subscriptions.AddChannelStream("chat_1", "b")
+	session.subscriptions.AddChannelStream("presence_1", "z")
+
+	session.env = common.NewSessionEnv("/cable", nil)
+	session.SetIdentifiers("plastilin")
+	session.env.MergeConnectionState(&map[string]string{"tenant": "x", "locale": "it"})
+	session.env.MergeChannelState("chat_1", &map[string]string{"presence": "on"})
+
+	cached, err := session.ToCacheEntry()
+	require.NoError(t, err)
+
+	new_session := Session{}
+	new_session.subscriptions = NewSubscriptionState()
+	new_session.env = common.NewSessionEnv("/cable", nil)
+
+	err = new_session.RestoreFromCache(cached)
+	require.NoError(t, err)
+
+	assert.Equal(t, "plastilin", new_session.GetIdentifiers())
+
+	assert.Contains(t, new_session.subscriptions.Channels(), "chat_1")
+	assert.Contains(t, new_session.subscriptions.Channels(), "presence_1")
+	assert.Contains(t, new_session.subscriptions.StreamsFor("chat_1"), "a")
+	assert.Contains(t, new_session.subscriptions.StreamsFor("chat_1"), "b")
+	assert.Contains(t, new_session.subscriptions.StreamsFor("presence_1"), "z")
+
+	assert.Equal(t, "x", new_session.env.GetConnectionStateField("tenant"))
+	assert.Equal(t, "it", new_session.env.GetConnectionStateField("locale"))
+	assert.Equal(t, "on", new_session.env.GetChannelStateField("chat_1", "presence"))
+}
+
+func TestCacheEntryEmptySession(t *testing.T) {
+	session := Session{}
+	session.subscriptions = NewSubscriptionState()
+	session.env = common.NewSessionEnv("/cable", nil)
+
+	cached, err := session.ToCacheEntry()
+	require.NoError(t, err)
+
+	new_session := Session{}
+	new_session.subscriptions = NewSubscriptionState()
+	new_session.env = common.NewSessionEnv("/cable", nil)
+
+	err = new_session.RestoreFromCache(cached)
+	require.NoError(t, err)
 }

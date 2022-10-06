@@ -125,7 +125,7 @@ func (i *JWTIdentifier) Identify(sid string, env *common.SessionEnv) (*common.Co
 
 	return &common.ConnectResult{
 		Identifier:    ids,
-		Transmissions: []string{actionCableWelcomeMessage},
+		Transmissions: []string{actionCableWelcomeMessage(sid)},
 		Status:        common.SUCCESS,
 	}, nil
 }

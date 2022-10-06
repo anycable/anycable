@@ -182,17 +182,37 @@ func (c *CommandResult) ToCallResult() *CallResult {
 	return &res
 }
 
+type HistoryPosition struct {
+	Epoch  string `json:"epoch"`
+	Offset uint64 `json:"offset"`
+}
+
+// HistoryRequest represents a client's streams state (offsets) or a timestamp since
+// which we should return the messages for the current streams
+type HistoryRequest struct {
+	// Since is UTC timestamp in ms
+	Since int64 `json:"since,omitempty"`
+	// Streams contains the information of last offsets/epoch received for a particular stream
+	Streams map[string]HistoryPosition `json:"streams,omitempty"`
+}
+
 // Message represents incoming client message
 type Message struct {
-	Command    string      `json:"command"`
-	Identifier string      `json:"identifier"`
-	Data       interface{} `json:"data,omitempty"`
+	Command    string         `json:"command"`
+	Identifier string         `json:"identifier"`
+	Data       interface{}    `json:"data,omitempty"`
+	History    HistoryRequest `json:"history,omitempty"`
 }
 
 // StreamMessage represents a pub/sub message to be sent to stream
 type StreamMessage struct {
 	Stream string `json:"stream"`
 	Data   string `json:"data"`
+
+	// Offset is the position of this message in the stream
+	Offset uint64
+	// Epoch is the uniq ID of the current storage state
+	Epoch string
 }
 
 func (sm *StreamMessage) ToReplyFor(identifier string) *Reply {
@@ -207,9 +227,19 @@ func (sm *StreamMessage) ToReplyFor(identifier string) *Reply {
 		msg = sm.Data
 	}
 
+	stream := ""
+
+	// Only include stream if offset/epovh is present
+	if sm.Epoch != "" {
+		stream = sm.Stream
+	}
+
 	return &Reply{
 		Identifier: identifier,
 		Message:    msg,
+		StreamID:   stream,
+		Offset:     sm.Offset,
+		Epoch:      sm.Epoch,
 	}
 }
 
@@ -257,6 +287,11 @@ type Reply struct {
 	Message    interface{} `json:"message,omitempty"`
 	Reason     string      `json:"reason,omitempty"`
 	Reconnect  bool        `json:"reconnect,omitempty"`
+	StreamID   string      `json:"stream_id,omitempty"`
+	Epoch      string      `json:"epoch,omitempty"`
+	Offset     uint64      `json:"offset,omitempty"`
+	Sid        string      `json:"sid,omitempty"`
+	Restored   bool        `json:"restored,omitempty"`
 }
 
 func (r *Reply) GetType() string {

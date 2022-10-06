@@ -27,6 +27,7 @@ func main() {
 		cli.WithController(func(m *metrics.Metrics, c *config.Config) (node.Controller, error) {
 			return gobench.NewController(m), nil
 		}),
+		cli.WithDefaultBroker(),
 		cli.WithDefaultSubscriber(),
 	}
 

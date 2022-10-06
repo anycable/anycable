@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/anycable/anycable-go/broker"
 	"github.com/anycable/anycable-go/enats"
 	"github.com/anycable/anycable-go/identity"
 	"github.com/anycable/anycable-go/metrics"
@@ -16,6 +17,8 @@ import (
 type Config struct {
 	App                  node.Config
 	RPC                  rpc.Config
+	BrokerAdapter        string
+	Broker               broker.Config
 	Redis                pubsub.RedisConfig
 	HTTPPubSub           pubsub.HTTPConfig
 	NATSPubSub           pubsub.NATSConfig
@@ -51,6 +54,7 @@ func NewConfig() Config {
 		Path:             []string{"/cable"},
 		HealthPath:       "/health",
 		BroadcastAdapter: "redis",
+		Broker:           broker.NewConfig(),
 		Headers:          []string{"cookie"},
 		LogLevel:         "info",
 		LogFormat:        "text",

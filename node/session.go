@@ -1,7 +1,9 @@
 package node
 
 import (
+	"encoding/json"
 	"errors"
+	"net/url"
 	"sync"
 	"time"
 
@@ -14,6 +16,9 @@ import (
 
 const (
 	writeWait = 10 * time.Second
+
+	prevSessionHeader = "X-ANYCABLE-RESTORE-SID"
+	prevSessionParam  = "sid"
 )
 
 // Executor handles incoming commands (messages)
@@ -423,6 +428,88 @@ func (s *Session) DisconnectWithMessage(msg encoders.EncodedMessage, code string
 	}
 
 	s.Disconnect(reason, wsCode)
+}
+
+type cacheEntry struct {
+	Identifiers     string                       `json:"ids"`
+	Subscriptions   map[string][]string          `json:"subs"`
+	ConnectionState map[string]string            `json:"cstate"`
+	ChannelsState   map[string]map[string]string `json:"istate"`
+}
+
+func (s *Session) ToCacheEntry() ([]byte, error) {
+	s.smu.Lock()
+	defer s.smu.Unlock()
+
+	entry := cacheEntry{
+		Identifiers:     s.GetIdentifiers(),
+		Subscriptions:   s.subscriptions.ToMap(),
+		ConnectionState: *s.env.ConnectionState,
+		ChannelsState:   *s.env.ChannelStates,
+	}
+
+	return json.Marshal(&entry)
+}
+
+func (s *Session) RestoreFromCache(cached []byte) error {
+	var entry cacheEntry
+
+	err := json.Unmarshal(cached, &entry)
+
+	if err != nil {
+		return err
+	}
+
+	s.smu.Lock()
+	defer s.smu.Unlock()
+
+	s.SetIdentifiers(entry.Identifiers)
+	s.env.MergeConnectionState(&entry.ConnectionState)
+
+	for k := range entry.ChannelsState {
+		v := entry.ChannelsState[k]
+		s.env.MergeChannelState(k, &v)
+	}
+
+	for k, v := range entry.Subscriptions {
+		s.subscriptions.AddChannel(k)
+
+		for _, stream := range v {
+			s.subscriptions.AddChannelStream(k, stream)
+		}
+	}
+
+	return nil
+}
+
+func (s *Session) PrevSid() (psid string) {
+	if s.env.Headers != nil {
+		if v, ok := (*s.env.Headers)[prevSessionHeader]; ok {
+			psid = v
+			// This header is of one-time use,
+			// no need to leak it to the RPC app
+			delete(*s.env.Headers, prevSessionHeader)
+			return
+		}
+	}
+
+	u, err := url.Parse(s.env.URL)
+
+	if err != nil {
+		return
+	}
+
+	m, err := url.ParseQuery(u.RawQuery)
+
+	if err != nil {
+		return
+	}
+
+	if v, ok := m[prevSessionParam]; ok {
+		psid = v[0]
+	}
+
+	return
 }
 
 func (s *Session) disconnectFromNode() {

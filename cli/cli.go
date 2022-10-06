@@ -10,6 +10,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/anycable/anycable-go/broker"
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/config"
 	"github.com/anycable/anycable-go/enats"
@@ -34,6 +35,7 @@ import (
 
 type controllerFactory = func(*metricspkg.Metrics, *config.Config) (node.Controller, error)
 type disconnectorFactory = func(*node.Node, *config.Config) (node.Disconnector, error)
+type brokerFactory = func(broker.Broadcaster, *config.Config) (broker.Broker, error)
 type subscriberFactory = func(pubsub.Handler, *config.Config) (pubsub.Subscriber, error)
 type websocketHandler = func(*node.Node, *config.Config) (http.Handler, error)
 
@@ -51,6 +53,7 @@ type Runner struct {
 	controllerFactory       controllerFactory
 	disconnectorFactory     disconnectorFactory
 	subscriberFactory       subscriberFactory
+	brokerFactory           brokerFactory
 	websocketHandlerFactory websocketHandler
 
 	websocketEndpoints map[string]websocketHandler
@@ -113,6 +116,10 @@ func (r *Runner) checkAndSetDefaults() error {
 		return errorx.AssertionFailed.New("Controller is blank, specify WithController()")
 	}
 
+	if r.brokerFactory == nil {
+		return errorx.AssertionFailed.New("Broker is blank, specify WithBroker()")
+	}
+
 	if r.subscriberFactory == nil {
 		return errorx.AssertionFailed.New("Subscriber is blank, specify WithController()")
 	}
@@ -148,6 +155,17 @@ func (r *Runner) Run() error {
 	}
 
 	appNode := node.NewNode(controller, metrics, &r.config.App)
+
+	appBroker, err := r.brokerFactory(appNode, r.config)
+	if err != nil {
+		return errorx.Decorate(err, "!!! Failed to initialize broker !!!")
+	}
+
+	if appBroker != nil {
+		r.log.Infof(appBroker.Announce())
+		appNode.SetBroker(appBroker)
+	}
+
 	err = appNode.Start()
 
 	if err != nil {

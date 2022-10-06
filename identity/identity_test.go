@@ -37,7 +37,7 @@ func TestIdentifiableController(t *testing.T) {
 	})
 
 	t.Run("Authenticate (success)", func(t *testing.T) {
-		expected := &common.ConnectResult{Identifier: "test_ids", Transmissions: []string{"{\"type\":\"welcome\"}"}, Status: common.SUCCESS}
+		expected := &common.ConnectResult{Identifier: "test_ids", Transmissions: []string{`{"type":"welcome","sid":"2021"}`}, Status: common.SUCCESS}
 
 		controller.On("Authenticate", "2021", env).Return(nil, errors.New("shouldn't be called"))
 		identifier.On("Identify", "2021", env).Return(expected, nil)
@@ -78,7 +78,7 @@ func TestIdentifiableController(t *testing.T) {
 	})
 
 	t.Run("Authenticate (noop -> passthrough)", func(t *testing.T) {
-		expected := &common.ConnectResult{Identifier: "test_ids", Transmissions: []string{"{\"type\":\"welcome\"}"}, Status: common.SUCCESS}
+		expected := &common.ConnectResult{Identifier: "test_ids", Transmissions: []string{`{"type":"welcome","sid":"2022"}`}, Status: common.SUCCESS}
 
 		controller.On("Authenticate", "2022", env).Return(expected, nil)
 		identifier.On("Identify", "2022", env).Return(nil, nil)

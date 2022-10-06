@@ -1,6 +1,7 @@
 package common
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -86,4 +87,37 @@ func TestConfirmationMessage(t *testing.T) {
 
 func TestRejectionMessage(t *testing.T) {
 	assert.Equal(t, "{\"type\":\"reject_subscription\",\"identifier\":\"test_channel\"}", RejectionMessage("test_channel"))
+}
+
+func TestMessageJSONSerialization(t *testing.T) {
+	command := `{
+		"command": "subscribe",
+		"identifier": "test_channel",
+		"data": {"foo": "bar"},
+		"history": {
+			"since": 20202020,
+			"streams": {
+				"1": {
+					"epoch": "test",
+					"offset": 14
+				},
+				"2": {
+					"epoch": "test",
+					"offset": 42
+				}
+			}
+		}
+	}`
+
+	var msg Message
+
+	err := json.Unmarshal([]byte(command), &msg)
+	assert.NoError(t, err)
+
+	assert.Equal(t, msg.Command, "subscribe")
+	assert.Equal(t, msg.Identifier, "test_channel")
+	assert.Equal(t, msg.Data.(map[string]interface{}), map[string]interface{}{"foo": "bar"})
+	assert.EqualValues(t, msg.History.Since, 20202020)
+	assert.Equal(t, msg.History.Streams["1"], HistoryPosition{Epoch: "test", Offset: 14})
+	assert.Equal(t, msg.History.Streams["2"], HistoryPosition{Epoch: "test", Offset: 42})
 }

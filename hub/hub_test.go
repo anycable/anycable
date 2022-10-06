@@ -244,11 +244,11 @@ func TestBroadcastMessage(t *testing.T) {
 	})
 
 	t.Run("Broadcast with stream data", func(t *testing.T) {
-		hub.BroadcastMessage(&common.StreamMessage{Stream: "test", Data: "\"ciao\""})
+		hub.BroadcastMessage(&common.StreamMessage{Stream: "test", Data: "\"ciao\"", Epoch: "xyz", Offset: 2022})
 
 		msg, err := session.Read()
 		assert.Nil(t, err)
-		assert.Equal(t, "{\"identifier\":\"test_channel\",\"message\":\"ciao\"}", string(msg))
+		assert.Equal(t, "{\"identifier\":\"test_channel\",\"message\":\"ciao\",\"stream_id\":\"test\",\"epoch\":\"xyz\",\"offset\":2022}", string(msg))
 	})
 }
 
