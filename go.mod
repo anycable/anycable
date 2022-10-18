@@ -16,7 +16,6 @@ require (
 	github.com/mattn/go-isatty v0.0.14
 	github.com/mitchellh/go-mruby v0.0.0-20200315023956-207cedc21542
 	github.com/namsral/flag v1.7.4-pre
-	github.com/nats-io/nats-server/v2 v2.8.4
 	github.com/nats-io/nats.go v1.16.0
 	github.com/stretchr/testify v1.7.4
 	github.com/syossan27/tebata v0.0.0-20180602121909-b283fe4bc5ba
@@ -29,9 +28,7 @@ require (
 require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/klauspost/compress v1.14.4 // indirect
-	github.com/minio/highwayhash v1.0.2 // indirect
-	github.com/nats-io/jwt/v2 v2.2.1-0.20220330180145-442af02fd36a // indirect
+	github.com/nats-io/nats-server/v2 v2.8.4 // indirect
 	github.com/nats-io/nkeys v0.3.0 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
@@ -42,7 +39,6 @@ require (
 	golang.org/x/crypto v0.0.0-20220315160706-3147a52a75dd // indirect
 	golang.org/x/sys v0.0.0-20220622161953-175b2fd9d664 // indirect
 	golang.org/x/text v0.3.7 // indirect
-	golang.org/x/time v0.0.0-20211116232009-f0f3c7e86c11 // indirect
 	google.golang.org/genproto v0.0.0-20220622171453-ea41d75dfa0f // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

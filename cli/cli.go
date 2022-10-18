@@ -265,7 +265,8 @@ func (r *Runner) defaultDisconnector(n *node.Node, c *config.Config) (node.Disco
 }
 
 func (r *Runner) defaultWebSocketHandler(n *node.Node, c *config.Config) (http.Handler, error) {
-	return ws.WebsocketHandler(c.Headers, common.ActionCableProtocols(), &c.WS, func(wsc *websocket.Conn, info *ws.RequestInfo, callback func()) error {
+	extractor := ws.HeadersExtractor{Headers: c.Headers, Cookies: c.Cookies}
+	return ws.WebsocketHandler(common.ActionCableProtocols(), extractor, &c.WS, func(wsc *websocket.Conn, info *ws.RequestInfo, callback func()) error {
 		wrappedConn := ws.NewConnection(wsc)
 		session := node.NewSession(n, wrappedConn, info.URL, info.Headers, info.UID)
 

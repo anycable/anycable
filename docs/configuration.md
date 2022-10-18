@@ -30,6 +30,10 @@ RPC service address (default: `"localhost:50051"`).
 
 Comma-separated list of headers to proxy to RPC (default: `"cookie"`).
 
+**--proxy-cookies** (`ANYCABLE_PROXY_COOKIES`)
+
+Comma-separated list of cookies to proxy to RPC (default: all cookies).
+
 **--allowed_origins** (`ANYCABLE_ALLOWED_ORIGINS`)
 
 Comma-separated list of hostnames to check the Origin header against during the WebSocket Upgrade.
