@@ -16,7 +16,14 @@ AnyCable-Go uses the same major version number (and minor version as well for 0.
 
 ## Installation
 
-The easiest way to install AnyCable-Go is to [download](https://github.com/anycable/anycable-go/releases) a pre-compiled binary.
+The easiest way to install AnyCable-Go is to [download](https://github.com/anycable/anycable-go/releases) a pre-compiled binary:
+
+```shell
+# Example for `anycable-go-linux-amd64`
+curl -fsSL https://github.com/anycable/anycable-go/releases/download/v1.2.2/anycable-go-linux-amd64 -o anycable-go
+chmod +x anycable-go
+./anycable-go -v
+```
 
 MacOS users could install it with [Homebrew](https://brew.sh/)
 
@@ -73,7 +80,7 @@ You can run tests with the following commands:
 # Run Golang unit tests
 make test
 
-# run once
+# Run once
 make prepare
 
 # Run integrations tests
