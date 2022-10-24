@@ -120,7 +120,7 @@ module AnyCable
           retry_count += 1
           if MAX_ATTEMPTS < retry_count
             logger.error("Broadcast request failed: #{e.message}")
-            return 
+            return
           end
 
           sleep((DELAY**retry_count).to_int * retry_count)
