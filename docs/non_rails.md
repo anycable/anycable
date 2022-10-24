@@ -51,10 +51,9 @@ connection = factory.call(socket, **options)
 Where:
 
 - `socket` – is an object, representing client's socket (say, _socket stub_) (see [socket.rb](https://github.com/anycable/anycable/blob/master/lib/anycable/socket.rb))
-
 - `options` may contain:
-  - `identifiers` – a JSON string returned by `connection.identifiers_json` on connection (see below)
-  - `subscriptions` – a list of channels identifiers for the connection.
+   - `identifiers`: a JSON string returned by `connection.identifiers_json` on connection (see below)
+   - `subscriptions`: a list of channels identifiers for the connection.
 
 Connection interface:
 
