@@ -28,6 +28,7 @@ module AnyCable
       redis_url: ENV.fetch("REDIS_URL", "redis://localhost:6379/5"),
       redis_sentinels: nil,
       redis_channel: "__anycable__",
+      redis_tls_verify: true,
 
       ### NATS options
       nats_servers: "nats://localhost:4222",
@@ -57,6 +58,7 @@ module AnyCable
       coerce_types(
         redis_sentinels: {type: nil, array: true},
         nats_servers: {type: nil, array: true},
+        redis_tls_verify: :boolean,
         nats_dont_randomize_servers: :boolean,
         debug: :boolean,
         version_check_enabled: :boolean
@@ -94,6 +96,7 @@ module AnyCable
           --redis-url=url                   Redis URL for pub/sub, default: REDIS_URL or "redis://localhost:6379/5"
           --redis-channel=name              Redis channel for broadcasting, default: "__anycable__"
           --redis-sentinels=<...hosts>      Redis Sentinel followers addresses (as a comma-separated list), default: nil
+          --redis-tls-verify=yes|no         Whether to perform server certificate check in case of rediss:// protocol. Default: yes
 
       NATS PUB/SUB
           --nats-servers=<...addresses>     NATS servers for pub/sub, default: "nats://localhost:4222"
@@ -119,7 +122,7 @@ module AnyCable
 
         params[:sentinels] = sentinels.map { |sentinel| parse_sentinel(sentinel) }
       end.tap do |params|
-        next unless redis_url.match?(/rediss:\/\//)
+        next unless redis_url.match?(/rediss:\/\//) && !redis_tls_verify?
 
         params[:ssl_params] = {verify_mode: OpenSSL::SSL::VERIFY_NONE}
       end

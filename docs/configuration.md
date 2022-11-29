@@ -45,6 +45,10 @@ Redis URL for pub/sub (default: `"redis://localhost:6379/5"`).
 
 Redis channel for broadcasting (default: `"__anycable__"`).
 
+**redis_tls_verify** (`ANYCABLE_REDIS_TLS_VERIFY`, `--redis-tls-verify`)
+
+Whether to validate Redis server TLS certificate if `rediss://` protocol is used (default: `true`)
+
 **log_level** (`ANYCABLE_LOG_LEVEL`, `--log-level`)
 
 Logging level (default: `"info"`).
