@@ -21,6 +21,7 @@ const (
 	defaultRedisURL                       = "redis://localhost:6379/5"
 	defaultRedisChannel                   = "__anycable__"
 	defaultRedisSentinelDiscoveryInterval = 30
+	defaultTLSVerify                      = true
 )
 
 // RedisConfig contains Redis pubsub adapter configuration
@@ -35,6 +36,8 @@ type RedisConfig struct {
 	SentinelDiscoveryInterval int
 	// Redis keepalive ping interval (seconds)
 	KeepalivePingInterval int
+	// Whether to check server's certificate for validity (in case of rediss:// protocol)
+	TLSVerify bool
 }
 
 // NewRedisConfig builds a new config for Redis pubsub
@@ -44,6 +47,7 @@ func NewRedisConfig() RedisConfig {
 		URL:                       defaultRedisURL,
 		Channel:                   defaultRedisChannel,
 		SentinelDiscoveryInterval: defaultRedisSentinelDiscoveryInterval,
+		TLSVerify:                 defaultTLSVerify,
 	}
 }
 
@@ -59,6 +63,7 @@ type RedisSubscriber struct {
 	reconnectAttempt          int
 	uri                       *url.URL
 	log                       *log.Entry
+	tlsVerify                 bool
 }
 
 // NewRedisSubscriber returns new RedisSubscriber struct
@@ -72,6 +77,7 @@ func NewRedisSubscriber(node Handler, config *RedisConfig) *RedisSubscriber {
 		pingInterval:              time.Duration(config.KeepalivePingInterval),
 		reconnectAttempt:          0,
 		log:                       log.WithFields(log.Fields{"context": "pubsub"}),
+		tlsVerify:                 config.TLSVerify,
 	}
 }
 
@@ -104,7 +110,7 @@ func (s *RedisSubscriber) Start(done chan (error)) error {
 					redis.DialConnectTimeout(timeout),
 					redis.DialReadTimeout(timeout),
 					redis.DialReadTimeout(timeout),
-					redis.DialTLSSkipVerify(true),
+					redis.DialTLSSkipVerify(!s.tlsVerify),
 				}
 
 				sentinelURI, err := url.Parse(fmt.Sprintf("redis://%s", addr))
@@ -209,7 +215,7 @@ func (s *RedisSubscriber) Shutdown() error {
 
 func (s *RedisSubscriber) listen() error {
 	dialOptions := []redis.DialOption{
-		redis.DialTLSSkipVerify(true),
+		redis.DialTLSSkipVerify(!s.tlsVerify),
 	}
 	c, err := redis.DialURL(s.url, dialOptions...)
 

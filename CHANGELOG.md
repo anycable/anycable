@@ -2,6 +2,10 @@
 
 ## master
 
+- Validate Redis TLS connections by default. ([@Envek][])
+
+- Add `redis_tls_verify` setting to disable validation of Redis server TLS certificate. ([@Envek][])
+
 ## 1.2.2 (2022-08-10)
 
 - Add NATS pub/sub adapter. ([@palkan][])
@@ -176,3 +180,4 @@ See [Changelog](https://github.com/anycable/anycable-go/blob/0-6-stable/CHANGELO
 [@prburgu]: https://github.com/prburgu
 [@skryukov]: https://github.com/skryukov
 [@ryansch]: https://github.com/ryansch
+[@Envek]: https://github.com/Envek

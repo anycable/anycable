@@ -234,6 +234,13 @@ func redisCLIFlags(c *config.Config) []cli.Flag {
 			Value:       c.Redis.KeepalivePingInterval,
 			Destination: &c.Redis.KeepalivePingInterval,
 		},
+
+		&cli.BoolFlag{
+			Name:        "redis_tls_verify",
+			Usage:       "Verify Redis server TLS certificate (only if URL protocol is rediss://)",
+			Value:       c.Redis.TLSVerify,
+			Destination: &c.Redis.TLSVerify,
+		},
 	})
 }
 
