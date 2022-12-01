@@ -2,7 +2,11 @@
 
 ## master
 
+## 1.2.3 (2022-12-01)
+
 - Add `redis_tls_verify` setting to enable validation of Redis server TLS certificate. ([@Envek][])
+
+- Add `--proxy-cookies` setting to filter cookies passed to RPC. ([@rafaelrubbioli][])
 
 ## 1.2.2 (2022-08-10)
 
@@ -179,3 +183,4 @@ See [Changelog](https://github.com/anycable/anycable-go/blob/0-6-stable/CHANGELO
 [@skryukov]: https://github.com/skryukov
 [@ryansch]: https://github.com/ryansch
 [@Envek]: https://github.com/Envek
+[@rafaelrubbioli]: https://github.com/rafaelrubbioli
