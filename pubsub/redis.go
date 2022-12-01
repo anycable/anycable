@@ -21,7 +21,7 @@ const (
 	defaultRedisURL                       = "redis://localhost:6379/5"
 	defaultRedisChannel                   = "__anycable__"
 	defaultRedisSentinelDiscoveryInterval = 30
-	defaultTLSVerify                      = true
+	defaultTLSVerify                      = false
 )
 
 // RedisConfig contains Redis pubsub adapter configuration
