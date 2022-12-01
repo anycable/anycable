@@ -8,6 +8,9 @@ module AnyCable
     def redis_sentinels=: (Array[String]) -> void
     def redis_channel: () -> String
     def redis_channel=: (String) -> void
+    def redis_tls_verify: () -> bool
+    def redis_tls_verify?: () -> bool
+    def redis_tls_verify=: (bool) -> void
     def nats_servers: () -> Array[String]
     def nats_servers=: (Array[String]) -> void
     def nats_channel: () -> String

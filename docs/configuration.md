@@ -47,7 +47,7 @@ Redis channel for broadcasting (default: `"__anycable__"`).
 
 **redis_tls_verify** (`ANYCABLE_REDIS_TLS_VERIFY`, `--redis-tls-verify`)
 
-Whether to validate Redis server TLS certificate if `rediss://` protocol is used (default: `true`)
+Whether to validate Redis server TLS certificate if `rediss://` protocol is used (default: `true`). Use `ANYCABLE_REDIS_TLS_VERIFY=no` to disable TLS verification.
 
 **log_level** (`ANYCABLE_LOG_LEVEL`, `--log-level`)
 
