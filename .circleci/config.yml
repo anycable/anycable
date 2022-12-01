@@ -501,7 +501,9 @@ jobs:
         command: sha256sum anycable-go-* > SHA256SUM
     - run:
         name: Install ghr tool
-        command: env GO111MODULE=off go get github.com/tcnksm/ghr
+        command: |
+          curl -L https://github.com/tcnksm/ghr/releases/download/v0.16.0/ghr_v0.16.0_linux_amd64.tar.gz -o - | tar -xz
+          cp ghr_v0.16.0_linux_amd64/ghr ./
     - run:
         name: Upload GitHub release
-        command: ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -prerelease -delete ${CIRCLE_TAG} ./
+        command: ./ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -prerelease -delete ${CIRCLE_TAG} ./
