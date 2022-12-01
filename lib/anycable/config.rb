@@ -28,7 +28,7 @@ module AnyCable
       redis_url: ENV.fetch("REDIS_URL", "redis://localhost:6379/5"),
       redis_sentinels: nil,
       redis_channel: "__anycable__",
-      redis_tls_verify: true,
+      redis_tls_verify: false,
 
       ### NATS options
       nats_servers: "nats://localhost:4222",

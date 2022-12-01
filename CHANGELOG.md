@@ -2,8 +2,6 @@
 
 ## master
 
-- Validate Redis TLS connections by default. ([@Envek][])
-
 - Add `ANYCABLE_REDIS_TLS_VERIFY` setting to disable validation of Redis server TLS certificate. ([@Envek][])
 
 ## 1.2.4 (2022-08-10)

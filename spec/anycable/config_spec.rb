@@ -85,19 +85,21 @@ describe AnyCable::Config do
       around { |ex| with_env("ANYCABLE_REDIS_URL" => "rediss://localhost:6379/3", "ANYCABLE_REDIS_SENTINELS" => "", &ex) }
 
       specify do
-        expect(subject.to_redis_params).to eq(url: "rediss://localhost:6379/3")
-      end
-    end
-
-    context "with TLS and server certificate verification disabled" do
-      subject(:config) { described_class.new }
-
-      around { |ex| with_env("ANYCABLE_REDIS_URL" => "rediss://localhost:6379/3", "ANYCABLE_REDIS_SENTINELS" => "", "ANYCABLE_REDIS_TLS_VERIFY" => "no", &ex) }
-
-      specify do
         expect(subject.to_redis_params).to eq(
           url: "rediss://localhost:6379/3",
           ssl_params: {verify_mode: OpenSSL::SSL::VERIFY_NONE}
+        )
+      end
+    end
+
+    context "with TLS and server certificate verification enabled" do
+      subject(:config) { described_class.new }
+
+      around { |ex| with_env("ANYCABLE_REDIS_URL" => "rediss://localhost:6379/3", "ANYCABLE_REDIS_TLS_VERIFY" => "1", "ANYCABLE_REDIS_SENTINELS" => "", &ex) }
+
+      specify do
+        expect(subject.to_redis_params).to eq(
+          url: "rediss://localhost:6379/3"
         )
       end
     end
