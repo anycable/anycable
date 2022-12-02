@@ -4,6 +4,10 @@
 
 - Setting the redis driver to ruby specified. ([@smasry][])
 
+- Add mutual TLS support for connections to Redis. ([@Envek][])
+
+  `ANYCABLE_REDIS_TLS_CLIENT_CERT_PATH` and `ANYCABLE_REDIS_TLS_CLIENT_KEY_PATH` settings to specify client certificate and key when connecting to Redis server that requires clients to authenticate themselves.
+
 ## 1.2.5 (2022-12-01)
 
 - Add `ANYCABLE_REDIS_TLS_VERIFY` setting to disable validation of Redis server TLS certificate. ([@Envek][])
