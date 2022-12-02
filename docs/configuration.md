@@ -49,6 +49,14 @@ Redis channel for broadcasting (default: `"__anycable__"`).
 
 Whether to validate Redis server TLS certificate if `rediss://` protocol is used (default: `false`).
 
+**redis_tls_client_cert_path** (`ANYCABLE_REDIS_TLS_CLIENT_CERT_PATH`, `--redis-tls-client_cert-path`)
+
+Path to file with client TLS certificate in PEM format if Redis server requires client authentication.
+
+**redis_tls_client_key_path** (`ANYCABLE_REDIS_TLS_CLIENT_KEY_PATH`, `--redis-tls-client_key-path`)
+
+Path to file with private key for client TLS certificate if Redis server requires client authentication.
+
 **log_level** (`ANYCABLE_LOG_LEVEL`, `--log-level`)
 
 Logging level (default: `"info"`).

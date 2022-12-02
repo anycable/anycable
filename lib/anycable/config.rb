@@ -29,6 +29,8 @@ module AnyCable
       redis_sentinels: nil,
       redis_channel: "__anycable__",
       redis_tls_verify: false,
+      redis_tls_client_cert_path: nil,
+      redis_tls_client_key_path: nil,
 
       ### NATS options
       nats_servers: "nats://localhost:4222",
@@ -97,6 +99,8 @@ module AnyCable
           --redis-channel=name              Redis channel for broadcasting, default: "__anycable__"
           --redis-sentinels=<...hosts>      Redis Sentinel followers addresses (as a comma-separated list), default: nil
           --redis-tls-verify=yes|no         Whether to perform server certificate check in case of rediss:// protocol. Default: yes
+          --redis-tls-client_cert-path=path Default: nil
+          --redis-tls-client_key-path=path  Default: nil
 
       NATS PUB/SUB
           --nats-servers=<...addresses>     NATS servers for pub/sub, default: "nats://localhost:4222"
@@ -122,9 +126,17 @@ module AnyCable
 
         params[:sentinels] = sentinels.map { |sentinel| parse_sentinel(sentinel) }
       end.tap do |params|
-        next unless redis_url.match?(/rediss:\/\//) && !redis_tls_verify?
+        next unless redis_url.match?(/rediss:\/\//)
 
-        params[:ssl_params] = {verify_mode: OpenSSL::SSL::VERIFY_NONE}
+        if !!redis_tls_client_cert_path ^ !!redis_tls_client_key_path
+          raise_validation_error "Both Redis TLS client certificate and private key must be specified (or none of them)"
+        end
+
+        params[:ssl_params] = {
+          verify_mode: (OpenSSL::SSL::VERIFY_NONE unless redis_tls_verify?),
+          cert: (OpenSSL::X509::Certificate.new(File.read(redis_tls_client_cert_path)) if redis_tls_client_cert_path),
+          key: (OpenSSL::PKey.read(File.read(redis_tls_client_key_path)) if redis_tls_client_key_path)
+        }.compact
       end
     end
 
