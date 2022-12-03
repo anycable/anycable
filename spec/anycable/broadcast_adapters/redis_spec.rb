@@ -33,6 +33,12 @@ describe AnyCable::BroadcastAdapters::Redis do
       .with(url: "redis://local.redis:123", driver: :ruby)
   end
 
+  it "allows for other drivers" do
+    described_class.new(driver: :memory)
+    expect(Redis).to have_received(:new)
+      .with(driver: :memory, url: anything)
+  end
+
   describe "#broadcast" do
     it "publish stream data to channel" do
       allow(redis_conn).to receive(:publish)
