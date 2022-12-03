@@ -2,6 +2,8 @@
 
 ## master
 
+- Setting the redis driver to ruby specified. ([@smasry][])
+
 ## 1.2.5 (2022-12-01)
 
 - Add `ANYCABLE_REDIS_TLS_VERIFY` setting to disable validation of Redis server TLS certificate. ([@Envek][])
