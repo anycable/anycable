@@ -22,7 +22,7 @@ type RequestInfo struct {
 	Headers *map[string]string
 }
 
-func NewRequestInfo(r *http.Request, extractor *HeadersExtractor) (*RequestInfo, error) {
+func NewRequestInfo(r *http.Request, extractor HeadersExtractor) (*RequestInfo, error) {
 	headers := extractor.FromRequest(r)
 	uid, err := FetchUID(r)
 
@@ -33,12 +33,16 @@ func NewRequestInfo(r *http.Request, extractor *HeadersExtractor) (*RequestInfo,
 	return &RequestInfo{UID: uid, Headers: &headers}, nil
 }
 
-type HeadersExtractor struct {
+type HeadersExtractor interface {
+	FromRequest(r *http.Request) map[string]string
+}
+
+type DefaultHeadersExtractor struct {
 	Headers []string
 	Cookies []string
 }
 
-func (h *HeadersExtractor) FromRequest(r *http.Request) map[string]string {
+func (h *DefaultHeadersExtractor) FromRequest(r *http.Request) map[string]string {
 	res := make(map[string]string)
 
 	for _, header := range h.Headers {
@@ -86,7 +90,7 @@ func WebsocketHandler(subprotocols []string, headersExtractor HeadersExtractor, 
 			url = fmt.Sprintf("%s%s%s", scheme, r.Host, url)
 		}
 
-		info, err := NewRequestInfo(r, &headersExtractor)
+		info, err := NewRequestInfo(r, headersExtractor)
 		if err != nil {
 			CloseWithReason(wsc, websocket.CloseAbnormalClosure, err.Error())
 			return

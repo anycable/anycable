@@ -32,7 +32,7 @@ func TestHeadersExtractor_FromRequest(t *testing.T) {
 	req.Header.Set("Accept-Language", "ru")
 
 	t.Run("Without specified headers ", func(t *testing.T) {
-		extractor := HeadersExtractor{}
+		extractor := DefaultHeadersExtractor{}
 		headers := extractor.FromRequest(req)
 
 		assert.Len(t, headers, 1)
@@ -40,7 +40,7 @@ func TestHeadersExtractor_FromRequest(t *testing.T) {
 	})
 
 	t.Run("With specified headers ", func(t *testing.T) {
-		extractor := HeadersExtractor{Headers: []string{"cookie", "x-api-token"}}
+		extractor := DefaultHeadersExtractor{Headers: []string{"cookie", "x-api-token"}}
 		headers := extractor.FromRequest(req)
 
 		assert.Len(t, headers, 3)
@@ -52,7 +52,7 @@ func TestHeadersExtractor_FromRequest(t *testing.T) {
 	})
 
 	t.Run("With specified headers and cookie filter", func(t *testing.T) {
-		extractor := HeadersExtractor{Headers: []string{"cookie"}, Cookies: []string{"yummy_cookie"}}
+		extractor := DefaultHeadersExtractor{Headers: []string{"cookie"}, Cookies: []string{"yummy_cookie"}}
 		headers := extractor.FromRequest(req)
 
 		assert.Len(t, headers, 2)
