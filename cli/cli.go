@@ -223,6 +223,14 @@ func (r *Runner) Run() error {
 			return errorx.Decorate(err, "couldn't configure pub/sub")
 		}
 
+		if broadcaster.IsFanout() && subscriber.IsMultiNode() {
+			return errorx.IllegalState.New("Using a fanout broadcaster with a multi-node subscriber is not allowed")
+		}
+
+		if !broadcaster.IsFanout() && !subscriber.IsMultiNode() {
+			r.log.Warnf("Using a single node subscriber with a non-distributed broadcaster; each broadcasted message is only processed by a single node")
+		}
+
 		err = broadcaster.Start(r.errChan)
 		if err != nil {
 			return errorx.Decorate(err, "!!! Broadcaster failed !!!")

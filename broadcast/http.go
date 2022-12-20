@@ -43,6 +43,8 @@ type HTTPBroadcaster struct {
 	log        *log.Entry
 }
 
+var _ Broadcaster = (*HTTPBroadcaster)(nil)
+
 // NewHTTPBroadcaster builds a new HTTPSubscriber struct
 func NewHTTPBroadcaster(node Handler, config *HTTPConfig) *HTTPBroadcaster {
 	authHeader := ""
@@ -58,6 +60,10 @@ func NewHTTPBroadcaster(node Handler, config *HTTPConfig) *HTTPBroadcaster {
 		path:       config.Path,
 		authHeader: authHeader,
 	}
+}
+
+func (HTTPBroadcaster) IsFanout() bool {
+	return false
 }
 
 // Start creates an HTTP server or attaches a handler to the existing one

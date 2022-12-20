@@ -8,6 +8,10 @@ package broadcast
 type Broadcaster interface {
 	Start(done chan (error)) error
 	Shutdown() error
+	// Returns true if the broadcaster fan-outs the same event
+	// to all nodes. Such subscriber shouldn't be used with real pub/sub
+	// engines (which are responsible for message distribution)
+	IsFanout() bool
 }
 
 type Handler interface {

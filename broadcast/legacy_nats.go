@@ -5,7 +5,7 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
-type NATSBroadcaster struct {
+type LegacyNATSBroadcaster struct {
 	conn    *nats.Conn
 	handler Handler
 	config  *NATSConfig
@@ -13,7 +13,7 @@ type NATSBroadcaster struct {
 	log *log.Entry
 }
 
-var _ Broadcaster = (*NATSBroadcaster)(nil)
+var _ Broadcaster = (*LegacyNATSBroadcaster)(nil)
 
 type NATSConfig struct {
 	Servers              string
@@ -25,15 +25,19 @@ func NewNATSConfig() NATSConfig {
 	return NATSConfig{Servers: nats.DefaultURL, Channel: "__anycable__"}
 }
 
-func NewNATSBroadcaster(node Handler, c *NATSConfig) *NATSBroadcaster {
-	return &NATSBroadcaster{
+func NewLegacyNATSBroadcaster(node Handler, c *NATSConfig) *LegacyNATSBroadcaster {
+	return &LegacyNATSBroadcaster{
 		config:  c,
 		handler: node,
 		log:     log.WithFields(log.Fields{"context": "pubsub", "provider": "nats"}),
 	}
 }
 
-func (s *NATSBroadcaster) Start(done chan (error)) error {
+func (LegacyNATSBroadcaster) IsFanout() bool {
+	return true
+}
+
+func (s *LegacyNATSBroadcaster) Start(done chan (error)) error {
 	connectOptions := []nats.Option{
 		nats.RetryOnFailedConnect(true),
 		nats.MaxReconnects(maxReconnectAttempts),
@@ -74,7 +78,7 @@ func (s *NATSBroadcaster) Start(done chan (error)) error {
 	return nil
 }
 
-func (s *NATSBroadcaster) Shutdown() error {
+func (s *LegacyNATSBroadcaster) Shutdown() error {
 	if s.conn != nil {
 		s.conn.Close()
 	}
