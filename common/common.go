@@ -3,7 +3,6 @@ package common
 
 import (
 	"encoding/json"
-	"fmt"
 )
 
 // Command result status
@@ -249,6 +248,16 @@ type RemoteCommandMessage struct {
 	Payload json.RawMessage `json:"payload,omitempty"`
 }
 
+func (m *RemoteCommandMessage) ToRemoteDisconnectMessage() (*RemoteDisconnectMessage, error) {
+	dmsg := RemoteDisconnectMessage{}
+
+	if err := json.Unmarshal(m.Payload, &dmsg); err != nil {
+		return nil, err
+	}
+
+	return &dmsg, nil
+}
+
 // RemoteDisconnectMessage contains information required to disconnect a session
 type RemoteDisconnectMessage struct {
 	Identifier string `json:"identifier"`
@@ -314,17 +323,7 @@ func PubSubMessageFromJSON(raw []byte) (interface{}, error) {
 		return nil, err
 	}
 
-	if rmsg.Command == "disconnect" {
-		dmsg := RemoteDisconnectMessage{}
-
-		if err := json.Unmarshal(rmsg.Payload, &dmsg); err != nil {
-			return nil, err
-		}
-
-		return dmsg, nil
-	}
-
-	return nil, fmt.Errorf("Unknown message: %s", raw)
+	return rmsg, nil
 }
 
 // ConfirmationMessage returns a subscription confirmation message for a specified identifier

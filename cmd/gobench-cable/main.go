@@ -29,6 +29,7 @@ func main() {
 		}),
 		cli.WithDefaultBroker(),
 		cli.WithDefaultSubscriber(),
+		cli.WithDefaultBroadcaster(),
 	}
 
 	runner, err := cli.NewRunner(c, opts)

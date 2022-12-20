@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"github.com/anycable/anycable-go/broadcast"
 	"github.com/anycable/anycable-go/broker"
 	"github.com/anycable/anycable-go/config"
 	"github.com/anycable/anycable-go/metrics"
@@ -39,6 +40,33 @@ func WithDefaultRPCController() Option {
 	})
 }
 
+// WithBroadcaster is an Option to set Runner broadaster
+func WithBroadcaster(fn broadcasterFactory) Option {
+	return func(r *Runner) error {
+		if r.broadcasterFactory != nil {
+			return errorx.IllegalArgument.New("Broadcaster has been already assigned")
+		}
+		r.broadcasterFactory = fn
+		return nil
+	}
+}
+
+// WithDefaultBroadcaster is an Option to set Runner subscriber to default broadcaster from config
+func WithDefaultBroadcaster() Option {
+	return WithBroadcaster(func(h broadcast.Handler, c *config.Config) (broadcast.Broadcaster, error) {
+		switch c.BroadcastAdapter {
+		case "http":
+			return broadcast.NewHTTPBroadcaster(h, &c.HTTPBroadcast), nil
+		case "redis":
+			return broadcast.NewRedisBroadcaster(h, &c.RedisBroadcast), nil
+		case "nats":
+			return broadcast.NewNATSBroadcaster(h, &c.NATSBroadcast), nil
+		default:
+			return nil, errorx.IllegalArgument.New("Unsupported broadcast adapter: %s", c.BroadcastAdapter)
+		}
+	})
+}
+
 // WithSubscriber is an Option to set Runner subscriber
 func WithSubscriber(fn subscriberFactory) Option {
 	return func(r *Runner) error {
@@ -53,7 +81,11 @@ func WithSubscriber(fn subscriberFactory) Option {
 // WithDefaultSubscriber is an Option to set Runner subscriber to pubsub.NewSubscriber
 func WithDefaultSubscriber() Option {
 	return WithSubscriber(func(h pubsub.Handler, c *config.Config) (pubsub.Subscriber, error) {
-		return pubsub.NewSubscriber(h, c.BroadcastAdapter, &c.Redis, &c.HTTPPubSub, &c.NATSPubSub)
+		if c.PubSubAdapter == "" {
+			return pubsub.NewLegacySubscriber(h), nil
+		}
+
+		return nil, errorx.IllegalArgument.New("Unsupported subscriber adapter: %s", c.PubSubAdapter)
 	})
 }
 
@@ -95,14 +127,14 @@ func WithWebSocketEndpoint(path string, fn websocketHandler) Option {
 
 // WithDefaultBroker is an Option to set Runner broker to default broker from config
 func WithDefaultBroker() Option {
-	return WithBroker(func(h broker.Broadcaster, c *config.Config) (broker.Broker, error) {
+	return WithBroker(func(br broker.Broadcaster, c *config.Config) (broker.Broker, error) {
 		if c.BrokerAdapter == "" {
-			return broker.NewLegacyBroker(h), nil
+			return broker.NewLegacyBroker(br), nil
 		}
 
 		switch c.BrokerAdapter {
 		case "memory":
-			b := broker.NewMemoryBroker(h, &c.Broker)
+			b := broker.NewMemoryBroker(br, &c.Broker)
 			return b, nil
 		default:
 			return nil, errorx.IllegalArgument.New("Unsupported broker adapter: %s", c.BrokerAdapter)

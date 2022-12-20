@@ -648,6 +648,8 @@ func TestHandlePubSub(t *testing.T) {
 	node.hub.AddSession(session2)
 	node.hub.SubscribeSession("15", "test", "test_channel")
 
+	node.broker.Subscribe("test")
+
 	node.HandlePubSub([]byte("{\"stream\":\"test\",\"data\":\"\\\"abc123\\\"\"}"))
 
 	expected := "{\"identifier\":\"test_channel\",\"message\":\"abc123\"}"

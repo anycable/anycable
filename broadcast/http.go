@@ -1,4 +1,4 @@
-package pubsub
+package broadcast
 
 import (
 	"fmt"
@@ -33,8 +33,8 @@ func NewHTTPConfig() HTTPConfig {
 	}
 }
 
-// HTTPSubscriber represents HTTP pub/sub
-type HTTPSubscriber struct {
+// HTTPBroadcaster represents HTTP pub/sub
+type HTTPBroadcaster struct {
 	port       int
 	path       string
 	authHeader string
@@ -43,15 +43,15 @@ type HTTPSubscriber struct {
 	log        *log.Entry
 }
 
-// NewHTTPSubscriber builds a new HTTPSubscriber struct
-func NewHTTPSubscriber(node Handler, config *HTTPConfig) *HTTPSubscriber {
+// NewHTTPBroadcaster builds a new HTTPSubscriber struct
+func NewHTTPBroadcaster(node Handler, config *HTTPConfig) *HTTPBroadcaster {
 	authHeader := ""
 
 	if config.Secret != "" {
 		authHeader = fmt.Sprintf("Bearer %s", config.Secret)
 	}
 
-	return &HTTPSubscriber{
+	return &HTTPBroadcaster{
 		node:       node,
 		log:        log.WithFields(log.Fields{"context": "pubsub"}),
 		port:       config.Port,
@@ -61,7 +61,7 @@ func NewHTTPSubscriber(node Handler, config *HTTPConfig) *HTTPSubscriber {
 }
 
 // Start creates an HTTP server or attaches a handler to the existing one
-func (s *HTTPSubscriber) Start(done chan (error)) error {
+func (s *HTTPBroadcaster) Start(done chan (error)) error {
 	server, err := server.ForPort(strconv.Itoa(s.port))
 
 	if err != nil {
@@ -85,7 +85,7 @@ func (s *HTTPSubscriber) Start(done chan (error)) error {
 }
 
 // Shutdown stops the HTTP server
-func (s *HTTPSubscriber) Shutdown() error {
+func (s *HTTPBroadcaster) Shutdown() error {
 	if s.server != nil {
 		s.server.Shutdown() //nolint:errcheck
 	}
@@ -94,7 +94,7 @@ func (s *HTTPSubscriber) Shutdown() error {
 }
 
 // Handler processes HTTP requests
-func (s *HTTPSubscriber) Handler(w http.ResponseWriter, r *http.Request) {
+func (s *HTTPBroadcaster) Handler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		s.log.Debugf("Invalid request method: %s", r.Method)
 		w.WriteHeader(422)

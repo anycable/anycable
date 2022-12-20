@@ -9,6 +9,7 @@ import (
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/mocks"
+	"github.com/anycable/anycable-go/pubsub"
 	"github.com/anycable/anycable-go/ws"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -298,7 +299,9 @@ func setupIntegrationNode() (*Node, *mocks.Controller) {
 	bconf := broker.NewConfig()
 	bconf.SessionsTTL = 2
 
-	br := broker.NewMemoryBroker(node, &bconf)
+	subscriber := pubsub.NewLegacySubscriber(node)
+
+	br := broker.NewMemoryBroker(subscriber, &bconf)
 	br.SetEpoch("2022")
 	node.SetBroker(br)
 

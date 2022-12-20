@@ -173,8 +173,8 @@ Use metrics_rotate_interval instead.`)
 	}
 
 	// Automatically set the URL of the embedded NATS as the pub/sub server URL
-	if c.EmbedNats && c.NATSPubSub.Servers == nats.DefaultURL {
-		c.NATSPubSub.Servers = c.EmbeddedNats.ServiceAddr
+	if c.EmbedNats && c.NATSBroadcast.Servers == nats.DefaultURL {
+		c.NATSBroadcast.Servers = c.EmbeddedNats.ServiceAddr
 	}
 
 	return &c, nil, false
@@ -271,7 +271,7 @@ func broadcastCLIFlags(c *config.Config) []cli.Flag {
 	return withDefaults(broadcastCategoryDescription, []cli.Flag{
 		&cli.StringFlag{
 			Name:        "broadcast_adapter",
-			Usage:       "Broadcasting adapter to use (redis, http or nats)",
+			Usage:       "Broadcasting adapter to use (http, redis or nats)",
 			Value:       c.BroadcastAdapter,
 			Destination: &c.BroadcastAdapter,
 		},
@@ -280,6 +280,12 @@ func broadcastCLIFlags(c *config.Config) []cli.Flag {
 			Usage:       "Broker engine to use (memory)",
 			Value:       c.BrokerAdapter,
 			Destination: &c.BrokerAdapter,
+		},
+		&cli.StringFlag{
+			Name:        "pubsub",
+			Usage:       "Pub/Sub adapter to use (redis or nats)",
+			Value:       c.PubSubAdapter,
+			Destination: &c.PubSubAdapter,
 		},
 		&cli.IntFlag{
 			Name:        "hub_gopool_size",
@@ -319,43 +325,43 @@ func redisCLIFlags(c *config.Config) []cli.Flag {
 		&cli.StringFlag{
 			Name:        "redis_url",
 			Usage:       "Redis url",
-			Value:       c.Redis.URL,
+			Value:       c.RedisBroadcast.URL,
 			EnvVars:     []string{envPrefix + "REDIS_URL", "REDIS_URL"},
-			Destination: &c.Redis.URL,
+			Destination: &c.RedisBroadcast.URL,
 		},
 
 		&cli.StringFlag{
 			Name:        "redis_channel",
 			Usage:       "Redis channel for broadcasts",
-			Value:       c.Redis.Channel,
-			Destination: &c.Redis.Channel,
+			Value:       c.RedisBroadcast.Channel,
+			Destination: &c.RedisBroadcast.Channel,
 		},
 
 		&cli.StringFlag{
 			Name:        "redis_sentinels",
 			Usage:       "Comma separated list of sentinel hosts, format: 'hostname:port,..'",
-			Destination: &c.Redis.Sentinels,
+			Destination: &c.RedisBroadcast.Sentinels,
 		},
 
 		&cli.IntFlag{
 			Name:        "redis_sentinel_discovery_interval",
 			Usage:       "Interval to rediscover sentinels in seconds",
-			Value:       c.Redis.SentinelDiscoveryInterval,
-			Destination: &c.Redis.SentinelDiscoveryInterval,
+			Value:       c.RedisBroadcast.SentinelDiscoveryInterval,
+			Destination: &c.RedisBroadcast.SentinelDiscoveryInterval,
 		},
 
 		&cli.IntFlag{
 			Name:        "redis_keepalive_interval",
 			Usage:       "Interval to periodically ping Redis to make sure it's alive",
-			Value:       c.Redis.KeepalivePingInterval,
-			Destination: &c.Redis.KeepalivePingInterval,
+			Value:       c.RedisBroadcast.KeepalivePingInterval,
+			Destination: &c.RedisBroadcast.KeepalivePingInterval,
 		},
 
 		&cli.BoolFlag{
 			Name:        "redis_tls_verify",
 			Usage:       "Verify Redis server TLS certificate (only if URL protocol is rediss://)",
-			Value:       c.Redis.TLSVerify,
-			Destination: &c.Redis.TLSVerify,
+			Value:       c.RedisBroadcast.TLSVerify,
+			Destination: &c.RedisBroadcast.TLSVerify,
 		},
 	})
 }
@@ -366,21 +372,21 @@ func httpBroadcastCLIFlags(c *config.Config) []cli.Flag {
 		&cli.IntFlag{
 			Name:        "http_broadcast_port",
 			Usage:       "HTTP pub/sub server port",
-			Value:       c.HTTPPubSub.Port,
-			Destination: &c.HTTPPubSub.Port,
+			Value:       c.HTTPBroadcast.Port,
+			Destination: &c.HTTPBroadcast.Port,
 		},
 
 		&cli.StringFlag{
 			Name:        "http_broadcast_path",
 			Usage:       "HTTP pub/sub endpoint path",
-			Value:       c.HTTPPubSub.Path,
-			Destination: &c.HTTPPubSub.Path,
+			Value:       c.HTTPBroadcast.Path,
+			Destination: &c.HTTPBroadcast.Path,
 		},
 
 		&cli.StringFlag{
 			Name:        "http_broadcast_secret",
 			Usage:       "HTTP pub/sub authorization secret",
-			Destination: &c.HTTPPubSub.Secret,
+			Destination: &c.HTTPBroadcast.Secret,
 		},
 	})
 }
@@ -391,21 +397,21 @@ func natsCLIFlags(c *config.Config) []cli.Flag {
 		&cli.StringFlag{
 			Name:        "nats_servers",
 			Usage:       "Comma separated list of NATS cluster servers",
-			Value:       c.NATSPubSub.Servers,
-			Destination: &c.NATSPubSub.Servers,
+			Value:       c.NATSBroadcast.Servers,
+			Destination: &c.NATSBroadcast.Servers,
 		},
 
 		&cli.StringFlag{
 			Name:        "nats_channel",
 			Usage:       "NATS channel for broadcasts",
-			Value:       c.NATSPubSub.Channel,
-			Destination: &c.NATSPubSub.Channel,
+			Value:       c.NATSBroadcast.Channel,
+			Destination: &c.NATSBroadcast.Channel,
 		},
 
 		&cli.BoolFlag{
 			Name:        "nats_dont_randomize_servers",
 			Usage:       "Pass this option to disable NATS servers randomization during (re-)connect",
-			Destination: &c.NATSPubSub.DontRandomizeServers,
+			Destination: &c.NATSBroadcast.DontRandomizeServers,
 		},
 	})
 }

@@ -1,11 +1,11 @@
-package pubsub
+package broadcast
 
 import (
 	"github.com/apex/log"
 	"github.com/nats-io/nats.go"
 )
 
-type NATSSubscriber struct {
+type NATSBroadcaster struct {
 	conn    *nats.Conn
 	handler Handler
 	config  *NATSConfig
@@ -13,7 +13,7 @@ type NATSSubscriber struct {
 	log *log.Entry
 }
 
-var _ Subscriber = (*NATSSubscriber)(nil)
+var _ Broadcaster = (*NATSBroadcaster)(nil)
 
 type NATSConfig struct {
 	Servers              string
@@ -25,15 +25,15 @@ func NewNATSConfig() NATSConfig {
 	return NATSConfig{Servers: nats.DefaultURL, Channel: "__anycable__"}
 }
 
-func NewNATSSubscriber(node Handler, c *NATSConfig) *NATSSubscriber {
-	return &NATSSubscriber{
+func NewNATSBroadcaster(node Handler, c *NATSConfig) *NATSBroadcaster {
+	return &NATSBroadcaster{
 		config:  c,
 		handler: node,
 		log:     log.WithFields(log.Fields{"context": "pubsub", "provider": "nats"}),
 	}
 }
 
-func (s *NATSSubscriber) Start(done chan (error)) error {
+func (s *NATSBroadcaster) Start(done chan (error)) error {
 	connectOptions := []nats.Option{
 		nats.RetryOnFailedConnect(true),
 		nats.MaxReconnects(maxReconnectAttempts),
@@ -74,7 +74,7 @@ func (s *NATSSubscriber) Start(done chan (error)) error {
 	return nil
 }
 
-func (s *NATSSubscriber) Shutdown() error {
+func (s *NATSBroadcaster) Shutdown() error {
 	if s.conn != nil {
 		s.conn.Close()
 	}

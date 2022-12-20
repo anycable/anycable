@@ -1,10 +1,12 @@
 package node
 
 import (
+	"github.com/anycable/anycable-go/broker"
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/encoders"
 	"github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/mocks"
+	"github.com/anycable/anycable-go/pubsub"
 	"github.com/anycable/anycable-go/ws"
 
 	"github.com/apex/log"
@@ -16,6 +18,7 @@ func NewMockNode() *Node {
 	config := NewConfig()
 	config.HubGopoolSize = 2
 	node := NewNode(&controller, metrics.NewMetrics(nil, 10), &config)
+	node.SetBroker(broker.NewLegacyBroker(pubsub.NewLegacySubscriber(node)))
 	dconfig := NewDisconnectQueueConfig()
 	dconfig.Rate = 1
 	node.SetDisconnector(NewDisconnectQueue(node, &dconfig))

@@ -138,6 +138,8 @@ type Memory struct {
 	sessionsMu sync.RWMutex
 }
 
+var _ Broker = (*Memory)(nil)
+
 func NewMemoryBroker(node Broadcaster, config *Config) *Memory {
 	epoch, _ := nanoid.Nanoid(4)
 
@@ -190,16 +192,28 @@ func (b *Memory) HandleBroadcast(msg *common.StreamMessage) {
 	}
 }
 
+func (b *Memory) HandleCommand(msg *common.RemoteCommandMessage) {
+	b.broadcaster.BroadcastCommand(msg)
+}
+
 // Registring streams (for granular pub/sub)
 
 func (b *Memory) Subscribe(stream string) string {
-	b.tracker.Add(stream)
+	isNew := b.tracker.Add(stream)
+
+	if isNew {
+		b.broadcaster.Subscribe(stream)
+	}
 
 	return stream
 }
 
 func (b *Memory) Unsubscribe(stream string) string {
-	b.tracker.Remove(stream)
+	isLast := b.tracker.Remove(stream)
+
+	if isLast {
+		b.broadcaster.Unsubscribe(stream)
+	}
 
 	return stream
 }

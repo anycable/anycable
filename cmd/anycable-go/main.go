@@ -23,6 +23,7 @@ func main() {
 		cli.WithDefaultRPCController(),
 		cli.WithDefaultBroker(),
 		cli.WithDefaultSubscriber(),
+		cli.WithDefaultBroadcaster(),
 	}
 
 	runner, err := cli.NewRunner(c, opts)

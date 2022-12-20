@@ -10,6 +10,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/anycable/anycable-go/broadcast"
 	"github.com/anycable/anycable-go/broker"
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/config"
@@ -35,6 +36,7 @@ import (
 
 type controllerFactory = func(*metricspkg.Metrics, *config.Config) (node.Controller, error)
 type disconnectorFactory = func(*node.Node, *config.Config) (node.Disconnector, error)
+type broadcasterFactory = func(broadcast.Handler, *config.Config) (broadcast.Broadcaster, error)
 type brokerFactory = func(broker.Broadcaster, *config.Config) (broker.Broker, error)
 type subscriberFactory = func(pubsub.Handler, *config.Config) (pubsub.Subscriber, error)
 type websocketHandler = func(*node.Node, *config.Config) (http.Handler, error)
@@ -53,6 +55,7 @@ type Runner struct {
 	controllerFactory       controllerFactory
 	disconnectorFactory     disconnectorFactory
 	subscriberFactory       subscriberFactory
+	broadcasterFactory      broadcasterFactory
 	brokerFactory           brokerFactory
 	websocketHandlerFactory websocketHandler
 
@@ -121,7 +124,7 @@ func (r *Runner) checkAndSetDefaults() error {
 	}
 
 	if r.subscriberFactory == nil {
-		return errorx.AssertionFailed.New("Subscriber is blank, specify WithController()")
+		return errorx.AssertionFailed.New("Subscriber is blank, specify WithSubscriber()")
 	}
 
 	if r.disconnectorFactory == nil {
@@ -149,6 +152,8 @@ func (r *Runner) Run() error {
 		return errorx.Decorate(err, "!!! Failed to initialize metrics writer !!!")
 	}
 
+	r.shutdownables = append(r.shutdownables, metrics)
+
 	controller, err := r.newController(metrics)
 	if err != nil {
 		return err
@@ -156,7 +161,13 @@ func (r *Runner) Run() error {
 
 	appNode := node.NewNode(controller, metrics, &r.config.App)
 
-	appBroker, err := r.brokerFactory(appNode, r.config)
+	subscriber, err := r.subscriberFactory(appNode, r.config)
+
+	if err != nil {
+		return errorx.Decorate(err, "couldn't configure pub/sub")
+	}
+
+	appBroker, err := r.brokerFactory(subscriber, r.config)
 	if err != nil {
 		return errorx.Decorate(err, "!!! Failed to initialize broker !!!")
 	}
@@ -164,12 +175,6 @@ func (r *Runner) Run() error {
 	if appBroker != nil {
 		r.log.Infof(appBroker.Announce())
 		appNode.SetBroker(appBroker)
-	}
-
-	err = appNode.Start()
-
-	if err != nil {
-		return errorx.Decorate(err, "!!! Failed to initialize application !!!")
 	}
 
 	disconnector, err := r.disconnectorFactory(appNode, r.config)
@@ -180,9 +185,10 @@ func (r *Runner) Run() error {
 	go disconnector.Run() // nolint:errcheck
 	appNode.SetDisconnector(disconnector)
 
-	subscriber, err := r.subscriberFactory(appNode, r.config)
+	err = appNode.Start()
+
 	if err != nil {
-		return errorx.Decorate(err, "couldn't configure pub/sub")
+		return errorx.Decorate(err, "!!! Failed to initialize application !!!")
 	}
 
 	if r.config.EmbedNats {
@@ -206,6 +212,23 @@ func (r *Runner) Run() error {
 	err = subscriber.Start(r.errChan)
 	if err != nil {
 		return errorx.Decorate(err, "!!! Subscriber failed !!!")
+	}
+
+	r.shutdownables = append(r.shutdownables, subscriber)
+
+	if r.broadcasterFactory != nil {
+		broadcaster, berr := r.broadcasterFactory(appNode, r.config)
+
+		if berr != nil {
+			return errorx.Decorate(err, "couldn't configure pub/sub")
+		}
+
+		err = broadcaster.Start(r.errChan)
+		if err != nil {
+			return errorx.Decorate(err, "!!! Broadcaster failed !!!")
+		}
+
+		r.shutdownables = append(r.shutdownables, broadcaster)
 	}
 
 	err = controller.Start()
@@ -242,12 +265,7 @@ func (r *Runner) Run() error {
 	go r.startWSServer(wsServer)
 	go r.startMetrics(metrics)
 
-	r.shutdownables = append(r.shutdownables,
-		metrics,
-		subscriber,
-		wsServer,
-		appNode,
-	)
+	r.shutdownables = append(r.shutdownables, appBroker, appNode)
 
 	r.announceGoPools()
 	r.setupSignalHandlers()

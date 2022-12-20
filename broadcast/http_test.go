@@ -1,4 +1,4 @@
-package pubsub
+package broadcast
 
 import (
 	"encoding/json"
@@ -15,8 +15,8 @@ func TestHttpHandler(t *testing.T) {
 	handler := &mocks.Handler{}
 	config := HTTPConfig{}
 	secretConfig := HTTPConfig{Secret: "secret"}
-	subscriber := NewHTTPSubscriber(handler, &config)
-	protectedSubscriber := NewHTTPSubscriber(handler, &secretConfig)
+	broadcaster := NewHTTPBroadcaster(handler, &config)
+	protectedBroadcaster := NewHTTPBroadcaster(handler, &secretConfig)
 
 	payload, err := json.Marshal(map[string]string{"stream": "any_test", "data": "123_test"})
 	if err != nil {
@@ -35,7 +35,7 @@ func TestHttpHandler(t *testing.T) {
 		}
 
 		rr := httptest.NewRecorder()
-		handler := http.HandlerFunc(subscriber.Handler)
+		handler := http.HandlerFunc(broadcaster.Handler)
 		handler.ServeHTTP(rr, req)
 
 		assert.Equal(t, http.StatusCreated, rr.Code)
@@ -48,7 +48,7 @@ func TestHttpHandler(t *testing.T) {
 		}
 
 		rr := httptest.NewRecorder()
-		handler := http.HandlerFunc(subscriber.Handler)
+		handler := http.HandlerFunc(broadcaster.Handler)
 		handler.ServeHTTP(rr, req)
 
 		assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
@@ -61,7 +61,7 @@ func TestHttpHandler(t *testing.T) {
 		}
 
 		rr := httptest.NewRecorder()
-		handler := http.HandlerFunc(protectedSubscriber.Handler)
+		handler := http.HandlerFunc(protectedBroadcaster.Handler)
 		handler.ServeHTTP(rr, req)
 
 		assert.Equal(t, http.StatusUnauthorized, rr.Code)
@@ -76,7 +76,7 @@ func TestHttpHandler(t *testing.T) {
 		}
 
 		rr := httptest.NewRecorder()
-		handler := http.HandlerFunc(protectedSubscriber.Handler)
+		handler := http.HandlerFunc(protectedBroadcaster.Handler)
 		handler.ServeHTTP(rr, req)
 
 		assert.Equal(t, http.StatusCreated, rr.Code)

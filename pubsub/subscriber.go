@@ -1,30 +1,57 @@
 package pubsub
 
-import (
-	"fmt"
-)
+import "github.com/anycable/anycable-go/common"
 
-// Subscriber is responsible for receiving broadcast messages
-// and sending them to hub
+// Subscriber is responsible for subscribing to individual streams and
+// and publishing messages to streams
 type Subscriber interface {
 	Start(done chan (error)) error
 	Shutdown() error
+	Broadcast(msg *common.StreamMessage)
+	BroadcastCommand(msg *common.RemoteCommandMessage)
+	Subscribe(stream string)
+	Unsubscribe(stream string)
+	IsMultiNode() bool
 }
 
 type Handler interface {
-	HandlePubSub(json []byte)
+	Broadcast(msg *common.StreamMessage)
+	ExecuteRemoteCommand(msg *common.RemoteCommandMessage)
 }
 
-// NewSubscriber creates an instance of the provided adapter
-func NewSubscriber(node Handler, adapter string, redis *RedisConfig, http *HTTPConfig, nats *NATSConfig) (Subscriber, error) {
-	switch adapter {
-	case "redis":
-		return NewRedisSubscriber(node, redis), nil
-	case "http":
-		return NewHTTPSubscriber(node, http), nil
-	case "nats":
-		return NewNATSSubscriber(node, nats), nil
-	}
+type LegacySubscriber struct {
+	node Handler
+}
 
-	return nil, fmt.Errorf("Unknown adapter type: %s", adapter)
+var _ Subscriber = (*LegacySubscriber)(nil)
+
+// NewLegacySubscriber creates a legacy subscriber implementation to work with legacy Redis and NATS broadcasters
+func NewLegacySubscriber(node Handler) *LegacySubscriber {
+	return &LegacySubscriber{node: node}
+}
+
+func (LegacySubscriber) Start(done chan (error)) error {
+	return nil
+}
+
+func (LegacySubscriber) Shutdown() error {
+	return nil
+}
+
+func (LegacySubscriber) Subscribe(stream string) {
+}
+
+func (LegacySubscriber) Unsubscribe(stream string) {
+}
+
+func (s *LegacySubscriber) Broadcast(msg *common.StreamMessage) {
+	s.node.Broadcast(msg)
+}
+
+func (s *LegacySubscriber) BroadcastCommand(cmd *common.RemoteCommandMessage) {
+	s.node.ExecuteRemoteCommand(cmd)
+}
+
+func (s *LegacySubscriber) IsMultiNode() bool {
+	return false
 }

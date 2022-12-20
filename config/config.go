@@ -1,12 +1,12 @@
 package config
 
 import (
+	"github.com/anycable/anycable-go/broadcast"
 	"github.com/anycable/anycable-go/broker"
 	"github.com/anycable/anycable-go/enats"
 	"github.com/anycable/anycable-go/identity"
 	"github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/node"
-	"github.com/anycable/anycable-go/pubsub"
 	"github.com/anycable/anycable-go/rails"
 	"github.com/anycable/anycable-go/rpc"
 	"github.com/anycable/anycable-go/server"
@@ -19,13 +19,14 @@ type Config struct {
 	RPC                  rpc.Config
 	BrokerAdapter        string
 	Broker               broker.Config
-	Redis                pubsub.RedisConfig
-	HTTPPubSub           pubsub.HTTPConfig
-	NATSPubSub           pubsub.NATSConfig
+	RedisBroadcast       broadcast.RedisConfig
+	HTTPBroadcast        broadcast.HTTPConfig
+	NATSBroadcast        broadcast.NATSConfig
 	Host                 string
 	Port                 int
 	MaxConn              int
 	BroadcastAdapter     string
+	PubSubAdapter        string
 	Path                 []string
 	HealthPath           string
 	Headers              []string
@@ -63,9 +64,9 @@ func NewConfig() Config {
 		WS:               ws.NewConfig(),
 		Metrics:          metrics.NewConfig(),
 		RPC:              rpc.NewConfig(),
-		Redis:            pubsub.NewRedisConfig(),
-		HTTPPubSub:       pubsub.NewHTTPConfig(),
-		NATSPubSub:       pubsub.NewNATSConfig(),
+		RedisBroadcast:   broadcast.NewRedisConfig(),
+		HTTPBroadcast:    broadcast.NewHTTPConfig(),
+		NATSBroadcast:    broadcast.NewNATSConfig(),
 		DisconnectQueue:  node.NewDisconnectQueueConfig(),
 		JWT:              identity.NewJWTConfig(""),
 		Rails:            rails.NewConfig(),

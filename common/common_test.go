@@ -64,9 +64,14 @@ func TestPubSubMessageFromJSON(t *testing.T) {
 		result, err := PubSubMessageFromJSON(msg)
 		assert.Nil(t, err)
 
-		casted := result.(RemoteDisconnectMessage)
-		assert.Equal(t, "14", casted.Identifier)
-		assert.Equal(t, false, casted.Reconnect)
+		casted := result.(RemoteCommandMessage)
+
+		assert.Equal(t, "disconnect", casted.Command)
+
+		dmsg, _ := casted.ToRemoteDisconnectMessage()
+
+		assert.Equal(t, "14", dmsg.Identifier)
+		assert.Equal(t, false, dmsg.Reconnect)
 	})
 
 	t.Run("Broadcast message", func(t *testing.T) {

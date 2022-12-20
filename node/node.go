@@ -150,8 +150,8 @@ func (n *Node) HandlePubSub(raw []byte) {
 	switch v := msg.(type) {
 	case common.StreamMessage:
 		n.broker.HandleBroadcast(&v)
-	case common.RemoteDisconnectMessage:
-		n.RemoteDisconnect(&v)
+	case common.RemoteCommandMessage:
+		n.broker.HandleCommand(&v)
 	}
 }
 
@@ -506,11 +506,29 @@ func (n *Node) History(s *Session, msg *common.Message) (err error) {
 	return
 }
 
-// Broadcast message to stream
+// Broadcast message to stream (locally)
 func (n *Node) Broadcast(msg *common.StreamMessage) {
 	n.metrics.CounterIncrement(metricsBroadcastMsg)
-	n.log.Debugf("Incoming pubsub message: %v", msg)
+	n.log.Debugf("Incoming broadcast message: %v", msg)
 	n.hub.BroadcastMessage(msg)
+}
+
+// Execute remote command (locally)
+func (n *Node) ExecuteRemoteCommand(msg *common.RemoteCommandMessage) {
+	// TODO: Add remote commands metrics
+	// n.metrics.CounterIncrement(metricsRemoteCommandsMsg)
+	n.log.Debugf("Incoming remote command: %v", msg)
+
+	switch msg.Command { // nolint:gocritic
+	case "disconnect":
+		dmsg, err := msg.ToRemoteDisconnectMessage()
+		if err != nil {
+			n.log.Warnf("Failed to parse remote disconnect command: %v", err)
+			return
+		}
+
+		n.RemoteDisconnect(dmsg)
+	}
 }
 
 // Disconnect adds session to disconnector queue and unregister session from hub

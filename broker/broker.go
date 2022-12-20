@@ -11,9 +11,13 @@ const (
 	SESSION_ID_HEADER = "X-ANYCABLE-RESTORE-SID"
 )
 
-// Broadcaster is responsible for fan-out message to the stream clients
+// Broadcaster is responsible for fanning-out messages to the stream clients
+// and other nodes
 type Broadcaster interface {
 	Broadcast(msg *common.StreamMessage)
+	BroadcastCommand(msg *common.RemoteCommandMessage)
+	Subscribe(stream string)
+	Unsubscribe(stream string)
 }
 
 // Cacheable is an interface which a session object must implement
@@ -35,6 +39,7 @@ type Broker interface {
 	Announce() string
 
 	HandleBroadcast(msg *common.StreamMessage)
+	HandleCommand(msg *common.RemoteCommandMessage)
 
 	// Registers the stream and returns its (short) unique identifier
 	Subscribe(stream string) string
@@ -103,10 +108,16 @@ func (s *StreamsTracker) Remove(name string) (isLast bool) {
 // Thus, we can use it without breaking the older behaviour
 type LegacyBroker struct {
 	broadcaster Broadcaster
+	tracker     *StreamsTracker
 }
 
+var _ Broker = (*LegacyBroker)(nil)
+
 func NewLegacyBroker(broadcaster Broadcaster) *LegacyBroker {
-	return &LegacyBroker{broadcaster: broadcaster}
+	return &LegacyBroker{
+		broadcaster: broadcaster,
+		tracker:     NewStreamsTracker(),
+	}
 }
 
 func (LegacyBroker) Start() error {
@@ -122,16 +133,33 @@ func (LegacyBroker) Announce() string {
 }
 
 func (b *LegacyBroker) HandleBroadcast(msg *common.StreamMessage) {
-	b.broadcaster.Broadcast(msg)
+	if b.tracker.Has(msg.Stream) {
+		b.broadcaster.Broadcast(msg)
+	}
+}
+
+func (b *LegacyBroker) HandleCommand(msg *common.RemoteCommandMessage) {
+	b.broadcaster.BroadcastCommand(msg)
 }
 
 // Registring streams (for granular pub/sub)
+func (b *LegacyBroker) Subscribe(stream string) string {
+	isNew := b.tracker.Add(stream)
 
-func (LegacyBroker) Subscribe(stream string) string {
+	if isNew {
+		b.broadcaster.Subscribe(stream)
+	}
+
 	return stream
 }
 
-func (LegacyBroker) Unsubscribe(stream string) string {
+func (b *LegacyBroker) Unsubscribe(stream string) string {
+	isLast := b.tracker.Remove(stream)
+
+	if isLast {
+		b.broadcaster.Unsubscribe(stream)
+	}
+
 	return stream
 }
 

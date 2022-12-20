@@ -1,4 +1,4 @@
-package pubsub
+package broadcast
 
 import (
 	"context"
@@ -51,8 +51,8 @@ func NewRedisConfig() RedisConfig {
 	}
 }
 
-// RedisSubscriber contains information about Redis pubsub connection
-type RedisSubscriber struct {
+// RedisBroadcaster contains information about Redis pubsub connection
+type RedisBroadcaster struct {
 	node                      Handler
 	url                       string
 	sentinels                 string
@@ -66,9 +66,9 @@ type RedisSubscriber struct {
 	tlsVerify                 bool
 }
 
-// NewRedisSubscriber returns new RedisSubscriber struct
-func NewRedisSubscriber(node Handler, config *RedisConfig) *RedisSubscriber {
-	return &RedisSubscriber{
+// NewRedisBroadcaster returns new RedisSubscriber struct
+func NewRedisBroadcaster(node Handler, config *RedisConfig) *RedisBroadcaster {
+	return &RedisBroadcaster{
 		node:                      node,
 		url:                       config.URL,
 		sentinels:                 config.Sentinels,
@@ -83,7 +83,7 @@ func NewRedisSubscriber(node Handler, config *RedisConfig) *RedisSubscriber {
 
 // Start connects to Redis and subscribes to the pubsub channel
 // if sentinels is set it gets the the master address first
-func (s *RedisSubscriber) Start(done chan (error)) error {
+func (s *RedisBroadcaster) Start(done chan (error)) error {
 	// parse URL and check if it is correct
 	redisURL, err := url.Parse(s.url)
 
@@ -145,7 +145,7 @@ func (s *RedisSubscriber) Start(done chan (error)) error {
 	return nil
 }
 
-func (s *RedisSubscriber) discoverSentinels() {
+func (s *RedisBroadcaster) discoverSentinels() {
 	defer s.sentinelClient.Close()
 
 	// Periodically discover new Sentinels.
@@ -172,7 +172,7 @@ func (s *RedisSubscriber) discoverSentinels() {
 	}()
 }
 
-func (s *RedisSubscriber) keepalive(done chan (error)) {
+func (s *RedisBroadcaster) keepalive(done chan (error)) {
 	for {
 		if s.sentinelClient != nil {
 			masterAddress, err := s.sentinelClient.MasterAddr()
@@ -209,11 +209,11 @@ func (s *RedisSubscriber) keepalive(done chan (error)) {
 }
 
 // Shutdown is no-op for Redis
-func (s *RedisSubscriber) Shutdown() error {
+func (s *RedisBroadcaster) Shutdown() error {
 	return nil
 }
 
-func (s *RedisSubscriber) listen() error {
+func (s *RedisBroadcaster) listen() error {
 	dialOptions := []redis.DialOption{
 		redis.DialTLSSkipVerify(!s.tlsVerify),
 	}

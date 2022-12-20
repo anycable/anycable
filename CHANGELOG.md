@@ -2,6 +2,12 @@
 
 ## master
 
+- Add NATS pub/sub. ([@palkan][])
+
+- Add Redis pub/sub. ([@palkan][])
+
+- New broadcasting architecture: broadcasters, subscribers and brokers. ([@palkan][])
+
 ## 1.3.1 (2023-03-22)
 
 - Add `--gateway_advertise` option for embedded NATS. ([@palkan][])
