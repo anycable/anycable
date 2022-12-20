@@ -58,9 +58,9 @@ func WithDefaultBroadcaster() Option {
 		case "http":
 			return broadcast.NewHTTPBroadcaster(h, &c.HTTPBroadcast), nil
 		case "redis":
-			return broadcast.NewLegacyRedisBroadcaster(h, &c.RedisBroadcast), nil
+			return broadcast.NewLegacyRedisBroadcaster(h, &c.Redis), nil
 		case "nats":
-			return broadcast.NewLegacyNATSBroadcaster(h, &c.NATSBroadcast), nil
+			return broadcast.NewLegacyNATSBroadcaster(h, &c.NATS), nil
 		default:
 			return nil, errorx.IllegalArgument.New("Unsupported broadcast adapter: %s", c.BroadcastAdapter)
 		}

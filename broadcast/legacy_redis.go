@@ -10,46 +10,11 @@ import (
 	"time"
 
 	"github.com/FZambia/sentinel"
+	rconfig "github.com/anycable/anycable-go/redis"
 
 	"github.com/apex/log"
 	"github.com/gomodule/redigo/redis"
 )
-
-const (
-	maxReconnectAttempts                  = 5
-	defaultKeepaliveInterval              = 30
-	defaultRedisURL                       = "redis://localhost:6379/5"
-	defaultRedisChannel                   = "__anycable__"
-	defaultRedisSentinelDiscoveryInterval = 30
-	defaultTLSVerify                      = false
-)
-
-// RedisConfig contains Redis pubsub adapter configuration
-type RedisConfig struct {
-	// Redis instance URL or master name in case of sentinels usage
-	URL string
-	// Redis channel to subscribe to
-	Channel string
-	// List of Redis Sentinel addresses
-	Sentinels string
-	// Redis Sentinel discovery interval (seconds)
-	SentinelDiscoveryInterval int
-	// Redis keepalive ping interval (seconds)
-	KeepalivePingInterval int
-	// Whether to check server's certificate for validity (in case of rediss:// protocol)
-	TLSVerify bool
-}
-
-// NewRedisConfig builds a new config for Redis pubsub
-func NewRedisConfig() RedisConfig {
-	return RedisConfig{
-		KeepalivePingInterval:     defaultKeepaliveInterval,
-		URL:                       defaultRedisURL,
-		Channel:                   defaultRedisChannel,
-		SentinelDiscoveryInterval: defaultRedisSentinelDiscoveryInterval,
-		TLSVerify:                 defaultTLSVerify,
-	}
-}
 
 // LegacyRedisBroadcaster contains information about Redis pubsub connection
 type LegacyRedisBroadcaster struct {
@@ -61,13 +26,14 @@ type LegacyRedisBroadcaster struct {
 	pingInterval              time.Duration
 	channel                   string
 	reconnectAttempt          int
+	maxReconnectAttempts      int
 	uri                       *url.URL
 	log                       *log.Entry
 	tlsVerify                 bool
 }
 
 // NewLegacyRedisBroadcaster returns new RedisSubscriber struct
-func NewLegacyRedisBroadcaster(node Handler, config *RedisConfig) *LegacyRedisBroadcaster {
+func NewLegacyRedisBroadcaster(node Handler, config *rconfig.RedisConfig) *LegacyRedisBroadcaster {
 	return &LegacyRedisBroadcaster{
 		node:                      node,
 		url:                       config.URL,
@@ -76,6 +42,7 @@ func NewLegacyRedisBroadcaster(node Handler, config *RedisConfig) *LegacyRedisBr
 		channel:                   config.Channel,
 		pingInterval:              time.Duration(config.KeepalivePingInterval),
 		reconnectAttempt:          0,
+		maxReconnectAttempts:      config.MaxReconnectAttempts,
 		log:                       log.WithFields(log.Fields{"context": "pubsub"}),
 		tlsVerify:                 config.TLSVerify,
 	}
@@ -198,7 +165,7 @@ func (s *LegacyRedisBroadcaster) keepalive(done chan (error)) {
 
 		s.reconnectAttempt++
 
-		if s.reconnectAttempt >= maxReconnectAttempts {
+		if s.reconnectAttempt >= s.maxReconnectAttempts {
 			done <- errors.New("Redis reconnect attempts exceeded") //nolint:stylecheck
 			return
 		}

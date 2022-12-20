@@ -6,8 +6,10 @@ import (
 	"github.com/anycable/anycable-go/enats"
 	"github.com/anycable/anycable-go/identity"
 	"github.com/anycable/anycable-go/metrics"
+	nconfig "github.com/anycable/anycable-go/nats"
 	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/rails"
+	rconfig "github.com/anycable/anycable-go/redis"
 	"github.com/anycable/anycable-go/rpc"
 	"github.com/anycable/anycable-go/server"
 	"github.com/anycable/anycable-go/ws"
@@ -19,9 +21,9 @@ type Config struct {
 	RPC                  rpc.Config
 	BrokerAdapter        string
 	Broker               broker.Config
-	RedisBroadcast       broadcast.RedisConfig
+	Redis                rconfig.RedisConfig
 	HTTPBroadcast        broadcast.HTTPConfig
-	NATSBroadcast        broadcast.NATSConfig
+	NATS                 nconfig.NATSConfig
 	Host                 string
 	Port                 int
 	MaxConn              int
@@ -64,9 +66,9 @@ func NewConfig() Config {
 		WS:               ws.NewConfig(),
 		Metrics:          metrics.NewConfig(),
 		RPC:              rpc.NewConfig(),
-		RedisBroadcast:   broadcast.NewRedisConfig(),
+		Redis:            rconfig.NewRedisConfig(),
 		HTTPBroadcast:    broadcast.NewHTTPConfig(),
-		NATSBroadcast:    broadcast.NewNATSConfig(),
+		NATS:             nconfig.NewNATSConfig(),
 		DisconnectQueue:  node.NewDisconnectQueueConfig(),
 		JWT:              identity.NewJWTConfig(""),
 		Rails:            rails.NewConfig(),

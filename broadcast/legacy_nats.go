@@ -3,29 +3,21 @@ package broadcast
 import (
 	"github.com/apex/log"
 	"github.com/nats-io/nats.go"
+
+	nconfig "github.com/anycable/anycable-go/nats"
 )
 
 type LegacyNATSBroadcaster struct {
 	conn    *nats.Conn
 	handler Handler
-	config  *NATSConfig
+	config  *nconfig.NATSConfig
 
 	log *log.Entry
 }
 
 var _ Broadcaster = (*LegacyNATSBroadcaster)(nil)
 
-type NATSConfig struct {
-	Servers              string
-	Channel              string
-	DontRandomizeServers bool
-}
-
-func NewNATSConfig() NATSConfig {
-	return NATSConfig{Servers: nats.DefaultURL, Channel: "__anycable__"}
-}
-
-func NewLegacyNATSBroadcaster(node Handler, c *NATSConfig) *LegacyNATSBroadcaster {
+func NewLegacyNATSBroadcaster(node Handler, c *nconfig.NATSConfig) *LegacyNATSBroadcaster {
 	return &LegacyNATSBroadcaster{
 		config:  c,
 		handler: node,
@@ -40,7 +32,7 @@ func (LegacyNATSBroadcaster) IsFanout() bool {
 func (s *LegacyNATSBroadcaster) Start(done chan (error)) error {
 	connectOptions := []nats.Option{
 		nats.RetryOnFailedConnect(true),
-		nats.MaxReconnects(maxReconnectAttempts),
+		nats.MaxReconnects(s.config.MaxReconnectAttempts),
 		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
 			if err != nil {
 				log.Warnf("Connection failed: %v", err)
