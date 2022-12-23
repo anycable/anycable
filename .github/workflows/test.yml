@@ -17,6 +17,12 @@ jobs:
       GO111MODULE: on
       GOFLAGS: "-mod=vendor"
       COVERAGE: "true"
+      REDIS_URL: "redis://localhost:6379/2"
+    services:
+      redis:
+        image: redis:7.0-alpine
+        ports: ["6379:6379"]
+        options: --health-cmd="redis-cli ping" --health-interval 1s --health-timeout 3s --health-retries 30
     steps:
     - uses: actions/checkout@v3
     - name: Install system deps
@@ -114,6 +120,7 @@ jobs:
           - test-conformance-nats-embedded
           - test-conformance-ssl
           - test-conformance-http-broker
+          - test-conformance-broker-redis-pubsub
     runs-on: ubuntu-latest
     env:
       GO111MODULE: on

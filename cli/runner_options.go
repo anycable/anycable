@@ -81,8 +81,11 @@ func WithSubscriber(fn subscriberFactory) Option {
 // WithDefaultSubscriber is an Option to set Runner subscriber to pubsub.NewSubscriber
 func WithDefaultSubscriber() Option {
 	return WithSubscriber(func(h pubsub.Handler, c *config.Config) (pubsub.Subscriber, error) {
-		if c.PubSubAdapter == "" {
+		switch c.PubSubAdapter {
+		case "":
 			return pubsub.NewLegacySubscriber(h), nil
+		case "redis":
+			return pubsub.NewRedisSubscriber(h, &c.Redis)
 		}
 
 		return nil, errorx.IllegalArgument.New("Unsupported subscriber adapter: %s", c.PubSubAdapter)

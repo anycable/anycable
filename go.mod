@@ -19,6 +19,7 @@ require (
 	github.com/namsral/flag v1.7.4-pre
 	github.com/nats-io/nats.go v1.24.0
 	github.com/smira/go-statsd v1.3.2
+	github.com/rueian/rueidis v0.0.90
 	github.com/stretchr/testify v1.8.2
 	github.com/syossan27/tebata v0.0.0-20180602121909-b283fe4bc5ba
 	github.com/urfave/cli/v2 v2.11.1
