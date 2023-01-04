@@ -1,5 +1,7 @@
 # Sponsors & Backers
 
+- [Fly.io](http://fly.io)
+
 ## Personal Sponsors
 
 - [Andrey Baranov](https://github.com/progapandist)
