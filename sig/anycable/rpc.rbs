@@ -12,6 +12,12 @@ module AnyCable
   type protoMap = _ProtobufMap
   type rpcMetadata = Hash[String, String]
 
+  module Status
+    SUCCESS: 0
+    FAILURE: 1
+    ERROR: 2
+  end
+
   interface _WithEnvState
     def cstate: () -> protoMap?
     def cstate=: (protoMap) -> void

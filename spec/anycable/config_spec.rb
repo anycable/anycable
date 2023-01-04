@@ -99,8 +99,7 @@ describe AnyCable::Config do
 
       specify do
         expect(subject.to_redis_params).to eq(
-          url: "rediss://localhost:6379/3",
-          ssl_params: {}
+          url: "rediss://localhost:6379/3"
         )
       end
     end

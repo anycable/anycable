@@ -15,12 +15,11 @@ module AnyCable
       def rpc_server_args=: (Hash[Symbol | String, untyped]) -> void
       def log_grpc: () -> bool
       def log_grpc=: (bool) -> void
+      def log_grpc?: () -> bool
     end
 
-    module Config : AnyCable::Config
+    module Config : AnyCable::_Config
       include _Config
-
-      alias log_grpc? log_grpc
 
       def to_grpc_params: () -> {
         pool_size: Integer,
@@ -32,5 +31,11 @@ module AnyCable
 
       def normalized_grpc_server_args: () -> Hash[String, untyped]
     end
+  end
+end
+
+module AnyCable
+  class Config
+    include GRPC::Config
   end
 end

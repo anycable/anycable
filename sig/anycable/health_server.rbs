@@ -12,7 +12,7 @@ module AnyCable
     attr_reader path: String
     attr_reader http_server: untyped
 
-    def initialize: (_Runnable server, port: Integer port, ?logger: Logger logger, ?path: String path) -> void
+    def initialize: (_Runnable server, port: Integer port, ?logger: Logger? logger, ?path: String path) -> void
     def start: () -> void
     def stop: () -> void
     def running?: () -> bool

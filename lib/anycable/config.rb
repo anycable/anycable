@@ -132,11 +132,17 @@ module AnyCable
           raise_validation_error "Both Redis TLS client certificate and private key must be specified (or none of them)"
         end
 
-        params[:ssl_params] = {
-          verify_mode: (OpenSSL::SSL::VERIFY_NONE unless redis_tls_verify?),
-          cert: (OpenSSL::X509::Certificate.new(File.read(redis_tls_client_cert_path)) if redis_tls_client_cert_path),
-          key: (OpenSSL::PKey.read(File.read(redis_tls_client_key_path)) if redis_tls_client_key_path)
-        }.compact
+        if !redis_tls_verify?
+          params[:ssl_params] = {verify_mode: OpenSSL::SSL::VERIFY_NONE}
+        else
+          cert_path, key_path = redis_tls_client_cert_path, redis_tls_client_key_path
+          if cert_path && key_path
+            params[:ssl_params] = {
+              cert: OpenSSL::X509::Certificate.new(File.read(cert_path)),
+              key: OpenSSL::PKey.read(File.read(key_path))
+            }
+          end
+        end
       end
     end
 

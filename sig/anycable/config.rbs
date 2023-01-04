@@ -9,14 +9,19 @@ module AnyCable
     def redis_channel: () -> String
     def redis_channel=: (String) -> void
     def redis_tls_verify: () -> bool
-    def redis_tls_verify?: () -> bool
     def redis_tls_verify=: (bool) -> void
+    def redis_tls_verify?: () -> bool
+    def redis_tls_client_cert_path: () -> String?
+    def redis_tls_client_cert_path=: (String) -> void
+    def redis_tls_client_key_path: () -> String?
+    def redis_tls_client_key_path=: (String) -> void
     def nats_servers: () -> Array[String]
     def nats_servers=: (Array[String]) -> void
     def nats_channel: () -> String
     def nats_channel=: (String) -> void
     def nats_dont_randomize_servers: () -> bool
     def nats_dont_randomize_servers=: (bool) -> void
+    def nats_dont_randomize_servers?: () -> bool
     def nats_options: () -> Hash[untyped, untyped]
     def nats_options=: (Hash[untyped, untyped]) -> void
     def http_broadcast_url: () -> String
@@ -29,12 +34,17 @@ module AnyCable
     def log_level=: (String) -> void
     def debug: () -> bool
     def debug=: (bool) -> void
+    def debug?: () -> bool
     def http_health_port: () -> Integer?
     def http_health_port=: (Integer) -> void
     def http_health_path: () -> String
     def http_health_path=: (String) -> void
     def version_check_enabled: () -> bool
     def version_check_enabled=: (bool) -> void
+    def version_check_enabled?: () -> bool
+    def sid_header_enabled: () -> bool
+    def sid_header_enabled=: (bool) -> void
+    def sid_header_enabled?: () -> bool
   end
 
   class Config < Anyway::Config

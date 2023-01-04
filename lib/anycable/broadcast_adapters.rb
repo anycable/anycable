@@ -3,7 +3,7 @@
 require "anycable/broadcast_adapters/base"
 
 module AnyCable
-  module BroadcastAdapters # :nodoc:
+  module BroadcastAdapters
     module_function
 
     def lookup_adapter(args)

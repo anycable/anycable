@@ -22,12 +22,14 @@ task :steep do
   require "steep"
   require "steep/cli"
 
-  Steep::CLI.new(argv: ["check"], stdout: $stdout, stderr: $stderr, stdin: $stdin).run
+  Steep::CLI.new(argv: ["check", "--severity-level=error"], stdout: $stdout, stderr: $stderr, stdin: $stdin).run.tap do |exit_code|
+    exit(exit_code) unless exit_code.zero?
+  end
 end
 
 namespace :steep do
   task :stats do
-    exec "bundle exec steep stats --log-level=fatal --format=table"
+    sh "bundle exec steep stats --log-level=fatal --format=table"
   end
 end
 

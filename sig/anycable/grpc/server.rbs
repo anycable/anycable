@@ -6,7 +6,7 @@ module AnyCable
       attr_reader grpc_server: untyped
       attr_reader host: String
 
-      def initialize: (host: String, ?logger: Logger, **untyped options) -> void
+      def initialize: (host: String, ?logger: Logger?, **untyped options) -> void
 
       private
 
