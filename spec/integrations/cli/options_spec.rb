@@ -33,13 +33,14 @@ describe "CLI options", :cli do
   end
 
   specify "many options" do
+    health_port = rand(9000..9200)
     run_cli(
       "-r ../spec/dummies/app.rb " \
       "--redis-channel _test_cable_ --debug " \
-      "--http-health-port 9009 --http-health-path '/hc'"
+      "--http-health-port #{health_port} --http-health-path '/hc'"
     ) do |cli|
       expect(cli).to have_output_line(
-        'HTTP health server is listening on localhost:9009 and mounted at "/hc"'
+        %(HTTP health server is listening on localhost:#{health_port} and mounted at "/hc")
       )
       expect(cli).to have_output_line("Broadcasting Redis channel: _test_cable_")
     end
