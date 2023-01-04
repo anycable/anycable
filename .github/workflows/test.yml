@@ -22,6 +22,8 @@ jobs:
         include:
         - ruby: "3.1"
           anyway_config: "~> 2.2"
+        - ruby: "3.2"
+          anyway_config: "~> 2.2"
         - ruby: "2.7"
           anyway_config: "~> 2.1"
         - ruby: "2.6"
