@@ -251,6 +251,10 @@ func (s *Session) GetID() string {
 	return s.uid
 }
 
+func (s *Session) SetID(id string) {
+	s.uid = id
+}
+
 func (s *Session) GetIdentifiers() string {
 	return s.env.Identifiers
 }
