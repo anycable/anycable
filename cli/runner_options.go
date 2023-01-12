@@ -63,3 +63,11 @@ func WithShutdownable(instance Shutdownable) Option {
 		return nil
 	}
 }
+
+// WithWebSocketHandler is an Option to set a custom websocket handler
+func WithWebSocketHandler(fn websocketHandler) Option {
+	return func(r *Runner) error {
+		r.websocketHandlerFactory = fn
+		return nil
+	}
+}
