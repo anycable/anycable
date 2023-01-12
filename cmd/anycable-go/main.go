@@ -24,7 +24,15 @@ func main() {
 		cli.WithDefaultSubscriber(),
 	}
 
-	err = cli.NewRunner(c, opts).Run()
+	runner, err := cli.NewRunner(c, opts)
+
+	if err != nil {
+		fmt.Printf("%+v\n", err)
+		os.Exit(1)
+	}
+
+	err = runner.Run()
+
 	if err != nil {
 		fmt.Printf("%+v\n", err)
 		os.Exit(1)

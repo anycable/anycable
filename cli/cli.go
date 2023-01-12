@@ -59,13 +59,20 @@ type Runner struct {
 }
 
 // NewRunner creates returns new Runner structure
-func NewRunner(c *config.Config, options []Option) *Runner {
-	return &Runner{
+func NewRunner(c *config.Config, options []Option) (*Runner, error) {
+	r := &Runner{
 		options:       options,
 		config:        c,
 		shutdownables: []Shutdownable{},
 		errChan:       make(chan error),
 	}
+
+	err := r.checkAndSetDefaults()
+	if err != nil {
+		return nil, err
+	}
+
+	return r, nil
 }
 
 // checkAndSetDefaults applies passed options and checks that all required fields are set
@@ -113,11 +120,6 @@ func (r *Runner) checkAndSetDefaults() error {
 
 // Run starts the instance
 func (r *Runner) Run() error {
-	err := r.checkAndSetDefaults()
-	if err != nil {
-		return err
-	}
-
 	numProcs := r.setMaxProcs()
 	r.announceDebugMode()
 
