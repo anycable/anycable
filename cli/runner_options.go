@@ -55,3 +55,11 @@ func WithDefaultSubscriber() Option {
 		return pubsub.NewSubscriber(h, c.BroadcastAdapter, &c.Redis, &c.HTTPPubSub, &c.NATSPubSub)
 	})
 }
+
+// WithShutdowable adds a new shutdownable instance to be shutdown at server stop
+func WithShutdownable(instance Shutdownable) Option {
+	return func(r *Runner) error {
+		r.shutdownables = append(r.shutdownables, instance)
+		return nil
+	}
+}
