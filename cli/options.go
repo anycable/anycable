@@ -10,9 +10,46 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+type cliOption func(*cli.App) error
+
+type customOptionsFactory = func() ([]cli.Flag, error)
+
+func WithCLIName(name string) cliOption {
+	return func(app *cli.App) error {
+		app.Name = name
+		return nil
+	}
+}
+
+func WithCLIVersion(str string) cliOption {
+	return func(app *cli.App) error {
+		app.Version = str
+		return nil
+	}
+}
+
+func WithCLIUsageHeader(desc string) cliOption {
+	return func(app *cli.App) error {
+		app.Usage = desc
+		return nil
+	}
+}
+
+func WithCLICustomOptions(factory customOptionsFactory) cliOption {
+	return func(app *cli.App) error {
+		custom, err := factory()
+		if err != nil {
+			return err
+		}
+
+		app.Flags = append(app.Flags, custom...)
+		return nil
+	}
+}
+
 // NewConfigFromCLI reads config from os.Args. It returns config, error (if any) and a bool value
 // indicating that the usage message or version was shown, no further action required.
-func NewConfigFromCLI(args []string) (*config.Config, error, bool) {
+func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, bool) {
 	c := config.NewConfig()
 
 	var path, headers, cookieFilter string
@@ -49,6 +86,13 @@ func NewConfigFromCLI(args []string) (*config.Config, error, bool) {
 			helpOrVersionWereShown = false
 			return nil
 		},
+	}
+
+	for _, o := range opts {
+		err := o(app)
+		if err != nil {
+			return &config.Config{}, err, false
+		}
 	}
 
 	err := app.Run(args)
