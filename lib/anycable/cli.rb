@@ -333,7 +333,7 @@ module AnyCable
             $ anycable [options]
 
           CLI
-              -r, --require=path                Location of application file to require, default: "config/environment.rb"
+              -r, --require=path                Location of application file to require, default candidates: #{APP_CANDIDATES.join(", ")}
               --server-command=command          Command to run WebSocket server
               -v, --version                     Print version and exit
               -h, --help                        Show this help
