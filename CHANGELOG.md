@@ -2,6 +2,10 @@
 
 ## master
 
+- (_Experimental_) Add support for [grpc_kit](https://github.com/cookpad/grpc_kit) as an alternative gRPC implementation. ([@palkan][])
+
+Add `grpc_kit` to your Gemfile and specify `ANYCABLE_GRPC_IMPL=grpc_kit` env var to use it.
+
 - Setting the redis driver to ruby specified. ([@smasry][])
 
 - Add mutual TLS support for connections to Redis. ([@Envek][])

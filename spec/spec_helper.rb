@@ -13,6 +13,11 @@ require "anycable"
 
 # Whether to run tests without GRPC loaded
 NO_GRPC = !defined?(::GRPC)
+GRPC_KIT = ENV["ANYCABLE_GRPC_IMPL"] == "grpc_kit"
+
+if GRPC_KIT
+  $stdout.puts "⚠️ Testing against grpc_kit"
+end
 
 require "json"
 require "rack"

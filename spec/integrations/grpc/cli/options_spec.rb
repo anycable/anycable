@@ -29,7 +29,11 @@ describe "gRPC CLI options", :cli do
         expect(cli).to have_output_line("RPC server is listening on 0.0.0.0:50053")
         expect(cli).to have_output_line("Broadcasting Redis channel: _test_cable_")
         # GRPC logging
-        expect(cli).to have_output_line("handling /anycable.RPC/Connect with")
+        if GRPC_KIT
+          expect(cli).to have_output_line("Launched grpc_kit")
+        else
+          expect(cli).to have_output_line("handling /anycable.RPC/Connect with")
+        end
       end
     end
   end
