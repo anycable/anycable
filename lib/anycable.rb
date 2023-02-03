@@ -109,11 +109,23 @@ module AnyCable
   end
 end
 
-# gRPC is the default for now, so, let's try to load it.
-begin
-  require "anycable/grpc"
-rescue LoadError => e
-  # Re-raise an exception if we failed to load grpc .so files
-  # (e.g., on Alpine Linux)
-  raise if /(error loading shared library|incompatible architecture)/i.match?(e.message)
+# Try loading a gRPC implementation
+impl = ENV.fetch("ANYCABLE_GRPC_IMPL", "grpc")
+
+case impl
+when "grpc"
+  begin
+    require "grpc/version"
+    require "anycable/grpc"
+  rescue LoadError => e
+    # Re-raise an exception if we failed to load grpc .so files
+    # (e.g., on Alpine Linux)
+    raise if /(error loading shared library|incompatible architecture)/i.match?(e.message)
+  end
+when "grpc_kit"
+  begin
+    require "grpc_kit/version"
+    require "anycable/grpc_kit"
+  rescue LoadError
+  end
 end

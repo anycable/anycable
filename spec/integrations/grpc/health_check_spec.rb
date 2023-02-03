@@ -2,7 +2,7 @@
 
 require "spec_helper"
 
-describe "health checker" do
+describe "health checker", skip: GRPC_KIT do
   include_context "anycable:grpc:server"
 
   before(:all) do

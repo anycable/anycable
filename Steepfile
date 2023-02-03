@@ -11,6 +11,8 @@ target :lib do
   ignore "lib/anycable/rspec/*.rb"
   ignore "lib/anycable/grpc/rpc_services_pb.rb"
   ignore "lib/anycable/protos/*.rb"
+  # TODO: unignore
+  ignore "lib/anycable/grpc_kit/*.rb"
 
   ignore "lib/anycable/cli.rb"
 
