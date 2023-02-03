@@ -7,6 +7,8 @@ begin
   gemfile(retried, quiet: true) do
     source "https://rubygems.org"
 
+    gem "grpc_kit" if ENV["ANYCABLE_GRPC_IMPL"] == "grpc_kit"
+
     gem "anycable", path: "../.."
 
     gem "actioncable"
