@@ -1,0 +1,263 @@
+#!/usr/bin/env ruby
+
+require "bundler/inline"
+
+retried = false
+begin
+  gemfile(retried, quiet: ENV["LOG"] != "1") do
+    source "https://rubygems.org"
+
+    gem "rails", "~> 7.0", group: :preload
+    gem "puma", "~> 6.0"
+    gem "rack", "< 3", group: :preload
+    gem "redis", "~> 5.0", group: :preload
+
+    gem "falcon", "~> 0.42.0", group: :preload
+    gem "async-websocket", group: :preload
+    gem "openssl", "3.1.0", group: :preload
+
+    gem "grpc_kit" if ENV["ANYCABLE_GRPC_IMPL"] == "grpc_kit"
+    gem "grpc" unless ENV["ANYCABLE_GRPC_IMPL"] == "grpc_kit"
+    gem "anycable-core", path: "../..", group: :preload
+
+    if File.directory?(File.join(__dir__, "../../../anycable-rails"))
+      gem "anycable-rails", path: "../../../anycable-rails", require: false, group: :preload
+    else
+      gem "anycable-rails", require: false, group: :preload
+    end
+
+    gem "debug", "1.7.0"
+  end
+rescue Gem::MissingSpecError
+  raise if retried
+
+  retried = true
+  retry
+end
+
+$stdout.puts "YJIT is enabled 🎉" if RUBY_DESCRIPTION =~ /\+YJIT/
+
+require "optparse"
+
+$benchmark_server = :anycable
+
+OptionParser.new do |opts|
+  opts.banner = "Usage: bento [options]"
+
+  opts.on('--puma', 'Run Rails via Puma server') do |v|
+    $benchmark_server = :puma
+  end
+
+  opts.on('--anycable', 'Run AnyCable RPC server') do |v|
+    $benchmark_server = :anycable
+  end
+
+  opts.on('--falcon', 'Run Falcon/Async server') do |v|
+    $benchmark_server = :falcon
+  end
+end.parse!
+
+require "rails"
+require "global_id"
+
+require "action_controller/railtie"
+require "action_view/railtie"
+require "action_cable/engine"
+
+require "redis"
+require "anycable-rails"
+
+# config/application.rb
+class App < Rails::Application
+  config.root = __dir__
+  config.eager_load = false
+  config.consider_all_requests_local = true
+  config.action_dispatch.show_exceptions = false
+  config.secret_key_base = "i_am_a_secret"
+
+  config.hosts = []
+
+  config.logger = ActiveSupport::Logger.new((ENV["LOG"] == "1") ? $stdout : IO::NULL)
+  config.log_level = (ENV["LOG"] == "1") ? :debug : :fatal
+
+  routes.append do
+    # Add routes here if needed
+  end
+end
+
+ActionCable.server.config.cable = {
+  "adapter" => $benchmark_server == :anycable ? "any_cable" : "redis",
+  "url" => ENV["REDIS_URL"]
+}
+ActionCable.server.config.connection_class = -> { ApplicationCable::Connection }
+ActionCable.server.config.disable_request_forgery_protection = true
+ActionCable.server.config.logger = Rails.logger
+
+Rails.application.initialize!
+
+module ApplicationCable
+  class Connection < ActionCable::Connection::Base
+    identified_by :uid
+  end
+
+  class Channel < ActionCable::Channel::Base
+  end
+end
+
+class BenchmarkChannel < ApplicationCable::Channel
+  def subscribed
+    stream_from "all#{stream_id}"
+  end
+
+  def echo(data)
+    transmit data
+  end
+
+  def broadcast(data)
+    ActionCable.server.broadcast "all#{stream_id}", data
+    data["action"] = "broadcastResult"
+    transmit data
+  end
+
+  private
+
+  def stream_id
+    params[:id] || ""
+  end
+end
+
+class AsyncApp
+  def call(req)
+		Async::WebSocket::Adapters::HTTP.open(req) do |connection|
+      env = {url: "/cable"}
+
+      connected = AnyCable.rpc_handler.handle(
+        :connect,
+        AnyCable::ConnectionRequest.new(env: env)
+      ).then do |response|
+        handle_response(connection, response)
+
+        if response.status != :SUCCESS
+          connection.close
+          next false
+        end
+
+        true
+      end
+
+      next unless connected
+
+      loop do
+        msg = connection.read
+        cmd = Protocol::WebSocket::JSONMessage.wrap(msg)&.to_h
+
+        next unless cmd
+
+        identifier = cmd[:identifier]
+        command = cmd[:command]
+
+        case command
+        when "subscribe"
+          AnyCable.rpc_handler.handle(
+            :command,
+            AnyCable::CommandMessage.new(
+              command:,
+              identifier:,
+              connection_identifiers: "{}",
+              env:
+            )
+          ).then do |response|
+            handle_response(connection, response, identifier)
+          end
+        when "message"
+          AnyCable.rpc_handler.handle(
+            :command,
+            AnyCable::CommandMessage.new(
+              command:,
+              identifier:,
+              connection_identifiers: "{}",
+              data: cmd[:data],
+              env:
+            )
+          ).then do |response|
+            handle_response(connection, response, identifier)
+          end
+        end
+      end
+    rescue EOFError
+		end
+	end
+
+  private
+
+  def handle_response(connection, response, identifier = nil)
+    response.transmissions&.each do |msg|
+      connection.write(msg)
+    end
+    connection.flush
+
+    # Command response
+    if identifier
+      writer = proc do |msg|
+        msg = {identifier: identifier, message: JSON.parse(msg)}.to_json
+        connection.write(msg)
+        connetion.flush
+      end
+
+      response.streams&.each do |stream|
+        ActionCable.server.pubsub.subscribe(stream, writer)
+      end
+    end
+  end
+end
+
+case $benchmark_server
+when :anycable
+  require "anycable/cli"
+  cli = AnyCable::CLI.new
+  cli.define_singleton_method(:boot_app!) { }
+  $stdout.puts "Running AnyCable server"
+  cli.run(["--server-command", "#{ENV.fetch("ANYCABLE_GO_BIN", "./anycable-go")} --host 0.0.0.0"])
+when :puma
+  require "puma/cli"
+  cli = Puma::CLI.new(["-w", "#{ENV.fetch("WEB_CONCURRENCY", 2)}", "-t", "5", "-p", "8080", "-b", "tcp://0.0.0.0"])
+  cli.instance_variable_get(:@conf).options[:app] = Rails.application
+  $stdout.puts "Running Puma server"
+  cli.run
+when :falcon
+  require "async/websocket"
+  require "async/websocket/adapters/http"
+  require 'protocol/websocket/json_message'
+
+  require "falcon/command"
+  require "falcon/command/serve"
+
+  # Patch Action Cable subscriber to be async-aware
+  require "async/semaphore"
+  ActionCable::SubscriptionAdapter::SubscriberMap.prepend(Module.new do
+    def initialize(...)
+      super
+      @semaphore = Async::Semaphore.new(1024)
+    end
+
+    def broadcast(channel, message)
+      list = @sync.synchronize do
+        return if !@subscribers.key?(channel)
+        @subscribers[channel].dup
+      end
+
+      Async do
+        list.each do |subscriber|
+          @semaphore.async do
+            invoke_callback(subscriber, message)
+          end
+        end
+      end
+    end
+  end)
+
+  cmd = Falcon::Command::Serve.new(["-p", "8080", "-b", "tcp://0.0.0.0", "--#{ENV.fetch("FALCON_MODE", "forked")}"])
+  cmd.define_singleton_method(:load_app) { AsyncApp.new }
+  $stdout.puts "Running Falcon server"
+  cmd.call
+end

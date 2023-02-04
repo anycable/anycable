@@ -59,14 +59,14 @@ def generate_plot(log, output):
 		ax.grid()
 
 		fig.savefig(output)
-	
+
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='Generate RTT chart')
 	parser.add_argument('-i', dest='inputfile', type=argparse.FileType('r'), help='input file containing benchmark results', required=True)
-	parser.add_argument('-o', dest='outputfile', type=argparse.FileType('w'), help='output file to write resulted chart PNG', required=True)
+	parser.add_argument('-o', dest='outputfile', help='output file path to write resulted chart PNG', required=True)
 
 	args = parser.parse_args()
-		
+
 	data = process_file(args.inputfile)
 
 	generate_plot(data, args.outputfile)
