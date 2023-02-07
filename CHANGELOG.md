@@ -2,6 +2,8 @@
 
 ## master
 
+- Support placeholders and wildcards in `--path`. ([@palkan][])
+
 ## 1.2.3 (2022-12-01)
 
 - Add `redis_tls_verify` setting to enable validation of Redis server TLS certificate. ([@Envek][])

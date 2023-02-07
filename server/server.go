@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/apex/log"
+	"github.com/go-chi/chi/v5"
 	"golang.org/x/net/netutil"
 )
 
@@ -25,7 +26,7 @@ type HTTPServer struct {
 	mu       sync.Mutex
 	log      *log.Entry
 
-	mux *http.ServeMux
+	mux *chi.Mux
 }
 
 var (
@@ -57,10 +58,10 @@ func ForPort(port string) (*HTTPServer, error) {
 
 // NewServer builds HTTPServer from config params
 func NewServer(host string, port string, ssl *SSLConfig, maxConn int) (*HTTPServer, error) {
-	mux := http.NewServeMux()
+	router := chi.NewRouter()
 	addr := net.JoinHostPort(host, port)
 
-	server := &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}
+	server := &http.Server{Addr: addr, Handler: router, ReadHeaderTimeout: 5 * time.Second}
 
 	secured := (ssl != nil) && ssl.Available()
 
@@ -77,7 +78,7 @@ func NewServer(host string, port string, ssl *SSLConfig, maxConn int) (*HTTPServ
 	return &HTTPServer{
 		server:   server,
 		addr:     addr,
-		mux:      mux,
+		mux:      router,
 		secured:  secured,
 		shutdown: false,
 		started:  false,

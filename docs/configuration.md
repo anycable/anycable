@@ -26,6 +26,18 @@ Server host and port (default: `"localhost:8080"`).
 
 RPC service address (default: `"localhost:50051"`).
 
+**--path** (`ANYCABLE_PATH`)
+
+WebSocket endpoint path (default: `"/cable"`).
+
+You can specify multiple paths separated by commas.
+
+You can also use wildcards (at the end of the paths) or path placeholders:
+
+```sh
+anycable-go --path="/cable,/admin/cable/*,/accounts/{tenant}/cable"
+```
+
 **--headers** (`ANYCABLE_HEADERS`)
 
 Comma-separated list of headers to proxy to RPC (default: `"cookie"`).
