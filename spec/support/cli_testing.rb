@@ -83,17 +83,20 @@ module CLITesting
   # spawned process collision)
   def run_command(command, chdir: nil, env: {"ANYCABLE_CONF" => ""})
     rspex = nil
+    ctrl = nil
 
     PTY.spawn(
       env,
       command,
       chdir: chdir || File.join(PROJECT_ROOT, "bin")
     ) do |stdout, stderr, pid|
-      yield CLIControl.new(stdout, stderr, pid)
+      ctrl = CLIControl.new(stdout, stderr, pid)
+      yield ctrl
     rescue Exception => e # rubocop:disable Lint/RescueException
       rspex = e
     ensure
       Process.kill("SIGKILL", pid)
+      ctrl&.has_stopped?
     end
   rescue PTY::ChildExited, Errno::ESRCH
     # no-op
