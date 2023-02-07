@@ -69,7 +69,7 @@ func (s *HTTPSubscriber) Start(done chan (error)) error {
 	}
 
 	s.server = server
-	s.server.Mux.Handle(s.path, http.HandlerFunc(s.Handler))
+	s.server.SetupHandler(s.path, http.HandlerFunc(s.Handler))
 
 	s.log.Infof("Accept broadcast requests at %s%s", s.server.Address(), s.path)
 

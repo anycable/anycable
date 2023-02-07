@@ -85,7 +85,7 @@ func NewFromConfig(config *Config) (*Metrics, error) {
 		}
 
 		instance.httpPath = config.HTTP
-		instance.server.Mux.Handle(instance.httpPath, http.HandlerFunc(instance.PrometheusHandler))
+		instance.server.SetupHandler(instance.httpPath, http.HandlerFunc(instance.PrometheusHandler))
 	}
 
 	return instance, nil

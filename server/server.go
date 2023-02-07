@@ -25,7 +25,7 @@ type HTTPServer struct {
 	mu       sync.Mutex
 	log      *log.Entry
 
-	Mux *http.ServeMux
+	mux *http.ServeMux
 }
 
 var (
@@ -77,7 +77,7 @@ func NewServer(host string, port string, ssl *SSLConfig, maxConn int) (*HTTPServ
 	return &HTTPServer{
 		server:   server,
 		addr:     addr,
-		Mux:      mux,
+		mux:      mux,
 		secured:  secured,
 		shutdown: false,
 		started:  false,
@@ -132,6 +132,11 @@ func (s *HTTPServer) StartAndAnnounce(name string) error {
 // Running returns true if server has been started
 func (s *HTTPServer) Running() bool {
 	return s.started
+}
+
+// SetupHandler adds new handler to mux
+func (s *HTTPServer) SetupHandler(path string, handler http.Handler) {
+	s.mux.Handle(path, handler)
 }
 
 // Shutdown shuts down server gracefully.

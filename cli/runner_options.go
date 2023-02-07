@@ -71,3 +71,12 @@ func WithWebSocketHandler(fn websocketHandler) Option {
 		return nil
 	}
 }
+
+// WithWebSocketEndpoint is an Option to set a custom websocket handler at
+// the specified path
+func WithWebSocketEndpoint(path string, fn websocketHandler) Option {
+	return func(r *Runner) error {
+		r.websocketEndpoints[path] = fn
+		return nil
+	}
+}

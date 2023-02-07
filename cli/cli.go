@@ -52,6 +52,8 @@ type Runner struct {
 	subscriberFactory       subscriberFactory
 	websocketHandlerFactory websocketHandler
 
+	websocketEndpoints map[string]websocketHandler
+
 	router *router.RouterController
 
 	errChan       chan error
@@ -61,10 +63,11 @@ type Runner struct {
 // NewRunner creates returns new Runner structure
 func NewRunner(c *config.Config, options []Option) (*Runner, error) {
 	r := &Runner{
-		options:       options,
-		config:        c,
-		shutdownables: []Shutdownable{},
-		errChan:       make(chan error),
+		options:            options,
+		config:             c,
+		shutdownables:      []Shutdownable{},
+		websocketEndpoints: make(map[string]websocketHandler),
+		errChan:            make(chan error),
 	}
 
 	err := r.checkAndSetDefaults()
@@ -178,12 +181,20 @@ func (r *Runner) Run() error {
 	}
 
 	for _, path := range r.config.Path {
-		wsServer.Mux.Handle(path, wsHandler)
+		wsServer.SetupHandler(path, wsHandler)
 		r.log.Infof("Handle WebSocket connections at %s%s", wsServer.Address(), path)
 	}
 
-	wsServer.Mux.Handle(r.config.HealthPath, http.HandlerFunc(server.HealthHandler))
-	r.log.Infof("Handle health connections at %s%s", wsServer.Address(), r.config.HealthPath)
+	for path, handlerFactory := range r.websocketEndpoints {
+		handler, err := handlerFactory(appNode, r.config)
+		if err != nil {
+			return errorx.Decorate(err, "!!! Failed to initialize WebSocket handler for %s !!!", path)
+		}
+		wsServer.SetupHandler(path, handler)
+	}
+
+	wsServer.SetupHandler(r.config.HealthPath, http.HandlerFunc(server.HealthHandler))
+	r.log.Infof("Handle health requests at %s%s", wsServer.Address(), r.config.HealthPath)
 
 	go r.startWSServer(wsServer)
 	go r.startMetrics(metrics)
