@@ -110,7 +110,7 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 	}
 
 	if path != "" {
-		c.Path = strings.Split(path, " ")
+		c.Path = strings.Split(path, ",")
 	}
 
 	c.Headers = strings.Split(strings.ToLower(headers), ",")
