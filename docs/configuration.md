@@ -29,6 +29,10 @@ Local address to run gRPC server on (default: `"[::]:50051"`, deprecated, will b
 
 [Broadcast adapter](./broadcast_adapters.md) to use. Available options out-of-the-box: `redis` (default), `nats`, `http`.
 
+**grpc_impl** (`ANYCABLE_GRPC_IMPL`, `--grpc-impl`)
+
+An implementation of the gRPC server (supported: `"google_grpc"` for the [official gem](https://github.com/grpc/grpc/tree/master/src/ruby) (default), `"grpc_kit"` for the [alternative implementation](https://github.com/cookpad/grpc_kit)).
+
 **nats_servers** (`ANYCABLE_NATS_SERVERS`, `--nats-servers`)
 
 A comma-separated list of NATS server addresses (default: `"nats://localhost:4222"`).
