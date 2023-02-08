@@ -2,7 +2,7 @@
 
 ## master
 
-- (_Experimental_) Add support for [grpc_kit](https://github.com/cookpad/grpc_kit) as an alternative gRPC implementation. ([@palkan][])
+- (_Experimental_) Add support for [grpc_kit](https://github.com/cookpad/grpc_kit) as an alternative gRPC implementation. ([@palkan][], [@cylon-v][])
 
 Add `grpc_kit` to your Gemfile and specify `ANYCABLE_GRPC_IMPL=grpc_kit` env var to use it.
 
@@ -142,7 +142,6 @@ See [#71](https://github.com/anycable/anycable/pull/71).
 See [Changelog](https://github.com/anycable/anycable/blob/0-6-stable/CHANGELOG.md) for versions <1.0.0.
 
 [@palkan]: https://github.com/palkan
-[@sponomarev]: https://github.com/sponomarev
-[@bibendi]: https://github.com/bibendi
 [@smasry]: https://github.com/smasry
 [@Envek]: https://github.com/Envek
+[@cylon-v]: https://github.com/cylon-v
