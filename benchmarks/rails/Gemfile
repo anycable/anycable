@@ -1,0 +1,22 @@
+source "https://rubygems.org"
+
+gem "rails", "~> 7.0", group: :preload
+gem "puma", "~> 6.0"
+gem "rack", "< 3", group: :preload
+gem "redis", "~> 5.0", group: :preload
+
+gem "falcon", "~> 0.42.0", group: :preload
+gem "async-websocket", group: :preload
+gem "openssl", "3.1.0", group: :preload
+
+gem "grpc_kit" if ENV["ANYCABLE_GRPC_IMPL"] == "grpc_kit"
+gem "grpc" unless ENV["ANYCABLE_GRPC_IMPL"] == "grpc_kit"
+gem "anycable-core", path: "../..", group: :preload
+
+if File.directory?(File.join(__dir__, "../../../anycable-rails"))
+  gem "anycable-rails", path: "../../../anycable-rails", require: false, group: :preload
+else
+  gem "anycable-rails", require: false, group: :preload
+end
+
+gem "debug", "1.7.0"
