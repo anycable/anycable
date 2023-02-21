@@ -2,6 +2,12 @@
 
 ## master
 
+- Add `grpc_active_conn_num` metrics. ([@palkan][])
+
+Useful when you use DNS load balancing to know, how many active gRPC connections are established.
+
+Also, added debug logs for gRPC connected/disconnected events.
+
 - Support placeholders and wildcards in `--path`. ([@palkan][])
 
 ## 1.2.3 (2022-12-01)

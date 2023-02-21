@@ -11,6 +11,7 @@ type Barrier interface {
 	Capacity() int
 	CapacityInfo() string
 	Exhausted()
+	HasDynamicCapacity() bool
 }
 
 type FixedSizeBarrier struct {
@@ -59,3 +60,5 @@ func (b *FixedSizeBarrier) CapacityInfo() string {
 }
 
 func (FixedSizeBarrier) Exhausted() {}
+
+func (FixedSizeBarrier) HasDynamicCapacity() (res bool) { return }

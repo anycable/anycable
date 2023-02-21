@@ -6,9 +6,11 @@ const (
 	defaultRPCHost = "localhost:50051"
 )
 
-// ClientHelepr provides additional methods to operate gRPC client
+// ClientHelper provides additional methods to operate gRPC client
 type ClientHelper interface {
 	Ready() error
+	SupportsActiveConns() bool
+	ActiveConns() int
 	Close()
 }
 

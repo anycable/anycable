@@ -28,6 +28,14 @@ func (st MockState) Ready() error {
 func (st MockState) Close() {
 }
 
+func (st MockState) SupportsActiveConns() bool {
+	return false
+}
+
+func (st MockState) ActiveConns() int {
+	return 0
+}
+
 func NewTestController() *Controller {
 	config := NewConfig()
 	metrics := metrics.NewMetrics(nil, 0)

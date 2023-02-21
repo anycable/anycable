@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/anycable/anycable-go/common"
@@ -22,6 +23,8 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/peer"
+	"google.golang.org/grpc/stats"
 	"google.golang.org/grpc/status"
 )
 
@@ -34,17 +37,22 @@ const (
 	retryExhaustedInterval   = 10
 	retryUnavailableInterval = 100
 
-	metricsRPCCalls    = "rpc_call_total"
-	metricsRPCRetries  = "rpc_retries_total"
-	metricsRPCFailures = "rpc_error_total"
-	metricsRPCPending  = "rpc_pending_num"
-	metricsRPCCapacity = "rpc_capacity_num"
+	refreshMetricsInterval = time.Duration(10) * time.Second
+
+	metricsRPCCalls        = "rpc_call_total"
+	metricsRPCRetries      = "rpc_retries_total"
+	metricsRPCFailures     = "rpc_error_total"
+	metricsRPCPending      = "rpc_pending_num"
+	metricsRPCCapacity     = "rpc_capacity_num"
+	metricsGRPCActiveConns = "grpc_active_conn_num"
 )
 
 type grpcClientHelper struct {
 	conn       *grpc.ClientConn
 	recovering bool
 	mu         sync.Mutex
+
+	active int64
 }
 
 // Returns nil if connection in the READY/IDLE/CONNECTING state.
@@ -73,6 +81,44 @@ func (st *grpcClientHelper) Ready() error {
 
 func (st *grpcClientHelper) Close() {
 	st.conn.Close()
+}
+
+func (st *grpcClientHelper) ActiveConns() int {
+	return int(atomic.LoadInt64(&st.active))
+}
+
+func (st *grpcClientHelper) SupportsActiveConns() bool {
+	return true
+}
+
+func (st *grpcClientHelper) HandleConn(ctx context.Context, stat stats.ConnStats) {
+	var addr string
+
+	if p, ok := peer.FromContext(ctx); ok {
+		addr = p.Addr.String()
+	}
+
+	if _, ok := stat.(*stats.ConnBegin); ok {
+		log.WithField("context", "grpc").Debugf("connected to %s", addr)
+		atomic.AddInt64(&st.active, 1)
+	}
+
+	if _, ok := stat.(*stats.ConnEnd); ok {
+		log.WithField("context", "grpc").Debugf("disconnected from %s", addr)
+		atomic.AddInt64(&st.active, -1)
+	}
+}
+
+func (st *grpcClientHelper) HandleRPC(ctx context.Context, stat stats.RPCStats) {
+	// no-op
+}
+
+func (st *grpcClientHelper) TagConn(ctx context.Context, stat *stats.ConnTagInfo) context.Context {
+	return ctx
+}
+
+func (st *grpcClientHelper) TagRPC(ctx context.Context, stat *stats.RPCTagInfo) context.Context {
+	return ctx
 }
 
 func (st *grpcClientHelper) tryRecover() error {
@@ -109,6 +155,9 @@ type Controller struct {
 	metrics     metrics.Instrumenter
 	log         *log.Entry
 	clientState ClientHelper
+
+	timerMu      sync.Mutex
+	metricsTimer *time.Timer
 }
 
 // NewController builds new Controller
@@ -117,11 +166,18 @@ func NewController(metrics metrics.Instrumenter, config *Config) *Controller {
 	metrics.RegisterCounter(metricsRPCRetries, "The total number of RPC call retries")
 	metrics.RegisterCounter(metricsRPCFailures, "The total number of failed RPC calls")
 	metrics.RegisterGauge(metricsRPCPending, "The number of pending RPC calls")
-	metrics.RegisterGauge(metricsRPCCapacity, "The max number of concurrent RPC calls allowed")
 
 	capacity := config.Concurrency
 	barrier := NewFixedSizeBarrier(capacity)
-	metrics.GaugeSet(metricsRPCCapacity, uint64(capacity))
+
+	if barrier.HasDynamicCapacity() {
+		metrics.RegisterGauge(metricsRPCCapacity, "The max number of concurrent RPC calls allowed")
+		metrics.GaugeSet(metricsRPCCapacity, uint64(barrier.Capacity()))
+	}
+
+	if config.DialFun == nil {
+		metrics.RegisterGauge(metricsGRPCActiveConns, "The number of active HTTP connections used by gRPC")
+	}
 
 	return &Controller{log: log.WithField("context", "rpc"), metrics: metrics, config: config, barrier: barrier}
 }
@@ -143,11 +199,18 @@ func (c *Controller) Start() error {
 
 	if err == nil {
 		c.log.Infof("RPC controller initialized: %s (concurrency: %s, enable_tls: %t, proto_versions: %s)", host, c.barrier.CapacityInfo(), enableTLS, ProtoVersions)
+	} else {
+		return err
 	}
 
 	c.client = client
 	c.clientState = state
-	return err
+
+	if c.barrier.HasDynamicCapacity() || state.SupportsActiveConns() {
+		c.metricsTimer = time.AfterFunc(refreshMetricsInterval, c.refreshMetrics)
+	}
+
+	return nil
 }
 
 // Shutdown closes connections
@@ -155,6 +218,12 @@ func (c *Controller) Shutdown() error {
 	if c.clientState == nil {
 		return nil
 	}
+
+	c.timerMu.Lock()
+	if c.metricsTimer != nil {
+		c.metricsTimer.Stop()
+	}
+	c.timerMu.Unlock()
 
 	defer c.clientState.Close()
 
@@ -408,7 +477,7 @@ func newContext(sessionID string) context.Context {
 	return metadata.NewOutgoingContext(context.Background(), md)
 }
 
-func defaultDialer(conf *Config) (client pb.RPCClient, state ClientHelper, err error) {
+func defaultDialer(conf *Config) (pb.RPCClient, ClientHelper, error) {
 	host := conf.Host
 	enableTLS := conf.EnableTLS
 
@@ -419,9 +488,12 @@ func defaultDialer(conf *Config) (client pb.RPCClient, state ClientHelper, err e
 
 	const grpcServiceConfig = `{"loadBalancingPolicy":"round_robin"}`
 
+	state := &grpcClientHelper{}
+
 	dialOptions := []grpc.DialOption{
 		grpc.WithKeepaliveParams(kacp),
 		grpc.WithDefaultServiceConfig(grpcServiceConfig),
+		grpc.WithStatsHandler(state),
 	}
 
 	if enableTLS {
@@ -456,11 +528,26 @@ func defaultDialer(conf *Config) (client pb.RPCClient, state ClientHelper, err e
 	)
 
 	if err != nil {
-		return
+		return nil, nil, err
 	}
 
-	client = pb.NewRPCClient(conn)
-	state = &grpcClientHelper{conn: conn}
+	client := pb.NewRPCClient(conn)
+	state.conn = conn
 
-	return
+	return client, state, nil
+}
+
+func (c *Controller) refreshMetrics() {
+	if c.clientState.SupportsActiveConns() {
+		c.metrics.GaugeSet(metricsGRPCActiveConns, uint64(c.clientState.ActiveConns()))
+	}
+
+	if c.barrier.HasDynamicCapacity() {
+		c.metrics.GaugeSet(metricsRPCCapacity, uint64(c.barrier.Capacity()))
+	}
+
+	c.timerMu.Lock()
+	defer c.timerMu.Unlock()
+
+	c.metricsTimer = time.AfterFunc(refreshMetricsInterval, c.refreshMetrics)
 }
