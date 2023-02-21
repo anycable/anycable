@@ -61,7 +61,7 @@ func NewFromConfig(config *Config) (*Metrics, error) {
 				return nil, err
 			}
 		} else {
-			metricsPrinter = NewBasePrinter()
+			metricsPrinter = NewBasePrinter(config.LogFilter)
 		}
 
 		writers = append(writers, metricsPrinter)

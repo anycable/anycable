@@ -6,9 +6,11 @@ type Config struct {
 	LogInterval    int // Deprecated
 	RotateInterval int
 	LogFormatter   string
-	HTTP           string
-	Host           string
-	Port           int
+	// Print only specified metrics
+	LogFilter []string
+	HTTP      string
+	Host      string
+	Port      int
 }
 
 // NewConfig creates an empty Config struct

@@ -54,6 +54,7 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 
 	var path, headers, cookieFilter string
 	var helpOrVersionWereShown bool = true
+	var metricsFilter string
 
 	// Print raw version without prefix
 	cli.VersionPrinter = func(cCtx *cli.Context) {
@@ -70,7 +71,7 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 	flags = append(flags, rpcCLIFlags(&c, &headers, &cookieFilter)...)
 	flags = append(flags, disconnectorCLIFlags(&c)...)
 	flags = append(flags, logCLIFlags(&c)...)
-	flags = append(flags, metricsCLIFlags(&c)...)
+	flags = append(flags, metricsCLIFlags(&c, &metricsFilter)...)
 	flags = append(flags, wsCLIFlags(&c)...)
 	flags = append(flags, pingCLIFlags(&c)...)
 	flags = append(flags, jwtCLIFlags(&c)...)
@@ -136,6 +137,10 @@ Use metrics_rotate_interval instead.`)
 		if c.Metrics.RotateInterval == 0 {
 			c.Metrics.RotateInterval = c.Metrics.LogInterval
 		}
+	}
+
+	if metricsFilter != "" {
+		c.Metrics.LogFilter = strings.Split(metricsFilter, ",")
 	}
 
 	return &c, nil, false
@@ -441,7 +446,7 @@ func logCLIFlags(c *config.Config) []cli.Flag {
 }
 
 // metricsCLIFlags returns CLI flags for metrics
-func metricsCLIFlags(c *config.Config) []cli.Flag {
+func metricsCLIFlags(c *config.Config, filter *string) []cli.Flag {
 	return withDefaults(metricsCategoryDescription, []cli.Flag{
 		// Metrics
 		&cli.BoolFlag{
@@ -462,6 +467,12 @@ func metricsCLIFlags(c *config.Config) []cli.Flag {
 			Usage:       "DEPRECATED. Specify how often flush metrics logs (in seconds)",
 			Value:       c.Metrics.LogInterval,
 			Destination: &c.Metrics.LogInterval,
+		},
+
+		&cli.StringFlag{
+			Name:        "metrics_log_filter",
+			Usage:       "Specify list of metrics to print to log (to reduce the output)",
+			Destination: filter,
 		},
 
 		&cli.StringFlag{

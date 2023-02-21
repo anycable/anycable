@@ -170,6 +170,16 @@ INFO 2018-03-06T14:16:27.872Z broadcast_msg_total=0 broadcast_streams_num=0 clie
 
 By default, metrics are logged every 15 seconds (you can change this behavior through `--metrics_rotate_interval` option).
 
+By default, all available metrics are logged. You can specify a subset of metrics to print to logs via the `--metrics_log_filter` option. For example:
+
+```sh
+$ anycable-go --metrics_log_filter=clients_num,rpc_call_total,rpc_error_total
+
+...
+INFO 2023-02-21T15:49:25.744Z context=metrics Log metrics every 15s (only selected fields: clients_num, rpc_call_total, rpc_error_total)
+...
+```
+
 ### Custom loggers with mruby
 
 <!-- TODO: add new API, remove "experimental" -->
