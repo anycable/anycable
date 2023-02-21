@@ -11,6 +11,8 @@ module AnyCable
       def rpc_poll_period=: (Numeric) -> void
       def rpc_pool_keep_alive: () -> Numeric
       def rpc_pool_keep_alive=: (Numeric) -> void
+      def rpc_max_connection_age: () -> Integer
+      def rpc_max_connection_age=: (Integer) -> void
       def rpc_server_args: () -> Hash[Symbol | String, untyped]?
       def rpc_server_args=: (Hash[Symbol | String, untyped]) -> void
       def log_grpc: () -> bool
@@ -30,6 +32,7 @@ module AnyCable
       }
 
       def normalized_grpc_server_args: () -> Hash[String, untyped]
+      def enhance_grpc_server_args: (Hash[String, untyped]) -> Hash[String, untyped]
     end
   end
 end

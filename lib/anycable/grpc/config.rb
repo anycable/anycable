@@ -8,6 +8,7 @@ AnyCable::Config.attr_config(
   rpc_poll_period: 1,
   rpc_pool_keep_alive: 0.25,
   rpc_server_args: {},
+  rpc_max_connection_age: 300,
   log_grpc: false
 )
 
@@ -31,7 +32,7 @@ module AnyCable
           max_waiting_requests: rpc_max_waiting_requests,
           poll_period: rpc_poll_period,
           pool_keep_alive: rpc_pool_keep_alive,
-          server_args: normalized_grpc_server_args
+          server_args: enhance_grpc_server_args(normalized_grpc_server_args)
         }
       end
 
@@ -43,6 +44,14 @@ module AnyCable
           skey = key.to_s
           skey.start_with?("grpc.") ? skey : "grpc.#{skey}"
         end
+      end
+
+      def enhance_grpc_server_args(opts)
+        return opts if opts.key?("grpc.max_connection_age_ms")
+        return opts unless rpc_max_connection_age.to_i > 0
+
+        opts["grpc.max_connection_age_ms"] = rpc_max_connection_age.to_i * 1000
+        opts
       end
     end
   end

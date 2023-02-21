@@ -17,6 +17,7 @@ AllCops:
     - 'benchmarks/**/*'
   DisplayCopNames: true
   SuggestExtensions: false
+  NewCops: disable
   TargetRubyVersion: 2.7
 
 Standard/BlockSingleLineBraces:

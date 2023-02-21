@@ -34,20 +34,26 @@ describe AnyCable::Config do
     around { |ex| with_env("ANYCABLE_RPC_SERVER_ARGS__LOADREPORTING" => "1", &ex) }
 
     it "returns normalized server args" do
-      config = described_class.new("rpc_server_args" => {max_connection_age_ms: 30_000, "grpc.per_message_compression" => 1, "max_concurrent_streams" => 10}) # rubocop:disable Style/HashSyntax
+      config = described_class.new("rpc_server_args" => {max_connection_age_ms: 10_000, "grpc.per_message_compression" => 1, "max_concurrent_streams" => 10}) # rubocop:disable Style/HashSyntax
 
       server_args = config.to_grpc_params[:server_args]
 
       expect(server_args).to eq({
         "grpc.loadreporting" => 1,
-        "grpc.max_connection_age_ms" => 30_000,
+        "grpc.max_connection_age_ms" => 10_000,
         "grpc.per_message_compression" => 1,
         "grpc.max_concurrent_streams" => 10
       })
     end
 
-    it "returns empty hash if server_args is not a hash" do
-      expect(described_class.new(rpc_server_args: "foo").to_grpc_params[:server_args]).to eq({})
+    it "returns default hash if server_args is not a hash" do
+      expect(described_class.new(rpc_server_args: "foo").to_grpc_params[:server_args])
+        .to eq({"grpc.max_connection_age_ms" => 300_000})
+    end
+
+    it "returns correct config if server_args is empty but rpc_max_connection_age is set" do
+      expect(described_class.new(rpc_server_args: {}, rpc_max_connection_age: 60).to_grpc_params[:server_args])
+        .to eq({"grpc.max_connection_age_ms" => 60_000})
     end
   end
 end

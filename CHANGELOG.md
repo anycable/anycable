@@ -2,6 +2,8 @@
 
 ## master
 
+- Add `rpc_max_connection_age` option (if favour of `rpc_server_args.max_connection_age_ms`) and configured its **default value to be 300 (5 minutes)**. ([@palkan][])
+
 - (_Experimental_) Add support for [grpc_kit](https://github.com/cookpad/grpc_kit) as an alternative gRPC implementation. ([@palkan][], [@cylon-v][])
 
 Add `grpc_kit` to your Gemfile and specify `ANYCABLE_GRPC_IMPL=grpc_kit` env var to use it.
