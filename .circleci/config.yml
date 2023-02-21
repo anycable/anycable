@@ -136,7 +136,7 @@ workflows:
 executors:
   golang:
     docker:
-      - image: cimg/go:1.18.3
+      - image: cimg/go:1.19.6
     environment:
       CGO_ENABLED: "0"
       GO111MODULE: "on"
@@ -149,8 +149,8 @@ executors:
       CGO_ENABLED: "1"
       GO111MODULE: "on"
       GOFLAGS: "-mod=vendor"
-      GO_VERSION: 1.18.3
-      GO_SHA: a23a24c5528671d444328a36a98056902f699a5a211b6ad5db29ca0c012e0085
+      GO_VERSION: 1.19.6
+      GO_SHA: 63386d51c69cef6c001ff0436832289635ba4a2649282451a18827e93507b444
   docker:
     docker:
       - image: cimg/base:stable
@@ -183,7 +183,7 @@ commands:
       - run: env GOOS=<< parameters.os >> GOARCH=<< parameters.arch >> go build -ldflags "-s -w -X github.com/anycable/anycable-go/version.version=${CIRCLE_TAG/v/''} -X github.com/anycable/anycable-go/version.sha=$(echo "$CIRCLE_SHA1" | cut -c -7)" -tags mrb -a -o "/tmp/dist/anycable-go-<< parameters.postfix >>" cmd/anycable-go/main.go
 
 orbs:
-  ruby: circleci/ruby@1.1
+  ruby: circleci/ruby@2.0.0
 
 # Jobs definitions
 jobs:
@@ -235,7 +235,7 @@ jobs:
 
   benchmark:
     docker:
-      - image: cimg/go:1.18.3
+      - image: cimg/go:1.19.6
       - image: cimg/redis:6.2.6
     environment:
       GO111MODULE: "on"
@@ -249,7 +249,7 @@ jobs:
     - attach_workspace:
         at: .
     - ruby/install:
-        version: '2.7'
+        version: '3.1.3'
     - run: bundle install
     - run: env GO111MODULE=off go get github.com/anycable/websocket-bench
     - run: env GO111MODULE=off go get github.com/google/gops
@@ -359,7 +359,7 @@ jobs:
 
   conformance:
     docker:
-    - image: cimg/go:1.18.3
+    - image: cimg/go:1.19.6
     - image: cimg/redis:6.2.6
     environment:
       BUNDLE_GEMFILE: ".circleci/Gemfile"
@@ -373,7 +373,7 @@ jobs:
     - attach_workspace:
         at: .
     - ruby/install:
-        version: '2.7'
+        version: '3.1.3'
     - run:
         name: Install deps
         command: bundle install
