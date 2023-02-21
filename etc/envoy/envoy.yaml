@@ -33,6 +33,6 @@ static_resources:
     dns_lookup_family: V4_ONLY
     http2_protocol_options: { }
     hosts: [
-      { socket_address: { address: "docker.for.mac.localhost", port_value: 50060 }},
-      { socket_address: { address: "docker.for.mac.localhost", port_value: 50061 }}
+      { socket_address: { address: "host.docker.internal", port_value: 50060 }},
+      { socket_address: { address: "host.docker.internal", port_value: 50061 }}
     ]

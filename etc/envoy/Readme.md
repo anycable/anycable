@@ -1,5 +1,7 @@
 # Using AnyCable-Go with Envoy
 
+**NOTE:** The example configuration works with v1.16, but no longer valid for the latest versions of Envoy. PRs are welcomed!
+
 [Envoy](https://www.envoyproxy.io) is a modern proxy service which support HTTP2 and gRPC.
 
 We can use Envoy for load balancing and zero-disconnect deployments.
@@ -16,12 +18,10 @@ bundle exec anycable --rpc-host="0.0.0.0:50060"
 bundle exec anycable --rpc-host="0.0.0.0:50061"
 ```
 
-Build and run Envoy Docker image:
+Run Envoy via the Docker image (from the current directory):
 
 ```sh
-docker rmi -f envoy:v1
-docker build -t envoy:v1 .
-docker run -p 9901:9901 -p 50051:50051 --name envoy-cable envoy:v1
+docker run --rm -p 50051:50051 -v $(pwd):/etc/envoy envoyproxy/envoy:v1.16.1
 ```
 
 Now you can access AnyCable RPC service at `:50051`.
