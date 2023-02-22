@@ -210,6 +210,8 @@ func (c *Controller) Start() error {
 		c.metricsTimer = time.AfterFunc(refreshMetricsInterval, c.refreshMetrics)
 	}
 
+	c.barrier.Start()
+
 	return nil
 }
 
@@ -244,6 +246,8 @@ func (c *Controller) Shutdown() error {
 		c.log.Info("All active RPC calls finished")
 		return true, nil
 	})
+
+	c.barrier.Stop()
 
 	return err
 }
