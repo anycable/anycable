@@ -41,3 +41,4 @@ debug*
 .vscode/
 
 Gemfile.lock
+/k6
