@@ -1,5 +1,6 @@
 [![Gem Version](https://badge.fury.io/rb/anycable.svg)](https://rubygems.org/gems/anycable)
 [![Build](https://github.com/anycable/anycable/workflows/Build/badge.svg)](https://github.com/anycable/anycable/actions)
+[![Coverage Status](https://coveralls.io/repos/github/anycable/anycable/badge.svg?branch=master)](https://coveralls.io/github/anycable/anycable?branch=master)
 [![Documentation](https://img.shields.io/badge/docs-link-brightgreen.svg)](https://docs.anycable.io/v1)
 
 # AnyCable
