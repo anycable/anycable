@@ -4,7 +4,15 @@ on:
   push:
     branches:
     - master
+    paths:
+    - "**/*.rb"
+    - "**/*.gemspec"
+    - ".github/workflows/lint.yml"
   pull_request:
+    paths:
+    - "**/*.rb"
+    - "**/*.gemspec"
+    - ".github/workflows/lint.yml"
 
 jobs:
   rubocop:

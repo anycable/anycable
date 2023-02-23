@@ -8,6 +8,7 @@ on:
 
 jobs:
   rspec:
+    if: ${{ !contains(github.event.head_commit.message, '[ci skip tests]') }}
     runs-on: ubuntu-latest
     env:
       BUNDLE_JOBS: 4
@@ -35,6 +36,8 @@ jobs:
           anyway_config: "~> 2.1"
           grpc_imlp: "grpc"
     steps:
+    - run: |
+        echo "Commit msg: ${{ github.event.head_commit.message }}"
     - uses: actions/checkout@v2
     - uses: ruby/setup-ruby@v1
       with:
