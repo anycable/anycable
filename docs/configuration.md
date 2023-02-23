@@ -111,6 +111,35 @@ We limit the number of concurrent RPC calls at the application level (to prevent
 
 You can change this value via `--rpc_concurrency` (`ANYCABLE_RPC_CONCURRENCY`) parameter.
 
+## Adaptive concurrency
+
+<p class="pro-badge-header"></p>
+
+AnyCable-Go Pro provides the **adaptive concurrency** feature. When it is enabled, AnyCable-Go automatically adjusts its RPC concurrency limit depending on the two factors: the number of `ResourceExhausted` errors (indicating that the current concurrency limit is greater than RPC servers capacity) and the number of pending RPC calls (indicating the current concurrency is too small to process incoming messages). The first factor (exhausted errors) has a priority (so if we have both a huge backlog and a large number of errors we decrease the concurrency limit).
+
+You can enable the adaptive concurrency by specifying 0 as the `--rpc_concurrency` value:
+
+```sh
+$ anycable-go --rpc_concurrency=0
+
+...
+
+INFO 2023-02-23T15:26:13.649Z context=rpc RPC controller initialized: \
+  localhost:50051 (concurrency: auto (initial=25, min=5, max=100), enable_tls: false, proto_versions: v1)
+```
+
+You should see the `(concurrency: auto (...))` in the logs. You can also specify the upper and lower bounds for concurrency via the following parameters:
+
+```sh
+$ anycable-go \
+  --rpc_concurrency=0 \
+  --rpc_concurrency_initial=30 \
+  --rpc_concurrency_max=50 \
+  --rpc_concurrency_min=5
+```
+
+You can also monitor the current concurrency value via the `rpc_capacity_num` metrics.
+
 ## Disconnect events settings
 
 AnyCable-Go notifies an RPC server about disconnected clients asynchronously with a rate limit. We do that to allow other RPC calls to have higher priority (because _live_ clients are usually more important) and to avoid load spikes during mass disconnects (i.e., when a server restarts).
