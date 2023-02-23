@@ -5,6 +5,26 @@ begin
 rescue LoadError
 end
 
+if ENV["COVERAGE"] == "true"
+  require "simplecov"
+  SimpleCov.start do
+    enable_coverage :branch
+
+    add_filter "/spec/"
+  end
+
+  require "simplecov-lcov"
+  SimpleCov::Formatter::LcovFormatter.config do |c|
+    c.report_with_single_file = true
+    c.single_report_path = "coverage/lcov.info"
+  end
+
+  SimpleCov.formatters = SimpleCov::Formatter::MultiFormatter.new([
+    SimpleCov::Formatter::HTMLFormatter,
+    SimpleCov::Formatter::LcovFormatter
+  ])
+end
+
 PROJECT_ROOT = File.expand_path("../", __dir__)
 
 ENV["ANYCABLE_CONF"] = File.join(File.dirname(__FILE__), "support/anycable.yml")
