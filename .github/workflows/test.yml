@@ -16,6 +16,8 @@ jobs:
       CI: true
       ANYWAY_CONFIG_VERSION: ${{ matrix.anyway_config }}
       ANYCABLE_GRPC_IMPL: ${{ matrix.grpc_impl }}
+      COVERAGE: "true"
+      COVERALLS_REPO_TOKEN: ${{ secrets.github_token }}
     strategy:
       fail-fast: false
       matrix:
@@ -38,16 +40,37 @@ jobs:
       with:
         ruby-version: ${{ matrix.ruby }}
         bundler-cache: true
+    - name: Install Coveralls reporter
+      run: |
+        curl -L https://github.com/coverallsapp/coverage-reporter/releases/latest/download/coveralls-linux.tar.gz | tar zxv
     - name: Run RSpec
       run: |
         bundle exec rspec
+    - name: Coveralls upload
+      run: |
+        ./coveralls -p --job-flag=ruby-${{ matrix.ruby }}-${{ matrix.grpc_impl }}
     - name: Run RSpec w/o gRPC
       env:
         GRPC: false
       run: |
         bundle exec rspec
+    - name: Coveralls upload
+      run: |
+        ./coveralls -p --job-flag=ruby-${{ matrix.ruby }}-${{ matrix.grpc_impl }}-no-grpc
     - name: Run RSpec with RBS runtime tester
       if: matrix.ruby == '3.1'
       run: |
         bundle exec rbs collection install
         bundle exec rake spec:rbs -- --force-color
+  coverage:
+    needs: rspec
+    runs-on: ubuntu-latest
+    env:
+      COVERALLS_REPO_TOKEN: ${{ secrets.github_token }}
+    steps:
+    - name: Install Coveralls reporter
+      run: |
+        curl -L https://github.com/coverallsapp/coverage-reporter/releases/latest/download/coveralls-linux.tar.gz | tar zxv
+    - name: Finilize Coveralls build
+      run: |
+        ./coveralls -d
