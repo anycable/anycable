@@ -8,6 +8,7 @@ on:
 
 jobs:
   test:
+    if: ${{ !contains(github.event.head_commit.message, '[ci skip tests]') }}[]
     strategy:
       matrix:
         go-version: [1.19.x]
@@ -47,6 +48,7 @@ jobs:
         path: dist/anycable-go
 
   test-macos:
+    if: ${{ !contains(github.event.head_commit.message, '[ci skip tests]') }}[]
     strategy:
       matrix:
         go-version: [1.19.x]
@@ -85,6 +87,7 @@ jobs:
         path: dist/anycable-go
 
   test-conformance:
+    if: ${{ !contains(github.event.head_commit.message, '[ci skip tests]') }}[]
     needs: [test, test-macos]
     strategy:
       matrix:

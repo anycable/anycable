@@ -57,7 +57,7 @@ Make it possible to terminate subscription requests at AnyCable Go without perfo
 
 - Add JWT authentication/identification support.
 
-You can pass a properly structured token along the connection request to authorize the connection and set up _identifiers_ without peforming an RPC call.
+You can pass a properly structured token along the connection request to authorize the connection and set up _identifiers_ without performing an RPC call.
 
 ## 1.1.4 (2021-11-16)
 
@@ -103,7 +103,7 @@ should not be treated as error (e.g., logged).
 
 - Added concurrency to broadcasting. ([@palkan][])
 
-Now new broadcast messages are handled (and retransmitted) concurrently by a pool of workers (Go routines).
+Now new broadcast messages are handled (and re-transmitted) concurrently by a pool of workers (Go routines).
 You can control the size of the pool via the `hub_gopool_size` configuration parameter (defaults to 16).
 
 ## 1.0.5 (2021-03-17)
@@ -182,7 +182,7 @@ The large value might indicate that the RPC server pool size doesn't correspond 
 - Use single gRPC client instance instead of a pool. ([@palkan][])
 
 gRPC connection provides concurrency via H2 streams (with load balancing). Using a pool doesn't bring any performance
-improvements and sometimes 'cause unstability (e.g., ResourceExhausted or Unavailable exceptions under the load).
+improvements and sometimes 'cause instability (e.g., ResourceExhausted or Unavailable exceptions under the load)
 
 We still limit the number of concurrent RPC requests. Now you can configure it via `--rpc_concurrency` setting.
 
