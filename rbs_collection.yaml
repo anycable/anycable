@@ -40,6 +40,10 @@ gems:
     ignore: true
   - name: activesupport
     ignore: true
+  - name: simplecov
+    ignore: true
+  - name: simeplecov-lcov
+    ignore: true
   # Ignore self to avoid deadlocks
   - name: anycable-core
     ignore: true
