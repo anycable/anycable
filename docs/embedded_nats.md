@@ -53,6 +53,14 @@ INFO 2023-02-28T00:06:45.649Z context=main Embedded NATS server started: nats://
 
 See more information in the [NATS documentation](https://docs.nats.io/running-a-nats-service/configuration/clustering).
 
+### Using on Fly.io
+
+AnyCable automatically infers sensible default configuration values for applications deployed to Fly.io.
+
+To configure a cluster from embedded NATS servers, all you need is to turn the embedded NATS feature on and use the defaults. AnyCable automatically configures cluster addresses and routes to build a cluster **within the current region**.
+
+See also [Fly deployment documentation](../deployment/fly.md).
+
 ### Super-cluster
 
 You can also setup a super-cluster by configuring gateways:
