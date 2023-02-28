@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/anycable/anycable-go/enats"
 	"github.com/anycable/anycable-go/identity"
 	"github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/node"
@@ -37,6 +38,8 @@ type Config struct {
 	Metrics              metrics.Config
 	JWT                  identity.JWTConfig
 	Rails                rails.Config
+	EmbedNats            bool
+	EmbeddedNats         enats.Config
 }
 
 // NewConfig returns a new empty config
@@ -61,6 +64,7 @@ func NewConfig() Config {
 		DisconnectQueue:  node.NewDisconnectQueueConfig(),
 		JWT:              identity.NewJWTConfig(""),
 		Rails:            rails.NewConfig(),
+		EmbeddedNats:     enats.NewConfig(),
 	}
 
 	return config

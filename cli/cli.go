@@ -12,6 +12,7 @@ import (
 
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/config"
+	"github.com/anycable/anycable-go/enats"
 	"github.com/anycable/anycable-go/identity"
 	metricspkg "github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/mrb"
@@ -158,6 +159,24 @@ func (r *Runner) Run() error {
 	subscriber, err := r.subscriberFactory(appNode, r.config)
 	if err != nil {
 		return errorx.Decorate(err, "couldn't configure pub/sub")
+	}
+
+	if r.config.EmbedNats {
+		service, enatsErr := r.embedNATS(&r.config.EmbeddedNats)
+
+		if enatsErr != nil {
+			return errorx.Decorate(enatsErr, "failed to start embedded NATS server")
+		}
+
+		desc := service.Description()
+
+		if desc != "" {
+			desc = fmt.Sprintf(" (%s)", desc)
+		}
+
+		r.log.Infof("Embedded NATS server started: %s%s", r.config.EmbeddedNats.ServiceAddr, desc)
+
+		r.shutdownables = append(r.shutdownables, service)
 	}
 
 	err = subscriber.Start(r.errChan)
@@ -376,4 +395,16 @@ func (r *Runner) setupSignalHandlers() {
 	}
 
 	t.Reserve(func() { r.errChan <- nil }) // nolint:errcheck
+}
+
+func (r *Runner) embedNATS(c *enats.Config) (*enats.Service, error) {
+	service := enats.NewService(c)
+
+	err := service.Start()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return service, nil
 }

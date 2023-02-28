@@ -17,7 +17,7 @@ require (
 	github.com/mattn/go-isatty v0.0.14
 	github.com/mitchellh/go-mruby v0.0.0-20200315023956-207cedc21542
 	github.com/namsral/flag v1.7.4-pre
-	github.com/nats-io/nats.go v1.16.0
+	github.com/nats-io/nats.go v1.24.0
 	github.com/stretchr/testify v1.7.4
 	github.com/syossan27/tebata v0.0.0-20180602121909-b283fe4bc5ba
 	github.com/urfave/cli/v2 v2.11.1
@@ -27,9 +27,16 @@ require (
 )
 
 require (
+	github.com/klauspost/compress v1.14.4 // indirect
+	github.com/minio/highwayhash v1.0.2 // indirect
+	github.com/nats-io/jwt/v2 v2.2.1-0.20220330180145-442af02fd36a // indirect
+	golang.org/x/time v0.0.0-20211116232009-f0f3c7e86c11 // indirect
+)
+
+require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/nats-io/nats-server/v2 v2.8.4 // indirect
+	github.com/nats-io/nats-server/v2 v2.8.4
 	github.com/nats-io/nkeys v0.3.0 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
@@ -38,7 +45,7 @@ require (
 	github.com/smira/go-statsd v1.3.2
 	github.com/stretchr/objx v0.4.0 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
-	golang.org/x/crypto v0.0.0-20220315160706-3147a52a75dd // indirect
+	golang.org/x/crypto v0.6.0 // indirect
 	golang.org/x/sys v0.5.0 // indirect
 	golang.org/x/text v0.7.0 // indirect
 	google.golang.org/genproto v0.0.0-20230216225411-c8e22ba71e44 // indirect

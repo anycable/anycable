@@ -7,6 +7,7 @@ import (
 
 	"github.com/anycable/anycable-go/config"
 	"github.com/anycable/anycable-go/version"
+	"github.com/nats-io/nats.go"
 	"github.com/urfave/cli/v2"
 )
 
@@ -55,6 +56,7 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 	var path, headers, cookieFilter, mtags string
 	var helpOrVersionWereShown bool = true
 	var metricsFilter string
+	var enatsRoutes string
 
 	// Print raw version without prefix
 	cli.VersionPrinter = func(cCtx *cli.Context) {
@@ -77,6 +79,7 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 	flags = append(flags, jwtCLIFlags(&c)...)
 	flags = append(flags, signedStreamsCLIFlags(&c)...)
 	flags = append(flags, statsdCLIFlags(&c)...)
+	flags = append(flags, embeddedNatsCLIFlags(&c, &enatsRoutes)...)
 
 	app := &cli.App{
 		Name:            "anycable-go",
@@ -148,6 +151,15 @@ Use metrics_rotate_interval instead.`)
 		c.Metrics.LogFilter = strings.Split(metricsFilter, ",")
 	}
 
+	if enatsRoutes != "" {
+		c.EmbeddedNats.Routes = strings.Split(enatsRoutes, ",")
+	}
+
+	// Automatically set the URL of the embedded NATS as the pub/sub server URL
+	if c.EmbedNats && c.NATSPubSub.Servers == nats.DefaultURL {
+		c.NATSPubSub.Servers = c.EmbeddedNats.ServiceAddr
+	}
+
 	return &c, nil, false
 }
 
@@ -169,6 +181,7 @@ const (
 	jwtCategoryDescription           = "JWT:"
 	signedStreamsCategoryDescription = "SIGNED STREAMS:"
 	statsdCategoryDescription        = "STATSD:"
+	embeddedNatsCategoryDescription  = "EMBEDDED NATS:"
 
 	envPrefix = "ANYCABLE_"
 )
@@ -345,8 +358,59 @@ func natsCLIFlags(c *config.Config) []cli.Flag {
 			Name:        "nats_dont_randomize_servers",
 			Usage:       "Pass this option to disable NATS servers randomization during (re-)connect",
 			Destination: &c.NATSPubSub.DontRandomizeServers,
-		}})
+		},
+	})
+}
 
+// embeddedNatsCLIFlags returns NATS cli flags
+func embeddedNatsCLIFlags(c *config.Config, routes *string) []cli.Flag {
+	return withDefaults(embeddedNatsCategoryDescription, []cli.Flag{
+		&cli.BoolFlag{
+			Name:        "embed_nats",
+			Usage:       "Enable embedded NATS server and use it for pub/sub",
+			Value:       c.EmbedNats,
+			Destination: &c.EmbedNats,
+		},
+
+		&cli.StringFlag{
+			Name:        "enats_addr",
+			Usage:       "NATS server bind address",
+			Value:       c.EmbeddedNats.ServiceAddr,
+			Destination: &c.EmbeddedNats.ServiceAddr,
+		},
+
+		&cli.StringFlag{
+			Name:        "enats_cluster",
+			Usage:       "NATS cluster service bind address",
+			Value:       c.EmbeddedNats.ClusterAddr,
+			Destination: &c.EmbeddedNats.ClusterAddr,
+		},
+
+		&cli.StringFlag{
+			Name:        "enats_cluster_name",
+			Usage:       "NATS cluster name",
+			Value:       c.EmbeddedNats.ClusterName,
+			Destination: &c.EmbeddedNats.ClusterName,
+		},
+
+		&cli.StringFlag{
+			Name:        "enats_cluster_routes",
+			Usage:       "Comma-separated list of known cluster addresses",
+			Destination: routes,
+		},
+
+		&cli.BoolFlag{
+			Name:        "enats_debug",
+			Usage:       "Enable NATS server logs",
+			Destination: &c.EmbeddedNats.Debug,
+		},
+
+		&cli.BoolFlag{
+			Name:        "enats_trace",
+			Usage:       "Enable NATS server protocol trace logs",
+			Destination: &c.EmbeddedNats.Trace,
+		},
+	})
 }
 
 // rpcCLIFlags returns CLI flags for RPC

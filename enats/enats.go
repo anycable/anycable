@@ -1,8 +1,10 @@
 package enats
 
 import (
+	"fmt"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/apex/log"
@@ -27,7 +29,7 @@ type Config struct {
 
 // Service represents NATS service
 type Service struct {
-	config Config
+	config *Config
 	server *server.Server
 }
 
@@ -48,11 +50,14 @@ func (e *LogEntry) Tracef(format string, v ...interface{}) {
 
 // NewConfig returns defaults for NATSServiceConfig
 func NewConfig() Config {
-	return Config{ServiceAddr: nats.DefaultURL, ClusterName: "anycable-cluster"}
+	return Config{
+		ServiceAddr: nats.DefaultURL,
+		ClusterName: "anycable-cluster",
+	}
 }
 
 // NewService returns an instance of NATS service
-func NewService(c Config) *Service {
+func NewService(c *Config) *Service {
 	return &Service{config: c}
 }
 
@@ -136,6 +141,20 @@ func (s *Service) WaitReady() error {
 	return errorx.TimeoutElapsed.New(
 		"Failed to start NATS server within %d seconds", serverStartTimeout,
 	)
+}
+
+func (s *Service) Description() string {
+	var builder strings.Builder
+
+	if s.config.ClusterAddr != "" {
+		builder.WriteString(fmt.Sprintf("cluster: %s, cluster_name: %s", s.config.ClusterAddr, s.config.ClusterName))
+	}
+
+	if s.config.Routes != nil {
+		builder.WriteString(fmt.Sprintf(", routes: %s", strings.Join(s.config.Routes, ",")))
+	}
+
+	return builder.String()
 }
 
 // Shutdown shuts the NATS server down
