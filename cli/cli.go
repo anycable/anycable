@@ -199,12 +199,12 @@ func (r *Runner) Run() error {
 	go r.startWSServer(wsServer)
 	go r.startMetrics(metrics)
 
-	r.shutdownables = []Shutdownable{
+	r.shutdownables = append(r.shutdownables,
 		metrics,
 		subscriber,
 		wsServer,
 		appNode,
-	}
+	)
 
 	r.announceGoPools()
 	r.setupSignalHandlers()
