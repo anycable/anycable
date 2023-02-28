@@ -56,7 +56,7 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 	var path, headers, cookieFilter, mtags string
 	var helpOrVersionWereShown bool = true
 	var metricsFilter string
-	var enatsRoutes string
+	var enatsRoutes, enatsGateways string
 
 	// Print raw version without prefix
 	cli.VersionPrinter = func(cCtx *cli.Context) {
@@ -79,7 +79,7 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 	flags = append(flags, jwtCLIFlags(&c)...)
 	flags = append(flags, signedStreamsCLIFlags(&c)...)
 	flags = append(flags, statsdCLIFlags(&c)...)
-	flags = append(flags, embeddedNatsCLIFlags(&c, &enatsRoutes)...)
+	flags = append(flags, embeddedNatsCLIFlags(&c, &enatsRoutes, &enatsGateways)...)
 
 	app := &cli.App{
 		Name:            "anycable-go",
@@ -153,6 +153,10 @@ Use metrics_rotate_interval instead.`)
 
 	if enatsRoutes != "" {
 		c.EmbeddedNats.Routes = strings.Split(enatsRoutes, ",")
+	}
+
+	if enatsGateways != "" {
+		c.EmbeddedNats.Gateways = strings.Split(enatsGateways, ";")
 	}
 
 	// Automatically set the URL of the embedded NATS as the pub/sub server URL
@@ -363,7 +367,7 @@ func natsCLIFlags(c *config.Config) []cli.Flag {
 }
 
 // embeddedNatsCLIFlags returns NATS cli flags
-func embeddedNatsCLIFlags(c *config.Config, routes *string) []cli.Flag {
+func embeddedNatsCLIFlags(c *config.Config, routes *string, gateways *string) []cli.Flag {
 	return withDefaults(embeddedNatsCategoryDescription, []cli.Flag{
 		&cli.BoolFlag{
 			Name:        "embed_nats",
@@ -397,6 +401,19 @@ func embeddedNatsCLIFlags(c *config.Config, routes *string) []cli.Flag {
 			Name:        "enats_cluster_routes",
 			Usage:       "Comma-separated list of known cluster addresses",
 			Destination: routes,
+		},
+
+		&cli.StringFlag{
+			Name:        "enats_gateway",
+			Usage:       "NATS gateway bind address",
+			Value:       c.EmbeddedNats.GatewayAddr,
+			Destination: &c.EmbeddedNats.GatewayAddr,
+		},
+
+		&cli.StringFlag{
+			Name:        "enats_gateways",
+			Usage:       "Semicolon-separated list of known gateway configurations: name_a:gateway_1,gateway_2;name_b:gateway_4",
+			Destination: gateways,
 		},
 
 		&cli.BoolFlag{

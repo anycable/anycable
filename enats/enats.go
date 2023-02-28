@@ -24,6 +24,8 @@ type Config struct {
 	ServiceAddr string
 	ClusterAddr string
 	ClusterName string
+	GatewayAddr string
+	Gateways    []string
 	Routes      []string
 }
 
@@ -63,7 +65,6 @@ func NewService(c *Config) *Service {
 
 // Start starts the service
 func (s *Service) Start() error {
-	var clusterOpts server.ClusterOpts
 	var err error
 
 	u, err := url.Parse(s.config.ServiceAddr)
@@ -79,32 +80,19 @@ func (s *Service) Start() error {
 		return errorx.Decorate(err, "Failed to parse NATS service port")
 	}
 
-	if s.config.ClusterAddr != "" {
-		var clusterURL *url.URL
-		var clusterPort int64
-
-		clusterURL, err = url.Parse(s.config.ClusterAddr)
-		if err != nil {
-			return errorx.Decorate(err, "Failed to parse NATS cluster URL")
-		}
-		if clusterURL.Port() == "" {
-			return errorx.IllegalArgument.New("Failed to parse NATS cluster port")
-		}
-
-		clusterPort, err = strconv.ParseInt(clusterURL.Port(), 10, 32)
-		if err != nil {
-			return errorx.Decorate(err, "Failed to parse NATS cluster port")
-		}
-		clusterOpts = server.ClusterOpts{
-			Name: s.config.ClusterName,
-			Host: clusterURL.Hostname(),
-			Port: int(clusterPort),
-		}
+	clusterOpts, err := s.getCluster(s.config.ClusterAddr, s.config.ClusterName)
+	if err != nil {
+		return errorx.Decorate(err, "Failed to configure NATS cluster")
 	}
 
 	routes, err := s.getRoutes()
 	if err != nil {
 		return errorx.Decorate(err, "Failed to parse routes")
+	}
+
+	gatewayOpts, err := s.getGateway(s.config.GatewayAddr, s.config.ClusterName, s.config.Gateways)
+	if err != nil {
+		return errorx.Decorate(err, "Failed to configure NATS gateway")
 	}
 
 	opts := &server.Options{
@@ -113,6 +101,7 @@ func (s *Service) Start() error {
 		Debug:   s.config.Debug,
 		Trace:   s.config.Trace,
 		Cluster: clusterOpts,
+		Gateway: gatewayOpts,
 		Routes:  routes,
 		NoSigs:  true,
 	}
@@ -154,6 +143,10 @@ func (s *Service) Description() string {
 		builder.WriteString(fmt.Sprintf(", routes: %s", strings.Join(s.config.Routes, ",")))
 	}
 
+	if s.config.GatewayAddr != "" {
+		builder.WriteString(fmt.Sprintf(", gateway: %s, gateways: %s", s.config.GatewayAddr, s.config.Gateways))
+	}
+
 	return builder.String()
 }
 
@@ -179,4 +172,97 @@ func (s *Service) getRoutes() ([]*url.URL, error) {
 		routes[i] = u
 	}
 	return routes, nil
+}
+
+func (s *Service) getCluster(addr string, name string) (opts server.ClusterOpts, err error) {
+	if addr == "" || name == "" {
+		return
+	}
+
+	host, port, err := parseAddress(addr)
+
+	if err != nil {
+		err = errorx.Decorate(err, "Failed to parse cluster URL")
+		return
+	}
+
+	opts = server.ClusterOpts{
+		Name: name,
+		Host: host,
+		Port: port,
+	}
+
+	return
+}
+
+func (s *Service) getGateway(addr string, name string, gateways []string) (opts server.GatewayOpts, err error) {
+	if addr == "" || name == "" {
+		return
+	}
+
+	host, port, err := parseAddress(addr)
+
+	if err != nil {
+		err = errorx.Decorate(err, "Failed to parse gateway URL")
+		return
+	}
+
+	opts = server.GatewayOpts{
+		Name: s.config.ClusterName,
+		Host: host,
+		Port: port,
+	}
+
+	if len(gateways) != 0 {
+		gateOpts := make([]*server.RemoteGatewayOpts, len(gateways))
+		for i, g := range gateways {
+			parts := strings.SplitN(g, ":", 2)
+
+			if len(parts) != 2 {
+				err = errorx.Decorate(err, "Gateway has unknown format: %s", g)
+				return
+			}
+
+			name := parts[0]
+			addrs := strings.Split(parts[1], ",")
+
+			nameAddrs := make([]*url.URL, len(addrs))
+
+			for j, addr := range addrs {
+				u, gateErr := url.Parse(addr)
+				if gateErr != nil {
+					err = errorx.Decorate(gateErr, "Error parsing gateway URL")
+					return
+				}
+
+				nameAddrs[j] = u
+			}
+
+			gateOpts[i] = &server.RemoteGatewayOpts{URLs: nameAddrs, Name: name}
+		}
+
+		opts.Gateways = gateOpts
+	}
+
+	return
+}
+
+func parseAddress(addr string) (string, int, error) {
+	var uri *url.URL
+
+	uri, err := url.Parse(addr)
+	if err != nil {
+		return "", 0, errorx.Decorate(err, "Failed to parse URL")
+	}
+
+	if uri.Port() == "" {
+		return "", 0, errorx.IllegalArgument.New("Port cannot be empty")
+	}
+
+	port, err := strconv.ParseInt(uri.Port(), 10, 32)
+	if err != nil {
+		return "", 0, errorx.Decorate(err, "Port is not valid")
+	}
+
+	return uri.Hostname(), int(port), nil
 }
