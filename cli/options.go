@@ -57,6 +57,7 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 	var helpOrVersionWereShown bool = true
 	var metricsFilter string
 	var enatsRoutes, enatsGateways string
+	var presets string
 
 	// Print raw version without prefix
 	cli.VersionPrinter = func(cCtx *cli.Context) {
@@ -80,6 +81,7 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 	flags = append(flags, signedStreamsCLIFlags(&c)...)
 	flags = append(flags, statsdCLIFlags(&c)...)
 	flags = append(flags, embeddedNatsCLIFlags(&c, &enatsRoutes, &enatsGateways)...)
+	flags = append(flags, miscCLIFlags(&c, &presets)...)
 
 	app := &cli.App{
 		Name:            "anycable-go",
@@ -159,6 +161,10 @@ Use metrics_rotate_interval instead.`)
 		c.EmbeddedNats.Gateways = strings.Split(enatsGateways, ";")
 	}
 
+	if presets != "" {
+		c.UserPresets = strings.Split(presets, ",")
+	}
+
 	// Automatically set the URL of the embedded NATS as the pub/sub server URL
 	if c.EmbedNats && c.NATSPubSub.Servers == nats.DefaultURL {
 		c.NATSPubSub.Servers = c.EmbeddedNats.ServiceAddr
@@ -186,6 +192,7 @@ const (
 	signedStreamsCategoryDescription = "SIGNED STREAMS:"
 	statsdCategoryDescription        = "STATSD:"
 	embeddedNatsCategoryDescription  = "EMBEDDED NATS:"
+	miscCategoryDescription          = "MISC:"
 
 	envPrefix = "ANYCABLE_"
 )
@@ -724,6 +731,17 @@ func statsdCLIFlags(c *config.Config) []cli.Flag {
 			Usage:       `One of "datadog", "influxdb", or "graphite"`,
 			Value:       c.Metrics.Statsd.TagFormat,
 			Destination: &c.Metrics.Statsd.TagFormat,
+		},
+	})
+}
+
+// miscCLIFlags returns uncategorized flags
+func miscCLIFlags(c *config.Config, presets *string) []cli.Flag {
+	return withDefaults(miscCategoryDescription, []cli.Flag{
+		&cli.StringFlag{
+			Name:        "presets",
+			Usage:       "Configuration presets, comma-separated (none, fly, heroku). Inferred automatically",
+			Destination: presets,
 		},
 	})
 }

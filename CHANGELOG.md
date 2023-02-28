@@ -2,6 +2,10 @@
 
 ## master
 
+- Add configuration presets (fly, heroku). ([@palkan][])
+
+Provide sensible defaults matching current platform.
+
 - Add embedded NATS support. ([@gzigzigzeo][], [@palkan][])
 
 - Added metrics default tags support for StatsD and Prometheus.

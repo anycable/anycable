@@ -40,6 +40,7 @@ type Config struct {
 	Rails                rails.Config
 	EmbedNats            bool
 	EmbeddedNats         enats.Config
+	UserPresets          []string
 }
 
 // NewConfig returns a new empty config

@@ -89,6 +89,41 @@ Logging level (default: `"info"`).
 
 Enable debug mode (more verbose logging).
 
+## Presets
+
+AnyCable-Go comes with a few built-in configuration presets for particular deployments environments, such as Heroku or Fly. The presets are detected and activated automatically. As an indication, you can find a line in the logs:
+
+```sh
+INFO ... context=config Loaded presets: fly
+```
+
+To disable automatic presets activation, provide `ANYCABLE_PRESETS=none` environment variable (or pass the corresponding option to the CLI: `anycable-go --presets=none`).
+
+**NOTE:** Presets do not override explicitly provided configuration values.
+
+### Preset: fly
+
+Automatically activated if all of the following environment variables are defined: `FLY_APP_NAME`, `FLY_REGION`, `FLY_ALLOC_ID`.
+
+The preset provide the following defaults:
+
+- `host`: "0.0.0.0"
+- `enats_server_addr`: "nats://0.0.0.0:4222"
+- `enats_cluster_addr`: "nats://0.0.0.0:5222"
+- `enats_cluster_routes`: "nats://<FLY_REGION>.<FLY_APP_NAME>.internal:5222"
+
+If the `ANYCABLE_FLY_RPC_APP_NAME` env variable is provided, the following defaults are configured as well:
+
+- `rpc_host`: "dns:///<FLY_REGION>.<ANYCABLE_FLY_RPC_APP_NAME>.internal:50051"
+
+### Preset: heroku
+
+Automatically activated if all of the following environment variables are defined: `HEROKU_DYNO_ID`, `HEROKU_APP_ID`. **NOTE:** These env vars are defined only if the [Dyno Metadata feature](https://devcenter.heroku.com/articles/dyno-metadata) is enabled.
+
+The preset provides the following defaults:
+
+- `host`: "0.0.0.0".
+
 ## TLS
 
 To secure your `anycable-go` server provide the paths to SSL certificate and private key:

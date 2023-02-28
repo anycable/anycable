@@ -81,16 +81,29 @@ func NewRunner(c *config.Config, options []Option) (*Runner, error) {
 
 // checkAndSetDefaults applies passed options and checks that all required fields are set
 func (r *Runner) checkAndSetDefaults() error {
-	server.SSL = &r.config.SSL
-	server.Host = r.config.Host
-	server.MaxConn = r.config.MaxConn
-
 	for _, o := range r.options {
 		err := o(r)
 		if err != nil {
 			return err
 		}
 	}
+
+	err := utils.InitLogger(r.config.LogFormat, r.config.LogLevel)
+	if err != nil {
+		return errorx.Decorate(err, "!!! Failed to initialize logger !!!")
+	}
+
+	r.log = log.WithFields(log.Fields{"context": "main"})
+
+	err = r.config.LoadPresets()
+
+	if err != nil {
+		return errorx.Decorate(err, "!!! Failed to load configuration presets !!!")
+	}
+
+	server.SSL = &r.config.SSL
+	server.Host = r.config.Host
+	server.MaxConn = r.config.MaxConn
 
 	if r.name == "" {
 		return errorx.AssertionFailed.New("Name is blank, specify WithName()")
@@ -111,13 +124,6 @@ func (r *Runner) checkAndSetDefaults() error {
 	if r.websocketHandlerFactory == nil {
 		r.websocketHandlerFactory = r.defaultWebSocketHandler
 	}
-
-	err := utils.InitLogger(r.config.LogFormat, r.config.LogLevel)
-	if err != nil {
-		return errorx.Decorate(err, "!!! Failed to initialize logger !!!")
-	}
-
-	r.log = log.WithFields(log.Fields{"context": "main"})
 
 	return nil
 }
