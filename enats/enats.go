@@ -1,3 +1,6 @@
+//go:build !freebsd || amd64
+// +build !freebsd amd64
+
 package enats
 
 import (
@@ -16,18 +19,6 @@ import (
 const (
 	serverStartTimeout = 5 * time.Second
 )
-
-// Config represents NATS service configuration
-type Config struct {
-	Debug       bool
-	Trace       bool
-	ServiceAddr string
-	ClusterAddr string
-	ClusterName string
-	GatewayAddr string
-	Gateways    []string
-	Routes      []string
-}
 
 // Service represents NATS service
 type Service struct {
