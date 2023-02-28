@@ -96,6 +96,7 @@ jobs:
           - test-conformance
           - test-conformance-http
           - test-conformance-nats
+          - test-conformance-nats-embedded
           - test-conformance-ssl
     runs-on: ubuntu-latest
     env:
