@@ -2,6 +2,8 @@
 
 ## master
 
+- Add embedded NATS support. ([@gzigzigzeo][], [@palkan][])
+
 - Added metrics default tags support for StatsD and Prometheus.
 
 You can define global tags (added to every reported metric by default) for Prometheus (reported as labels)
@@ -215,3 +217,4 @@ See [Changelog](https://github.com/anycable/anycable-go/blob/0-6-stable/CHANGELO
 [@ryansch]: https://github.com/ryansch
 [@Envek]: https://github.com/Envek
 [@rafaelrubbioli]: https://github.com/rafaelrubbioli
+[@gzigzigzeo]: https://github.com/gzigzigzeo
