@@ -46,6 +46,8 @@ If your sentinels are protected with passwords, use the following format: `:pass
 
 NATS adapter uses [NATS publish/subscribe](https://docs.nats.io/nats-concepts/core-nats/pubsub) functionality and supports cluster features out-of-the-box.
 
+> With [embedded NATS](../anycable-go/embedded_nats.md) feature of AnyCable-Go, you can minimize the number of required components to deploy an AnyCable-backed application.
+
 See [configuration](./configuration.md) for available NATS options.
 
 ## Custom adapters

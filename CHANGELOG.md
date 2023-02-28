@@ -2,6 +2,8 @@
 
 ## master
 
+- Require Ruby 2.7+ and Anyway Config 2.2+.
+
 - Add `rpc_max_connection_age` option (if favour of `rpc_server_args.max_connection_age_ms`) and configured its **default value to be 300 (5 minutes)**. ([@palkan][])
 
 - (_Experimental_) Add support for [grpc_kit](https://github.com/cookpad/grpc_kit) as an alternative gRPC implementation. ([@palkan][], [@cylon-v][])

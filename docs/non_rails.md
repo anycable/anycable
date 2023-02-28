@@ -4,8 +4,8 @@ AnyCable can be used without Rails, thus allowing you to use ActionCable-like fu
 
 ## Requirements
 
-- Ruby >= 2.6
-- Redis (when using Redis [broadcast adapter](broadcast_adapters.md))
+- Ruby >= 2.7
+- Redis or NATS (see [broadcast adapters](broadcast_adapters.md))
 
 ## Installation
 
@@ -16,6 +16,9 @@ gem "anycable", "~> 1.1"
 
 # when using Redis broadcast adapter
 gem "redis", ">= 4.0"
+
+# when using NATS broadcast adapter
+gem "nats-pure", "~> 2"
 ```
 
 (and don't forget to run `bundle install`).

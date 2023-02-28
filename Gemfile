@@ -8,7 +8,6 @@ gem "benchmark_driver"
 # https://github.com/soutaro/steep/issues/466
 gem "activesupport", "~> 6.0"
 
-gem "anyway_config", ENV.fetch("ANYWAY_CONFIG_VERSION", ">= 2.1.0")
 unless ENV["GRPC"] == "false"
   case ENV["ANYCABLE_GRPC_IMPL"]
   when "grpc_kit" then gem "grpc_kit"

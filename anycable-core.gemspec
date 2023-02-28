@@ -26,9 +26,9 @@ Gem::Specification.new do |spec|
     Dir.glob("sig/anycable/**/*.rbs") + %w[sig/anycable.rbs]
   spec.require_paths = ["lib"]
 
-  spec.required_ruby_version = ">= 2.6.0"
+  spec.required_ruby_version = ">= 2.7.0"
 
-  spec.add_dependency "anyway_config", ">= 2.1.0"
+  spec.add_dependency "anyway_config", "~> 2.2"
   spec.add_dependency "google-protobuf", ">= 3.13"
 
   spec.add_development_dependency "redis", ">= 4.0"

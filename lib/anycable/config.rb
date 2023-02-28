@@ -56,24 +56,17 @@ module AnyCable
       sid_header_enabled: true
     )
 
-    if respond_to?(:coerce_types)
-      coerce_types(
-        redis_sentinels: {type: nil, array: true},
-        nats_servers: {type: nil, array: true},
-        redis_tls_verify: :boolean,
-        nats_dont_randomize_servers: :boolean,
-        debug: :boolean,
-        version_check_enabled: :boolean
-      )
-    end
+    coerce_types(
+      redis_sentinels: {type: nil, array: true},
+      nats_servers: {type: nil, array: true},
+      redis_tls_verify: :boolean,
+      nats_dont_randomize_servers: :boolean,
+      debug: :boolean,
+      version_check_enabled: :boolean
+    )
 
     flag_options :debug, :nats_dont_randomize_servers
     ignore_options :nats_options
-
-    on_load do
-      # @type self : AnyCable::Config
-      self.debug = debug != false
-    end
 
     def log_level
       debug? ? "debug" : super

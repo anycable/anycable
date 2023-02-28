@@ -15,7 +15,6 @@ jobs:
       BUNDLE_RETRY: 3
       BUNDLE_FORCE_RUBY_PLATFORM: 1
       CI: true
-      ANYWAY_CONFIG_VERSION: ${{ matrix.anyway_config }}
       ANYCABLE_GRPC_IMPL: ${{ matrix.grpc_impl }}
       COVERAGE: "true"
       COVERALLS_REPO_TOKEN: ${{ secrets.github_token }}
@@ -28,12 +27,7 @@ jobs:
         include:
         - ruby: "3.1"
           grpc_impl: "grpc_kit"
-          anyway_config: "~> 2.2"
         - ruby: "2.7"
-          anyway_config: "~> 2.1"
-          grpc_imlp: "grpc"
-        - ruby: "2.6"
-          anyway_config: "~> 2.1"
           grpc_imlp: "grpc"
     steps:
     - run: |
