@@ -1,7 +1,7 @@
 source 'https://rubygems.org'
 gemspec name: "anycable-core"
 
-gem "pry-byebug", platform: :mri
+gem "debug", platform: :mri
 
 gem "benchmark_driver"
 

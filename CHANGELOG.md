@@ -2,6 +2,10 @@
 
 ## master
 
+- Add configuration presets. ([@palkan][])
+
+Provide sensible defaults matching current platform (e.g., Fly.io).
+
 - Require Ruby 2.7+ and Anyway Config 2.2+.
 
 - Add `rpc_max_connection_age` option (if favour of `rpc_server_args.max_connection_age_ms`) and configured its **default value to be 300 (5 minutes)**. ([@palkan][])

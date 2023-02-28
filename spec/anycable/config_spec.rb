@@ -147,4 +147,63 @@ describe AnyCable::Config do
       specify { expect(config.redis_url).to eq("redis://localhost:6379/5") }
     end
   end
+
+  describe "presets", grpc: true do
+    subject(:config) { described_class.new }
+
+    around { |ex| with_env("ANYCABLE_CONF" => nil, &ex) }
+
+    specify "no presets detected" do
+      expect(config.presets).to eq([])
+    end
+
+    context "with Fly env" do
+      around do |ex|
+        with_env(
+          "FLY_APP_NAME" => "real-timer",
+          "FLY_ALLOC_ID" => "431",
+          "FLY_REGION" => "syd",
+          &ex
+        )
+      end
+
+      specify do
+        expect(config.rpc_host).to eq("0.0.0.0:50051")
+      end
+
+      context "with WS app name" do
+        around { |ex| with_env("ANYCABLE_FLY_WS_APP_NAME" => "kabel", &ex) }
+
+        specify do
+          expect(config.rpc_host).to eq("0.0.0.0:50051")
+          expect(config.http_broadcast_url).to eq("http://syd.kabel.internal:8090/_broadcast")
+          expect(config.nats_servers).to eq(["nats://syd.kabel.internal:4222"])
+        end
+
+        context "with explicit settings" do
+          around do |ex|
+            with_env(
+              "ANYCABLE_NATS_SERVERS" => "nats://some.other.nats:4321",
+              "ANYCABLE_RPC_HOST" => "0.0.0.0:50061",
+              &ex
+            )
+          end
+
+          specify do
+            expect(config.rpc_host).to eq("0.0.0.0:50061")
+            expect(config.nats_servers).to eq(["nats://some.other.nats:4321"])
+            expect(config.http_broadcast_url).to eq("http://syd.kabel.internal:8090/_broadcast")
+          end
+        end
+      end
+
+      context "when none provided" do
+        around { |ex| with_env("ANYCABLE_PRESETS" => "none", &ex) }
+
+        specify do
+          expect(config.rpc_host).to eq("127.0.0.1:50051")
+        end
+      end
+    end
+  end
 end

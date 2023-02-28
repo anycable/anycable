@@ -1,5 +1,7 @@
 module AnyCable
   interface _Config
+    def presets: () -> Array[String]
+    def presets=: (Array[String]) -> void
     def broadcast_adapter: () -> Symbol
     def broadcast_adapter=: (Symbol) -> void
     def redis_url: () -> String
@@ -56,6 +58,7 @@ module AnyCable
     alias debug? debug
     alias version_check_enabled? version_check_enabled
 
+    def load: (*untyped) -> void
     def http_health_port_provided?: () -> bool
     def to_redis_params: () -> { url: String, sentinels: Array[untyped]?, ssl_params: Hash[Symbol, untyped]? }
     def to_http_health_params: () -> { port: Integer?, path: String }
@@ -64,5 +67,10 @@ module AnyCable
     private
 
     def parse_sentinel: ((String | Hash[untyped, untyped]) sentinel) -> Hash[Symbol, untyped]
+    def load_presets: () -> void
+    def detect_presets: () -> Array[String]
+    def write_preset: (Symbol, untyped, preset: String) -> void
+    def write_config_attr: (Symbol, untyped) -> void
+    def __trace__: () -> untyped
   end
 end

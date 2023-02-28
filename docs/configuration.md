@@ -73,6 +73,27 @@ For the complete list of configuration parameters see [`config.rb`](https://gith
 
 \* You can change the default YML config location path by settings `ANYCABLE_CONF` env variable.
 
+## Presets
+
+AnyCable comes with a few built-in configuration presets for particular deployments environments, such as Fly. The presets are detected and activated automatically
+
+To disable automatic presets activation, provide `ANYCABLE_PRESETS=none` environment variable (or pass the corresponding option to the CLI: `bundle exec anycable --presets=none`).
+
+**NOTE:** Presets do not override explicitly provided configuration values.
+
+### Preset: fly
+
+Automatically activated if all of the following environment variables are defined: `FLY_APP_NAME`, `FLY_REGION`, `FLY_ALLOC_ID`.
+
+The preset provide the following defaults:
+
+- `rpc_host`: "0.0.0.0:50051"
+
+If the `FLY_ANYCABLE_WS_APP_NAME` env variable is provided, the following defaults are configured as well:
+
+- `nats_servers`: `"nats://<FLY_REGION>.<FLY_ANYCABLE_WS_APP_NAME>.internal:4222"`
+- `http_broadcast_url`: `"http://<FLY_REGION>.<FLY_ANYCABLE_WS_APP_NAME>.internal:8090/_broadcast"`
+
 ## Concurrency settings
 
 AnyCable gRPC server maintains a pool of worker threads to execute commands. We rely on the `grpc` gem [default pool size](https://github.com/grpc/grpc/blob/80e834abab5dff45e16e9a1e3b98f20eae5f91ad/src/ruby/lib/grpc/generic/rpc_server.rb#L163), which is equal to **30**.

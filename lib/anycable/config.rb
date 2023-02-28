@@ -21,6 +21,8 @@ module AnyCable
     config_name :anycable
 
     attr_config(
+      presets: "",
+
       ## PubSub
       broadcast_adapter: :redis,
 
@@ -57,6 +59,7 @@ module AnyCable
     )
 
     coerce_types(
+      presets: {type: nil, array: true},
       redis_sentinels: {type: nil, array: true},
       nats_servers: {type: nil, array: true},
       redis_tls_verify: :boolean,
@@ -67,6 +70,10 @@ module AnyCable
 
     flag_options :debug, :nats_dont_randomize_servers
     ignore_options :nats_options
+
+    def load(*)
+      super.tap { load_presets }
+    end
 
     def log_level
       debug? ? "debug" : super
@@ -165,6 +172,43 @@ module AnyCable
       {host: uri.host, port: uri.port}.tap do |opts|
         opts[:password] = uri.password if uri.password
       end
+    end
+
+    def load_presets
+      if presets.nil? || presets.empty?
+        self.presets = detect_presets
+        __trace__&.record_value(presets, :presets, type: :env)
+      end
+
+      return if presets.empty?
+
+      presets.each { send(:"load_#{_1}_presets") if respond_to?(:"load_#{_1}_presets", true) }
+    end
+
+    def detect_presets
+      [].tap do
+        _1 << "fly" if ENV.key?("FLY_APP_NAME") && ENV.key?("FLY_ALLOC_ID") && ENV.key?("FLY_REGION")
+      end
+    end
+
+    def load_fly_presets
+      write_preset(:rpc_host, "0.0.0.0:50051", preset: "fly")
+
+      ws_app_name = ENV["ANYCABLE_FLY_WS_APP_NAME"]
+      return unless ws_app_name
+
+      region = ENV.fetch("FLY_REGION")
+
+      write_preset(:http_broadcast_url, "http://#{region}.#{ws_app_name}.internal:8090/_broadcast", preset: "fly")
+      write_preset(:nats_servers, "nats://#{region}.#{ws_app_name}.internal:4222", preset: "fly")
+    end
+
+    def write_preset(key, value, preset:)
+      # do not override explicitly provided values
+      return unless __trace__&.dig(key.to_s)&.source&.dig(:type) == :defaults
+
+      write_config_attr(key, value)
+      __trace__&.record_value(value, key, type: :preset, preset: preset)
     end
   end
 end

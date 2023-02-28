@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 begin
-  require "pry-byebug"
+  require "debug" unless ENV["CI"] == "true"
 rescue LoadError
 end
 
