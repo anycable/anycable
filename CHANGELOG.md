@@ -2,6 +2,8 @@
 
 ## master
 
+## 1.3.0 (2023-02-28)
+
 - Add configuration presets (fly, heroku). ([@palkan][])
 
 Provide sensible defaults matching current platform.
