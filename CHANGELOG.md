@@ -2,6 +2,8 @@
 
 ## master
 
+## 1.3.0 (2023-02-28)
+
 - Add configuration presets. ([@palkan][])
 
 Provide sensible defaults matching current platform (e.g., Fly.io).
