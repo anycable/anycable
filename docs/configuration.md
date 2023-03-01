@@ -110,6 +110,7 @@ The preset provide the following defaults:
 - `host`: "0.0.0.0"
 - `enats_server_addr`: "nats://0.0.0.0:4222"
 - `enats_cluster_addr`: "nats://0.0.0.0:5222"
+- `enats_cluster_name`: "<FLY_APP_NAME>-<FLY_REGION>-cluster"
 - `enats_cluster_routes`: "nats://<FLY_REGION>.<FLY_APP_NAME>.internal:5222"
 
 If the `ANYCABLE_FLY_RPC_APP_NAME` env variable is provided, the following defaults are configured as well:

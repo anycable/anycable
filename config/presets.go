@@ -69,6 +69,10 @@ func (c *Config) loadFlyPreset(defaults *Config) error {
 		c.EmbeddedNats.ClusterAddr = "nats://0.0.0.0:5222"
 	}
 
+	if c.EmbeddedNats.ClusterName == defaults.EmbeddedNats.ClusterName {
+		c.EmbeddedNats.ClusterName = fmt.Sprintf("%s-%s-cluster", appName, region)
+	}
+
 	if c.EmbeddedNats.Routes == nil {
 		c.EmbeddedNats.Routes = []string{fmt.Sprintf("nats://%s.%s.internal:5222", region, appName)}
 	}

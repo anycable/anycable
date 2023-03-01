@@ -39,6 +39,7 @@ func TestFlyPresets(t *testing.T) {
 	assert.Equal(t, "0.0.0.0", config.Host)
 	assert.Equal(t, "nats://0.0.0.0:4222", config.EmbeddedNats.ServiceAddr)
 	assert.Equal(t, "nats://0.0.0.0:5222", config.EmbeddedNats.ClusterAddr)
+	assert.Equal(t, "any-test-mag-cluster", config.EmbeddedNats.ClusterName)
 	assert.Equal(t, []string{"nats://mag.any-test.internal:5222"}, config.EmbeddedNats.Routes)
 	assert.Equal(t, "dns:///mag.anycable-web.internal:50051", config.RPC.Host)
 }
