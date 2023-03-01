@@ -20,7 +20,7 @@ The easiest way to install AnyCable-Go is to [download](https://github.com/anyca
 
 ```shell
 # Example for `anycable-go-linux-amd64`
-curl -fsSL https://github.com/anycable/anycable-go/releases/download/v1.2.2/anycable-go-linux-amd64 -o anycable-go
+curl -fsSL https://github.com/anycable/anycable-go/releases/latest/download/anycable-go-linux-amd64 -o anycable-go
 chmod +x anycable-go
 ./anycable-go -v
 ```
