@@ -13,6 +13,9 @@ describe AnyCable::BroadcastAdapters::Nats do
 
     allow(::NATS::Client).to receive(:new) { nats_conn }
     allow(nats_conn).to receive(:connect)
+    allow(nats_conn).to receive(:on_disconnect)
+    allow(nats_conn).to receive(:on_reconnect)
+    allow(nats_conn).to receive(:on_error)
   end
 
   after { AnyCable.config.reload }

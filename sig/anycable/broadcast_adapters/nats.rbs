@@ -5,6 +5,10 @@ module AnyCable
       attr_reader channel: String
 
       def initialize: (?channel: String channel, **untyped options) -> void
+
+      private
+
+      def setup_listeners: (untyped nats_conn) -> void
     end
   end
 end

@@ -31,6 +31,7 @@ module AnyCable
       )
         options = AnyCable.config.to_nats_params.merge(options)
         @nats_conn = ::NATS.connect(nil, options)
+        setup_listeners(nats_conn)
         @channel = channel
       end
 
@@ -40,6 +41,19 @@ module AnyCable
 
       def announce!
         logger.info "Broadcasting NATS channel: #{channel}"
+      end
+
+      private
+
+      def setup_listeners(nats_client)
+        nats_client.on_disconnect { logger.info "NATS client disconnected" }
+        nats_client.on_reconnect do
+          info = nats_client.server_info
+          logger.info "NATS client reconnected: host=#{info[:host]}:#{info[:port]} cluster=#{info[:cluster]}"
+        end
+        nats_client.on_error do |err|
+          logger.warn "NATS client error: #{err.message}"
+        end
       end
     end
   end
