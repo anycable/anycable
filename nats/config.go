@@ -9,8 +9,15 @@ type NATSConfig struct {
 	Channel              string
 	DontRandomizeServers bool
 	MaxReconnectAttempts int
+	// Internal channel name for node-to-node broadcasting
+	InternalChannel string
 }
 
 func NewNATSConfig() NATSConfig {
-	return NATSConfig{Servers: natsgo.DefaultURL, Channel: "__anycable__", MaxReconnectAttempts: 5}
+	return NATSConfig{
+		Servers:              natsgo.DefaultURL,
+		Channel:              "__anycable__",
+		MaxReconnectAttempts: 5,
+		InternalChannel:      "__anycable_internal__",
+	}
 }

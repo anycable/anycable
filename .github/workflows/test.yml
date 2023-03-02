@@ -121,6 +121,7 @@ jobs:
           - test-conformance-ssl
           - test-conformance-http-broker
           - test-conformance-broker-redis-pubsub
+          - test-conformance-broker-nats-pubsub
     runs-on: ubuntu-latest
     env:
       GO111MODULE: on

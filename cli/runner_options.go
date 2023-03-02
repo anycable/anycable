@@ -86,6 +86,8 @@ func WithDefaultSubscriber() Option {
 			return pubsub.NewLegacySubscriber(h), nil
 		case "redis":
 			return pubsub.NewRedisSubscriber(h, &c.Redis)
+		case "nats":
+			return pubsub.NewNATSSubscriber(h, &c.NATS)
 		}
 
 		return nil, errorx.IllegalArgument.New("Unsupported subscriber adapter: %s", c.PubSubAdapter)
