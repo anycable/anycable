@@ -81,9 +81,9 @@ anycable_go_broadcast_msg_total 956
 # TYPE anycable_go_failed_broadcast_msg_total counter
 anycable_go_failed_broadcast_msg_total 0
 
-# HELP anycable_go_broadcast_streams_total The number of active broadcasting streams
-# TYPE anycable_go_broadcast_streams_total gauge
-anycable_go_broadcast_streams_total 0
+# HELP anycable_go_broadcast_streams_num The number of active broadcasting streams
+# TYPE anycable_go_broadcast_streams_num gauge
+anycable_go_broadcast_streams_num 0
 
 # HELP anycable_go_rpc_call_total The total number of RPC calls
 # TYPE anycable_go_rpc_call_total counter
