@@ -28,6 +28,8 @@ Check out our 📑 [Documentation](https://docs.anycable.io/v1).
 
 ## Links
 
+- [AnyCable off Rails: connecting Twilio streams with Hanami](https://evilmartians.com/chronicles/anycable-goes-off-rails-connecting-twilio-streams-with-hanami)
+
 - [AnyCable 1.0: Four years of real-time web with Ruby and Go](https://evilmartians.com/chronicles/anycable-1-0-four-years-of-real-time-web-with-ruby-and-go)
 
 - [AnyCable: Action Cable on steroids!](https://evilmartians.com/chronicles/anycable-actioncable-on-steroids)
