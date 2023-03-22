@@ -81,7 +81,7 @@ func (s *Service) Start() error {
 		return errorx.Decorate(err, "Failed to parse routes")
 	}
 
-	gatewayOpts, err := s.getGateway(s.config.GatewayAddr, s.config.ClusterName, s.config.Gateways)
+	gatewayOpts, err := s.getGateway(s.config.GatewayAddr, s.config.GatewayAdvertise, s.config.ClusterName, s.config.Gateways)
 	if err != nil {
 		return errorx.Decorate(err, "Failed to configure NATS gateway")
 	}
@@ -136,6 +136,10 @@ func (s *Service) Description() string {
 
 	if s.config.GatewayAddr != "" {
 		builder.WriteString(fmt.Sprintf(", gateway: %s, gateways: %s", s.config.GatewayAddr, s.config.Gateways))
+
+		if s.config.GatewayAdvertise != "" {
+			builder.WriteString(fmt.Sprintf(", gateway_advertise: %s", s.config.GatewayAdvertise))
+		}
 	}
 
 	return builder.String()
@@ -186,7 +190,7 @@ func (s *Service) getCluster(addr string, name string) (opts server.ClusterOpts,
 	return
 }
 
-func (s *Service) getGateway(addr string, name string, gateways []string) (opts server.GatewayOpts, err error) {
+func (s *Service) getGateway(addr string, advertise string, name string, gateways []string) (opts server.GatewayOpts, err error) {
 	if addr == "" || name == "" {
 		return
 	}
@@ -199,9 +203,10 @@ func (s *Service) getGateway(addr string, name string, gateways []string) (opts 
 	}
 
 	opts = server.GatewayOpts{
-		Name: s.config.ClusterName,
-		Host: host,
-		Port: port,
+		Name:      s.config.ClusterName,
+		Host:      host,
+		Port:      port,
+		Advertise: advertise,
 	}
 
 	if len(gateways) != 0 {

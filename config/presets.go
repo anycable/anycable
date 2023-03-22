@@ -77,6 +77,10 @@ func (c *Config) loadFlyPreset(defaults *Config) error {
 		c.EmbeddedNats.Routes = []string{fmt.Sprintf("nats://%s.%s.internal:5222", region, appName)}
 	}
 
+	if c.EmbeddedNats.GatewayAdvertise == defaults.EmbeddedNats.GatewayAdvertise {
+		c.EmbeddedNats.GatewayAdvertise = fmt.Sprintf("%s.%s.internal:7222", region, appName)
+	}
+
 	if rpcName, ok := os.LookupEnv("ANYCABLE_FLY_RPC_APP_NAME"); ok {
 		if c.RPC.Host == defaults.RPC.Host {
 			c.RPC.Host = fmt.Sprintf("dns:///%s.%s.internal:50051", region, rpcName)

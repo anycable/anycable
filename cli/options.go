@@ -423,6 +423,13 @@ func embeddedNatsCLIFlags(c *config.Config, routes *string, gateways *string) []
 			Destination: gateways,
 		},
 
+		&cli.StringFlag{
+			Name:        "enats_gateway_advertise",
+			Usage:       "NATS gateway advertise address",
+			Value:       c.EmbeddedNats.GatewayAdvertise,
+			Destination: &c.EmbeddedNats.GatewayAdvertise,
+		},
+
 		&cli.BoolFlag{
 			Name:        "enats_debug",
 			Usage:       "Enable NATS server logs",
