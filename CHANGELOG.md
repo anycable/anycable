@@ -2,6 +2,8 @@
 
 ## master
 
+## 1.3.1 (2023-03-22)
+
 - Add `--gateway_advertise` option for embedded NATS. ([@palkan][])
 
 ## 1.3.0 (2023-02-28)
