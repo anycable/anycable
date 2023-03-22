@@ -82,4 +82,6 @@ $ anycable-go --port 8081 --broadcast_adapter=nats --embed_nats \
 
 **IMPORTANT**: All servers in the cluster must have the same gateway configuration.
 
+You can also specify the advertised address for the gateway (in case your cluster is behind a NAT) via the `--enats_gateway_advertise` parameter.
+
 See more information in the [NATS documentation](https://docs.nats.io/running-a-nats-service/configuration/clustering).
