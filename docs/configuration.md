@@ -110,13 +110,13 @@ The preset provide the following defaults:
 - `host`: "0.0.0.0"
 - `enats_server_addr`: "nats://0.0.0.0:4222"
 - `enats_cluster_addr`: "nats://0.0.0.0:5222"
-- `enats_cluster_name`: "<FLY_APP_NAME>-<FLY_REGION>-cluster"
-- `enats_cluster_routes`: "nats://<FLY_REGION>.<FLY_APP_NAME>.internal:5222"
-- `enats_gateway_advertise`: "<FLY_REGION>.<FLY_APP_NAME>.internal:7222" (**NOTE:** You must set `ANYCABLE_ENATS_GATEWAY` to `nats://0.0.0.0:7222` manually to enable gateways).
+- `enats_cluster_name`: "\<FLY_APP_NAME\>-\<FLY_REGION\>-cluster"
+- `enats_cluster_routes`: "nats://\<FLY_REGION\>.\<FLY_APP_NAME\>.internal:5222"
+- `enats_gateway_advertise`: "\<FLY_REGION\>.\<FLY_APP_NAME\>.internal:7222" (**NOTE:** You must set `ANYCABLE_ENATS_GATEWAY` to `nats://0.0.0.0:7222` and configure at least one gateway address manually to enable gateways).
 
 If the `ANYCABLE_FLY_RPC_APP_NAME` env variable is provided, the following defaults are configured as well:
 
-- `rpc_host`: "dns:///<FLY_REGION>.<ANYCABLE_FLY_RPC_APP_NAME>.internal:50051"
+- `rpc_host`: "dns:///\<FLY_REGION\>.\<ANYCABLE_FLY_RPC_APP_NAME\>.internal:50051"
 
 ### Preset: heroku
 
