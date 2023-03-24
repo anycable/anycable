@@ -2,6 +2,8 @@
 
 AnyCable supports running a NATS server as a part of the `anycable-go` WebSocket server. Thus, you don't need any _external_ pub/sub services to build AnyCable clusters (i.e., having multiple WebSocket nodes).
 
+> 🎥 Check out this [AnyCasts episode](https://anycable.io/anycasts/flying-multi-regionally-with-nats/) to learn how to use AnyCable with embedded NATS on [Fly.io][fly]
+
 There are multiple ways to use this functionality:
 
 - [Single-server configuration](#single-server-configuration)
@@ -85,3 +87,5 @@ $ anycable-go --port 8081 --broadcast_adapter=nats --embed_nats \
 You can also specify the advertised address for the gateway (in case your cluster is behind a NAT) via the `--enats_gateway_advertise` parameter.
 
 See more information in the [NATS documentation](https://docs.nats.io/running-a-nats-service/configuration/clustering).
+
+[fly]: https://fly.io
