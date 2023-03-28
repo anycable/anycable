@@ -281,6 +281,32 @@ func (s *Session) MergeEnv(env *common.SessionEnv) {
 	}
 }
 
+// WriteInternalState
+func (s *Session) WriteInternalState(key string, val interface{}) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.InternalState == nil {
+		s.InternalState = make(map[string]interface{})
+	}
+
+	s.InternalState[key] = val
+}
+
+// ReadInternalState reads internal state value by key
+func (s *Session) ReadInternalState(key string) (interface{}, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.InternalState == nil {
+		return nil, false
+	}
+
+	val, ok := s.InternalState[key]
+
+	return val, ok
+}
+
 // Serve enters a loop to read incoming data
 func (s *Session) Serve(callback func()) error {
 	go func() {
