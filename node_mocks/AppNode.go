@@ -34,6 +34,29 @@ func (_m *AppNode) Authenticate(s *node.Session) (*common.ConnectResult, error) 
 	return r0, r1
 }
 
+// AuthenticateWithOptions provides a mock function with given fields: s, options
+func (_m *AppNode) AuthenticateWithOptions(s *node.Session, opts... node.AuthOption) (*common.ConnectResult, error) {
+	ret := _m.Called(s, opts)
+
+	var r0 *common.ConnectResult
+	if rf, ok := ret.Get(0).(func(*node.Session) *common.ConnectResult); ok {
+		r0 = rf(s)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*common.ConnectResult)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*node.Session) error); ok {
+		r1 = rf(s)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // Disconnect provides a mock function with given fields: s
 func (_m *AppNode) Disconnect(s *node.Session) error {
 	ret := _m.Called(s)

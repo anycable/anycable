@@ -46,6 +46,11 @@ type AppNode interface {
 	Disconnect(s *Session) error
 }
 
+type AppNodeExt interface {
+	AppNode
+	AuthenticateWithOptions(s *Session, opts ...AuthOption) (*common.ConnectResult, error)
+}
+
 // Connection represents underlying connection
 type Connection interface {
 	Write(msg []byte, deadline time.Time) error
@@ -194,9 +199,40 @@ func (n *Node) Shutdown() (err error) {
 	return
 }
 
+type authOptions struct {
+	DisconnectOnFailure bool
+}
+
+func newAuthOptions(modifiers []AuthOption) *authOptions {
+	base := &authOptions{
+		DisconnectOnFailure: true,
+	}
+
+	for _, modifier := range modifiers {
+		modifier(base)
+	}
+
+	return base
+}
+
+type AuthOption = func(*authOptions)
+
+func WithDisconnectOnFailure(disconnect bool) AuthOption {
+	return func(opts *authOptions) {
+		opts.DisconnectOnFailure = disconnect
+	}
+}
+
 // Authenticate calls controller to perform authentication.
 // If authentication is successful, session is registered with a hub.
 func (n *Node) Authenticate(s *Session) (res *common.ConnectResult, err error) {
+	return n.AuthenticateWithOptions(s)
+}
+
+// AuthenticateWithOptions provides more control on how authentication is performed.
+func (n *Node) AuthenticateWithOptions(s *Session, options ...AuthOption) (res *common.ConnectResult, err error) {
+	opts := newAuthOptions(options)
+
 	res, err = n.controller.Authenticate(s.GetID(), s.env)
 
 	if err != nil {
@@ -214,7 +250,9 @@ func (n *Node) Authenticate(s *Session) (res *common.ConnectResult, err error) {
 			n.metrics.CounterIncrement(metricsFailedAuths)
 		}
 
-		defer s.Disconnect("Auth Failed", ws.CloseNormalClosure)
+		if opts.DisconnectOnFailure {
+			defer s.Disconnect("Auth Failed", ws.CloseNormalClosure)
+		}
 	}
 
 	n.handleCallReply(s, res.ToCallResult())
