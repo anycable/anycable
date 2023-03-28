@@ -18,13 +18,17 @@ require (
 	github.com/mitchellh/go-mruby v0.0.0-20200315023956-207cedc21542
 	github.com/namsral/flag v1.7.4-pre
 	github.com/nats-io/nats.go v1.24.0
-	github.com/stretchr/testify v1.7.4
+	github.com/smira/go-statsd v1.3.2
+	github.com/stretchr/testify v1.8.2
 	github.com/syossan27/tebata v0.0.0-20180602121909-b283fe4bc5ba
 	github.com/urfave/cli/v2 v2.11.1
 	go.uber.org/automaxprocs v1.5.1
 	golang.org/x/net v0.7.0
 	google.golang.org/grpc v1.53.0
 )
+
+// https://github.com/stretchr/testify/pull/1229
+replace github.com/stretchr/testify => github.com/palkan/testify v0.0.0-20220714120938-9ebebef47942
 
 require (
 	github.com/klauspost/compress v1.16.0 // indirect
@@ -42,8 +46,7 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-	github.com/smira/go-statsd v1.3.2
-	github.com/stretchr/objx v0.4.0 // indirect
+	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	golang.org/x/crypto v0.6.0 // indirect
 	golang.org/x/sys v0.5.0 // indirect
