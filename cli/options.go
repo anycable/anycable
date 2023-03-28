@@ -123,6 +123,7 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 	flags = append(flags, pusherCLIFlags(&c)...)
 	flags = append(flags, dsCLIFlags(&c)...)
 	flags = append(flags, apiCLIFlags(&c)...)
+	flags = append(flags, ocppCLIFlags(&c)...)
 	flags = append(flags, miscCLIFlags(&c, &presets)...)
 
 	app := &cli.App{
@@ -531,6 +532,7 @@ const (
 	dsCategoryDescription            = "DURABLE STREAMS:"
 	apiCategoryDescription           = "API:"
 	graphqlCategoryDescription       = "GRAPHQL:"
+	ocppCategoryDescription          = "OCCP:"
 
 	envPrefix = "ANYCABLE_"
 )
@@ -1703,6 +1705,35 @@ func graphqlCLIFlags(c *config.Config) []cli.Flag {
 			Name:        "apollo_action",
 			Hidden:      true,
 			Destination: &c.LegacyGraphQL.Action,
+		},
+	})
+}
+
+func ocppCLIFlags(c *config.Config) []cli.Flag {
+	return withDefaults(ocppCategoryDescription, []cli.Flag{
+		&cli.StringFlag{
+			Name:        "ocpp_path",
+			Usage:       "WebSocket endpoint path prefix to accept OCPP connections",
+			Destination: &c.OCPP.Path,
+		},
+		&cli.StringFlag{
+			Name:        "ocpp_channel",
+			Usage:       "Action Cable channel class name to use at the Ruby side to manage OCPP connections",
+			Value:       c.OCPP.ChannelName,
+			Destination: &c.OCPP.ChannelName,
+		},
+		&cli.IntFlag{
+			Name:        "ocpp_hearbeat_interval",
+			Usage:       "Default heartbeat interval in seconds",
+			Value:       c.OCPP.HeartbeatInterval,
+			Destination: &c.OCPP.HeartbeatInterval,
+		},
+		&cli.BoolFlag{
+			Name: "ocpp_granular_actions",
+			Usage: `When enabled, each OCPP command is translated into its own Action Cable action (e.g, "BootNotification" -> "#boot_notification").
+				When disabled, all commands are sent to the #receive method`,
+			Value:       c.OCPP.GranularActions,
+			Destination: &c.OCPP.GranularActions,
 		},
 	})
 }

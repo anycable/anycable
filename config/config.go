@@ -17,6 +17,7 @@ import (
 	"github.com/anycable/anycable-go/metrics"
 	nconfig "github.com/anycable/anycable-go/nats"
 	"github.com/anycable/anycable-go/node"
+	"github.com/anycable/anycable-go/ocpp"
 	"github.com/anycable/anycable-go/pubsub"
 	"github.com/anycable/anycable-go/pusher"
 	rconfig "github.com/anycable/anycable-go/redis"
@@ -67,6 +68,7 @@ type Config struct {
 	API                  api.Config                 `toml:"api"`
 	GraphQL              graphql.Config             `toml:"graphql"`
 	LegacyGraphQL        graphql.Config
+	OCPP                 ocpp.Config
 
 	ConfigFilePath string
 }
@@ -104,6 +106,7 @@ func NewConfig() Config {
 		API:                  api.NewConfig(),
 		GraphQL:              graphql.NewConfig(),
 		LegacyGraphQL:        graphql.NewConfig(),
+		OCPP:                 ocpp.NewConfig(),
 	}
 
 	return config // nolint:govet
@@ -257,6 +260,9 @@ func (c *Config) ToToml() string {
 
 	result.WriteString("# GraphQL configuration\n[graphql]\n")
 	result.WriteString(c.GraphQL.ToToml())
+
+	result.WriteString("# OCPP configuration\n[ocpp]\n")
+	result.WriteString(c.OCPP.ToToml())
 
 	result.WriteString("# Embedded NATS configuration\n[embedded_nats]\n")
 	result.WriteString(c.EmbeddedNats.ToToml())
