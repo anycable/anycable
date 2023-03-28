@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"path"
 	"runtime"
 	"strconv"
 	"strings"
@@ -23,6 +24,7 @@ import (
 	"github.com/anycable/anycable-go/mrb"
 	"github.com/anycable/anycable-go/netpoll"
 	"github.com/anycable/anycable-go/node"
+	"github.com/anycable/anycable-go/ocpp"
 	"github.com/anycable/anycable-go/pubsub"
 	"github.com/anycable/anycable-go/router"
 	"github.com/anycable/anycable-go/server"
@@ -206,6 +208,16 @@ func (r *Runner) Run() error {
 		wsServer.SetupHandler(gqlPath, apolloHandler)
 
 		r.log.Info(fmt.Sprintf("Handle GraphQL WebSocket connections at %s%s", wsServer.Address(), gqlPath))
+	}
+
+	if r.config.OCPP.Enabled() {
+		occpPrefix := r.config.OCPP.Path
+		ocppPath := path.Join(occpPrefix, "{station_id}")
+		occpHandler := r.ocppWebsocketHandler(appNode, r.config)
+
+		wsServer.SetupHandler(ocppPath, occpHandler)
+
+		r.log.Infof("Handle OCPP v1.6 WebSocket connections at %s%s", wsServer.Address(), ocppPath)
 	}
 
 	wsServer.SetupHandler(r.config.HealthPath, http.HandlerFunc(server.HealthHandler))
@@ -519,6 +531,28 @@ func (r *Runner) apolloWebsocketHandler(n *node.Node, c *config.Config) http.Han
 			)
 		}
 
+		session := node.NewSession(n, wrappedConn, info.URL, info.Headers, info.UID, opts...)
+
+		if r.poller != nil {
+			return session.ServeWithPoll(r.poller, callback)
+		}
+
+		return session.Serve(callback)
+	})
+}
+
+func (r *Runner) ocppWebsocketHandler(n *node.Node, c *config.Config) http.Handler {
+	extractor := server.DefaultHeadersExtractor{Headers: c.Headers, Cookies: c.Cookies}
+	executor := ocpp.NewExecutor(n, &c.OCPP)
+
+	return ws.WebsocketHandler(ocpp.Subprotocols(), &extractor, &c.WS, r.log, func(wsc *websocket.Conn, info *server.RequestInfo, callback func()) error {
+		wrappedConn := ws.NewConnection(wsc)
+
+		opts := []node.SessionOption{
+			node.WithEncoder(ocpp.Encoder{}),
+			node.WithExecutor(executor),
+			node.WithHandshakeMessageDeadline(time.Now().Add(time.Duration(c.OCPP.IdleTimeout) * time.Second)),
+		}
 		session := node.NewSession(n, wrappedConn, info.URL, info.Headers, info.UID, opts...)
 
 		if r.poller != nil {

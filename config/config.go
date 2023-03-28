@@ -9,6 +9,7 @@ import (
 	"github.com/anycable/anycable-go/metrics"
 	nconfig "github.com/anycable/anycable-go/nats"
 	"github.com/anycable/anycable-go/node"
+	"github.com/anycable/anycable-go/ocpp"
 	rconfig "github.com/anycable/anycable-go/redis"
 	"github.com/anycable/anycable-go/rpc"
 	"github.com/anycable/anycable-go/server"
@@ -58,6 +59,7 @@ type Config struct {
 	UserPresets          []string
 	GraphQL              graphql.Config
 	LegacyGraphQL        graphql.Config
+	OCPP                 ocpp.Config
 }
 
 // NewConfig returns a new empty config
@@ -90,6 +92,7 @@ func NewConfig() Config {
 		Streams:          streams.NewConfig(),
 		GraphQL:          graphql.NewConfig(),
 		LegacyGraphQL:    graphql.NewConfig(),
+		OCPP:             ocpp.NewConfig(),
 	}
 
 	return config
