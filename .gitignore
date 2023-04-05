@@ -42,3 +42,5 @@ debug*
 
 Gemfile.lock
 /k6
+
+/coverage.out

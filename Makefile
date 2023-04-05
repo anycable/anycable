@@ -9,6 +9,15 @@ ifndef ANYCABLE_DEBUG
   export ANYCABLE_DEBUG=1
 endif
 
+TEST_FLAGS=
+TEST_BUILD_FLAGS=
+
+ifdef COVERAGE
+  TEST_FLAGS=-coverprofile=coverage.out
+# Enable after upgrading to 1.20
+# TEST_BUILD_FLAGS=-cover
+endif
+
 # If port 6379 is listening, we assume that this is a Redis instance,
 # so we can use a Redis broadcast adapter.
 # Otherwise we fallback to HTTP adapter.
@@ -100,13 +109,13 @@ bench:
 	go test -tags mrb -bench=. ./...
 
 test:
-	go test -count=1 -timeout=30s -race -tags mrb ./...
+	go test -count=1 -timeout=30s -race -tags mrb ./... $(TEST_FLAGS)
 
 benchmarks: build
 	BUNDLE_GEMFILE=.circleci/Gemfile ruby benchmarks/runner.rb benchmarks/*.benchfile
 
 tmp/anycable-go-test:
-	go build -tags mrb -race -o tmp/anycable-go-test cmd/anycable-go/main.go
+	go build $(TEST_BUILD_FLAGS) -tags mrb -race -o tmp/anycable-go-test cmd/anycable-go/main.go
 
 test-conformance: tmp/anycable-go-test
 	BUNDLE_GEMFILE=.circleci/Gemfile bundle exec anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable"

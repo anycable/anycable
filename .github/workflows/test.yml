@@ -16,6 +16,7 @@ jobs:
     env:
       GO111MODULE: on
       GOFLAGS: "-mod=vendor"
+      COVERAGE: "true"
     steps:
     - uses: actions/checkout@v3
     - name: Install system deps
@@ -36,6 +37,12 @@ jobs:
         go-version: ${{ matrix.go-version }}
     - name: Run tests
       run: make test
+    - name: Report coverage
+      uses: coverallsapp/github-action@v2
+      with:
+        file: coverage.out
+        parallel: true
+        flag-name: ${{ matrix.go-version }}-ubuntu
     - name: Build
       if: matrix['go-version'] == '1.19.x'
       run: |
@@ -56,6 +63,7 @@ jobs:
     env:
       GO111MODULE: on
       GOFLAGS: "-mod=vendor"
+      COVERAGE: "true"
     steps:
     - uses: actions/checkout@v3
     - uses: actions/setup-go@v2
@@ -75,6 +83,12 @@ jobs:
       run: bash -c '(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)'
     - name: Run tests
       run: make test
+    - name: Report coverage
+      uses: coverallsapp/github-action@v2
+      with:
+        file: coverage.out
+        parallel: true
+        flag-name: ${{ matrix.go-version }}-macos
     - name: Build
       if: matrix['go-version'] == '1.19.x'
       run: |
@@ -85,6 +99,14 @@ jobs:
       with:
         name: anycable-go-Darwin-x86_64
         path: dist/anycable-go
+
+  coverage:
+    runs-on: ubuntu-latest
+    needs: [test, test-macos]
+    steps:
+      - uses: coverallsapp/github-action@v2
+        with:
+          parallel-finished: true
 
   test-conformance:
     if: ${{ !contains(github.event.head_commit.message, '[ci skip tests]') }}[]
