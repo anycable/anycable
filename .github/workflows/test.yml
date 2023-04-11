@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    if: ${{ !contains(github.event.head_commit.message, '[ci skip tests]') }}[]
+    if: "!contains(github.event.head_commit.message, '[ci skip tests]')"
     strategy:
       matrix:
         go-version: [1.20.x]
@@ -55,7 +55,7 @@ jobs:
         path: dist/anycable-go
 
   test-macos:
-    if: ${{ !contains(github.event.head_commit.message, '[ci skip tests]') }}[]
+    if: "!contains(github.event.head_commit.message, '[ci skip tests]')"
     strategy:
       matrix:
         go-version: [1.20.x]
@@ -100,16 +100,8 @@ jobs:
         name: anycable-go-Darwin-x86_64
         path: dist/anycable-go
 
-  coverage:
-    runs-on: ubuntu-latest
-    needs: [test, test-macos]
-    steps:
-      - uses: coverallsapp/github-action@v2
-        with:
-          parallel-finished: true
-
   test-conformance:
-    if: ${{ !contains(github.event.head_commit.message, '[ci skip tests]') }}[]
+    if: "!contains(github.event.head_commit.message, '[ci skip tests]')"
     needs: [test, test-macos]
     strategy:
       matrix:
@@ -126,6 +118,8 @@ jobs:
       GOFLAGS: "-mod=vendor"
       BUILD_ARGS: "-race"
       GORACE: "halt_on_error=1"
+      COVERAGE: "true"
+      GOCOVERDIR: "_icoverdir_"
       BUNDLE_GEMFILE: .circleci/Gemfile
       BUNDLE_PATH: ./vendor/bundle
       # Specify REDIS_URL explicitly, so Makefile doesn't check the presence of Redis
@@ -164,4 +158,35 @@ jobs:
     - name: Run tests
       run: |
         bundle install
+        mkdir _icoverdir_
         make ${{ matrix.test_command }}
+    - name: Format coverage
+      continue-on-error: true
+      run: |
+        go tool covdata textfmt -i _icoverdir_ -o coverage.out
+    - name: Check if has coverage?
+      id: coverage
+      run: |
+        if [ -s coverage.out ]; then
+          echo "coverage found"
+          echo "COVERAGE=yes" >> $GITHUB_OUTPUT
+        else
+          echo "no coverage found"
+          echo "COVERAGE=no" >> $GITHUB_OUTPUT
+        fi
+    - name: Report coverage
+      if: steps.coverage.outputs.COVERAGE == 'yes'
+      uses: coverallsapp/github-action@v2
+      with:
+        file: coverage.out
+        parallel: true
+        format: golang
+        flag-name: integration-${{ matrix.test_command }}
+
+  coverage:
+    runs-on: ubuntu-latest
+    needs: [test, test-macos, test-conformance]
+    steps:
+      - uses: coverallsapp/github-action@v2
+        with:
+          parallel-finished: true

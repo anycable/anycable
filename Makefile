@@ -14,8 +14,7 @@ TEST_BUILD_FLAGS=
 
 ifdef COVERAGE
   TEST_FLAGS=-coverprofile=coverage.out
-# Enable after upgrading to 1.20
-# TEST_BUILD_FLAGS=-cover
+  TEST_BUILD_FLAGS=-cover
 endif
 
 # If port 6379 is listening, we assume that this is a Redis instance,

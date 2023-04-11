@@ -1,12 +1,12 @@
 name: Benchmark
 
 on:
-  # Hangs during tests run for (yet) unknown reason
-  #
-  # push:
-  #   branches:
-  #   - master
-  # pull_request:
+  push:
+    branches:
+    - master
+    paths:
+    - "**/*.go"
+    - "go.sum"
   workflow_dispatch:
 
 jobs:
