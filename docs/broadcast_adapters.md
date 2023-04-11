@@ -14,6 +14,12 @@ HTTP adapter has zero-dependencies and thus a good candidate for experimenting w
 
 To use HTTP adapter specify `broadcast_adapter` configuration parameter (`--broadcast-adapter=http` or `ANYCABLE_BROADCAST_ADAPTER=http` or set in the code/YML) and make sure your AnyCable WebSocket server supports it. An URL to broadcast to could be specified via `http_broadcast_url` parameter (defaults to `http://localhost:8080/_broadcast`, which corresponds to the [AnyCable-Go](../anycable-go/getting_started.md#configuration-parameters) default).
 
+Example cURL command to publish a message:
+
+```bash
+curl -X POST -H "Content-Type: application/json" -d '{"stream":"my_stream","data":"{\"text\":\"Hello, world!\"}"}' http://localhost:8090/_broadcast
+```
+
 ### Securing HTTP endpoint
 
 Although the primary use-case for HTTP adapter is local development, you might want to use it in staging-like environments as well.

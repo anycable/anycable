@@ -2,6 +2,8 @@
 
 AnyCable can be used without Rails, thus allowing you to use ActionCable-like functionality in your app.
 
+> Learn how to use AnyCable with Hanami in the ["AnyCable off Rails: connecting Twilio streams with Hanami"](https://evilmartians.com/chronicles/anycable-goes-off-rails-connecting-twilio-streams-with-hanami) blog post.
+
 ## Requirements
 
 - Ruby >= 2.7
