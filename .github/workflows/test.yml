@@ -11,7 +11,7 @@ jobs:
     if: ${{ !contains(github.event.head_commit.message, '[ci skip tests]') }}[]
     strategy:
       matrix:
-        go-version: [1.19.x]
+        go-version: [1.20.x]
     runs-on: ubuntu-20.04
     env:
       GO111MODULE: on
@@ -44,11 +44,11 @@ jobs:
         parallel: true
         flag-name: ${{ matrix.go-version }}-ubuntu
     - name: Build
-      if: matrix['go-version'] == '1.19.x'
+      if: matrix['go-version'] == '1.20.x'
       run: |
         make build
     - name: Upload linux build
-      if: matrix['go-version'] == '1.19.x' && (github.ref == 'refs/head/master' || contains(github.event.pull_request.body, '[Build]'))
+      if: matrix['go-version'] == '1.20.x' && (github.ref == 'refs/head/master' || contains(github.event.pull_request.body, '[Build]'))
       uses: actions/upload-artifact@v1
       with:
         name: anycable-go-Linux-x86_64
@@ -58,7 +58,7 @@ jobs:
     if: ${{ !contains(github.event.head_commit.message, '[ci skip tests]') }}[]
     strategy:
       matrix:
-        go-version: [1.19.x]
+        go-version: [1.20.x]
     runs-on: macos-11
     env:
       GO111MODULE: on
@@ -90,11 +90,11 @@ jobs:
         parallel: true
         flag-name: ${{ matrix.go-version }}-macos
     - name: Build
-      if: matrix['go-version'] == '1.19.x'
+      if: matrix['go-version'] == '1.20.x'
       run: |
         make build
     - name: Upload MacOS build
-      if: matrix['go-version'] == '1.19.x' && (github.ref == 'refs/head/master' || contains(github.event.pull_request.body, '[Build]'))
+      if: matrix['go-version'] == '1.20.x' && (github.ref == 'refs/head/master' || contains(github.event.pull_request.body, '[Build]'))
       uses: actions/upload-artifact@v1
       with:
         name: anycable-go-Darwin-x86_64
@@ -142,7 +142,7 @@ jobs:
     - uses: actions/checkout@v3
     - uses: actions/setup-go@v3
       with:
-        go-version: 1.19.x
+        go-version: 1.20.x
     - name: Install system deps
       run: |
         sudo apt-get update

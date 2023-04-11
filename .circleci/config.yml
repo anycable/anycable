@@ -136,7 +136,7 @@ workflows:
 executors:
   golang:
     docker:
-      - image: cimg/go:1.19.6
+      - image: cimg/go:1.20.3
     environment:
       CGO_ENABLED: "0"
       GO111MODULE: "on"
@@ -149,8 +149,8 @@ executors:
       CGO_ENABLED: "1"
       GO111MODULE: "on"
       GOFLAGS: "-mod=vendor"
-      GO_VERSION: 1.19.6
-      GO_SHA: 63386d51c69cef6c001ff0436832289635ba4a2649282451a18827e93507b444
+      GO_VERSION: 1.20.3
+      GO_SHA: 7ab4929d3c49d11ea2af8542de01e9ca98cb2e96963423b60aa0f695d52fe82b
   docker:
     docker:
       - image: cimg/base:stable
@@ -235,7 +235,7 @@ jobs:
 
   benchmark:
     docker:
-      - image: cimg/go:1.19.6
+      - image: cimg/go:1.20.3
       - image: cimg/redis:6.2.6
     environment:
       GO111MODULE: "on"
@@ -359,7 +359,7 @@ jobs:
 
   conformance:
     docker:
-    - image: cimg/go:1.19.6
+    - image: cimg/go:1.20.3
     - image: cimg/redis:6.2.6
     environment:
       BUNDLE_GEMFILE: ".circleci/Gemfile"
@@ -466,7 +466,7 @@ jobs:
           docker pull anycable/anycable-go:${CIRCLE_TAG/v/''}-mrb
           docker pull anycable/anycable-go:${CIRCLE_TAG/v/''}-alpine
     - run:
-        name: Pushs latest Docker images
+        name: Push latest Docker images
         command: |
             docker tag anycable/anycable-go:${CIRCLE_TAG/v/''} anycable/anycable-go:latest
             docker tag anycable/anycable-go:${CIRCLE_TAG/v/''} anycable/anycable-go:$(echo "$CIRCLE_TAG" | sed -E 's/^v([0-9]+)\.([0-9]+)\.([0-9]+)$/\1/')
