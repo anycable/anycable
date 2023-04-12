@@ -41,11 +41,22 @@ class BenchRunner
     instance_eval script, path, 0
   end
 
-  def launch(name, cmd, debug: ENV["DEBUG"] == "true")
+  def launch(name, cmd, env: {}, debug: ENV["DEBUG"] == "true", capture_output: false)
     log(:info) { "Launching background process: #{cmd}"}
 
     process = ChildProcess.build(*cmd.split(/\s+/))
-    process.io.inherit! if debug
+    # set process environment variables
+    process.environment.merge!(env)
+
+    if capture_output
+      r, w = IO.pipe
+      process.io.stdout = w
+      process.io.stderr = w
+      pipes[name] = {r: r, w: w}
+    else
+      process.io.inherit! if debug
+    end
+
     process.detach = true
 
     processes[name] = process
@@ -111,6 +122,11 @@ class BenchRunner
 
   def pid(name)
     processes.fetch(name).pid
+  end
+
+  def stop(name)
+    processes.fetch(name).stop
+    pipes[name]&.fetch(:w)&.close
   end
 
   def stdout(name)

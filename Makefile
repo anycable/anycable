@@ -9,12 +9,14 @@ ifndef ANYCABLE_DEBUG
   export ANYCABLE_DEBUG=1
 endif
 
+BUILD_ARGS ?=
 TEST_FLAGS=
 TEST_BUILD_FLAGS=
 
 ifdef COVERAGE
   TEST_FLAGS=-coverprofile=coverage.out
   TEST_BUILD_FLAGS=-cover
+	BUILD_ARGS += -cover
 endif
 
 # If port 6379 is listening, we assume that this is a Redis instance,

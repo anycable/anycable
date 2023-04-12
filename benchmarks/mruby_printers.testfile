@@ -1,0 +1,56 @@
+launch :rpc, "bundle exec anyt --only-rpc"
+wait_tcp 50051
+
+launch :anycable,
+  "./dist/anycable-go --broadcast_adapter=http --metrics_log_formatter=#{File.join(__dir__, "simple_logger.rb")} --metrics_rotate_interval=1 --ping_interval=3",
+  capture_output: true,
+  env: {"PRINTER_NAME" => "MRUBY PRINTER"}
+wait_tcp 8080
+
+scenario = [
+  client: {
+    multiplier: 2,
+    actions: [
+      {
+        receive: {
+          "data>": {
+            type: "welcome"
+          }
+        }
+      },
+      {
+        receive: {
+          "data>": {
+            type: "ping"
+          }
+        }
+      },
+      {
+        receive: {
+          "data>": {
+            type: "ping"
+          }
+        }
+      }
+    ]
+  }
+]
+
+TEST_COMMAND = <<~CMD
+  bundle exec wsdirector ws://localhost:8080/cable -i #{scenario.to_json}
+CMD
+
+run :wsdirector, TEST_COMMAND
+
+result = stdout(:wsdirector)
+
+if result !~ /2 clients, 0 failures/
+  fail "Unexpected scenario result:\n#{result}"
+end
+
+stop :anycable
+
+logs = stdout(:anycable)
+if logs !~ /\[MRUBY PRINTER\] Connections: 2/
+  fail "Missing metrics in logs:\n#{logs}"
+end
