@@ -113,7 +113,7 @@ test:
 	go test -count=1 -timeout=30s -race -tags mrb ./... $(TEST_FLAGS)
 
 benchmarks: build
-	BUNDLE_GEMFILE=.circleci/Gemfile ruby benchmarks/runner.rb benchmarks/*.benchfile
+	BUNDLE_GEMFILE=.circleci/Gemfile ruby features/runner.rb features/*.benchfile
 
 tmp/anycable-go-test:
 	go build $(TEST_BUILD_FLAGS) -tags mrb -race -o tmp/anycable-go-test cmd/anycable-go/main.go
@@ -135,9 +135,9 @@ test-conformance-nats-embedded: tmp/anycable-go-test
 
 test-conformance-all: test-conformance test-conformance-ssl test-conformance-http
 
-TESTFILE ?= benchmarks/*.testfile
-test-wsdirector: build
-	BUNDLE_GEMFILE=.circleci/Gemfile ruby benchmarks/runner.rb $(TESTFILE)
+TESTFILE ?= features/*.testfile
+test-features: build
+	BUNDLE_GEMFILE=.circleci/Gemfile ruby features/runner.rb $(TESTFILE)
 
 test-ci: prepare prepare-mruby test test-conformance
 
