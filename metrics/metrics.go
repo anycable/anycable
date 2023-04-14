@@ -41,6 +41,7 @@ type Metrics struct {
 	counters       map[string]*Counter
 	gauges         map[string]*Gauge
 	shutdownCh     chan struct{}
+	closed         bool
 	log            *log.Entry
 }
 
@@ -167,12 +168,13 @@ func (m *Metrics) Shutdown() (err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if m.shutdownCh == nil {
+	if m.closed {
 		return
 	}
 
+	m.closed = true
+
 	close(m.shutdownCh)
-	m.shutdownCh = nil
 
 	if m.server != nil {
 		m.server.Shutdown() //nolint:errcheck
