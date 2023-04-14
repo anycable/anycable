@@ -57,6 +57,16 @@ Supports wildcards, e.g., `--allowed_origins=*.evilmartians.io,www.evilmartians.
 
 When HTTP adapter is used, AnyCable-Go accepts broadcasting requests on `:8090/_broadcast`.
 
+You can also enable multiple adapters at once by specifying them separated by commas.
+
+**--broker** (`ANYCABLE_BROKER`, default: `none`)
+
+[Broker](./broker.md) adapter to use.
+
+**--pubsub** (`ANYCABLE_PUBSUB`, default: `none`)
+
+Pub/Sub adapter to use to distribute broadcasted messages within the cluster (when non-distributed broadcasting adapter is used). **Required for broker**.
+
 **--http_broadcast_port** (`ANYCABLE_HTTP_BROADCAST_PORT`, default: `8090`)
 
 You can specify on which port to receive broadcasting requests (NOTE: it could be the same port as the main HTTP server listens to).
