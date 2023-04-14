@@ -106,6 +106,7 @@ jobs:
     strategy:
       matrix:
         test_command:
+          - benchmarks
           - test-features
           - test-conformance
           - test-conformance-http
@@ -155,6 +156,13 @@ jobs:
     - run: go mod vendor
     - name: Build mruby
       run: bash -c '(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)'
+    - name: Install websocket-bench & gops
+      if: matrix.test_command == 'benchmarks'
+      env:
+        GO111MODULE: off
+      run: |
+        go get -u github.com/anycable/websocket-bench
+        go get -u github.com/google/gops
     - name: Run tests
       run: |
         bundle install
