@@ -271,7 +271,7 @@ func broadcastCLIFlags(c *config.Config) []cli.Flag {
 	return withDefaults(broadcastCategoryDescription, []cli.Flag{
 		&cli.StringFlag{
 			Name:        "broadcast_adapter",
-			Usage:       "Broadcasting adapter to use (http, redis or nats)",
+			Usage:       "Broadcasting adapter to use (http, redis or nats). You can specify multiple at once via a comma-separated list",
 			Value:       c.BroadcastAdapter,
 			Destination: &c.BroadcastAdapter,
 		},

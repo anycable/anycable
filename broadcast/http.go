@@ -55,7 +55,7 @@ func NewHTTPBroadcaster(node Handler, config *HTTPConfig) *HTTPBroadcaster {
 
 	return &HTTPBroadcaster{
 		node:       node,
-		log:        log.WithFields(log.Fields{"context": "pubsub"}),
+		log:        log.WithFields(log.Fields{"context": "pubsub", "provider": "http"}),
 		port:       config.Port,
 		path:       config.Path,
 		authHeader: authHeader,

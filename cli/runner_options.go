@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"strings"
+
 	"github.com/anycable/anycable-go/broadcast"
 	"github.com/anycable/anycable-go/broker"
 	"github.com/anycable/anycable-go/config"
@@ -43,28 +45,46 @@ func WithDefaultRPCController() Option {
 // WithBroadcaster is an Option to set Runner broadaster
 func WithBroadcaster(fn broadcasterFactory) Option {
 	return func(r *Runner) error {
-		if r.broadcasterFactory != nil {
-			return errorx.IllegalArgument.New("Broadcaster has been already assigned")
-		}
-		r.broadcasterFactory = fn
+		r.broadcasters = append(r.broadcasters, fn)
 		return nil
 	}
 }
 
 // WithDefaultBroadcaster is an Option to set Runner subscriber to default broadcaster from config
 func WithDefaultBroadcaster() Option {
-	return WithBroadcaster(func(h broadcast.Handler, c *config.Config) (broadcast.Broadcaster, error) {
-		switch c.BroadcastAdapter {
-		case "http":
-			return broadcast.NewHTTPBroadcaster(h, &c.HTTPBroadcast), nil
-		case "redis":
-			return broadcast.NewLegacyRedisBroadcaster(h, &c.Redis), nil
-		case "nats":
-			return broadcast.NewLegacyNATSBroadcaster(h, &c.NATS), nil
-		default:
-			return nil, errorx.IllegalArgument.New("Unsupported broadcast adapter: %s", c.BroadcastAdapter)
+	return func(r *Runner) error {
+		adapters := strings.Split(r.config.BroadcastAdapter, ",")
+
+		for _, adapter := range adapters {
+			switch adapter {
+			case "http":
+				r.broadcasters = append(
+					r.broadcasters,
+					func(h broadcast.Handler, c *config.Config) (broadcast.Broadcaster, error) {
+						return broadcast.NewHTTPBroadcaster(h, &c.HTTPBroadcast), nil
+					},
+				)
+			case "redis":
+				r.broadcasters = append(
+					r.broadcasters,
+					func(h broadcast.Handler, c *config.Config) (broadcast.Broadcaster, error) {
+						return broadcast.NewLegacyRedisBroadcaster(h, &c.Redis), nil
+					},
+				)
+			case "nats":
+				r.broadcasters = append(
+					r.broadcasters,
+					func(h broadcast.Handler, c *config.Config) (broadcast.Broadcaster, error) {
+						return broadcast.NewLegacyNATSBroadcaster(h, &c.NATS), nil
+					},
+				)
+			default:
+				return errorx.IllegalArgument.New("Unsupported broadcast adapter: %s", adapter)
+			}
 		}
-	})
+
+		return nil
+	}
 }
 
 // WithSubscriber is an Option to set Runner subscriber
