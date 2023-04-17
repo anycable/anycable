@@ -312,8 +312,6 @@ func BenchmarkBroadcast(b *testing.B) {
 				sid := fmt.Sprintf("%d", i)
 				session := NewMockSession(sid)
 
-				rand.Seed(time.Now().Unix())
-
 				wg.Add(1)
 
 				go func() {
