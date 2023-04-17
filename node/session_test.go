@@ -265,3 +265,21 @@ func TestCacheEntryEmptySession(t *testing.T) {
 	err = new_session.RestoreFromCache(cached)
 	require.NoError(t, err)
 }
+
+func TestPrevSid(t *testing.T) {
+	session := Session{}
+	headers := make(map[string]string)
+	session.env = common.NewSessionEnv("ws://example.dev/cable", nil)
+	assert.Equal(t, "", session.PrevSid())
+
+	session.env = common.NewSessionEnv("ws://example.dev/cable?sid=123", &headers)
+	assert.Equal(t, "123", session.PrevSid())
+
+	session.env = common.NewSessionEnv("http://example.dev/cable?jid=xxxx&sid=213", &headers)
+	assert.Equal(t, "213", session.PrevSid())
+
+	headers["X-ANYCABLE-RESTORE-SID"] = "456"
+
+	session.env = common.NewSessionEnv("http://example.dev/cable?jid=xxxx&sid=213", &headers)
+	assert.Equal(t, "456", session.PrevSid())
+}

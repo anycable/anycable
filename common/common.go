@@ -13,11 +13,12 @@ const (
 )
 
 const (
-	ActionCableV1JSON = "actioncable-v1-json"
+	ActionCableV1JSON    = "actioncable-v1-json"
+	ActionCableV1ExtJSON = "actioncable-v1-ext-json"
 )
 
 func ActionCableProtocols() []string {
-	return []string{ActionCableV1JSON}
+	return []string{ActionCableV1JSON, ActionCableV1ExtJSON}
 }
 
 // Outgoing message types (according to Action Cable protocol)

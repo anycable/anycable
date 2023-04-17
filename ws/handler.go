@@ -53,7 +53,9 @@ func (h *DefaultHeadersExtractor) FromRequest(r *http.Request) map[string]string
 			value = parseCookies(value, h.Cookies)
 		}
 
-		res[header] = value
+		if value != "" {
+			res[header] = value
+		}
 	}
 	res[remoteAddrHeader], _, _ = net.SplitHostPort(r.RemoteAddr)
 
