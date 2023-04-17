@@ -368,6 +368,11 @@ func TestHistory(t *testing.T) {
 			)
 		}
 
+		ack, err := session.conn.Read()
+		require.NoError(t, err)
+
+		assert.Equal(t, `{"type":"confirm_history","identifier":"test_channel"}`, string(ack))
+
 		_, err = session.conn.Read()
 		require.Error(t, err)
 	})
@@ -426,6 +431,11 @@ func TestHistory(t *testing.T) {
 			)
 		}
 
+		ack, err := session.conn.Read()
+		require.NoError(t, err)
+
+		assert.Equal(t, `{"type":"confirm_history","identifier":"test_channel"}`, string(ack))
+
 		_, err = session.conn.Read()
 		require.Error(t, err)
 	})
@@ -483,6 +493,11 @@ func TestHistory(t *testing.T) {
 			)
 		}
 
+		ack, err := session.conn.Read()
+		require.NoError(t, err)
+
+		assert.Equal(t, `{"type":"confirm_history","identifier":"with_stream"}`, string(ack))
+
 		_, err = session.conn.Read()
 		require.Error(t, err)
 	})
@@ -508,6 +523,11 @@ func TestHistory(t *testing.T) {
 		)
 
 		assert.Error(t, err, "Couldn't restore history")
+
+		ack, err := session.conn.Read()
+		require.NoError(t, err)
+
+		assert.Equal(t, `{"type":"reject_history","identifier":"test_channel"}`, string(ack))
 	})
 }
 
@@ -560,7 +580,7 @@ func TestRestoreSession(t *testing.T) {
 
 		require.Equalf(
 			t,
-			`{"type":"welcome","sid":"214","restored":true}`,
+			`{"type":"welcome","sid":"214","restored":true,"restored_ids":["fruits_channel"]}`,
 			string(welcome),
 			"Sent message is invalid: %s", welcome,
 		)
@@ -602,7 +622,7 @@ func TestRestoreSession(t *testing.T) {
 
 		require.Equalf(
 			t,
-			`{"type":"welcome","sid":"214","restored":true}`,
+			`{"type":"welcome","sid":"214","restored":true,"restored_ids":["fruits_channel"]}`,
 			string(welcome),
 			"Sent message is invalid: %s", welcome,
 		)

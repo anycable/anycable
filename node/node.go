@@ -11,6 +11,7 @@ import (
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/hub"
 	"github.com/anycable/anycable-go/metrics"
+	"github.com/anycable/anycable-go/utils"
 	"github.com/anycable/anycable-go/ws"
 	"github.com/apex/log"
 )
@@ -323,7 +324,12 @@ func (n *Node) TryRestoreSession(s *Session) (restored bool) {
 	}
 
 	// Send welcome message
-	s.Send(&common.Reply{Type: common.WelcomeType, Sid: sid, Restored: true})
+	s.Send(&common.Reply{
+		Type:        common.WelcomeType,
+		Sid:         sid,
+		Restored:    true,
+		RestoredIDs: utils.Keys(s.subscriptions.channels),
+	})
 
 	if berr := n.broker.CommitSession(s.GetID(), s); berr != nil {
 		s.Log.Errorf("Failed to persist session in cache: %v", berr)
@@ -469,9 +475,33 @@ func (n *Node) History(s *Session, msg *common.Message) (err error) {
 		return
 	}
 
-	backlog := []common.StreamMessage{}
+	backlog, err := n.retreiveHistory(&history, subscriptionStreams)
 
-	for _, stream := range subscriptionStreams {
+	if err != nil {
+		s.Send(&common.Reply{
+			Type:       common.HistoryRejectedType,
+			Identifier: msg.Identifier,
+		})
+
+		return err
+	}
+
+	for _, el := range backlog {
+		s.Send(el.ToReplyFor(msg.Identifier))
+	}
+
+	s.Send(&common.Reply{
+		Type:       common.HistoryConfirmedType,
+		Identifier: msg.Identifier,
+	})
+
+	return
+}
+
+func (n *Node) retreiveHistory(history *common.HistoryRequest, streams []string) (backlog []common.StreamMessage, err error) {
+	backlog = []common.StreamMessage{}
+
+	for _, stream := range streams {
 		if history.Streams != nil {
 			pos, ok := history.Streams[stream]
 
@@ -479,7 +509,7 @@ func (n *Node) History(s *Session, msg *common.Message) (err error) {
 				streamBacklog, err := n.broker.HistoryFrom(stream, pos.Epoch, pos.Offset)
 
 				if err != nil {
-					return err
+					return nil, err
 				}
 
 				backlog = append(backlog, streamBacklog...)
@@ -492,18 +522,14 @@ func (n *Node) History(s *Session, msg *common.Message) (err error) {
 			streamBacklog, err := n.broker.HistorySince(stream, history.Since)
 
 			if err != nil {
-				return err
+				return nil, err
 			}
 
 			backlog = append(backlog, streamBacklog...)
 		}
 	}
 
-	for _, el := range backlog {
-		s.Send(el.ToReplyFor(msg.Identifier))
-	}
-
-	return
+	return backlog, nil
 }
 
 // Broadcast message to stream (locally)

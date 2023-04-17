@@ -1,6 +1,7 @@
 package node
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
@@ -114,11 +115,18 @@ func TestIntegrationRestore(t *testing.T) {
 	_, err = node.Authenticate(session)
 	require.NoError(t, err)
 
-	requireReceive(
-		t,
-		session,
-		`{"type":"welcome","sid":"s21","restored":true}`,
-	)
+	welcomeMsg, err := session.conn.Read()
+	require.NoError(t, err)
+
+	var welcome map[string]interface{}
+	err = json.Unmarshal(welcomeMsg, &welcome)
+	require.NoError(t, err)
+
+	require.Equal(t, "welcome", welcome["type"])
+	require.Equal(t, "s21", welcome["sid"])
+	require.Equal(t, true, welcome["restored"])
+	require.Contains(t, welcome["restored_ids"], "chat_1")
+	require.Contains(t, welcome["restored_ids"], "user_jack")
 
 	t.Run("Restore hub subscriptions", func(t *testing.T) {
 		node.HandlePubSub([]byte(`{"stream": "messages_1", "data": "Lorenzo: Ciao"}`))
@@ -241,6 +249,7 @@ func TestIntegrationHistory(t *testing.T) {
 		assertReceive(t, session, `{"type":"confirm","identifier":"chat_1"}`)
 		assertReceive(t, session, `{"identifier":"chat_1","message":"Flavia: buona sera","stream_id":"messages_1","epoch":"2022","offset":2}`)
 		assertReceive(t, session, `{"identifier":"chat_1","message":"Mario: ta-dam!","stream_id":"messages_1","epoch":"2022","offset":3}`)
+		assertReceive(t, session, `{"type":"confirm_history","identifier":"chat_1"}`)
 	})
 
 	t.Run("Subscribe + History", func(t *testing.T) {
@@ -283,6 +292,7 @@ func TestIntegrationHistory(t *testing.T) {
 		assertReceive(t, session, `{"identifier":"chat_1","message":"3 new notifications","stream_id":"presence_1","epoch":"2022","offset":3}`)
 		assertReceive(t, session, `{"identifier":"chat_1","message":"4 new notifications","stream_id":"presence_1","epoch":"2022","offset":4}`)
 		assertReceive(t, session, `{"identifier":"chat_1","message":"100+ new notifications","stream_id":"presence_1","epoch":"2022","offset":5}`)
+		assertReceive(t, session, `{"type":"confirm_history","identifier":"chat_1"}`)
 	})
 }
 

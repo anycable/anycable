@@ -30,6 +30,9 @@ const (
 	RejectedType   = "reject_subscription"
 	// Not supported by Action Cable currently
 	UnsubscribedType = "unsubscribed"
+
+	HistoryConfirmedType = "confirm_history"
+	HistoryRejectedType  = "reject_history"
 )
 
 // Disconnect reasons
@@ -292,16 +295,17 @@ func NewDisconnectMessage(reason string, reconnect bool) *DisconnectMessage {
 
 // Reply represents an outgoing client message
 type Reply struct {
-	Type       string      `json:"type,omitempty"`
-	Identifier string      `json:"identifier,omitempty"`
-	Message    interface{} `json:"message,omitempty"`
-	Reason     string      `json:"reason,omitempty"`
-	Reconnect  bool        `json:"reconnect,omitempty"`
-	StreamID   string      `json:"stream_id,omitempty"`
-	Epoch      string      `json:"epoch,omitempty"`
-	Offset     uint64      `json:"offset,omitempty"`
-	Sid        string      `json:"sid,omitempty"`
-	Restored   bool        `json:"restored,omitempty"`
+	Type        string      `json:"type,omitempty"`
+	Identifier  string      `json:"identifier,omitempty"`
+	Message     interface{} `json:"message,omitempty"`
+	Reason      string      `json:"reason,omitempty"`
+	Reconnect   bool        `json:"reconnect,omitempty"`
+	StreamID    string      `json:"stream_id,omitempty"`
+	Epoch       string      `json:"epoch,omitempty"`
+	Offset      uint64      `json:"offset,omitempty"`
+	Sid         string      `json:"sid,omitempty"`
+	Restored    bool        `json:"restored,omitempty"`
+	RestoredIDs []string    `json:"restored_ids,omitempty"`
 }
 
 func (r *Reply) GetType() string {
