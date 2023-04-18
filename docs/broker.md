@@ -61,14 +61,14 @@ By default, broker is disabled. To enable it, you need to provide the `--broker`
 ```sh
 $ anycable-go --broker=memory
 
-INFO 2023-04-14T00:31:55.548Z context=main Starting AnyCable 1.3.1-d8939df (with mruby 1.2.0 (2015-11-17)) (pid: 87410, open file limit: 122880, gomaxprocs: 8)
+INFO 2023-04-14T00:31:55.548Z context=main Starting AnyCable 1.4.0-d8939df (with mruby 1.2.0 (2015-11-17)) (pid: 87410, open file limit: 122880, gomaxprocs: 8)
 INFO 2023-04-14T00:31:55.548Z context=main Using in-memory broker (epoch: vRXl, history limit: 100, history ttl: 300s, sessions ttl: 300s)
 ...
 ```
 
-With broker enabled in an AnyCable-Go cluster, you MUST use a non-distributed, single-node broadcaster (currently, only `http`). Otherwise, different nodes will have different IDs for the same messages and using cache will be impossible.
+With broker enabled in an AnyCable-Go cluster, you MUST use a non-distributed, single-node broadcaster (currently, only `http`). Otherwise, different nodes will have different IDs for the same messages and using cache will be impossible. See [Broadcast adapters](/ruby/broadcast_adapters.md) for more information.
 
-To re-transmit _registered_ messages within a cluster, you MUST also configure a pub/sub adapter (via the `--pubsub` option).
+To re-transmit _registered_ messages within a cluster, you MUST also configure a pub/sub adapter (via the `--pubsub` option). See [Pub/Sub documentation](./pubsub.md) for available options.
 
 The overall broadcasting message flow looks as follows:
 
