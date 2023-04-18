@@ -1,18 +1,22 @@
 # Broadcast Adapters
 
-Broadcast adapter is used to proxy messaged published by your application to WebSocket server which in its turn broadcast messages to clients (see [architecture](../architecture.md)).
+Broadcast adapter is used to handle messages published by your application to WebSocket server which in its turn delivers the messages to connected clients (see [architecture](../architecture.md)).
 
-That is, when you call `ActionCable.server.broadcast`, AnyCable first pushes the message to WebSocket server via broadcast adapter, and the actual _broadcasting_ is happening within a WS server.
+That is, when you call `ActionCable.server.broadcast`, AnyCable first pushes the message to WebSocket server via a broadcast adapter, and the actual _broadcasting_ is happening within a WS server (or servers).
 
 AnyCable ships with three broadcast adapters by default: Redis (default), [NATS][], and HTTP.
 
+**NOTE:** The broadcast adapters fall into two categories: legacy fan-out (distributed) and _singular_.
+
 ## HTTP adapter
 
-HTTP adapter has zero-dependencies and thus a good candidate for experimenting with AnyCable or even using in development/test environments.
+HTTP adapter has zero-dependencies and, thus, allows you to quickly start using AnyCable.
 
-**HTTP adapter is not meant for production**. It's not scalable (only supports a single WS server), less performant (due to HTTP overhead). For SSL connections it uses `SSL_VERIFY_NONE`.
+Since v1.4, HTTP adapter can also be considered for production (thanks to the new [pub/sub component](/anycable-go/pubsub.md) in AnyCable-Go). Moreover, currently, it's the only adapter compatible with the new [broker feature](/anycable-go/broker.md) of AnyCable-Go.
 
 To use HTTP adapter specify `broadcast_adapter` configuration parameter (`--broadcast-adapter=http` or `ANYCABLE_BROADCAST_ADAPTER=http` or set in the code/YML) and make sure your AnyCable WebSocket server supports it. An URL to broadcast to could be specified via `http_broadcast_url` parameter (defaults to `http://localhost:8080/_broadcast`, which corresponds to the [AnyCable-Go](../anycable-go/getting_started.md#configuration-parameters) default).
+
+**NOTE:** For SSL connections, we use the `SSL_VERIFY_NONE` mode.
 
 Example cURL command to publish a message:
 
@@ -22,14 +26,19 @@ curl -X POST -H "Content-Type: application/json" -d '{"stream":"my_stream","data
 
 ### Securing HTTP endpoint
 
-Although the primary use-case for HTTP adapter is local development, you might want to use it in staging-like environments as well.
-In this case, we recommend to protect the HTTP endpoint via a simple authorization via a header check.
+If your broadcasting HTTP endpoint is open to public, we recommend to protect it via a simple authorization via a header check.
 
 You must configure both Ruby RPC server and a WebSocket server to use the same `http_broadcast_secret` (which will we passed via `Authorization: Bearer %secret%`).
 
-## Redis adapter
+## Redis X
 
-It's a default adapter to AnyCable. It uses Redis [Pub/Sub](https://redis.io/topics/pubsub) feature under the hood.
+<p class="pro-badge-header"></p>
+
+Coming soon ⏳
+
+## Redis adapter (legacy)
+
+It's a default adapter for AnyCable. It uses Redis [Pub/Sub](https://redis.io/topics/pubsub) feature under the hood. Thus, all the messages delivered to all WebSocket servers at once.
 
 **NOTE:** To use Redis adapter, you must ensure that it is present in your Gemfile; AnyCable gem doesn't have `redis` as a dependency.
 
@@ -46,7 +55,7 @@ If your sentinels are protected with passwords, use the following format: `:pass
 
 > See the [demo](https://github.com/anycable/anycable_rails_demo/pull/8) of using Redis with Sentinels in a local Docker dev environment.
 
-## NATS adapter
+## NATS adapter (legacy)
 
 **NOTE:** Make sure you added [`nats-pure` gem][nats-pure] to your Gemfile.
 
