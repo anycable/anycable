@@ -35,6 +35,7 @@ type RedisSubscriber struct {
 
 	client           rueidis.Client
 	clientOptions    *rueidis.ClientOption
+	clientMu         sync.RWMutex
 	reconnectAttempt int
 
 	subscriptions map[string]*subscriptionEntry
@@ -97,12 +98,6 @@ func NewRedisSubscriber(node Handler, config *rconfig.RedisConfig) (*RedisSubscr
 }
 
 func (s *RedisSubscriber) Start(done chan (error)) error {
-	err := s.initClient()
-
-	if err != nil {
-		return err
-	}
-
 	if s.config.IsSentinel() { //nolint:gocritic
 		s.log.Infof("Starting Redis pub/sub (sentinels): %v", s.config.SentinelHostnames())
 	} else if s.config.IsCluster() {
@@ -119,6 +114,9 @@ func (s *RedisSubscriber) Start(done chan (error)) error {
 }
 
 func (s *RedisSubscriber) Shutdown() error {
+	s.clientMu.RLock()
+	defer s.clientMu.RUnlock()
+
 	if s.client == nil {
 		return nil
 	}
@@ -168,8 +166,17 @@ func (s *RedisSubscriber) BroadcastCommand(cmd *common.RemoteCommandMessage) {
 }
 
 func (s *RedisSubscriber) Publish(stream string, msg interface{}) {
+	s.clientMu.RLock()
+
+	if s.client == nil {
+		s.clientMu.RUnlock()
+		return
+	}
+
 	ctx := context.Background()
 	client := s.client
+
+	s.clientMu.RUnlock()
 
 	s.log.WithField("channel", stream).Debugf("Publish message: %v", msg)
 
@@ -177,6 +184,13 @@ func (s *RedisSubscriber) Publish(stream string, msg interface{}) {
 }
 
 func (s *RedisSubscriber) initClient() error {
+	s.clientMu.Lock()
+	defer s.clientMu.Unlock()
+
+	if s.client != nil {
+		return nil
+	}
+
 	c, err := rueidis.NewClient(*s.clientOptions)
 
 	if err != nil {
@@ -189,6 +203,14 @@ func (s *RedisSubscriber) initClient() error {
 }
 
 func (s *RedisSubscriber) runPubSub(done chan (error)) {
+	err := s.initClient()
+
+	if err != nil {
+		s.log.Errorf("Failed to connect to Redis: %v", err)
+		s.maybeReconnect(done)
+		return
+	}
+
 	client, cancel := s.client.Dedicate()
 	defer cancel()
 
@@ -282,9 +304,13 @@ func (s *RedisSubscriber) maybeReconnect(done chan (error)) {
 		return
 	}
 
-	// Make sure client knows about connection failure,
-	// so the next attempt to Publish won't fail
-	s.client.Do(context.Background(), s.client.B().Arbitrary("ping").Build())
+	s.clientMu.RLock()
+	if s.client != nil {
+		// Make sure client knows about connection failure,
+		// so the next attempt to Publish won't fail
+		s.client.Do(context.Background(), s.client.B().Arbitrary("ping").Build())
+	}
+	s.clientMu.RUnlock()
 
 	s.subMu.Lock()
 	toRemove := []string{}

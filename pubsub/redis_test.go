@@ -38,6 +38,12 @@ func init() {
 	err = subscriber.Start(make(chan error))
 
 	if err != nil {
+		fmt.Printf("Failed to start Redis subscriber: %v", err)
+		return
+	}
+
+	err = subscriber.initClient()
+	if err != nil {
 		fmt.Printf("No Redis detected at %s: %v", config.URL, err)
 		return
 	}
