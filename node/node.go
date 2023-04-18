@@ -138,8 +138,8 @@ func (n *Node) HandleCommand(s *Session, msg *common.Message) (err error) {
 	return
 }
 
-// HandlePubSub parses incoming pubsub message and broadcast it
-func (n *Node) HandlePubSub(raw []byte) {
+// HandleBroadcast parses incoming broadcast message, record it and re-transmit to other nodes
+func (n *Node) HandleBroadcast(raw []byte) {
 	msg, err := common.PubSubMessageFromJSON(raw)
 
 	if err != nil {
@@ -153,6 +153,24 @@ func (n *Node) HandlePubSub(raw []byte) {
 		n.broker.HandleBroadcast(&v)
 	case common.RemoteCommandMessage:
 		n.broker.HandleCommand(&v)
+	}
+}
+
+// HandlePubSub parses incoming pubsub message and broadcast it to all clients (w/o using a broker)
+func (n *Node) HandlePubSub(raw []byte) {
+	msg, err := common.PubSubMessageFromJSON(raw)
+
+	if err != nil {
+		n.metrics.CounterIncrement(metricsUnknownBroadcast)
+		n.log.Warnf("Failed to parse pubsub message '%s' with error: %v", raw, err)
+		return
+	}
+
+	switch v := msg.(type) {
+	case common.StreamMessage:
+		n.Broadcast(&v)
+	case common.RemoteCommandMessage:
+		n.ExecuteRemoteCommand(&v)
 	}
 }
 

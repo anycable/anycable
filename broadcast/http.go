@@ -122,7 +122,7 @@ func (s *HTTPBroadcaster) Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.node.HandlePubSub(body)
+	s.node.HandleBroadcast(body)
 
 	w.WriteHeader(201)
 }

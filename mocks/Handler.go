@@ -9,6 +9,11 @@ type Handler struct {
 	mock.Mock
 }
 
+// HandleBroadcast provides a mock function with given fields: json
+func (_m *Handler) HandleBroadcast(json []byte) {
+	_m.Called(json)
+}
+
 // HandlePubSub provides a mock function with given fields: json
 func (_m *Handler) HandlePubSub(json []byte) {
 	_m.Called(json)

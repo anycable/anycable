@@ -24,7 +24,7 @@ func TestHttpHandler(t *testing.T) {
 	}
 
 	handler.On(
-		"HandlePubSub",
+		"HandleBroadcast",
 		payload,
 	)
 

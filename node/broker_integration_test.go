@@ -102,10 +102,10 @@ func TestIntegrationRestore(t *testing.T) {
 		`{"type":"confirm","identifier":"user_jack"}`,
 	)
 
-	node.HandlePubSub([]byte(`{"stream": "messages_1", "data": "Alice: Hey!"}`))
+	node.HandleBroadcast([]byte(`{"stream": "messages_1", "data": "Alice: Hey!"}`))
 	requireReceive(t, prev_session, `{"identifier":"chat_1","message":"Alice: Hey!","stream_id":"messages_1","epoch":"2022","offset":1}`)
 
-	node.HandlePubSub([]byte(`{"stream": "u_jack", "data": "New message from Alice"}`))
+	node.HandleBroadcast([]byte(`{"stream": "u_jack", "data": "New message from Alice"}`))
 	requireReceive(t, prev_session, `{"identifier":"user_jack","message":"New message from Alice","stream_id":"u_jack","epoch":"2022","offset":1}`)
 
 	prev_session.Disconnect("normal", ws.CloseNormalClosure)
@@ -129,13 +129,13 @@ func TestIntegrationRestore(t *testing.T) {
 	require.Contains(t, welcome["restored_ids"], "user_jack")
 
 	t.Run("Restore hub subscriptions", func(t *testing.T) {
-		node.HandlePubSub([]byte(`{"stream": "messages_1", "data": "Lorenzo: Ciao"}`))
+		node.HandleBroadcast([]byte(`{"stream": "messages_1", "data": "Lorenzo: Ciao"}`))
 		requireReceive(t, session, `{"identifier":"chat_1","message":"Lorenzo: Ciao","stream_id":"messages_1","epoch":"2022","offset":2}`)
 
-		node.HandlePubSub([]byte(`{"stream": "presence_1", "data": "@lorenzo:join"}`))
+		node.HandleBroadcast([]byte(`{"stream": "presence_1", "data": "@lorenzo:join"}`))
 		requireReceive(t, session, `{"identifier":"chat_1","message":"@lorenzo:join","stream_id":"presence_1","epoch":"2022","offset":1}`)
 
-		node.HandlePubSub([]byte(`{"stream": "u_jack", "data": "1:1"}`))
+		node.HandleBroadcast([]byte(`{"stream": "u_jack", "data": "1:1"}`))
 		requireReceive(t, session, `{"identifier":"user_jack","message":"1:1","stream_id":"u_jack","epoch":"2022","offset":2}`)
 	})
 
@@ -207,21 +207,21 @@ func TestIntegrationHistory(t *testing.T) {
 	go node.Start()       // nolint:errcheck
 	defer node.Shutdown() // nolint:errcheck
 
-	node.HandlePubSub([]byte(`{"stream": "messages_1","data":"Lorenzo: Ciao"}`))
+	node.HandleBroadcast([]byte(`{"stream": "messages_1","data":"Lorenzo: Ciao"}`))
 
 	// Use sleep to make sure Since option works (and we don't want
 	// to hack broker internals to update stream messages timestamps)
 	time.Sleep(2 * time.Second)
 	ts := time.Now().Unix()
 
-	node.HandlePubSub([]byte(`{"stream": "messages_1","data":"Flavia: buona sera"}`))
-	node.HandlePubSub([]byte(`{"stream": "messages_1","data":"Mario: ta-dam!"}`))
+	node.HandleBroadcast([]byte(`{"stream": "messages_1","data":"Flavia: buona sera"}`))
+	node.HandleBroadcast([]byte(`{"stream": "messages_1","data":"Mario: ta-dam!"}`))
 
-	node.HandlePubSub([]byte(`{"stream": "presence_1","data":"1 new notification"}`))
-	node.HandlePubSub([]byte(`{"stream": "presence_1","data":"2 new notifications"}`))
-	node.HandlePubSub([]byte(`{"stream": "presence_1","data":"3 new notifications"}`))
-	node.HandlePubSub([]byte(`{"stream": "presence_1","data":"4 new notifications"}`))
-	node.HandlePubSub([]byte(`{"stream": "presence_1","data":"100+ new notifications"}`))
+	node.HandleBroadcast([]byte(`{"stream": "presence_1","data":"1 new notification"}`))
+	node.HandleBroadcast([]byte(`{"stream": "presence_1","data":"2 new notifications"}`))
+	node.HandleBroadcast([]byte(`{"stream": "presence_1","data":"3 new notifications"}`))
+	node.HandleBroadcast([]byte(`{"stream": "presence_1","data":"4 new notifications"}`))
+	node.HandleBroadcast([]byte(`{"stream": "presence_1","data":"100+ new notifications"}`))
 
 	t.Run("Subscribe with history", func(t *testing.T) {
 		session := requireAuthenticatedSession(t, node, "alice")

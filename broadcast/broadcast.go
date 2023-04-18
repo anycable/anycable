@@ -15,5 +15,10 @@ type Broadcaster interface {
 }
 
 type Handler interface {
+	// Handle broadcast message delivered only to this node (and pass it through the broker)
+	// (Used by single-node broadcasters)
+	HandleBroadcast(json []byte)
+	// Handle broadcast message delivered to all nodes
+	// (Used by fan-out broadcasters)
 	HandlePubSub(json []byte)
 }
