@@ -1,10 +1,10 @@
-# Broker
+# Streams History (Broker)
 
 AnyCable v1.4 introduced a new major concept of a **broker**. It's responsible for providing better consistency guarantees for AnyCable real-time applications.
 
 Current status: **experimental**.
 
-_The experimental status is due to the fact that the only broker cache implementation available right now is the in-memory one. Distributed broker adapters will be added in the future versions._
+_The experimental status is due to the fact that the in-memory broker cache implementation is currently available. Distributed/persistent broker adapters will be added in the future versions. The API may slightly change in the future (more likely, extended to support more use cases)._
 
 ## Overview
 
@@ -12,6 +12,47 @@ Broker implements features that can be characterized as _hot cache utilities_:
 
 - Handling incoming broadcast messages and storing them in a cache—that could help clients to receive missing broadcasts (triggered while the client was offline, for example).
 - Persisting client states—to make it possible to restore on re-connection (by providing a _session id_ of the previous connection).
+
+Below you can see the diagram demonstrating how clients can you these features to keep up with the stream messages:
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Server
+    participant RPC
+    participant Publisher
+    Publisher--)Server: '{"stream":"chat_42","data":{"text":"Hi"}}'
+    Client->>Server: CONNECT /cable
+    activate Client
+    Server->>RPC: Connect
+    RPC->>Server: SUCCESS
+    Server->>Client: '{"type":"welcome","sid":"a431"}'
+    Client->>Server: '{"command":"subscribe","identifier":"ChatChannel/42","history":{"since":163213232}}'
+    Server->>RPC: Subscribe
+    RPC->>Server: SUCCESS
+    Server->>Client: '{"type":"confirm_subscription","identifier":"ChatChannel"}}'
+    Server->>Client: '{"identifier":"ChatChannel","message":{"text":"Hi"},"stream_id":"chat_42",offset: 42, epoch: "y2023"}'
+    Server->>Client: '{"type":"confirm_history","identifier":"ChatChannel"}'
+    Publisher--)Server: '{"stream":"chat_42","data":{"text":"What's up?"}}'
+    Server->>Client: '{"identifier":"ChatChannel","message":{"text":"What's up?"},"stream_id":"chat_42",offset: 43, epoch: "y2023"}'
+    Client-x Client: DISCONNECT
+    deactivate Client
+    Server--)RPC: Disconnect
+    Publisher--)Server: '{"stream":"chat_42","data":{"text":"Where are you?"}}'
+    Client->>Server: CONNECT /cable?sid=a431
+    activate Client
+    Note over Server,RPC: No RPC calls made here
+    Server->>Client: '{"type":"welcome", "sid":"h542", "restored":true,"restored_ids":["ChatChannel"]}'
+    Note over Client,Server: No need to re-subscribe, we only request history
+    Client->>Server: '{"type":"history","identifier":"ChatChannel","history":{"streams": {"chat_42": {"offset":43,"epoch":"y2023"}}}}'
+    Server->>Client: '{"identifier":"ChatChannel","message":{"text":"Where are you?"},"stream_id":"chat_42",offset: 44, epoch: "y2023"}'
+    Server->>Client: '{"type":"confirm_history","identifier":"ChatChannel"}'
+    deactivate Client
+```
+
+To support these features, an [extended Action Cable protocol](/misc/action_cable_protocol.md#action-cable-extended-protocol) is used for communication.
+
+You can use [AnyCable JS client](https://github.com/anycable/anycable-client) library at the client-side to use the extended protocol.
 
 ## Usage
 
@@ -91,3 +132,9 @@ The default broker adapter. It stores all data in memory. It can be used for sin
 Since the data is stored in memory, it's getting lost during restarts.
 
 **NOTE:** Storing data in memory can noticeably increase the overall RAM usage of an AnyCable-Go process.
+
+### Redis
+
+<p class="pro-badge-header"></p>
+
+Coming soon ⏳
