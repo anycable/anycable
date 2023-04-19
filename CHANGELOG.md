@@ -2,6 +2,8 @@
 
 ## master
 
+- Add `try-broker` preset to configure required components to use an in-memory broker. ([@palkan][])
+
 - Add NATS pub/sub. ([@palkan][])
 
 - Add Redis pub/sub. ([@palkan][])

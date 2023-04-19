@@ -36,7 +36,7 @@ import (
 
 type controllerFactory = func(*metricspkg.Metrics, *config.Config) (node.Controller, error)
 type disconnectorFactory = func(*node.Node, *config.Config) (node.Disconnector, error)
-type broadcasterFactory = func(broadcast.Handler, *config.Config) (broadcast.Broadcaster, error)
+type broadcastersFactory = func(broadcast.Handler, *config.Config) ([]broadcast.Broadcaster, error)
 type brokerFactory = func(broker.Broadcaster, *config.Config) (broker.Broker, error)
 type subscriberFactory = func(pubsub.Handler, *config.Config) (pubsub.Subscriber, error)
 type websocketHandler = func(*node.Node, *config.Config) (http.Handler, error)
@@ -58,8 +58,8 @@ type Runner struct {
 	brokerFactory           brokerFactory
 	websocketHandlerFactory websocketHandler
 
-	broadcasters       []broadcasterFactory
-	websocketEndpoints map[string]websocketHandler
+	broadcastersFactory broadcastersFactory
+	websocketEndpoints  map[string]websocketHandler
 
 	router *router.RouterController
 
@@ -216,14 +216,14 @@ func (r *Runner) Run() error {
 
 	r.shutdownables = append(r.shutdownables, subscriber)
 
-	if r.broadcasters != nil {
-		for _, broadcasterFactory := range r.broadcasters {
-			broadcaster, berr := broadcasterFactory(appNode, r.config)
+	if r.broadcastersFactory != nil {
+		broadcasters, berr := r.broadcastersFactory(appNode, r.config)
 
-			if berr != nil {
-				return errorx.Decorate(err, "couldn't configure broadcaster")
-			}
+		if berr != nil {
+			return errorx.Decorate(err, "couldn't configure broadcasters")
+		}
 
+		for _, broadcaster := range broadcasters {
 			if broadcaster.IsFanout() && subscriber.IsMultiNode() {
 				r.log.Warnf("Using pub/sub with a distributed broadcaster has no effect")
 			}

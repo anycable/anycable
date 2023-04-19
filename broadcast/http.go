@@ -55,7 +55,7 @@ func NewHTTPBroadcaster(node Handler, config *HTTPConfig) *HTTPBroadcaster {
 
 	return &HTTPBroadcaster{
 		node:       node,
-		log:        log.WithFields(log.Fields{"context": "pubsub", "provider": "http"}),
+		log:        log.WithFields(log.Fields{"context": "broadcast", "provider": "http"}),
 		port:       config.Port,
 		path:       config.Path,
 		authHeader: authHeader,
@@ -80,9 +80,9 @@ func (s *HTTPBroadcaster) Start(done chan (error)) error {
 	s.log.Infof("Accept broadcast requests at %s%s", s.server.Address(), s.path)
 
 	go func() {
-		if err := s.server.StartAndAnnounce("Pub/Sub HTTP server"); err != nil {
+		if err := s.server.StartAndAnnounce("broadcasting HTTP server"); err != nil {
 			if !s.server.Stopped() {
-				done <- fmt.Errorf("Pub/Sub HTTP server at %s stopped: %v", s.server.Address(), err)
+				done <- fmt.Errorf("broadcasting HTTP server at %s stopped: %v", s.server.Address(), err)
 			}
 		}
 	}()

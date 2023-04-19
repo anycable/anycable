@@ -43,48 +43,37 @@ func WithDefaultRPCController() Option {
 }
 
 // WithBroadcaster is an Option to set Runner broadaster
-func WithBroadcaster(fn broadcasterFactory) Option {
+func WithBroadcasters(fn broadcastersFactory) Option {
 	return func(r *Runner) error {
-		r.broadcasters = append(r.broadcasters, fn)
+		r.broadcastersFactory = fn
 		return nil
 	}
 }
 
 // WithDefaultBroadcaster is an Option to set Runner subscriber to default broadcaster from config
 func WithDefaultBroadcaster() Option {
-	return func(r *Runner) error {
-		adapters := strings.Split(r.config.BroadcastAdapter, ",")
+	return WithBroadcasters(func(h broadcast.Handler, c *config.Config) ([]broadcast.Broadcaster, error) {
+		broadcasters := []broadcast.Broadcaster{}
+		adapters := strings.Split(c.BroadcastAdapter, ",")
 
 		for _, adapter := range adapters {
 			switch adapter {
 			case "http":
-				r.broadcasters = append(
-					r.broadcasters,
-					func(h broadcast.Handler, c *config.Config) (broadcast.Broadcaster, error) {
-						return broadcast.NewHTTPBroadcaster(h, &c.HTTPBroadcast), nil
-					},
-				)
+				hb := broadcast.NewHTTPBroadcaster(h, &c.HTTPBroadcast)
+				broadcasters = append(broadcasters, hb)
 			case "redis":
-				r.broadcasters = append(
-					r.broadcasters,
-					func(h broadcast.Handler, c *config.Config) (broadcast.Broadcaster, error) {
-						return broadcast.NewLegacyRedisBroadcaster(h, &c.Redis), nil
-					},
-				)
+				rb := broadcast.NewLegacyRedisBroadcaster(h, &c.Redis)
+				broadcasters = append(broadcasters, rb)
 			case "nats":
-				r.broadcasters = append(
-					r.broadcasters,
-					func(h broadcast.Handler, c *config.Config) (broadcast.Broadcaster, error) {
-						return broadcast.NewLegacyNATSBroadcaster(h, &c.NATS), nil
-					},
-				)
+				nb := broadcast.NewLegacyNATSBroadcaster(h, &c.NATS)
+				broadcasters = append(broadcasters, nb)
 			default:
-				return errorx.IllegalArgument.New("Unsupported broadcast adapter: %s", adapter)
+				return broadcasters, errorx.IllegalArgument.New("Unsupported broadcast adapter: %s", adapter)
 			}
 		}
 
-		return nil
-	}
+		return broadcasters, nil
+	})
 }
 
 // WithSubscriber is an Option to set Runner subscriber

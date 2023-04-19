@@ -18,7 +18,7 @@ Broker implements features that can be characterized as _hot cache utilities_:
 The easiest way to try the streams history feature is to use the `try-broker` preset for AnyCable-Go:
 
 ```sh
-$ anycable-go --preset=try-broker
+$ anycable-go --presets=try-broker
 
 INFO 2023-04-14T00:31:55.548Z context=main Starting AnyCable 1.4.0-d8939df (with mruby 1.2.0 (2015-11-17)) (pid: 87410, open file limit: 122880, gomaxprocs: 8)
 INFO 2023-04-14T00:31:55.548Z context=main Using in-memory broker (epoch: vRXl, history limit: 100, history ttl: 300s, sessions ttl: 300s)

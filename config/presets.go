@@ -38,6 +38,10 @@ func (c *Config) LoadPresets() error {
 			if err := c.loadHerokuPreset(&defaults); err != nil {
 				return err
 			}
+		case "try-broker":
+			if err := c.loadTryBrokerPreset(&defaults); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -93,6 +97,22 @@ func (c *Config) loadFlyPreset(defaults *Config) error {
 func (c *Config) loadHerokuPreset(defaults *Config) error {
 	if c.Host == defaults.Host {
 		c.Host = "0.0.0.0"
+	}
+
+	return nil
+}
+
+func (c *Config) loadTryBrokerPreset(defaults *Config) error {
+	if c.BrokerAdapter == defaults.BrokerAdapter {
+		c.BrokerAdapter = "memory"
+	}
+
+	if c.BroadcastAdapter == defaults.BroadcastAdapter {
+		c.BroadcastAdapter = "http,redis"
+	}
+
+	if c.PubSubAdapter == defaults.PubSubAdapter {
+		c.PubSubAdapter = "redis"
 	}
 
 	return nil

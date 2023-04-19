@@ -790,7 +790,7 @@ func miscCLIFlags(c *config.Config, presets *string) []cli.Flag {
 	return withDefaults(miscCategoryDescription, []cli.Flag{
 		&cli.StringFlag{
 			Name:        "presets",
-			Usage:       "Configuration presets, comma-separated (none, fly, heroku). Inferred automatically",
+			Usage:       "Configuration presets, comma-separated (none, fly, heroku, try-broker). Inferred automatically",
 			Destination: presets,
 		},
 	})

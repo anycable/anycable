@@ -43,7 +43,7 @@ func NewLegacyRedisBroadcaster(node Handler, config *rconfig.RedisConfig) *Legac
 		pingInterval:              time.Duration(config.KeepalivePingInterval),
 		reconnectAttempt:          0,
 		maxReconnectAttempts:      config.MaxReconnectAttempts,
-		log:                       log.WithFields(log.Fields{"context": "pubsub", "provider": "redis"}),
+		log:                       log.WithFields(log.Fields{"context": "broadcast", "provider": "redis"}),
 		tlsVerify:                 config.TLSVerify,
 	}
 }

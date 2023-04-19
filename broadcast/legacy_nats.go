@@ -21,7 +21,7 @@ func NewLegacyNATSBroadcaster(node Handler, c *nconfig.NATSConfig) *LegacyNATSBr
 	return &LegacyNATSBroadcaster{
 		config:  c,
 		handler: node,
-		log:     log.WithFields(log.Fields{"context": "pubsub", "provider": "nats"}),
+		log:     log.WithFields(log.Fields{"context": "broadcast", "provider": "nats"}),
 	}
 }
 

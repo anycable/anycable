@@ -63,6 +63,21 @@ func TestHerokuPresets(t *testing.T) {
 	assert.Equal(t, "0.0.0.0", config.Host)
 }
 
+func TestTryBroker(t *testing.T) {
+	config := NewConfig()
+	config.UserPresets = []string{"try-broker"}
+
+	require.Equal(t, []string{"try-broker"}, config.Presets())
+
+	err := config.LoadPresets()
+
+	require.NoError(t, err)
+
+	assert.Equal(t, "memory", config.BrokerAdapter)
+	assert.Equal(t, "http,redis", config.BroadcastAdapter)
+	assert.Equal(t, "redis", config.PubSubAdapter)
+}
+
 func TestOverrideSomePresetSettings(t *testing.T) {
 	setEnv(
 		"FLY_APP_NAME", "any-test",
