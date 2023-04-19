@@ -13,7 +13,45 @@ Broker implements features that can be characterized as _hot cache utilities_:
 - Handling incoming broadcast messages and storing them in a cache—that could help clients to receive missing broadcasts (triggered while the client was offline, for example).
 - Persisting client states—to make it possible to restore on re-connection (by providing a _session id_ of the previous connection).
 
-Below you can see the diagram demonstrating how clients can you these features to keep up with the stream messages:
+## Quick start
+
+The easiest way to try the streams history feature is to use the `try-broker` preset for AnyCable-Go:
+
+```sh
+$ anycable-go --preset=try-broker
+
+INFO 2023-04-14T00:31:55.548Z context=main Starting AnyCable 1.4.0-d8939df (with mruby 1.2.0 (2015-11-17)) (pid: 87410, open file limit: 122880, gomaxprocs: 8)
+INFO 2023-04-14T00:31:55.548Z context=main Using in-memory broker (epoch: vRXl, history limit: 100, history ttl: 300s, sessions ttl: 300s)
+INFO 2023-04-18T20:46:00.693Z context=pubsub Starting Redis pub/sub: localhost:6379
+INFO 2023-04-19T16:22:55.776Z context=pubsub provider=http Accept broadcast requests at http://localhost:8090/_broadcast
+...
+```
+
+**NOTE:** The preset assumes that you use Redis as a pub/sub component. If you use a different pub/sub adapter, you need to provide the `--pubsub` option with the adapter name.
+
+Now, at the Ruby/Rails side, switch to the `http` broadcasting adapter. For example, in `config/anycable.yml`:
+
+```yaml
+default: &default
+  # ...
+  broadcast_adapter: http
+```
+
+Finally, at the client-side, you MUST use the [AnyCable JS client](https://github.com/anycable/anycable-client) and configure it to use the `actioncable-v1-ext-json` protocol:
+
+```js
+import { createCable } from '@anycable/web'
+// or for non-web projects
+// import { createCable } from '@anycable/core'
+
+export default createCable({protocol: 'actioncable-v1-ext-json'})
+```
+
+That's it! Now your clients will automatically catch-up with the missed messages and restore their state on re-connection.
+
+## How it works
+
+Below you can see the diagram demonstrating how clients can you the broker features to keep up with the stream messages and restore their state:
 
 ```mermaid
 sequenceDiagram
@@ -54,9 +92,11 @@ To support these features, an [extended Action Cable protocol](/misc/action_cabl
 
 You can use [AnyCable JS client](https://github.com/anycable/anycable-client) library at the client-side to use the extended protocol.
 
-## Usage
+## Manual setup
 
-By default, broker is disabled. To enable it, you need to provide the `--broker` option with a broker adapter name:
+The `try-broker` preset is good for a quick start. Let's see how to configure the broker and other components manually.
+
+First, you need to provide the `--broker` option with a broker adapter name:
 
 ```sh
 $ anycable-go --broker=memory
