@@ -15,6 +15,7 @@ AllCops:
     - 'vendor/**/*'
     - 'gemfiles/**/*'
     - 'benchmarks/**/*'
+    - 'lib/anycable/grpc_kit/health_*.rb'
   DisplayCopNames: true
   SuggestExtensions: false
   NewCops: disable

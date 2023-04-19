@@ -2,12 +2,16 @@
 
 require "spec_helper"
 
-describe "health checker", skip: GRPC_KIT do
+describe "health checker" do
   include_context "anycable:grpc:server"
 
   before(:all) do
-    @service = Grpc::Health::Checker.rpc_stub_class
-      .new(AnyCable.config.rpc_host, :this_channel_is_insecure)
+    @service = if GRPC_KIT
+      sock = TCPSocket.new(*AnyCable.config.rpc_host.split(":"))
+      ::Grpc::Health::V1::Health::Stub.new(sock)
+    else
+      ::Grpc::Health::V1::Health::Stub.new(AnyCable.config.rpc_host, :this_channel_is_insecure)
+    end
   end
 
   let(:service) { @service }

@@ -2,10 +2,7 @@
 
 RSpec.shared_context "anycable:grpc:server" do
   before(:all) do
-    @server = AnyCable::GRPC::Server.new(
-      host: AnyCable.config.rpc_host,
-      **AnyCable.config.to_grpc_params
-    )
+    @server = AnyCable.server_builder.call(AnyCable.config)
 
     @server.start
     sleep 0.1

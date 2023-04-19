@@ -2,6 +2,10 @@
 
 require "anycable/grpc/handler"
 
+require_relative "./health_pb"
+require_relative "./health_services_pb"
+require_relative "./health_checker"
+
 module AnyCable
   module GRPC
     raise LoadError, "AnyCable::GRPC::Server has been already loaded!" if defined?(AnyCable::GRPC::Server)
@@ -77,8 +81,8 @@ module AnyCable
 
         loop do
           sock = TCPSocket.new(hostname, port, connect_timeout: 1)
-          stub = AnyCable::GRPC::Stub.new(sock)
-          stub.connect(AnyCable::ConnectionRequest.new(env: {}))
+          stub = ::Grpc::Health::V1::Health::Stub.new(sock)
+          stub.check(::Grpc::Health::V1::HealthCheckRequest.new)
           sock.close
           break
         rescue Errno::ECONNREFUSED, Errno::EHOSTUNREACH, SocketError
@@ -126,7 +130,21 @@ module AnyCable
 
         ::GrpcKit::Server.new(min_pool_size: pool_size, max_pool_size: pool_size).tap do |server|
           server.handle(AnyCable::GRPC::Handler)
+          server.handle(build_health_checker)
         end
+      end
+
+      def build_health_checker
+        health_checker = ::Grpc::Health::Checker.new
+        health_checker.add_status(
+          "anycable.RPC",
+          ::Grpc::Health::V1::HealthCheckResponse::ServingStatus::SERVING
+        )
+        health_checker.add_status(
+          "",
+          ::Grpc::Health::V1::HealthCheckResponse::ServingStatus::NOT_SERVING
+        )
+        health_checker
       end
     end
   end

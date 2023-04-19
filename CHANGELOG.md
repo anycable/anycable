@@ -2,6 +2,8 @@
 
 ## master
 
+- Add gRPC health check when using grpc_kit. ([@palkan][])
+
 ## 1.3.0 (2023-02-28)
 
 - Add configuration presets. ([@palkan][])

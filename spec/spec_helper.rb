@@ -11,6 +11,8 @@ if ENV["COVERAGE"] == "true"
     enable_coverage :branch
 
     add_filter "/spec/"
+    add_filter "/lib/anycable/protos/"
+    add_filter "/lib/anycable/grpc_kit/health_*.rb"
   end
 
   require "simplecov-lcov"
