@@ -7,9 +7,8 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-ARG TARGETOS=linux
-ARG TARGETARCH=amd64
-ADD .docker/${TARGETOS}/${TARGETARCH}/anycable-go /usr/local/bin/anycable-go
+ARG TARGETPLATFORM=linux/amd64
+ADD .docker/${TARGETPLATFORM}/anycable-go /usr/local/bin/anycable-go
 
 USER nobody
 
