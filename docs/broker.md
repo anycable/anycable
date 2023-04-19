@@ -27,6 +27,8 @@ INFO 2023-04-19T16:22:55.776Z context=pubsub provider=http Accept broadcast requ
 ...
 ```
 
+**IMPORTANT:** Use v1.4.0-rc.1 or higher to try the broker (e.g., `anycable/anycable-go:1.4.0-rc.1` Docker image).
+
 **NOTE:** The preset assumes that you use Redis as a pub/sub component. If you use a different pub/sub adapter, you need to provide the `--pubsub` option with the adapter name.
 
 Now, at the Ruby/Rails side, switch to the `http` broadcasting adapter. For example, in `config/anycable.yml`:
