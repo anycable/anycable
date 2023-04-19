@@ -118,7 +118,7 @@ module AnyCable
           yield http
         rescue Timeout::Error, *RECOVERABLE_EXCEPTIONS => e
           retry_count += 1
-          if MAX_ATTEMPTS < retry_count
+          if retry_count > MAX_ATTEMPTS
             logger.error("Broadcast request failed: #{e.message}")
             return
           end
