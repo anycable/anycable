@@ -89,7 +89,7 @@ workflows:
         - build
         filters:
           branches:
-            only: "master"
+            only: "edge"
     - build_docker:
         name: build_docker_edge_mrb
         version: "edge-mrb"
@@ -101,7 +101,7 @@ workflows:
         - build_linux_mruby
         filters:
           branches:
-            only: "master"
+            only: "edge"
     - push_latest_docker:
         requires:
         - build_docker_main
