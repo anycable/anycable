@@ -1,4 +1,6 @@
-# Apollo GraphQL support <img class='pro-badge' src='https://docs.anycable.io/assets/pro.svg' alt='pro' />
+# Apollo GraphQL support
+
+<p class="pro-badge-header"></p>
 
 AnyCable can act as a _translator_ between Apollo GraphQL and Action Cable protocols (used by [GraphQL Ruby][graphql-ruby]).
 

@@ -1,4 +1,6 @@
-# Binary messaging formats <img class='pro-badge' src='https://docs.anycable.io/assets/pro.svg' alt='pro' />
+# Binary messaging formats
+
+<p class="pro-badge-header"></p>
 
 AnyCable Pro allows you to use Msgpack or Protobufs instead of JSON to serialize incoming and outgoing data. Using binary formats bring the following benefits: faster (de)serialization and less data passing through network (see comparisons below).
 
