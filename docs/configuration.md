@@ -135,6 +135,7 @@ Automatically activated if all of the following environment variables are define
 The preset provides the following defaults:
 
 - `host`: "0.0.0.0".
+- `http_broadcast_port`: `$PORT` (to make HTTP endpoint accessible from other applications).
 
 ## TLS
 

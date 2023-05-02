@@ -48,9 +48,10 @@ func TestHerokuPresets(t *testing.T) {
 	setEnv(
 		"HEROKU_DYNO_ID", "web.42",
 		"HEROKU_APP_ID", "herr-cable",
+		"PORT", "4321",
 	)
 
-	defer unsetEnv("HEROKU_DYNO_ID", "HEROKU_APP_ID")
+	defer unsetEnv("HEROKU_DYNO_ID", "HEROKU_APP_ID", "PORT")
 
 	config := NewConfig()
 
@@ -61,6 +62,7 @@ func TestHerokuPresets(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, "0.0.0.0", config.Host)
+	assert.Equal(t, 4321, config.HTTPBroadcast.Port)
 }
 
 func TestTryBroker(t *testing.T) {

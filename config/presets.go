@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/apex/log"
@@ -97,6 +98,17 @@ func (c *Config) loadFlyPreset(defaults *Config) error {
 func (c *Config) loadHerokuPreset(defaults *Config) error {
 	if c.Host == defaults.Host {
 		c.Host = "0.0.0.0"
+	}
+
+	if c.HTTPBroadcast.Port == defaults.HTTPBroadcast.Port {
+		if herokuPortStr := os.Getenv("PORT"); herokuPortStr != "" {
+			herokuPort, err := strconv.Atoi(herokuPortStr)
+			if err != nil {
+				return err
+			}
+
+			c.HTTPBroadcast.Port = herokuPort
+		}
 	}
 
 	return nil
