@@ -85,20 +85,18 @@ build-clean:
 	rm -rf ./dist
 
 build-linux:
-	env GOOS=linux   GOARCH=amd64 $(GOBUILD) -o "dist/anycable-go-$(VERSION)-linux-amd64"   cmd/anycable-go/main.go
-	env GOOS=linux   GOARCH=arm64 $(GOBUILD) -o "dist/anycable-go-$(VERSION)-linux-arm64"   cmd/anycable-go/main.go
+	env GOOS=linux   GOARCH=amd64 $(GOBUILD) -o "dist/anycable-go-linux-amd64"   cmd/anycable-go/main.go
+	env GOOS=linux   GOARCH=arm64 $(GOBUILD) -o "dist/anycable-go-linux-arm64"   cmd/anycable-go/main.go
 
 build-all: build-clean build-linux
-	env GOOS=linux   GOARCH=arm   $(GOBUILD) -o "dist/anycable-go-$(VERSION)-linux-arm"     cmd/anycable-go/main.go
-	env GOOS=linux   GOARCH=arm64 $(GOBUILD) -o "dist/anycable-go-$(VERSION)-linux-arm64"   cmd/anycable-go/main.go
-	env GOOS=linux   GOARCH=amd64 $(GOBUILD) -o "dist/anycable-go-$(VERSION)-linux-amd64"   cmd/anycable-go/main.go
-	env GOOS=windows GOARCH=386   $(GOBUILD) -o "dist/anycable-go-$(VERSION)-win-386"       cmd/anycable-go/main.go
-	env GOOS=windows GOARCH=amd64 $(GOBUILD) -o "dist/anycable-go-$(VERSION)-win-amd64"     cmd/anycable-go/main.go
-	env GOOS=darwin  GOARCH=386   $(GOBUILD) -o "dist/anycable-go-$(VERSION)-macos-386"     cmd/anycable-go/main.go
-	env GOOS=darwin  GOARCH=amd64 $(GOBUILD) -o "dist/anycable-go-$(VERSION)-macos-amd64"   cmd/anycable-go/main.go
-	env GOOS=freebsd GOARCH=arm   $(GOBUILD) -o "dist/anycable-go-$(VERSION)-freebsd-arm"   cmd/anycable-go/main.go
-	env GOOS=freebsd GOARCH=386   $(GOBUILD) -o "dist/anycable-go-$(VERSION)-freebsd-386"   cmd/anycable-go/main.go
-	env GOOS=freebsd GOARCH=amd64 $(GOBUILD) -o "dist/anycable-go-$(VERSION)-freebsd-amd64" cmd/anycable-go/main.go
+	env GOOS=linux   GOARCH=arm   $(GOBUILD) -o "dist/anycable-go-linux-arm"     cmd/anycable-go/main.go
+	env GOOS=linux   GOARCH=arm64 $(GOBUILD) -o "dist/anycable-go-linux-arm64"   cmd/anycable-go/main.go
+	env GOOS=linux   GOARCH=amd64 $(GOBUILD) -o "dist/anycable-go-linux-amd64"   cmd/anycable-go/main.go
+	env GOOS=windows GOARCH=amd64 $(GOBUILD) -o "dist/anycable-go-win-amd64.exe" cmd/anycable-go/main.go
+	env GOOS=darwin  GOARCH=arm64 $(GOBUILD) -o "dist/anycable-go-darwin-arm64"  cmd/anycable-go/main.go
+	env GOOS=darwin  GOARCH=amd64 $(GOBUILD) -o "dist/anycable-go-darwin-amd64"  cmd/anycable-go/main.go
+	env GOOS=freebsd GOARCH=arm   $(GOBUILD) -o "dist/anycable-go-freebsd-arm"   cmd/anycable-go/main.go
+	env GOOS=freebsd GOARCH=amd64 $(GOBUILD) -o "dist/anycable-go-freebsd-amd64" cmd/anycable-go/main.go
 
 # Run server
 run:
