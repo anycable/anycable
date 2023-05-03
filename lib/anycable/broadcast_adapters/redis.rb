@@ -21,7 +21,7 @@ module AnyCable
     #
     # You can override these params:
     #
-    #   AnyCable.broadcast_adapter = :redis, url: "redis://my_redis", channel: "_any_cable_"
+    #   AnyCable.broadcast_adapter = :redis, { url: "redis://my_redis", channel: "_any_cable_" }
     class Redis < Base
       attr_reader :redis_conn, :channel
 
