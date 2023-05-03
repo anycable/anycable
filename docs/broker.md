@@ -70,11 +70,11 @@ sequenceDiagram
     Client->>Server: '{"command":"subscribe","identifier":"ChatChannel/42","history":{"since":163213232}}'
     Server->>RPC: Subscribe
     RPC->>Server: SUCCESS
-    Server->>Client: '{"type":"confirm_subscription","identifier":"ChatChannel"}}'
-    Server->>Client: '{"identifier":"ChatChannel","message":{"text":"Hi"},"stream_id":"chat_42",offset: 42, epoch: "y2023"}'
-    Server->>Client: '{"type":"confirm_history","identifier":"ChatChannel"}'
+    Server->>Client: '{"type":"confirm_subscription"}}'
+    Server->>Client: '{"message":{"text":"Hi"},"stream_id":"chat_42",offset: 42, epoch: "y2023"}'
+    Server->>Client: '{"type":"confirm_history"}'
     Publisher--)Server: '{"stream":"chat_42","data":{"text":"What's up?"}}'
-    Server->>Client: '{"identifier":"ChatChannel","message":{"text":"What's up?"},"stream_id":"chat_42",offset: 43, epoch: "y2023"}'
+    Server->>Client: '{"message":{"text":"What's up?"},"stream_id":"chat_42",offset: 43, epoch: "y2023"}'
     Client-x Client: DISCONNECT
     deactivate Client
     Server--)RPC: Disconnect
@@ -82,11 +82,11 @@ sequenceDiagram
     Client->>Server: CONNECT /cable?sid=a431
     activate Client
     Note over Server,RPC: No RPC calls made here
-    Server->>Client: '{"type":"welcome", "sid":"h542", "restored":true,"restored_ids":["ChatChannel"]}'
+    Server->>Client: '{"type":"welcome", "sid":"h542", "restored":true,"restored_ids":["ChatChannel/42"]}'
     Note over Client,Server: No need to re-subscribe, we only request history
-    Client->>Server: '{"type":"history","identifier":"ChatChannel","history":{"streams": {"chat_42": {"offset":43,"epoch":"y2023"}}}}'
-    Server->>Client: '{"identifier":"ChatChannel","message":{"text":"Where are you?"},"stream_id":"chat_42",offset: 44, epoch: "y2023"}'
-    Server->>Client: '{"type":"confirm_history","identifier":"ChatChannel"}'
+    Client->>Server: '{"type":"history","identifier":"ChatChannel/42","history":{"streams": {"chat_42": {"offset":43,"epoch":"y2023"}}}}'
+    Server->>Client: '{"message":{"text":"Where are you?"},"stream_id":"chat_42",offset: 44, epoch: "y2023"}'
+    Server->>Client: '{"type":"confirm_history"}'
     deactivate Client
 ```
 
