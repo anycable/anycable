@@ -2,6 +2,8 @@
 
 AnyCable v1.4 introduced a new major concept of a **broker**. It's responsible for providing better consistency guarantees for AnyCable real-time applications.
 
+> 🎥 Learn more about the consistency pitfalls of Action Cable from [The pitfalls of realtime-ification](https://noti.st/palkan/MeBUVe/the-pitfalls-of-realtime-ification) talk (RailsConf 2022).
+
 Current status: **experimental**.
 
 _The experimental status is due to the fact that the in-memory broker cache implementation is currently available. Distributed/persistent broker adapters will be added in the future versions. The API may slightly change in the future (more likely, extended to support more use cases)._
