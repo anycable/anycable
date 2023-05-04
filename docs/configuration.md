@@ -53,7 +53,7 @@ Supports wildcards, e.g., `--allowed_origins=*.evilmartians.io,www.evilmartians.
 
 **--broadcast_adapter** (`ANYCABLE_BROADCAST_ADAPTER`, default: `redis`)
 
-[Broadcasting adapter](../ruby/broadcast_adapters.md) to use. Available options: `redis` (default), `nats`, and `http`.
+[Broadcasting adapter](../ruby/broadcast_adapters.md) to use. Available options: `redis` (default), `redisx`, `nats`, and `http`.
 
 When HTTP adapter is used, AnyCable-Go accepts broadcasting requests on `:8090/_broadcast`.
 
@@ -81,7 +81,7 @@ Redis URL for pub/sub (default: `"redis://localhost:6379/5"`).
 
 **--redis_channel** (`ANYCABLE_REDIS_CHANNEL`)
 
-Redis channel for broadcasting (default: `"__anycable__"`).
+Redis channel for broadcasting (default: `"__anycable__"`). When using the `redisx` adapter, it's used as a name of the Redis stream.
 
 **--nats_servers** (`ANYCABLE_NATS_SERVERS`)
 

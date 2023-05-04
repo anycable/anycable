@@ -2,6 +2,8 @@
 
 ## master
 
+- Add `redisx` broadcast adapter. ([@palkan][])
+
 - Set HTTP broadcast to `$PORT` on Heroku by default. ([@palkan][])
 
 - Add `try-broker` preset to configure required components to use an in-memory broker. ([@palkan][])

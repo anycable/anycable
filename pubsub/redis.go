@@ -5,7 +5,6 @@ import (
 	"errors"
 	"math"
 	"math/rand"
-	"net"
 	"sync"
 	"time"
 
@@ -51,39 +50,10 @@ var _ Subscriber = (*RedisSubscriber)(nil)
 
 // NewRedisSubscriber creates a Redis subscriber using pub/sub
 func NewRedisSubscriber(node Handler, config *rconfig.RedisConfig) (*RedisSubscriber, error) {
-	err := config.Parse()
+	options, err := config.ToRueidisOptions()
 
 	if err != nil {
 		return nil, err
-	}
-
-	keepalive := time.Duration(config.KeepalivePingInterval) * time.Second
-
-	options := &rueidis.ClientOption{
-		Dialer: net.Dialer{
-			KeepAlive: keepalive,
-		},
-	}
-
-	if config.IsCluster() { //nolint:gocritic
-		options.InitAddress = config.Hostnames()
-		options.ShuffleInit = true
-	} else if config.IsSentinel() {
-		options.InitAddress = config.SentinelHostnames()
-		options.Sentinel = rueidis.SentinelOption{
-			MasterSet: config.Hostname(),
-		}
-	} else {
-		options.InitAddress = config.Hostnames()
-	}
-
-	if config.HasAuth() {
-		options.Username = config.Username()
-		options.Password = config.Password()
-	}
-
-	if config.HasTLS() {
-		options.TLSConfig = config.ToTLSConfig()
 	}
 
 	return &RedisSubscriber{

@@ -64,6 +64,9 @@ func WithDefaultBroadcaster() Option {
 			case "redis":
 				rb := broadcast.NewLegacyRedisBroadcaster(h, &c.Redis)
 				broadcasters = append(broadcasters, rb)
+			case "redisx":
+				rb := broadcast.NewRedisBroadcaster(h, &c.Redis)
+				broadcasters = append(broadcasters, rb)
 			case "nats":
 				nb := broadcast.NewLegacyNATSBroadcaster(h, &c.NATS)
 				broadcasters = append(broadcasters, nb)

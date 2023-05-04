@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math/rand"
 	"net/url"
 	"strings"
 	"time"
@@ -245,9 +244,4 @@ loop:
 
 	psc.Unsubscribe() //nolint:errcheck
 	return <-done
-}
-
-func nextRetry(step int) time.Duration {
-	secs := (step * step) + (rand.Intn(step*4) * (step + 1)) // #nosec
-	return time.Duration(secs) * time.Second
 }

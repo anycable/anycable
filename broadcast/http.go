@@ -33,7 +33,7 @@ func NewHTTPConfig() HTTPConfig {
 	}
 }
 
-// HTTPBroadcaster represents HTTP pub/sub
+// HTTPBroadcaster represents HTTP broadcaster
 type HTTPBroadcaster struct {
 	port       int
 	path       string

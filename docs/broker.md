@@ -110,7 +110,7 @@ INFO 2023-04-14T00:31:55.548Z context=main Using in-memory broker (epoch: vRXl, 
 ...
 ```
 
-With broker enabled in an AnyCable-Go cluster, you MUST use a non-distributed, single-node broadcaster (currently, only `http`). Otherwise, different nodes will have different IDs for the same messages and using cache will be impossible. See [Broadcast adapters](/ruby/broadcast_adapters.md) for more information.
+With broker enabled in an AnyCable-Go cluster, you MUST use a non-distributed, single-node broadcaster (currently, `http` and `redisx` are available). Otherwise, different nodes will have different IDs for the same messages and using cache will be impossible. See [Broadcast adapters](/ruby/broadcast_adapters.md) for more information.
 
 To re-transmit _registered_ messages within a cluster, you MUST also configure a pub/sub adapter (via the `--pubsub` option). See [Pub/Sub documentation](./pubsub.md) for available options.
 
@@ -155,7 +155,7 @@ To sum up, to enable broker features, you must configure:
 
 - `--broker` option with a broker adapter name
 - `--pubsub` option with a pub/sub adapter name
-- `--broadcaster` option with a compatible broadcasting adapters (currently, only `http`).
+- `--broadcaster` option with a compatible broadcasting adapters (`http` or `redisx`).
 
 ## Configuration
 
@@ -171,11 +171,11 @@ Currently, the configuration is global. We plan to add support for granular (per
 
 ### Memory
 
-The default broker adapter. It stores all data in memory. It can be used for single node installations, and it's a primary option for development and testing purposes.
+The default broker adapter. It stores all data in memory. It can be used **only for single node installations**. So, it's perfect for development and testing as well as applications having just a single WebSocket server.
 
-Since the data is stored in memory, it's getting lost during restarts.
+**IMPORTANT**: Since the data is stored in memory, it's getting lost during restarts.
 
-**NOTE:** Storing data in memory can noticeably increase the overall RAM usage of an AnyCable-Go process.
+**NOTE:** Storing data in memory may result into the increased RAM usage of an AnyCable-Go process.
 
 ### Redis
 

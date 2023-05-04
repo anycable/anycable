@@ -6,6 +6,7 @@ gem "colorize"
 
 if File.directory?(File.join(__dir__, "../../anycable"))
   $stdout.puts "\n=== Using local gems for Anyt ===\n\n"
+  gem "debug"
   gem "anycable", path: "../../anycable"
   gem "anycable-rails", path: "../../anycable-rails"
   gem "anyt", path: "../../anyt"

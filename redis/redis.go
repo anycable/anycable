@@ -3,8 +3,12 @@ package redis
 import (
 	"crypto/tls"
 	"fmt"
+	"net"
 	"net/url"
 	"strings"
+	"time"
+
+	"github.com/rueian/rueidis"
 )
 
 // RedisConfig contains Redis pubsub adapter configuration
@@ -14,6 +18,10 @@ type RedisConfig struct {
 	URL string
 	// Redis channel to subscribe to (legacy pub/sub)
 	Channel string
+	// Redis stream consumer group name
+	Group string
+	// Redis stream read wait time in milliseconds
+	StreamReadBlockMilliseconds int64
 	// Internal channel name for node-to-node broadcasting
 	InternalChannel string
 	// List of Redis Sentinel addresses
@@ -37,13 +45,15 @@ type RedisConfig struct {
 // NewRedisConfig builds a new config for Redis pubsub
 func NewRedisConfig() RedisConfig {
 	return RedisConfig{
-		KeepalivePingInterval:     30,
-		URL:                       "redis://localhost:6379/5",
-		Channel:                   "__anycable__",
-		InternalChannel:           "__anycable_internal__",
-		SentinelDiscoveryInterval: 30,
-		TLSVerify:                 false,
-		MaxReconnectAttempts:      5,
+		KeepalivePingInterval:       30,
+		URL:                         "redis://localhost:6379/5",
+		Channel:                     "__anycable__",
+		Group:                       "bx",
+		StreamReadBlockMilliseconds: 2000,
+		InternalChannel:             "__anycable_internal__",
+		SentinelDiscoveryInterval:   30,
+		TLSVerify:                   false,
+		MaxReconnectAttempts:        5,
 	}
 }
 
@@ -167,4 +177,43 @@ func (config *RedisConfig) Parse() error {
 	}
 
 	return nil
+}
+
+func (config *RedisConfig) ToRueidisOptions() (*rueidis.ClientOption, error) {
+	err := config.Parse()
+
+	if err != nil {
+		return nil, err
+	}
+
+	keepalive := time.Duration(config.KeepalivePingInterval) * time.Second
+
+	options := &rueidis.ClientOption{
+		Dialer: net.Dialer{
+			KeepAlive: keepalive,
+		},
+	}
+
+	if config.IsCluster() { //nolint:gocritic
+		options.InitAddress = config.Hostnames()
+		options.ShuffleInit = true
+	} else if config.IsSentinel() {
+		options.InitAddress = config.SentinelHostnames()
+		options.Sentinel = rueidis.SentinelOption{
+			MasterSet: config.Hostname(),
+		}
+	} else {
+		options.InitAddress = config.Hostnames()
+	}
+
+	if config.HasAuth() {
+		options.Username = config.Username()
+		options.Password = config.Password()
+	}
+
+	if config.HasTLS() {
+		options.TLSConfig = config.ToTLSConfig()
+	}
+
+	return options, nil
 }
