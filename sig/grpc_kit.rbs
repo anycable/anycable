@@ -1,0 +1,5 @@
+class GrpcKit
+  VERSION: String
+  def self.loglevel=:(untyped) -> untyped
+  def self.logger=:(untyped) -> untyped
+end

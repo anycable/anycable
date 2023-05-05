@@ -1,0 +1,1582 @@
+module NATS
+  def self.connect: (?untyped uri, ?untyped opts) -> untyped
+
+  NANOSECONDS: Integer
+
+  class Client
+    include NATS::Status
+
+    include MonitorMixin
+
+    public
+
+    alias JetStream jetstream
+
+    def close: () -> untyped
+
+    def closed?: () -> untyped
+
+    def connect: (?untyped uri, ?untyped opts) -> untyped
+
+    def connected?: () -> untyped
+
+    def connected_server: () -> untyped
+
+    def connecting?: () -> untyped
+
+    def discovered_servers: () -> untyped
+
+    def drain: () -> untyped
+
+    def draining?: () -> untyped
+
+    def flush: (?untyped timeout) -> untyped
+
+    def jetstream: (?untyped opts) -> untyped
+
+    alias jsm jetstream
+
+    def last_error: () -> untyped
+
+    def new_inbox: () -> untyped
+
+    def old_request: (untyped subject, untyped payload, ?untyped opts) { (*untyped) -> untyped } -> untyped
+
+    def on_close: () { (*untyped) -> untyped } -> untyped
+
+    def on_disconnect: () { (*untyped) -> untyped } -> untyped
+
+    def on_error: () { (*untyped) -> untyped } -> untyped
+
+    def on_reconnect: () { (*untyped) -> untyped } -> untyped
+
+    def options: () -> untyped
+
+    def publish: (untyped subject, ?untyped msg, ?untyped opt_reply, **untyped) { (*untyped) -> untyped } -> untyped
+
+    def publish_msg: (untyped msg) -> untyped
+
+    def reconnecting?: () -> untyped
+
+    def request: (untyped subject, ?untyped payload, **untyped) { (*untyped) -> untyped } -> untyped
+
+    def request_msg: (untyped msg, **untyped) -> untyped
+
+    def server_info: () -> untyped
+
+    def server_pool: () -> untyped
+
+    alias servers server_pool
+
+    def stats: () -> untyped
+
+    def status: () -> untyped
+
+    def subscribe: (untyped subject, ?untyped opts) { (*untyped) -> untyped } -> untyped
+
+    def uri: () -> untyped
+
+    private
+
+    def attempt_reconnect: () -> untyped
+
+    def auth_connection?: () -> untyped
+
+    def can_reuse_server?: (untyped server) -> untyped
+
+    def client_using_secure_connection?: () -> untyped
+
+    def close_connection: (untyped conn_status, ?untyped do_cbs) -> untyped
+
+    def connect_command: () -> untyped
+
+    def create_socket: () -> untyped
+
+    def delete_sid: (untyped sid) -> untyped
+
+    def do_drain: () -> untyped
+
+    def drain_sub: (untyped sub) -> untyped
+
+    def err_cb_call: (untyped nc, untyped e, untyped sub) -> untyped
+
+    def flusher_loop: () -> untyped
+
+    def force_flush!: () -> untyped
+
+    def initialize: () -> void
+
+    def jwt_cb_for_creds_file: (untyped creds) -> untyped
+
+    def nkey_cb_for_nkey_file: (untyped nkey) -> untyped
+
+    def ping_interval_loop: () -> untyped
+
+    def process_connect_init: () -> untyped
+
+    def process_err: (untyped err) -> untyped
+
+    def process_hdr: (untyped header) -> untyped
+
+    def process_info: (untyped line) -> untyped
+
+    def process_msg: (untyped subject, untyped sid, untyped reply, untyped data, untyped header) -> untyped
+
+    def process_op_error: (untyped e) -> untyped
+
+    def process_ping: () -> untyped
+
+    def process_pong: () -> untyped
+
+    def process_uri: (untyped uris) -> untyped
+
+    def read_loop: () -> untyped
+
+    def select_next_server: () -> untyped
+
+    def send_command: (untyped command) -> untyped
+
+    def send_flush_queue: (untyped s) -> untyped
+
+    def server_using_secure_connection?: () -> untyped
+
+    def setup_nkeys_connect: () -> untyped
+
+    def should_delay_connect?: (untyped server) -> untyped
+
+    def should_not_reconnect?: () -> untyped
+
+    def should_reconnect?: () -> untyped
+
+    def signature_cb_for_creds_file: (untyped creds) -> untyped
+
+    def signature_cb_for_nkey_file: (untyped nkey) -> untyped
+
+    def single_url_connect_used?: () -> untyped
+
+    def start_resp_mux_sub!: () -> untyped
+
+    def start_threads!: () -> untyped
+
+    def unsubscribe: (untyped sub, ?untyped opt_max) -> untyped
+
+    def validate_settings!: () -> untyped
+
+    CR_LF: String
+
+    CR_LF_SIZE: Integer
+
+    DEFAULT_PORT: Integer
+
+    DEFAULT_URI: String
+
+    DESC_HDR: String
+
+    EMPTY_MSG: String
+
+    NATS_HDR_LINE: String
+
+    NATS_HDR_LINE_SIZE: Integer
+
+    PING_REQUEST: String
+
+    PONG_RESPONSE: String
+
+    STATUS_HDR: String
+
+    STATUS_MSG_LEN: Integer
+
+    SUB_OP: String
+  end
+
+  module IO
+    include NATS::Status
+
+    DEFAULT_CONNECT_TIMEOUT: Integer
+
+    DEFAULT_DRAIN_TIMEOUT: Integer
+
+    DEFAULT_PING_INTERVAL: Integer
+
+    DEFAULT_PING_MAX: Integer
+
+    DEFAULT_READ_WRITE_TIMEOUT: Integer
+
+    DEFAULT_SUB_PENDING_BYTES_LIMIT: Integer
+
+    DEFAULT_SUB_PENDING_MSGS_LIMIT: Integer
+
+    LANG: String
+
+    MAX_FLUSH_KICK_SIZE: Integer
+
+    MAX_PENDING_SIZE: Integer
+
+    MAX_RECONNECT_ATTEMPTS: Integer
+
+    MAX_SOCKET_READ_BYTES: Integer
+
+    PROTOCOL: Integer
+
+    RECONNECT_TIME_WAIT: Integer
+
+    VERSION: String
+
+    class AuthError < NATS::IO::ConnectError
+    end
+
+    class BadSubject < NATS::IO::Error
+    end
+
+    class BadSubscription < NATS::IO::Error
+    end
+
+    class ClientError < NATS::IO::Error
+    end
+
+    class ConnectError < NATS::IO::Error
+    end
+
+    class ConnectionDrainingError < NATS::IO::Error
+    end
+
+    class DrainTimeoutError < NATS::IO::Error
+    end
+
+    class Error < StandardError
+    end
+
+    class NoRespondersError < NATS::IO::ConnectError
+    end
+
+    class NoServersError < NATS::IO::ConnectError
+    end
+
+    class ServerError < NATS::IO::Error
+    end
+
+    class SlowConsumer < NATS::IO::Error
+    end
+
+    class Socket
+      public
+
+      def close: () -> untyped
+
+      def closed?: () -> untyped
+
+      def connect: () -> untyped
+
+      def read: (untyped max_bytes, ?untyped deadline) -> untyped
+
+      def read_line: (?untyped deadline) -> untyped
+
+      def socket: () -> untyped
+
+      def socket=: (untyped) -> untyped
+
+      def write: (untyped data, ?untyped deadline) -> untyped
+
+      private
+
+      def connect_addrinfo: (untyped ai, untyped port, untyped timeout) -> untyped
+
+      def initialize: (?untyped options) -> void
+    end
+
+    class SocketTimeoutError < NATS::IO::Timeout
+    end
+
+    class StaleConnectionError < NATS::IO::Error
+    end
+
+    class Timeout < NATS::IO::Error
+    end
+  end
+
+  class JetStream
+    public
+
+    def publish: (untyped subject, ?untyped payload, **untyped) -> untyped
+
+    def pull_subscribe: (untyped subject, untyped durable, ?untyped params) -> untyped
+
+    def subscribe: (untyped subject, ?untyped params) { (*untyped) -> untyped } -> untyped
+
+    private
+
+    def initialize: (untyped conn, ?untyped params) -> void
+
+    module API
+      class ConsumerConfig < Struct[untyped]
+        def self.[]: (*untyped) -> untyped
+
+        def self.inspect: () -> untyped
+
+        def self.keyword_init?: () -> untyped
+
+        def self.members: () -> untyped
+
+        def self.new: (*untyped) -> untyped
+
+        public
+
+        def ack_policy: () -> untyped
+
+        def ack_policy=: (untyped _) -> untyped
+
+        def ack_wait: () -> untyped
+
+        def ack_wait=: (untyped _) -> untyped
+
+        def backoff: () -> untyped
+
+        def backoff=: (untyped _) -> untyped
+
+        def deliver_group: () -> untyped
+
+        def deliver_group=: (untyped _) -> untyped
+
+        def deliver_policy: () -> untyped
+
+        def deliver_policy=: (untyped _) -> untyped
+
+        def deliver_subject: () -> untyped
+
+        def deliver_subject=: (untyped _) -> untyped
+
+        def description: () -> untyped
+
+        def description=: (untyped _) -> untyped
+
+        def durable_name: () -> untyped
+
+        def durable_name=: (untyped _) -> untyped
+
+        def filter_subject: () -> untyped
+
+        def filter_subject=: (untyped _) -> untyped
+
+        def flow_control: () -> untyped
+
+        def flow_control=: (untyped _) -> untyped
+
+        def headers_only: () -> untyped
+
+        def headers_only=: (untyped _) -> untyped
+
+        def idle_heartbeat: () -> untyped
+
+        def idle_heartbeat=: (untyped _) -> untyped
+
+        def inactive_threshold: () -> untyped
+
+        def inactive_threshold=: (untyped _) -> untyped
+
+        def max_ack_pending: () -> untyped
+
+        def max_ack_pending=: (untyped _) -> untyped
+
+        def max_batch: () -> untyped
+
+        def max_batch=: (untyped _) -> untyped
+
+        def max_deliver: () -> untyped
+
+        def max_deliver=: (untyped _) -> untyped
+
+        def max_expires: () -> untyped
+
+        def max_expires=: (untyped _) -> untyped
+
+        def max_waiting: () -> untyped
+
+        def max_waiting=: (untyped _) -> untyped
+
+        def mem_storage: () -> untyped
+
+        def mem_storage=: (untyped _) -> untyped
+
+        def name: () -> untyped
+
+        def name=: (untyped _) -> untyped
+
+        def num_replicas: () -> untyped
+
+        def num_replicas=: (untyped _) -> untyped
+
+        def opt_start_seq: () -> untyped
+
+        def opt_start_seq=: (untyped _) -> untyped
+
+        def opt_start_time: () -> untyped
+
+        def opt_start_time=: (untyped _) -> untyped
+
+        def rate_limit_bps: () -> untyped
+
+        def rate_limit_bps=: (untyped _) -> untyped
+
+        def replay_policy: () -> untyped
+
+        def replay_policy=: (untyped _) -> untyped
+
+        def sample_freq: () -> untyped
+
+        def sample_freq=: (untyped _) -> untyped
+
+        private
+
+        def initialize: (?untyped opts) -> void
+      end
+
+      class ConsumerInfo < Struct[untyped]
+        def self.[]: (*untyped) -> untyped
+
+        def self.inspect: () -> untyped
+
+        def self.keyword_init?: () -> untyped
+
+        def self.members: () -> untyped
+
+        def self.new: (*untyped) -> untyped
+
+        public
+
+        def ack_floor: () -> untyped
+
+        def ack_floor=: (untyped _) -> untyped
+
+        def cluster: () -> untyped
+
+        def cluster=: (untyped _) -> untyped
+
+        def config: () -> untyped
+
+        def config=: (untyped _) -> untyped
+
+        def created: () -> untyped
+
+        def created=: (untyped _) -> untyped
+
+        def delivered: () -> untyped
+
+        def delivered=: (untyped _) -> untyped
+
+        def name: () -> untyped
+
+        def name=: (untyped _) -> untyped
+
+        def num_ack_pending: () -> untyped
+
+        def num_ack_pending=: (untyped _) -> untyped
+
+        def num_pending: () -> untyped
+
+        def num_pending=: (untyped _) -> untyped
+
+        def num_redelivered: () -> untyped
+
+        def num_redelivered=: (untyped _) -> untyped
+
+        def num_waiting: () -> untyped
+
+        def num_waiting=: (untyped _) -> untyped
+
+        def push_bound: () -> untyped
+
+        def push_bound=: (untyped _) -> untyped
+
+        def stream_name: () -> untyped
+
+        def stream_name=: (untyped _) -> untyped
+
+        def type: () -> untyped
+
+        def type=: (untyped _) -> untyped
+
+        private
+
+        def initialize: (?untyped opts) -> void
+      end
+
+      class RawStreamMsg < Struct[untyped]
+        def self.[]: (*untyped) -> untyped
+
+        def self.inspect: () -> untyped
+
+        def self.keyword_init?: () -> untyped
+
+        def self.members: () -> untyped
+
+        def self.new: (*untyped) -> untyped
+
+        public
+
+        def data: () -> untyped
+
+        def data=: (untyped _) -> untyped
+
+        def headers: () -> untyped
+
+        def headers=: (untyped _) -> untyped
+
+        def seq: () -> untyped
+
+        def seq=: (untyped _) -> untyped
+
+        def sequence: () -> untyped
+
+        def subject: () -> untyped
+
+        def subject=: (untyped _) -> untyped
+
+        private
+
+        def initialize: (untyped opts) -> void
+      end
+
+      class SequenceInfo < Struct[untyped]
+        def self.[]: (*untyped) -> untyped
+
+        def self.inspect: () -> untyped
+
+        def self.keyword_init?: () -> untyped
+
+        def self.members: () -> untyped
+
+        def self.new: (*untyped) -> untyped
+
+        public
+
+        def consumer_seq: () -> untyped
+
+        def consumer_seq=: (untyped _) -> untyped
+
+        def last_active: () -> untyped
+
+        def last_active=: (untyped _) -> untyped
+
+        def stream_seq: () -> untyped
+
+        def stream_seq=: (untyped _) -> untyped
+
+        private
+
+        def initialize: (?untyped opts) -> void
+      end
+
+      class StreamConfig < Struct[untyped]
+        def self.[]: (*untyped) -> untyped
+
+        def self.inspect: () -> untyped
+
+        def self.keyword_init?: () -> untyped
+
+        def self.members: () -> untyped
+
+        def self.new: (*untyped) -> untyped
+
+        public
+
+        def allow_direct: () -> untyped
+
+        def allow_direct=: (untyped _) -> untyped
+
+        def allow_rollup_hdrs: () -> untyped
+
+        def allow_rollup_hdrs=: (untyped _) -> untyped
+
+        def deny_delete: () -> untyped
+
+        def deny_delete=: (untyped _) -> untyped
+
+        def deny_purge: () -> untyped
+
+        def deny_purge=: (untyped _) -> untyped
+
+        def description: () -> untyped
+
+        def description=: (untyped _) -> untyped
+
+        def discard: () -> untyped
+
+        def discard=: (untyped _) -> untyped
+
+        def duplicate_window: () -> untyped
+
+        def duplicate_window=: (untyped _) -> untyped
+
+        def max_age: () -> untyped
+
+        def max_age=: (untyped _) -> untyped
+
+        def max_bytes: () -> untyped
+
+        def max_bytes=: (untyped _) -> untyped
+
+        def max_consumers: () -> untyped
+
+        def max_consumers=: (untyped _) -> untyped
+
+        def max_msg_size: () -> untyped
+
+        def max_msg_size=: (untyped _) -> untyped
+
+        def max_msgs: () -> untyped
+
+        def max_msgs=: (untyped _) -> untyped
+
+        def max_msgs_per_subject: () -> untyped
+
+        def max_msgs_per_subject=: (untyped _) -> untyped
+
+        def mirror: () -> untyped
+
+        def mirror=: (untyped _) -> untyped
+
+        def mirror_direct: () -> untyped
+
+        def mirror_direct=: (untyped _) -> untyped
+
+        def name: () -> untyped
+
+        def name=: (untyped _) -> untyped
+
+        def no_ack: () -> untyped
+
+        def no_ack=: (untyped _) -> untyped
+
+        def num_replicas: () -> untyped
+
+        def num_replicas=: (untyped _) -> untyped
+
+        def placement: () -> untyped
+
+        def placement=: (untyped _) -> untyped
+
+        def republish: () -> untyped
+
+        def republish=: (untyped _) -> untyped
+
+        def retention: () -> untyped
+
+        def retention=: (untyped _) -> untyped
+
+        def sealed: () -> untyped
+
+        def sealed=: (untyped _) -> untyped
+
+        def sources: () -> untyped
+
+        def sources=: (untyped _) -> untyped
+
+        def storage: () -> untyped
+
+        def storage=: (untyped _) -> untyped
+
+        def subjects: () -> untyped
+
+        def subjects=: (untyped _) -> untyped
+
+        private
+
+        def initialize: (?untyped opts) -> void
+      end
+
+      class StreamCreateResponse < Struct[untyped]
+        def self.[]: (*untyped) -> untyped
+
+        def self.inspect: () -> untyped
+
+        def self.keyword_init?: () -> untyped
+
+        def self.members: () -> untyped
+
+        def self.new: (*untyped) -> untyped
+
+        public
+
+        def config: () -> untyped
+
+        def config=: (untyped _) -> untyped
+
+        def created: () -> untyped
+
+        def created=: (untyped _) -> untyped
+
+        def did_create: () -> untyped
+
+        def did_create=: (untyped _) -> untyped
+
+        def state: () -> untyped
+
+        def state=: (untyped _) -> untyped
+
+        def type: () -> untyped
+
+        def type=: (untyped _) -> untyped
+
+        private
+
+        def initialize: (?untyped opts) -> void
+      end
+
+      class StreamInfo < Struct[untyped]
+        def self.[]: (*untyped) -> untyped
+
+        def self.inspect: () -> untyped
+
+        def self.keyword_init?: () -> untyped
+
+        def self.members: () -> untyped
+
+        def self.new: (*untyped) -> untyped
+
+        public
+
+        def config: () -> untyped
+
+        def config=: (untyped _) -> untyped
+
+        def created: () -> untyped
+
+        def created=: (untyped _) -> untyped
+
+        def domain: () -> untyped
+
+        def domain=: (untyped _) -> untyped
+
+        def state: () -> untyped
+
+        def state=: (untyped _) -> untyped
+
+        def type: () -> untyped
+
+        def type=: (untyped _) -> untyped
+
+        private
+
+        def initialize: (?untyped opts) -> void
+      end
+
+      class StreamState < Struct[untyped]
+        def self.[]: (*untyped) -> untyped
+
+        def self.inspect: () -> untyped
+
+        def self.keyword_init?: () -> untyped
+
+        def self.members: () -> untyped
+
+        def self.new: (*untyped) -> untyped
+
+        public
+
+        def bytes: () -> untyped
+
+        def bytes=: (untyped _) -> untyped
+
+        def consumer_count: () -> untyped
+
+        def consumer_count=: (untyped _) -> untyped
+
+        def first_seq: () -> untyped
+
+        def first_seq=: (untyped _) -> untyped
+
+        def first_ts: () -> untyped
+
+        def first_ts=: (untyped _) -> untyped
+
+        def last_seq: () -> untyped
+
+        def last_seq=: (untyped _) -> untyped
+
+        def last_ts: () -> untyped
+
+        def last_ts=: (untyped _) -> untyped
+
+        def messages: () -> untyped
+
+        def messages=: (untyped _) -> untyped
+
+        private
+
+        def initialize: (?untyped opts) -> void
+      end
+    end
+
+    class Error < NATS::IO::Error
+      class APIError < NATS::JetStream::Error
+        public
+
+        def code: () -> untyped
+
+        def description: () -> untyped
+
+        def err_code: () -> untyped
+
+        def seq: () -> untyped
+
+        def stream: () -> untyped
+
+        def to_s: () -> untyped
+
+        private
+
+        def initialize: (?untyped params) -> void
+      end
+
+      class BadRequest < NATS::JetStream::Error::APIError
+        private
+
+        def initialize: (?untyped params) -> void
+      end
+
+      class ConsumerNotFound < NATS::JetStream::Error::NotFound
+      end
+
+      class InvalidConsumerName < NATS::JetStream::Error
+      end
+
+      class InvalidDurableName < NATS::JetStream::Error
+      end
+
+      class InvalidJSAck < NATS::JetStream::Error
+      end
+
+      class InvalidStreamName < NATS::JetStream::Error
+      end
+
+      class MsgAlreadyAckd < NATS::JetStream::Error
+      end
+
+      class NoStreamResponse < NATS::JetStream::Error
+      end
+
+      class NotFound < NATS::JetStream::Error::APIError
+        private
+
+        def initialize: (?untyped params) -> void
+      end
+
+      class NotJSMessage < NATS::JetStream::Error
+      end
+
+      class ServerError < NATS::JetStream::Error::APIError
+        private
+
+        def initialize: (?untyped params) -> void
+      end
+
+      class ServiceUnavailable < NATS::JetStream::Error::APIError
+        private
+
+        def initialize: (?untyped params) -> void
+      end
+
+      class StreamNotFound < NATS::JetStream::Error::NotFound
+      end
+    end
+
+    module JS
+      def self.check_503_error: (untyped msg) -> untyped
+
+      def self.from_error: (untyped err) -> untyped
+
+      def self.from_msg: (untyped msg) -> untyped
+
+      def self.is_status_msg: (untyped msg) -> untyped
+
+      def self.next_req_to_json: (untyped next_req) -> untyped
+
+      DefaultAPIPrefix: String
+
+      module Config
+        AckAll: String
+
+        AckExplicit: String
+
+        AckNone: String
+      end
+
+      module Header
+        Desc: String
+
+        ExpectedLastMsgID: String
+
+        ExpectedLastSeq: String
+
+        ExpectedLastSubjSeq: String
+
+        ExpectedStream: String
+
+        LastConsumerSeq: String
+
+        LastStreamSeq: String
+
+        MsgID: String
+
+        Status: String
+      end
+
+      module Status
+        CtrlMsg: String
+
+        NoMsgs: String
+
+        NotFound: String
+
+        RequestTimeout: String
+
+        ServiceUnavailable: String
+      end
+
+      class Sub
+        public
+
+        def consumer: () -> untyped
+
+        def js: () -> untyped
+
+        def nms: () -> untyped
+
+        def stream: () -> untyped
+
+        private
+
+        def initialize: (?untyped opts) -> void
+      end
+    end
+
+    module Manager
+      public
+
+      def account_info: () -> untyped
+
+      def add_consumer: (untyped stream, untyped config, ?untyped params) -> untyped
+
+      def add_stream: (untyped config, ?untyped params) -> untyped
+
+      def consumer_info: (untyped stream, untyped consumer, ?untyped params) -> untyped
+
+      def delete_consumer: (untyped stream, untyped consumer, ?untyped params) -> untyped
+
+      def delete_stream: (untyped stream, ?untyped params) -> untyped
+
+      def find_stream_name_by_subject: (untyped subject, ?untyped params) -> untyped
+
+      def get_last_msg: (untyped stream_name, untyped subject, ?untyped params) -> untyped
+
+      def get_msg: (untyped stream_name, ?untyped params) -> untyped
+
+      def stream_info: (untyped stream, ?untyped params) -> untyped
+
+      def update_stream: (untyped config, ?untyped params) -> untyped
+
+      private
+
+      def _lift_msg_to_raw_msg: (untyped msg) -> untyped
+
+      def api_request: (untyped req_subject, ?untyped req, ?untyped params) -> untyped
+    end
+
+    module Msg
+      module Ack
+        AccHash: Integer
+
+        Ack: String
+
+        Consumer: Integer
+
+        ConsumerSeq: Integer
+
+        Domain: Integer
+
+        DotSep: String
+
+        Empty: String
+
+        Nak: String
+
+        NoDomainName: String
+
+        NumDelivered: Integer
+
+        NumPending: Integer
+
+        Prefix0: String
+
+        Prefix1: String
+
+        Progress: String
+
+        Stream: Integer
+
+        StreamSeq: Integer
+
+        Term: String
+
+        Timestamp: Integer
+
+        V1TokenCounts: Integer
+
+        V2TokenCounts: Integer
+
+        class SequencePair < Struct[untyped]
+          def self.[]: (*untyped) -> untyped
+
+          def self.inspect: () -> untyped
+
+          def self.keyword_init?: () -> untyped
+
+          def self.members: () -> untyped
+
+          def self.new: (*untyped) -> untyped
+
+          public
+
+          def consumer: () -> untyped
+
+          def consumer=: (untyped _) -> untyped
+
+          def stream: () -> untyped
+
+          def stream=: (untyped _) -> untyped
+        end
+      end
+
+      module AckMethods
+        public
+
+        def ack: (**untyped) -> untyped
+
+        def ack_sync: (**untyped) -> untyped
+
+        def in_progress: (**untyped) -> untyped
+
+        def metadata: () -> untyped
+
+        def nak: (**untyped) -> untyped
+
+        def term: (**untyped) -> untyped
+
+        private
+
+        def ensure_is_acked_once!: () -> untyped
+
+        def parse_metadata: (untyped reply) -> untyped
+      end
+
+      class Metadata
+        public
+
+        def consumer: () -> untyped
+
+        def domain: () -> untyped
+
+        def num_delivered: () -> untyped
+
+        def num_pending: () -> untyped
+
+        def sequence: () -> untyped
+
+        def stream: () -> untyped
+
+        def timestamp: () -> untyped
+
+        private
+
+        def initialize: (untyped opts) -> void
+      end
+    end
+
+    class PubAck < Struct[untyped]
+      def self.[]: (*untyped) -> untyped
+
+      def self.inspect: () -> untyped
+
+      def self.keyword_init?: () -> untyped
+
+      def self.members: () -> untyped
+
+      def self.new: (*untyped) -> untyped
+
+      public
+
+      def domain: () -> untyped
+
+      def domain=: (untyped _) -> untyped
+
+      def duplicate: () -> untyped
+
+      def duplicate=: (untyped _) -> untyped
+
+      def seq: () -> untyped
+
+      def seq=: (untyped _) -> untyped
+
+      def stream: () -> untyped
+
+      def stream=: (untyped _) -> untyped
+    end
+
+    module PullSubscription
+      public
+
+      def consumer_info: (?untyped params) -> untyped
+
+      def fetch: (?untyped batch, ?untyped params) -> untyped
+
+      def next_msg: (?untyped params) -> untyped
+    end
+
+    module PushSubscription
+      public
+
+      def consumer_info: (?untyped params) -> untyped
+    end
+  end
+
+  class KeyValue
+    public
+
+    def create: (untyped key, untyped value) -> untyped
+
+    def delete: (untyped key, ?untyped params) -> untyped
+
+    def get: (untyped key, ?untyped params) -> untyped
+
+    def purge: (untyped key) -> untyped
+
+    def put: (untyped key, untyped value) -> untyped
+
+    def status: () -> untyped
+
+    def update: (untyped key, untyped value, ?untyped params) -> untyped
+
+    private
+
+    def _get: (untyped key, ?untyped params) -> untyped
+
+    def initialize: (?untyped opts) -> void
+
+    EXPECTED_LAST_SUBJECT_SEQUENCE: String
+
+    KV_DEL: String
+
+    KV_OP: String
+
+    KV_PURGE: String
+
+    MSG_ROLLUP_ALL: String
+
+    MSG_ROLLUP_SUBJECT: String
+
+    ROLLUP: String
+
+    module API
+      class KeyValueConfig < Struct[untyped]
+        def self.[]: (*untyped) -> untyped
+
+        def self.inspect: () -> untyped
+
+        def self.keyword_init?: () -> untyped
+
+        def self.members: () -> untyped
+
+        def self.new: (*untyped) -> untyped
+
+        public
+
+        def bucket: () -> untyped
+
+        def bucket=: (untyped _) -> untyped
+
+        def description: () -> untyped
+
+        def description=: (untyped _) -> untyped
+
+        def direct: () -> untyped
+
+        def direct=: (untyped _) -> untyped
+
+        def history: () -> untyped
+
+        def history=: (untyped _) -> untyped
+
+        def max_bytes: () -> untyped
+
+        def max_bytes=: (untyped _) -> untyped
+
+        def max_value_size: () -> untyped
+
+        def max_value_size=: (untyped _) -> untyped
+
+        def placement: () -> untyped
+
+        def placement=: (untyped _) -> untyped
+
+        def replicas: () -> untyped
+
+        def replicas=: (untyped _) -> untyped
+
+        def republish: () -> untyped
+
+        def republish=: (untyped _) -> untyped
+
+        def storage: () -> untyped
+
+        def storage=: (untyped _) -> untyped
+
+        def ttl: () -> untyped
+
+        def ttl=: (untyped _) -> untyped
+
+        private
+
+        def initialize: (?untyped opts) -> void
+      end
+    end
+
+    class BadBucketError < NATS::KeyValue::Error
+    end
+
+    class BucketNotFoundError < NATS::KeyValue::Error
+    end
+
+    class BucketStatus
+      public
+
+      def bucket: () -> untyped
+
+      def history: () -> untyped
+
+      def ttl: () -> untyped
+
+      def values: () -> untyped
+
+      private
+
+      def initialize: (untyped info, untyped bucket) -> void
+    end
+
+    class Entry < Struct[untyped]
+      def self.[]: (*untyped) -> untyped
+
+      def self.inspect: () -> untyped
+
+      def self.keyword_init?: () -> untyped
+
+      def self.members: () -> untyped
+
+      def self.new: (*untyped) -> untyped
+
+      public
+
+      def bucket: () -> untyped
+
+      def bucket=: (untyped _) -> untyped
+
+      def created: () -> untyped
+
+      def created=: (untyped _) -> untyped
+
+      def delta: () -> untyped
+
+      def delta=: (untyped _) -> untyped
+
+      def key: () -> untyped
+
+      def key=: (untyped _) -> untyped
+
+      def operation: () -> untyped
+
+      def operation=: (untyped _) -> untyped
+
+      def revision: () -> untyped
+
+      def revision=: (untyped _) -> untyped
+
+      def value: () -> untyped
+
+      def value=: (untyped _) -> untyped
+
+      private
+
+      def initialize: (?untyped opts) -> void
+    end
+
+    class Error < NATS::IO::Error
+    end
+
+    class KeyDeletedError < NATS::KeyValue::KeyNotFoundError
+      public
+
+      def to_s: () -> untyped
+    end
+
+    class KeyNotFoundError < NATS::KeyValue::Error
+      public
+
+      def entry: () -> untyped
+
+      def op: () -> untyped
+
+      def to_s: () -> untyped
+
+      private
+
+      def initialize: (?untyped params) -> void
+    end
+
+    class KeyWrongLastSequenceError < NATS::KeyValue::Error
+      public
+
+      def to_s: () -> untyped
+
+      private
+
+      def initialize: (untyped msg) -> void
+    end
+
+    module Manager
+      public
+
+      def create_key_value: (untyped config) -> untyped
+
+      def delete_key_value: (untyped bucket) -> untyped
+
+      def key_value: (untyped bucket) -> untyped
+    end
+  end
+
+  class MonotonicTime
+    def self.now: () -> untyped
+
+    def self.since: (untyped t0) -> untyped
+
+    def self.with_nats_timeout: (untyped timeout) { () -> untyped } -> untyped
+  end
+
+  class Msg
+    include NATS::JetStream::Msg::AckMethods
+
+    public
+
+    def data: () -> untyped
+
+    def data=: (untyped) -> untyped
+
+    def header: () -> untyped
+
+    def header=: (untyped) -> untyped
+
+    def inspect: () -> untyped
+
+    def reply: () -> untyped
+
+    def reply=: (untyped) -> untyped
+
+    def respond: (?untyped data) -> untyped
+
+    def respond_msg: (untyped msg) -> untyped
+
+    def subject: () -> untyped
+
+    def subject=: (untyped) -> untyped
+
+    private
+
+    def initialize: (?untyped opts) -> void
+  end
+
+  class NUID
+    def self.next: () -> untyped
+
+    public
+
+    def next: () -> untyped
+
+    def randomize_prefix!: () -> untyped
+
+    private
+
+    def initialize: () -> void
+
+    def reset_sequential!: () -> untyped
+
+    BASE: Integer
+
+    DIGITS: Array[untyped]
+
+    INC: Integer
+
+    MAX_INC: Integer
+
+    MAX_SEQ: Integer
+
+    MIN_INC: Integer
+
+    PREFIX_LENGTH: Integer
+
+    SEQ_LENGTH: Integer
+
+    TOTAL_LENGTH: Integer
+  end
+
+  module Protocol
+    AWAITING_CONTROL_LINE: Integer
+
+    AWAITING_MSG_PAYLOAD: Integer
+
+    CR_LF: String
+
+    CR_LF_SIZE: Integer
+
+    EMPTY_MSG: String
+
+    ERR: Regexp
+
+    HMSG: Regexp
+
+    INFO: Regexp
+
+    MSG: Regexp
+
+    OK: Regexp
+
+    PING: Regexp
+
+    PING_REQUEST: String
+
+    PONG: Regexp
+
+    PONG_RESPONSE: String
+
+    SUB_OP: String
+
+    UNKNOWN: Regexp
+
+    class Parser
+      public
+
+      def parse: (untyped data) -> untyped
+
+      def reset!: () -> untyped
+
+      private
+
+      def initialize: (untyped nc) -> void
+    end
+  end
+
+  module Status
+    CLOSED: Integer
+
+    CONNECTED: Integer
+
+    CONNECTING: Integer
+
+    DISCONNECTED: Integer
+
+    DRAINING_PUBS: Integer
+
+    DRAINING_SUBS: Integer
+
+    RECONNECTING: Integer
+  end
+
+  class Subscription
+    include MonitorMixin
+
+    public
+
+    def callback: () -> untyped
+
+    def callback=: (untyped) -> untyped
+
+    def closed: () -> untyped
+
+    def closed=: (untyped) -> untyped
+
+    def future: () -> untyped
+
+    def future=: (untyped) -> untyped
+
+    def inspect: () -> untyped
+
+    def is_slow_consumer: () -> untyped
+
+    def is_slow_consumer=: (untyped) -> untyped
+
+    def jsi: () -> untyped
+
+    def jsi=: (untyped) -> untyped
+
+    def max: () -> untyped
+
+    def max=: (untyped) -> untyped
+
+    def nc: () -> untyped
+
+    def nc=: (untyped) -> untyped
+
+    def next_msg: (?untyped opts) -> untyped
+
+    def pending: () -> untyped
+
+    def pending=: (untyped) -> untyped
+
+    def pending_bytes_limit: () -> untyped
+
+    def pending_bytes_limit=: (untyped) -> untyped
+
+    def pending_msgs_limit: () -> untyped
+
+    def pending_msgs_limit=: (untyped) -> untyped
+
+    def pending_queue: () -> untyped
+
+    def pending_queue=: (untyped) -> untyped
+
+    def pending_size: () -> untyped
+
+    def pending_size=: (untyped) -> untyped
+
+    def queue: () -> untyped
+
+    def queue=: (untyped) -> untyped
+
+    def received: () -> untyped
+
+    def received=: (untyped) -> untyped
+
+    def response: () -> untyped
+
+    def response=: (untyped) -> untyped
+
+    def sid: () -> untyped
+
+    def sid=: (untyped) -> untyped
+
+    def subject: () -> untyped
+
+    def subject=: (untyped) -> untyped
+
+    def unsubscribe: (?untyped opt_max) -> untyped
+
+    def wait_for_msgs_cond: () -> untyped
+
+    def wait_for_msgs_cond=: (untyped) -> untyped
+
+    def wait_for_msgs_t: () -> untyped
+
+    def wait_for_msgs_t=: (untyped) -> untyped
+
+    private
+
+    def initialize: () -> void
+  end
+end

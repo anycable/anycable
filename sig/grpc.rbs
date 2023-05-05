@@ -1,0 +1,1857 @@
+module Forwardable
+  def self._compile_method: (untyped src, untyped file, untyped line) -> untyped
+
+  def self._delegator_method: (untyped obj, untyped accessor, untyped method, untyped ali) -> untyped
+
+  def self._valid_method?: (untyped method) -> untyped
+
+  def self.debug: () -> untyped
+
+  def self.debug=: (untyped) -> untyped
+
+  public
+
+  alias def_delegator def_instance_delegator
+
+  alias def_delegators def_instance_delegators
+
+  def def_instance_delegator: (untyped accessor, untyped method, ?untyped ali) -> untyped
+
+  def def_instance_delegators: (untyped accessor, *untyped methods) -> untyped
+
+  alias delegate instance_delegate
+
+  def instance_delegate: (untyped hash) -> untyped
+
+  FORWARDABLE_VERSION: String
+
+  VERSION: String
+end
+
+module GRPC
+  extend GRPC::DefaultLogger
+
+  VERSION: String
+
+  class Aborted < GRPC::BadStatus
+    private
+
+    def initialize: (?untyped details, ?untyped metadata, ?untyped debug_error_string) -> void
+  end
+
+  class ActiveCall
+    include GRPC::Core::CallOps
+
+    include GRPC::Core::TimeConsts
+
+    extend Forwardable
+
+    def self.client_invoke: (untyped call, ?untyped metadata) -> untyped
+
+    def self.view_class: (*untyped visible_methods) -> untyped
+
+    public
+
+    def attach_peer_cert: (untyped peer_cert) -> untyped
+
+    def attach_status_results_and_complete_call: (untyped recv_status_batch_result) -> untyped
+
+    def bidi_streamer: (untyped requests, ?metadata: untyped) { (*untyped) -> untyped } -> untyped
+
+    def cancel: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+    def cancelled?: () -> untyped
+
+    def client_streamer: (untyped requests, ?metadata: untyped) -> untyped
+
+    def deadline: () -> untyped
+
+    def each_remote_read: () ?{ (untyped) -> untyped } -> untyped
+
+    def each_remote_read_then_finish: () ?{ (untyped) -> untyped } -> untyped
+
+    def get_message_from_batch_result: (untyped recv_message_batch_result) -> untyped
+
+    def interceptable: () -> untyped
+
+    def merge_metadata_to_send: (?untyped new_metadata) -> untyped
+
+    def metadata: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+    def metadata_sent: () -> untyped
+
+    def metadata_to_send: () -> untyped
+
+    def multi_req_view: () -> untyped
+
+    def op_is_done: () -> untyped
+
+    def operation: () -> untyped
+
+    def output_metadata: () -> untyped
+
+    def peer: () -> untyped
+
+    def peer_cert: () -> untyped
+
+    def read_unary_request: () -> untyped
+
+    def receive_and_check_status: () -> untyped
+
+    def remote_read: () -> untyped
+
+    def remote_send: (untyped req, ?untyped marshalled) -> untyped
+
+    def request_response: (untyped req, ?metadata: untyped) -> untyped
+
+    def run_server_bidi: (untyped mth, untyped interception_ctx) -> untyped
+
+    def send_initial_metadata: (?untyped new_metadata) -> untyped
+
+    def send_status: (?untyped code, ?untyped details, ?untyped assert_finished, ?metadata: untyped) -> untyped
+
+    def server_streamer: (untyped req, ?metadata: untyped) ?{ (untyped) -> untyped } -> untyped
+
+    def server_unary_response: (untyped req, ?trailing_metadata: untyped, ?code: untyped, ?details: untyped) -> untyped
+
+    def single_req_view: () -> untyped
+
+    def status: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+    def trailing_metadata: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+    def wait: () -> untyped
+
+    def write_flag: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+    def write_flag=: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+    private
+
+    def initialize: (untyped call, untyped marshal, untyped unmarshal, untyped deadline, ?started: untyped, ?metadata_received: untyped, ?metadata_to_send: untyped) -> void
+
+    def maybe_finish_and_close_call_locked: () -> untyped
+
+    def raise_error_if_already_executed: () -> untyped
+
+    def set_input_stream_done: () -> untyped
+
+    def set_output_stream_done: () -> untyped
+
+    def start_call: (?untyped metadata) -> untyped
+
+    class InterceptableView
+      extend Forwardable
+
+      public
+
+      def deadline: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      private
+
+      def initialize: (untyped wrapped) -> void
+    end
+
+    class MultiReqView
+      extend Forwardable
+
+      public
+
+      def cancelled?: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def deadline: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def each_remote_read: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def merge_metadata_to_send: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def metadata: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def metadata_sent: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def metadata_to_send: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def output_metadata: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def peer: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def peer_cert: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def send_initial_metadata: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      private
+
+      def initialize: (untyped wrapped) -> void
+    end
+
+    class Operation
+      extend Forwardable
+
+      public
+
+      def cancel: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def cancelled?: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def deadline: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def execute: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def metadata: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def start_call: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def status: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def trailing_metadata: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def wait: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def write_flag: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def write_flag=: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      private
+
+      def initialize: (untyped wrapped) -> void
+    end
+
+    class SingleReqView
+      extend Forwardable
+
+      public
+
+      def cancelled?: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def deadline: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def merge_metadata_to_send: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def metadata: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def metadata_sent: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def metadata_to_send: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def output_metadata: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def peer: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def peer_cert: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def send_initial_metadata: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      private
+
+      def initialize: (untyped wrapped) -> void
+    end
+  end
+
+  class AlreadyExists < GRPC::BadStatus
+    private
+
+    def initialize: (?untyped details, ?untyped metadata, ?untyped debug_error_string) -> void
+  end
+
+  class BadStatus < StandardError
+    include GRPC::Core::StatusCodes
+
+    def self.new_status_exception: (untyped code, ?untyped details, ?untyped metadata, ?untyped debug_error_string) -> untyped
+
+    public
+
+    def code: () -> untyped
+
+    def debug_error_string: () -> untyped
+
+    def details: () -> untyped
+
+    def metadata: () -> untyped
+
+    def to_rpc_status: () -> untyped
+
+    def to_status: () -> untyped
+
+    private
+
+    def initialize: (untyped code, ?untyped details, ?untyped metadata, ?untyped debug_error_string) -> void
+  end
+
+  class BidiCall
+    include GRPC::Core::TimeConsts
+
+    include GRPC::Core::StatusCodes
+
+    include GRPC::Core::CallOps
+
+    public
+
+    def read_next_loop: (untyped finalize_stream, ?untyped is_client) -> untyped
+
+    def run_on_client: (untyped requests, untyped set_input_stream_done, untyped set_output_stream_done) { (*untyped) -> untyped } -> untyped
+
+    def run_on_server: (untyped gen_each_reply, untyped requests) -> untyped
+
+    private
+
+    def initialize: (untyped call, untyped marshal, untyped unmarshal, ?metadata_received: untyped, ?req_view: untyped) -> void
+
+    def read_loop: (untyped set_input_stream_done, ?is_client: untyped) ?{ (untyped) -> untyped } -> untyped
+
+    def read_using_run_batch: () -> untyped
+
+    def write_loop: (untyped requests, ?is_client: untyped, ?set_output_stream_done: untyped) -> untyped
+
+    END_OF_READS: Symbol
+
+    END_OF_WRITES: Symbol
+  end
+
+  class Cancelled < GRPC::BadStatus
+    private
+
+    def initialize: (?untyped details, ?untyped metadata, ?untyped debug_error_string) -> void
+  end
+
+  class ClientInterceptor < GRPC::Interceptor
+    public
+
+    def bidi_streamer: (?requests: untyped, ?call: untyped, ?method: untyped, ?metadata: untyped) { () -> untyped } -> untyped
+
+    def client_streamer: (?requests: untyped, ?call: untyped, ?method: untyped, ?metadata: untyped) { () -> untyped } -> untyped
+
+    def request_response: (?request: untyped, ?call: untyped, ?method: untyped, ?metadata: untyped) { () -> untyped } -> untyped
+
+    def server_streamer: (?request: untyped, ?call: untyped, ?method: untyped, ?metadata: untyped) { () -> untyped } -> untyped
+  end
+
+  class ClientStub
+    include GRPC::Core::TimeConsts
+
+    include GRPC::Core::StatusCodes
+
+    def self.setup_channel: (untyped alt_chan, untyped host, untyped creds, ?untyped channel_args) -> untyped
+
+    public
+
+    def bidi_streamer: (untyped method, untyped requests, untyped marshal, untyped unmarshal, ?deadline: untyped, ?return_op: untyped, ?parent: untyped, ?credentials: untyped, ?metadata: untyped) { (*untyped) -> untyped } -> untyped
+
+    def client_streamer: (untyped method, untyped requests, untyped marshal, untyped unmarshal, ?deadline: untyped, ?return_op: untyped, ?parent: untyped, ?credentials: untyped, ?metadata: untyped) -> untyped
+
+    def propagate_mask=: (untyped) -> untyped
+
+    def request_response: (untyped method, untyped req, untyped marshal, untyped unmarshal, ?deadline: untyped, ?return_op: untyped, ?parent: untyped, ?credentials: untyped, ?metadata: untyped) -> untyped
+
+    def server_streamer: (untyped method, untyped req, untyped marshal, untyped unmarshal, ?deadline: untyped, ?return_op: untyped, ?parent: untyped, ?credentials: untyped, ?metadata: untyped) { (*untyped) -> untyped } -> untyped
+
+    private
+
+    def initialize: (untyped host, untyped creds, ?channel_override: untyped, ?timeout: untyped, ?propagate_mask: untyped, ?channel_args: untyped, ?interceptors: untyped) -> void
+
+    def new_active_call: (untyped method, untyped marshal, untyped unmarshal, ?deadline: untyped, ?parent: untyped, ?credentials: untyped) -> untyped
+
+  end
+
+  module Core
+    class Call
+      public
+
+      def cancel: () -> untyped
+
+      def cancel_with_status: (untyped, untyped) -> untyped
+
+      def close: () -> untyped
+
+      def metadata: () -> untyped
+
+      def metadata=: (untyped) -> untyped
+
+      def peer: () -> untyped
+
+      def peer_cert: () -> untyped
+
+      def run_batch: (untyped) -> untyped
+
+      def set_credentials!: (untyped) -> untyped
+
+      def status: () -> untyped
+
+      def status=: (untyped) -> untyped
+
+      def trailing_metadata: () -> untyped
+
+      def trailing_metadata=: (untyped) -> untyped
+
+      def write_flag: () -> untyped
+
+      def write_flag=: (untyped) -> untyped
+
+      private
+
+      def initialize: () -> void
+
+      def initialize_copy: (untyped) -> untyped
+    end
+
+    class CallCredentials
+      public
+
+      def compose: (*untyped) -> untyped
+
+      private
+
+      def initialize: (untyped) -> void
+
+      def initialize_copy: (untyped) -> untyped
+    end
+
+    class CallError < Exception
+    end
+
+    module CallOps
+      RECV_CLOSE_ON_SERVER: Integer
+
+      RECV_INITIAL_METADATA: Integer
+
+      RECV_MESSAGE: Integer
+
+      RECV_STATUS_ON_CLIENT: Integer
+
+      SEND_CLOSE_FROM_CLIENT: Integer
+
+      SEND_INITIAL_METADATA: Integer
+
+      SEND_MESSAGE: Integer
+
+      SEND_STATUS_FROM_SERVER: Integer
+    end
+
+    class Channel
+      public
+
+      alias close destroy
+
+      def connectivity_state: (*untyped) -> untyped
+
+      def create_call: (untyped, untyped, untyped, untyped, untyped) -> untyped
+
+      def destroy: () -> untyped
+
+      def target: () -> untyped
+
+      def watch_connectivity_state: (untyped, untyped) -> untyped
+
+      private
+
+      def initialize: (*untyped) -> void
+
+      def initialize_copy: (untyped) -> untyped
+
+      ENABLE_CENSUS: Symbol
+
+      MAX_CONCURRENT_STREAMS: Symbol
+
+      MAX_MESSAGE_LENGTH: Symbol
+
+      SSL_TARGET: Symbol
+    end
+
+    class ChannelCredentials
+      def self.set_default_roots_pem: (untyped) -> untyped
+
+      public
+
+      def compose: (*untyped) -> untyped
+
+      private
+
+      def initialize: (*untyped) -> void
+
+      def initialize_copy: (untyped) -> untyped
+
+      def set_default_roots_pem: (untyped) -> untyped
+    end
+
+    class CompressionOptions
+      public
+
+      def algorithm_enabled?: (untyped) -> untyped
+
+      def default_algorithm: () -> untyped
+
+      def default_level: () -> untyped
+
+      def disabled_algorithms: () -> untyped
+
+      alias to_channel_arg_hash to_hash
+
+      def to_hash: () -> untyped
+
+      private
+
+      def initialize: (*untyped) -> void
+    end
+
+    module ConnectivityStates
+      CONNECTING: Integer
+
+      FATAL_FAILURE: Integer
+
+      IDLE: Integer
+
+      READY: Integer
+
+      TRANSIENT_FAILURE: Integer
+    end
+
+    class MetadataArray
+    end
+
+    module MetadataKeys
+      COMPRESSION_REQUEST_ALGORITHM: String
+    end
+
+    class OutOfTime < Exception
+    end
+
+    module PropagateMasks
+      CANCELLATION: Integer
+
+      CENSUS_STATS_CONTEXT: Integer
+
+      CENSUS_TRACING_CONTEXT: Integer
+
+      DEADLINE: Integer
+
+      DEFAULTS: Integer
+    end
+
+    module RpcErrors
+      ALREADY_ACCEPTED: Integer
+
+      ALREADY_FINISHED: Integer
+
+      ALREADY_INVOKED: Integer
+
+      ERROR: Integer
+
+      ErrorMessages: Hash[untyped, untyped]
+
+      INVALID_FLAGS: Integer
+
+      NOT_INVOKED: Integer
+
+      NOT_ON_CLIENT: Integer
+
+      NOT_ON_SERVER: Integer
+
+      OK: Integer
+
+      TOO_MANY_OPERATIONS: Integer
+    end
+
+    class Server
+      public
+
+      def add_http2_port: (untyped, untyped) -> untyped
+
+      alias close destroy
+
+      def destroy: () -> untyped
+
+      def request_call: () -> untyped
+
+      def shutdown_and_notify: (untyped) -> untyped
+
+      def start: () -> untyped
+
+      private
+
+      def initialize: (untyped) -> void
+
+      def initialize_copy: (untyped) -> untyped
+    end
+
+    class ServerCredentials
+      private
+
+      def initialize: (untyped, untyped, untyped) -> void
+
+      def initialize_copy: (untyped) -> untyped
+    end
+
+    module StatusCodes
+      ABORTED: Integer
+
+      ALREADY_EXISTS: Integer
+
+      CANCELLED: Integer
+
+      DATA_LOSS: Integer
+
+      DEADLINE_EXCEEDED: Integer
+
+      FAILED_PRECONDITION: Integer
+
+      INTERNAL: Integer
+
+      INVALID_ARGUMENT: Integer
+
+      NOT_FOUND: Integer
+
+      OK: Integer
+
+      OUT_OF_RANGE: Integer
+
+      PERMISSION_DENIED: Integer
+
+      RESOURCE_EXHAUSTED: Integer
+
+      UNAUTHENTICATED: Integer
+
+      UNAVAILABLE: Integer
+
+      UNIMPLEMENTED: Integer
+
+      UNKNOWN: Integer
+    end
+
+    module TimeConsts
+      def self.from_relative_time: (untyped timeish) -> untyped
+
+      private
+
+      def from_relative_time: (untyped timeish) -> untyped
+
+      INFINITE_FUTURE: TimeSpec
+
+      INFINITE_PAST: TimeSpec
+
+      ZERO: TimeSpec
+    end
+
+    class TimeSpec
+      public
+
+      def inspect: () -> untyped
+
+      def to_s: () -> untyped
+
+      def to_time: () -> untyped
+    end
+
+    module WriteFlags
+      BUFFER_HINT: Integer
+
+      NO_COMPRESS: Integer
+    end
+
+    class XdsChannelCredentials
+      public
+
+      def compose: (*untyped) -> untyped
+
+      private
+
+      def initialize: (untyped) -> void
+
+      def initialize_copy: (untyped) -> untyped
+    end
+
+    class XdsServerCredentials
+      private
+
+      def initialize: (untyped) -> void
+
+      def initialize_copy: (untyped) -> untyped
+    end
+  end
+
+  class DataLoss < GRPC::BadStatus
+    private
+
+    def initialize: (?untyped details, ?untyped metadata, ?untyped debug_error_string) -> void
+  end
+
+  class DeadlineExceeded < GRPC::BadStatus
+    private
+
+    def initialize: (?untyped details, ?untyped metadata, ?untyped debug_error_string) -> void
+  end
+
+  module DefaultLogger
+    public
+
+    def logger: () -> untyped
+
+    LOGGER: NoopLogger
+
+    class NoopLogger
+      public
+
+      def debug: (untyped _ignored) -> untyped
+
+      def info: (untyped _ignored) -> untyped
+
+      def warn: (untyped _ignored) -> untyped
+    end
+  end
+
+  class FailedPrecondition < GRPC::BadStatus
+    private
+
+    def initialize: (?untyped details, ?untyped metadata, ?untyped debug_error_string) -> void
+  end
+
+  module GenericService
+    def self.included: (untyped o) -> untyped
+
+    def self.underscore: (untyped s) -> untyped
+
+    module Dsl
+      public
+
+      def assert_can_marshal: (untyped cls) -> untyped
+
+      def inherited: (untyped subclass) -> untyped
+
+      def marshal_class_method: () -> untyped
+
+      def marshal_class_method=: (untyped) -> untyped
+
+      def rpc: (untyped name, untyped input, untyped output) -> untyped
+
+      def rpc_descs: () -> untyped
+
+      def rpc_stub_class: () -> untyped
+
+      def service_name: () -> untyped
+
+      def service_name=: (untyped) -> untyped
+
+      def stream: (untyped cls) -> untyped
+
+      def unmarshal_class_method: () -> untyped
+
+      def unmarshal_class_method=: (untyped) -> untyped
+    end
+
+    class DuplicateRpcName < StandardError
+      private
+
+      def initialize: (untyped name) -> void
+    end
+  end
+
+  class GoogleRpcStatusUtils
+    def self.extract_google_rpc_status: (untyped status) -> untyped
+  end
+
+  class InterceptionContext
+    public
+
+    def intercept!: (untyped type, ?untyped args) { () -> untyped } -> untyped
+
+    private
+
+    def initialize: (?untyped interceptors) -> void
+  end
+
+  class Interceptor
+    private
+
+    def initialize: (?untyped options) -> void
+  end
+
+  class InterceptorRegistry
+    public
+
+    def build_context: () -> untyped
+
+    private
+
+    def initialize: (?untyped interceptors) -> void
+
+    class DescendantError < StandardError
+    end
+  end
+
+  class Internal < GRPC::BadStatus
+    private
+
+    def initialize: (?untyped details, ?untyped metadata, ?untyped debug_error_string) -> void
+  end
+
+  class InvalidArgument < GRPC::BadStatus
+    private
+
+    def initialize: (?untyped details, ?untyped metadata, ?untyped debug_error_string) -> void
+  end
+
+  class NotFound < GRPC::BadStatus
+    private
+
+    def initialize: (?untyped details, ?untyped metadata, ?untyped debug_error_string) -> void
+  end
+
+  class Notifier
+    public
+
+    def notified: () -> untyped
+
+    alias notified? notified
+
+    def notify: (untyped payload) -> untyped
+
+    def payload: () -> untyped
+
+    def wait: () -> untyped
+
+    private
+
+    def initialize: () -> void
+  end
+
+  class Ok < GRPC::BadStatus
+    private
+
+    def initialize: (?untyped details, ?untyped metadata, ?untyped debug_error_string) -> void
+  end
+
+  class OutOfRange < GRPC::BadStatus
+    private
+
+    def initialize: (?untyped details, ?untyped metadata, ?untyped debug_error_string) -> void
+  end
+
+  class PermissionDenied < GRPC::BadStatus
+    private
+
+    def initialize: (?untyped details, ?untyped metadata, ?untyped debug_error_string) -> void
+  end
+
+  class Pool
+    public
+
+    def jobs_waiting: () -> untyped
+
+    def ready_for_work?: () -> untyped
+
+    def schedule: (*untyped args) { (*untyped) -> untyped } -> untyped
+
+    def start: () -> untyped
+
+    def stop: () -> untyped
+
+    private
+
+    def initialize: (untyped size, ?keep_alive: untyped) -> void
+
+    DEFAULT_KEEP_ALIVE: Integer
+  end
+
+  class ResourceExhausted < GRPC::BadStatus
+    private
+
+    def initialize: (?untyped details, ?untyped metadata, ?untyped debug_error_string) -> void
+  end
+
+  class RpcDesc
+    include GRPC::Core::StatusCodes
+
+    public
+
+    def arity_error: (untyped mth, untyped want, untyped msg) -> untyped
+
+    def assert_arity_matches: (untyped mth) -> untyped
+
+    def bidi_streamer?: () -> untyped
+
+    def client_streamer?: () -> untyped
+
+    def handle_bidi_streamer: (untyped active_call, untyped mth, untyped inter_ctx) -> untyped
+
+    def handle_client_streamer: (untyped active_call, untyped mth, untyped inter_ctx) -> untyped
+
+    def handle_request_response: (untyped active_call, untyped mth, untyped inter_ctx) -> untyped
+
+    def handle_server_streamer: (untyped active_call, untyped mth, untyped inter_ctx) -> untyped
+
+    def marshal_proc: () -> untyped
+
+    def request_response?: () -> untyped
+
+    def run_server_method: (untyped active_call, untyped mth, ?untyped inter_ctx) -> untyped
+
+    def send_status: (untyped active_client, untyped code, untyped details, ?untyped metadata) -> untyped
+
+    def server_streamer?: () -> untyped
+
+    def unmarshal_proc: (untyped target) -> untyped
+
+    class Stream
+      public
+
+      def type: () -> untyped
+
+      def type=: (untyped) -> untyped
+
+      private
+
+      def initialize: (untyped type) -> void
+    end
+  end
+
+  class RpcServer
+    include GRPC::Core::TimeConsts
+
+    include GRPC::Core::CallOps
+
+    extend Forwardable
+
+    def self.setup_connect_md_proc: (untyped a_proc) -> untyped
+
+    public
+
+    def add_http2_port: (*untyped args, **untyped) -> untyped
+
+    def available?: (untyped an_rpc) -> untyped
+
+    def handle: (untyped service) -> untyped
+
+    def implemented?: (untyped an_rpc) -> untyped
+
+    def loop_handle_server_calls: () -> untyped
+
+    def new_active_server_call: (untyped an_rpc) -> untyped
+
+    def run: () -> untyped
+
+    alias run_till_terminated run
+
+    def run_till_terminated_or_interrupted: (untyped signals, ?untyped wait_interval) -> untyped
+
+    def running?: () -> untyped
+
+    def running_state: () -> untyped
+
+    def stop: () -> untyped
+
+    def stopped?: () -> untyped
+
+    def transition_running_state: (untyped target_state) -> untyped
+
+    def wait_till_running: (?untyped timeout) -> untyped
+
+    private
+
+    def initialize: (?pool_size: untyped, ?max_waiting_requests: untyped, ?poll_period: untyped, ?pool_keep_alive: untyped, ?connect_md_proc: untyped, ?server_args: untyped, ?interceptors: untyped) -> void
+
+    DEFAULT_MAX_WAITING_REQUESTS: Integer
+
+    DEFAULT_POLL_PERIOD: Integer
+
+    DEFAULT_POOL_SIZE: Integer
+
+    SIGNAL_CHECK_PERIOD: Float
+  end
+
+  class ServerInterceptor < GRPC::Interceptor
+    public
+
+    def bidi_streamer: (?requests: untyped, ?call: untyped, ?method: untyped) { () -> untyped } -> untyped
+
+    def client_streamer: (?call: untyped, ?method: untyped) { () -> untyped } -> untyped
+
+    def request_response: (?request: untyped, ?call: untyped, ?method: untyped) { () -> untyped } -> untyped
+
+    def server_streamer: (?request: untyped, ?call: untyped, ?method: untyped) { () -> untyped } -> untyped
+  end
+
+  class Unauthenticated < GRPC::BadStatus
+    private
+
+    def initialize: (?untyped details, ?untyped metadata, ?untyped debug_error_string) -> void
+  end
+
+  class Unavailable < GRPC::BadStatus
+    private
+
+    def initialize: (?untyped details, ?untyped metadata, ?untyped debug_error_string) -> void
+  end
+
+  class Unimplemented < GRPC::BadStatus
+    private
+
+    def initialize: (?untyped details, ?untyped metadata, ?untyped debug_error_string) -> void
+  end
+
+  class Unknown < GRPC::BadStatus
+    private
+
+    def initialize: (?untyped details, ?untyped metadata, ?untyped debug_error_string) -> void
+  end
+end
+
+module Google
+  module Protobuf
+    def self.decode: (untyped klass, untyped proto, ?untyped options) -> untyped
+
+    def self.decode_json: (untyped klass, untyped json, ?untyped options) -> untyped
+
+    def self.deep_copy: (untyped) -> untyped
+
+    def self.discard_unknown: (untyped) -> untyped
+
+    def self.encode: (untyped msg, ?untyped options) -> untyped
+
+    def self.encode_json: (untyped msg, ?untyped options) -> untyped
+
+    class AbstractMessage
+      include Google::Protobuf::MessageExts
+
+      extend Google::Protobuf::MessageExts::ClassMethods
+
+      def self.decode: (*untyped) -> untyped
+
+      def self.decode_json: (*untyped) -> untyped
+
+      def self.descriptor: () -> untyped
+
+      def self.encode: (*untyped) -> untyped
+
+      def self.encode_json: (*untyped) -> untyped
+
+      public
+
+      def ==: (untyped) -> untyped
+
+      def []: (untyped) -> untyped
+
+      def []=: (untyped, untyped) -> untyped
+
+      def clone: () -> untyped
+
+      def dup: () -> untyped
+
+      def eql?: (untyped) -> untyped
+
+      def freeze: () -> untyped
+
+      def hash: () -> untyped
+
+      def inspect: () -> untyped
+
+      def method_missing: (*untyped) -> untyped
+
+      def to_h: () -> untyped
+
+      def to_s: () -> untyped
+
+      private
+
+      def initialize: (*untyped) -> void
+
+      def respond_to_missing?: (*untyped) -> untyped
+    end
+
+    class Descriptor
+      include Enumerable[untyped]
+
+      public
+
+      def each: () -> untyped
+
+      def each_oneof: () -> untyped
+
+      def file_descriptor: () -> untyped
+
+      def lookup: (untyped) -> untyped
+
+      def lookup_oneof: (untyped) -> untyped
+
+      def msgclass: () -> untyped
+
+      def name: () -> untyped
+
+      private
+
+      def initialize: (untyped, untyped, untyped) -> void
+    end
+
+    class DescriptorPool
+      def self.generated_pool: () -> untyped
+
+      public
+
+      def add_serialized_file: (untyped) -> untyped
+
+      def build: () { (*untyped) -> untyped } -> untyped
+
+      def lookup: (untyped) -> untyped
+    end
+
+    class DescriptorProto < Google::Protobuf::AbstractMessage
+      class ExtensionRange < Google::Protobuf::AbstractMessage
+      end
+
+      class ReservedRange < Google::Protobuf::AbstractMessage
+      end
+    end
+
+    class EnumDescriptor
+      include Enumerable[untyped]
+
+      public
+
+      def each: () -> untyped
+
+      def enummodule: () -> untyped
+
+      def file_descriptor: () -> untyped
+
+      def lookup_name: (untyped) -> untyped
+
+      def lookup_value: (untyped) -> untyped
+
+      def name: () -> untyped
+
+      private
+
+      def initialize: (untyped, untyped, untyped) -> void
+    end
+
+    class EnumDescriptorProto < Google::Protobuf::AbstractMessage
+      class EnumReservedRange < Google::Protobuf::AbstractMessage
+      end
+    end
+
+    class EnumOptions < Google::Protobuf::AbstractMessage
+    end
+
+    class EnumValueDescriptorProto < Google::Protobuf::AbstractMessage
+    end
+
+    class EnumValueOptions < Google::Protobuf::AbstractMessage
+    end
+
+    class Error < StandardError
+    end
+
+    class ExtensionRangeOptions < Google::Protobuf::AbstractMessage
+    end
+
+    class FieldDescriptor
+      public
+
+      def clear: (untyped) -> untyped
+
+      def default: () -> untyped
+
+      def get: (untyped) -> untyped
+
+      def has?: (untyped) -> untyped
+
+      def json_name: () -> untyped
+
+      def label: () -> untyped
+
+      def name: () -> untyped
+
+      def number: () -> untyped
+
+      def set: (untyped, untyped) -> untyped
+
+      def submsg_name: () -> untyped
+
+      def subtype: () -> untyped
+
+      def type: () -> untyped
+
+      private
+
+      def initialize: (untyped, untyped, untyped) -> void
+    end
+
+    class FieldDescriptorProto < Google::Protobuf::AbstractMessage
+      module Label
+        def self.descriptor: () -> untyped
+
+        def self.lookup: (untyped) -> untyped
+
+        def self.resolve: (untyped) -> untyped
+
+        LABEL_OPTIONAL: Integer
+
+        LABEL_REPEATED: Integer
+
+        LABEL_REQUIRED: Integer
+      end
+
+      module Type
+        def self.descriptor: () -> untyped
+
+        def self.lookup: (untyped) -> untyped
+
+        def self.resolve: (untyped) -> untyped
+
+        TYPE_BOOL: Integer
+
+        TYPE_BYTES: Integer
+
+        TYPE_DOUBLE: Integer
+
+        TYPE_ENUM: Integer
+
+        TYPE_FIXED32: Integer
+
+        TYPE_FIXED64: Integer
+
+        TYPE_FLOAT: Integer
+
+        TYPE_GROUP: Integer
+
+        TYPE_INT32: Integer
+
+        TYPE_INT64: Integer
+
+        TYPE_MESSAGE: Integer
+
+        TYPE_SFIXED32: Integer
+
+        TYPE_SFIXED64: Integer
+
+        TYPE_SINT32: Integer
+
+        TYPE_SINT64: Integer
+
+        TYPE_STRING: Integer
+
+        TYPE_UINT32: Integer
+
+        TYPE_UINT64: Integer
+      end
+    end
+
+    class FieldOptions < Google::Protobuf::AbstractMessage
+      module CType
+        def self.descriptor: () -> untyped
+
+        def self.lookup: (untyped) -> untyped
+
+        def self.resolve: (untyped) -> untyped
+
+        CORD: Integer
+
+        STRING: Integer
+
+        STRING_PIECE: Integer
+      end
+
+      module JSType
+        def self.descriptor: () -> untyped
+
+        def self.lookup: (untyped) -> untyped
+
+        def self.resolve: (untyped) -> untyped
+
+        JS_NORMAL: Integer
+
+        JS_NUMBER: Integer
+
+        JS_STRING: Integer
+      end
+
+      module OptionRetention
+        def self.descriptor: () -> untyped
+
+        def self.lookup: (untyped) -> untyped
+
+        def self.resolve: (untyped) -> untyped
+
+        RETENTION_RUNTIME: Integer
+
+        RETENTION_SOURCE: Integer
+
+        RETENTION_UNKNOWN: Integer
+      end
+
+      module OptionTargetType
+        def self.descriptor: () -> untyped
+
+        def self.lookup: (untyped) -> untyped
+
+        def self.resolve: (untyped) -> untyped
+
+        TARGET_TYPE_ENUM: Integer
+
+        TARGET_TYPE_ENUM_ENTRY: Integer
+
+        TARGET_TYPE_EXTENSION_RANGE: Integer
+
+        TARGET_TYPE_FIELD: Integer
+
+        TARGET_TYPE_FILE: Integer
+
+        TARGET_TYPE_MESSAGE: Integer
+
+        TARGET_TYPE_METHOD: Integer
+
+        TARGET_TYPE_ONEOF: Integer
+
+        TARGET_TYPE_SERVICE: Integer
+
+        TARGET_TYPE_UNKNOWN: Integer
+      end
+    end
+
+    class FileDescriptor
+      public
+
+      def name: () -> untyped
+
+      def syntax: () -> untyped
+
+      private
+
+      def initialize: (untyped, untyped, untyped) -> void
+    end
+
+    class FileDescriptorProto < Google::Protobuf::AbstractMessage
+    end
+
+    class FileDescriptorSet < Google::Protobuf::AbstractMessage
+    end
+
+    class FileOptions < Google::Protobuf::AbstractMessage
+      module OptimizeMode
+        def self.descriptor: () -> untyped
+
+        def self.lookup: (untyped) -> untyped
+
+        def self.resolve: (untyped) -> untyped
+
+        CODE_SIZE: Integer
+
+        LITE_RUNTIME: Integer
+
+        SPEED: Integer
+      end
+    end
+
+    class GeneratedCodeInfo < Google::Protobuf::AbstractMessage
+      class Annotation < Google::Protobuf::AbstractMessage
+        module Semantic
+          def self.descriptor: () -> untyped
+
+          def self.lookup: (untyped) -> untyped
+
+          def self.resolve: (untyped) -> untyped
+
+          ALIAS: Integer
+
+          NONE: Integer
+
+          SET: Integer
+        end
+      end
+    end
+
+    module Internal
+      class Arena
+      end
+
+      class AtomicCounter
+        public
+
+        def get_and_increment: () -> untyped
+
+        private
+
+        def initialize: () -> void
+      end
+
+      class Builder
+        public
+
+        def add_enum: (untyped name) { (*untyped) -> untyped } -> untyped
+
+        def add_file: (untyped name, ?untyped options) { (*untyped) -> untyped } -> untyped
+
+        def add_message: (untyped name) { (*untyped) -> untyped } -> untyped
+
+        def build: () -> untyped
+
+        private
+
+        def initialize: (untyped pool) -> void
+
+        def internal_add_file: (untyped file_builder) -> untyped
+
+        def internal_default_file: () -> untyped
+      end
+
+      class EnumBuilder
+        public
+
+        def value: (untyped name, untyped number) -> untyped
+
+        private
+
+        def initialize: (untyped name, untyped file_proto) -> void
+      end
+
+      class FileBuilder
+        public
+
+        def add_enum: (untyped name) { (*untyped) -> untyped } -> untyped
+
+        def add_message: (untyped name) { (*untyped) -> untyped } -> untyped
+
+        def build: () -> untyped
+
+        def fix_nesting: () -> untyped
+
+        def get_parent_msg: (untyped msgs_by_name, untyped name, untyped parent_name) -> untyped
+
+        def infer_package: (untyped names) -> untyped
+
+        def internal_file_proto: () -> untyped
+
+        def rewrite_enum_default: (untyped field) -> untyped
+
+        def rewrite_enum_defaults: () -> untyped
+
+        def split_parent_name: (untyped msg_or_enum) -> untyped
+
+        private
+
+        def initialize: (untyped pool, untyped name, ?untyped options) -> void
+      end
+
+      class MessageBuilder
+        public
+
+        def internal_add_field: (untyped label, untyped name, untyped type, untyped number, untyped type_class, untyped options, ?oneof_index: untyped, ?proto3_optional: untyped) -> untyped
+
+        def internal_add_synthetic_oneofs: () -> untyped
+
+        def internal_msg_proto: () -> untyped
+
+        def map: (untyped name, untyped key_type, untyped value_type, untyped number, ?untyped value_type_class) -> untyped
+
+        def oneof: (untyped name) { (*untyped) -> untyped } -> untyped
+
+        def optional: (untyped name, untyped type, untyped number, ?untyped type_class, ?untyped options) -> untyped
+
+        def proto3_optional: (untyped name, untyped type, untyped number, ?untyped type_class, ?untyped options) -> untyped
+
+        def repeated: (untyped name, untyped type, untyped number, ?untyped type_class, ?untyped options) -> untyped
+
+        def required: (untyped name, untyped type, untyped number, ?untyped type_class, ?untyped options) -> untyped
+
+        private
+
+        def initialize: (untyped name, untyped file_builder, untyped file_proto) -> void
+      end
+
+      class OneofBuilder
+        public
+
+        def optional: (untyped name, untyped type, untyped number, ?untyped type_class, ?untyped options) -> untyped
+
+        private
+
+        def initialize: (untyped name, untyped msg_builder) -> void
+      end
+    end
+
+    class Map
+      include Enumerable[untyped]
+
+      public
+
+      def ==: (untyped) -> untyped
+
+      def []: (untyped) -> untyped
+
+      def []=: (untyped, untyped) -> untyped
+
+      def clear: () -> untyped
+
+      def clone: () -> untyped
+
+      def delete: (untyped) -> untyped
+
+      def dup: () -> untyped
+
+      def each: () -> untyped
+
+      def freeze: () -> untyped
+
+      def has_key?: (untyped) -> untyped
+
+      def hash: () -> untyped
+
+      def inspect: () -> untyped
+
+      def keys: () -> untyped
+
+      def length: () -> untyped
+
+      def merge: (untyped) -> untyped
+
+      def size: () -> untyped
+
+      def to_h: () -> untyped
+
+      def values: () -> untyped
+
+      private
+
+      def initialize: (*untyped) -> void
+    end
+
+    module MessageExts
+      def self.included: (untyped klass) -> untyped
+
+      public
+
+      def to_json: (?untyped options) -> untyped
+
+      def to_proto: (?untyped options) -> untyped
+
+      module ClassMethods
+      end
+    end
+
+    class MessageOptions < Google::Protobuf::AbstractMessage
+    end
+
+    class MethodDescriptorProto < Google::Protobuf::AbstractMessage
+    end
+
+    class MethodOptions < Google::Protobuf::AbstractMessage
+      module IdempotencyLevel
+        def self.descriptor: () -> untyped
+
+        def self.lookup: (untyped) -> untyped
+
+        def self.resolve: (untyped) -> untyped
+
+        IDEMPOTENCY_UNKNOWN: Integer
+
+        IDEMPOTENT: Integer
+
+        NO_SIDE_EFFECTS: Integer
+      end
+    end
+
+    class OneofDescriptor
+      include Enumerable[untyped]
+
+      public
+
+      def each: () -> untyped
+
+      def name: () -> untyped
+
+      private
+
+      def initialize: (untyped, untyped, untyped) -> void
+    end
+
+    class OneofDescriptorProto < Google::Protobuf::AbstractMessage
+    end
+
+    class OneofOptions < Google::Protobuf::AbstractMessage
+    end
+
+    class ParseError < Google::Protobuf::Error
+    end
+
+    class RepeatedField
+      include Enumerable[untyped]
+
+      extend Forwardable
+
+      public
+
+      def &: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def *: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def +: (untyped) -> untyped
+
+      def -: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def <<: (untyped) -> untyped
+
+      def <=>: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def ==: (untyped) -> untyped
+
+      def []: (*untyped) -> untyped
+
+      def []=: (untyped, untyped) -> untyped
+
+      def assoc: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def at: (*untyped) -> untyped
+
+      def bsearch: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def bsearch_index: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def clear: () -> untyped
+
+      def clone: () -> untyped
+
+      def collect!: (*untyped args) { (*untyped) -> untyped } -> untyped
+
+      def combination: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def compact: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def compact!: (*untyped args) { (*untyped) -> untyped } -> untyped
+
+      def concat: (untyped) -> untyped
+
+      def count: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def cycle: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def delete: (*untyped args) { (*untyped) -> untyped } -> untyped
+
+      def delete_at: (*untyped args) { (*untyped) -> untyped } -> untyped
+
+      def delete_if: (*untyped args) { (*untyped) -> untyped } -> untyped
+
+      def dig: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def drop: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def drop_while: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def dup: () -> untyped
+
+      def each: () -> untyped
+
+      alias each_index each_with_index
+
+      def empty?: () -> untyped
+
+      def eql?: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def fetch: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def fill: (*untyped args) { (*untyped) -> untyped } -> untyped
+
+      def find_index: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def first: (?untyped n) -> untyped
+
+      def flatten: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def flatten!: (*untyped args) { (*untyped) -> untyped } -> untyped
+
+      def freeze: () -> untyped
+
+      def hash: () -> untyped
+
+      def include?: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def index: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def insert: (*untyped args) { (*untyped) -> untyped } -> untyped
+
+      def inspect: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def join: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      alias keep_if select!
+
+      def last: (?untyped n) -> untyped
+
+      def length: () -> untyped
+
+      alias map collect
+
+      alias map! collect!
+
+      def pack: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def permutation: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def pop: (?untyped n) -> untyped
+
+      def pretty_print: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def pretty_print_cycle: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def product: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def push: (*untyped) -> untyped
+
+      def rassoc: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      alias reject! delete_if
+
+      def repeated_combination: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def repeated_permutation: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def replace: (untyped) -> untyped
+
+      def reverse: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def reverse!: (*untyped args) { (*untyped) -> untyped } -> untyped
+
+      def rindex: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def rotate: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def rotate!: (*untyped args) { (*untyped) -> untyped } -> untyped
+
+      def sample: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def select!: (*untyped args) { (*untyped) -> untyped } -> untyped
+
+      def shelljoin: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def shift: (*untyped args) { (*untyped) -> untyped } -> untyped
+
+      def shuffle: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def shuffle!: (*untyped args) { (*untyped) -> untyped } -> untyped
+
+      def size: () -> untyped
+
+      alias slice []
+
+      def slice!: (*untyped args) { (*untyped) -> untyped } -> untyped
+
+      def sort!: (*untyped args) { (*untyped) -> untyped } -> untyped
+
+      def sort_by!: (*untyped args) { (*untyped) -> untyped } -> untyped
+
+      def to_ary: () -> untyped
+
+      def to_s: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def transpose: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def uniq: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      def uniq!: (*untyped args) { (*untyped) -> untyped } -> untyped
+
+      def unshift: (*untyped args) { (*untyped) -> untyped } -> untyped
+
+      alias values_at select
+
+      def |: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+      private
+
+      def initialize: (*untyped) -> void
+
+      def pop_one: () -> untyped
+
+      class ProxyingEnumerator
+        public
+
+        def each: (*untyped args) { (*untyped) -> untyped } -> untyped
+      end
+    end
+
+    class ServiceDescriptorProto < Google::Protobuf::AbstractMessage
+    end
+
+    class ServiceOptions < Google::Protobuf::AbstractMessage
+    end
+
+    class SourceCodeInfo < Google::Protobuf::AbstractMessage
+      class Location < Google::Protobuf::AbstractMessage
+      end
+    end
+
+
+    class UninterpretedOption < Google::Protobuf::AbstractMessage
+      class NamePart < Google::Protobuf::AbstractMessage
+      end
+    end
+  end
+end
+
+module Grpc
+  module Health
+    class Checker < Grpc::Health::V1::Health::Service
+      public
+
+      def add_status: (untyped service, untyped status) -> untyped
+
+      def add_statuses: (?untyped service_statuses) -> untyped
+
+      def check: (untyped req, untyped _call) -> untyped
+
+      def clear_all: () -> untyped
+
+      def clear_status: (untyped service) -> untyped
+
+      def set_status_for_services: (untyped status, *untyped services) -> untyped
+
+      private
+
+      def initialize: () -> void
+    end
+
+    module V1
+      module Health
+        class Service
+          include GRPC::GenericService
+
+          extend GRPC::GenericService::Dsl
+
+          public
+
+          def check: (*untyped) -> untyped
+
+          def watch: (*untyped) -> untyped
+        end
+
+        class Stub < GRPC::ClientStub
+          public
+
+          def check: (untyped req, ?untyped metadata) -> untyped
+
+          def watch: (untyped req, ?untyped metadata) { (*untyped) -> untyped } -> untyped
+
+          private
+
+          def initialize: (untyped host, untyped creds, **untyped) -> void
+        end
+      end
+
+      class HealthCheckRequest < Google::Protobuf::AbstractMessage
+      end
+
+      class HealthCheckResponse < Google::Protobuf::AbstractMessage
+        module ServingStatus
+          def self.descriptor: () -> untyped
+
+          def self.lookup: (untyped) -> untyped
+
+          def self.resolve: (untyped) -> untyped
+
+          NOT_SERVING: Integer
+
+          SERVICE_UNKNOWN: Integer
+
+          SERVING: Integer
+
+          UNKNOWN: Integer
+        end
+      end
+    end
+  end
+end
