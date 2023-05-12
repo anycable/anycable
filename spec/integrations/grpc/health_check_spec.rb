@@ -22,7 +22,7 @@ describe "health checker" do
 
   context "without service" do
     specify do
-      expect(subject.status).to eq :NOT_SERVING
+      expect(subject.status).to eq :SERVING
     end
   end
 

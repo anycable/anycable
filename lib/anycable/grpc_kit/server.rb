@@ -142,7 +142,7 @@ module AnyCable
         )
         health_checker.add_status(
           "",
-          ::Grpc::Health::V1::HealthCheckResponse::ServingStatus::NOT_SERVING
+          ::Grpc::Health::V1::HealthCheckResponse::ServingStatus::SERVING
         )
         health_checker
       end

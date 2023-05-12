@@ -2,6 +2,10 @@
 
 ## master
 
+- Fix gRPC health check response for an empty service. ([@palkan][])
+
+As per [docs](https://github.com/grpc/grpc/blob/master/doc/health-checking.md), an empty service is used as the key for server's overall health status. So, if we serve any services, we should return `SERVING` status.
+
 - Add gRPC health check when using grpc_kit. ([@palkan][])
 
 ## 1.3.0 (2023-02-28)
