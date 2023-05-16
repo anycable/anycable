@@ -89,10 +89,10 @@ The preset provide the following defaults:
 
 - `rpc_host`: "0.0.0.0:50051"
 
-If the `FLY_ANYCABLE_WS_APP_NAME` env variable is provided, the following defaults are configured as well:
+If the `ANYCABLE_FLY_WS_APP_NAME` env variable is provided, the following defaults are configured as well:
 
-- `nats_servers`: `"nats://<FLY_REGION>.<FLY_ANYCABLE_WS_APP_NAME>.internal:4222"`
-- `http_broadcast_url`: `"http://<FLY_REGION>.<FLY_ANYCABLE_WS_APP_NAME>.internal:8090/_broadcast"`
+- `nats_servers`: `"nats://<FLY_REGION>.<ANYCABLE_FLY_WS_APP_NAME>.internal:4222"`
+- `http_broadcast_url`: `"http://<FLY_REGION>.<ANYCABLE_FLY_WS_APP_NAME>.internal:8090/_broadcast"`
 
 ## Concurrency settings
 
