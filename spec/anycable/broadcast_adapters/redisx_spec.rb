@@ -19,6 +19,20 @@ describe AnyCable::BroadcastAdapters::Redisx do
 
   let(:config) { AnyCable.config }
 
+  describe "#announce" do
+    around do |ex|
+      old_logger = AnyCable.logger
+      AnyCable.remove_instance_variable(:@logger)
+      ex.run
+      AnyCable.logger = old_logger
+      AnyCable.config.reload
+    end
+
+    specify do
+      expect { described_class.new.announce! }.to output(/Broadcasting Redis stream: _test_/).to_stdout_from_any_process
+    end
+  end
+
   describe "#broadcast" do
     it "add new entry to stream" do
       allow(redis_conn).to receive(:xadd)

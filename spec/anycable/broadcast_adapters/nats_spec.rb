@@ -36,6 +36,20 @@ describe AnyCable::BroadcastAdapters::Nats do
       .with(nil, {servers: ["nats://natsy:8222", "nats://nasty:2228"], dont_randomize_servers: true})
   end
 
+  describe "#announce" do
+    around do |ex|
+      old_logger = AnyCable.logger
+      AnyCable.remove_instance_variable(:@logger)
+      ex.run
+      AnyCable.logger = old_logger
+      AnyCable.config.reload
+    end
+
+    specify do
+      expect { described_class.new.announce! }.to output(/Broadcasting NATS channel: _test_/).to_stdout_from_any_process
+    end
+  end
+
   describe "#broadcast" do
     it "publish stream data to channel" do
       allow(nats_conn).to receive(:publish)
