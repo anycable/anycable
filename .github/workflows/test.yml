@@ -119,9 +119,9 @@ jobs:
           - test-conformance-nats
           - test-conformance-nats-embedded
           - test-conformance-ssl
-          - test-conformance-http-broker
-          - test-conformance-broker-redis-pubsub
-          - test-conformance-broker-nats-pubsub
+          - test-conformance-broker-http
+          - test-conformance-broker-redis
+          - test-conformance-broker-nats
     runs-on: ubuntu-latest
     env:
       GO111MODULE: on

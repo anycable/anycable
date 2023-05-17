@@ -132,13 +132,13 @@ test-conformance-nats: tmp/anycable-go-test
 test-conformance-nats-embedded: tmp/anycable-go-test
 	BUNDLE_GEMFILE=.circleci/Gemfile ANYCABLE_BROADCAST_ADAPTER=nats ANYCABLE_NATS_SERVERS=nats://127.0.0.1:4242 ANYCABLE_EMBED_NATS=true ANYCABLE_ENATS_ADDR=nats://127.0.0.1:4242 bundle exec anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable"
 
-test-conformance-http-broker: tmp/anycable-go-test
+test-conformance-broker-http: tmp/anycable-go-test
 	BUNDLE_GEMFILE=.circleci/Gemfile ANYCABLE_BROKER=memory ANYCABLE_BROADCAST_ADAPTER=http ANYCABLE_HTTP_BROADCAST_SECRET=any_secret bundle exec anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable" --require=etc/anyt/broker_tests/*.rb
 
-test-conformance-broker-redis-pubsub: tmp/anycable-go-test
-	BUNDLE_GEMFILE=.circleci/Gemfile ANYCABLE_BROKER=memory ANYCABLE_BROADCAST_ADAPTER=http ANYCABLE_HTTP_BROADCAST_SECRET=any_secret ANYCABLE_PUBSUB=redis bundle exec anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable" --require=etc/anyt/broker_tests/*.rb
+test-conformance-broker-redis: tmp/anycable-go-test
+	BUNDLE_GEMFILE=.circleci/Gemfile ANYCABLE_BROKER=memory ANYCABLE_BROADCAST_ADAPTER=redisx ANYCABLE_HTTP_BROADCAST_SECRET=any_secret ANYCABLE_PUBSUB=redis bundle exec anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable" --require=etc/anyt/broker_tests/*.rb
 
-test-conformance-broker-nats-pubsub: tmp/anycable-go-test
+test-conformance-broker-nats: tmp/anycable-go-test
 	BUNDLE_GEMFILE=.circleci/Gemfile ANYCABLE_BROKER=memory ANYCABLE_EMBED_NATS=true ANYCABLE_ENATS_ADDR=nats://127.0.0.1:4343 ANYCABLE_PUBSUB=nats ANYCABLE_BROADCAST_ADAPTER=http ANYCABLE_HTTP_BROADCAST_SECRET=any_secret bundle exec anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable" --require=etc/anyt/broker_tests/*.rb
 
 test-conformance-all: test-conformance test-conformance-ssl test-conformance-http
