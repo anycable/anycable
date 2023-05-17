@@ -43,7 +43,7 @@ Redis URL for pub/sub (default: `"redis://localhost:6379/5"`).
 
 **redis_channel** (`ANYCABLE_REDIS_CHANNEL`, `--redis-channel`)
 
-Redis channel for broadcasting (default: `"__anycable__"`).
+Redis channel for broadcasting (default: `"__anycable__"`). When using the `redisx` adapter, it's used as a name of the Redis stream.
 
 **redis_tls_verify** (`ANYCABLE_REDIS_TLS_VERIFY`, `--redis-tls-verify`)
 

@@ -12,7 +12,7 @@ AnyCable ships with three broadcast adapters by default: Redis (default), [NATS]
 
 HTTP adapter has zero-dependencies and, thus, allows you to quickly start using AnyCable.
 
-Since v1.4, HTTP adapter can also be considered for production (thanks to the new [pub/sub component](/anycable-go/pubsub.md) in AnyCable-Go). Moreover, currently, it's the only adapter compatible with the new [broker feature](/anycable-go/broker.md) of AnyCable-Go.
+Since v1.4, HTTP adapter can also be considered for production (thanks to the new [pub/sub component](/anycable-go/pubsub.md) in AnyCable-Go). Moreover, it can be used with the new [broker feature](/anycable-go/broker.md) of AnyCable-Go.
 
 To use HTTP adapter specify `broadcast_adapter` configuration parameter (`--broadcast-adapter=http` or `ANYCABLE_BROADCAST_ADAPTER=http` or set in the code/YML) and make sure your AnyCable WebSocket server supports it. An URL to broadcast to could be specified via `http_broadcast_url` parameter (defaults to `http://localhost:8080/_broadcast`, which corresponds to the [AnyCable-Go](../anycable-go/getting_started.md#configuration-parameters) default).
 
@@ -32,9 +32,15 @@ You must configure both Ruby RPC server and a WebSocket server to use the same `
 
 ## Redis X
 
-<p class="pro-badge-header"></p>
+Redis X adapter uses [Redis Streams][redis-streams] instead of Publish/Subscribe to deliver broadcasting messages from your application to WebSocket servers. That gives us the following benefits:
 
-Coming soon ⏳
+- **Better delivery guarantees**. Even if there is no WebSocket server available at the broadcast time, the message will be stored in Redis and delivered to the server once it is available. In combination with the [broker feature](/anycable-go/broker.md), you can achieve at-least-once delivery guarantees (compared to at-most-once provided by Redis pub/sub).
+
+- **Broker compatibility**. Using a [broker](/anycable-go/broker.md) (or **streams history**) requires handling each broadcasted message by a single node in the cluster (so it can be _registered_ in a cache). With Redis X adapter, we achieve this by using consumer groups for the Redis stream.
+
+Configuration options are the same as for the Redis adapter. The `redis_channel` option is treated as a stream name.
+
+See [configuration](./configuration.md) for available Redis options.
 
 ## Redis adapter (legacy)
 
@@ -81,3 +87,4 @@ Want to have a different adapter out-of-the-box? Join [the discussion](https://g
 
 [NATS]: https://nats.io
 [nats-pure]: https://github.com/nats-io/nats-pure.rb
+[redis-streams]: https://redis.io/docs/data-types/streams-tutorial/

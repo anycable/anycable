@@ -2,6 +2,10 @@
 
 ## master
 
+- Add `redisx` broadcast adapter. ([@palkan][])
+
+A next-gen (Broker-compatible) broadcasting adapter using Redis Streams.
+
 ## 1.3.1 (2023-05-12)
 
 - Fix gRPC health check response for an empty service. ([@palkan][])

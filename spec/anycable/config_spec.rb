@@ -144,7 +144,7 @@ describe AnyCable::Config do
     around { |ex| with_env("ANYCABLE_CONF" => nil, &ex) }
 
     describe "#redis_url" do
-      specify { expect(config.redis_url).to eq("redis://localhost:6379/5") }
+      specify { expect(config.redis_url).to eq("redis://localhost:6379") }
     end
   end
 

@@ -1,0 +1,6 @@
+module AnyCable
+  module BroadcastAdapters
+    class Redisx < Redis
+    end
+  end
+end

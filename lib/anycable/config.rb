@@ -27,7 +27,7 @@ module AnyCable
       broadcast_adapter: :redis,
 
       ### Redis options
-      redis_url: ENV.fetch("REDIS_URL", "redis://localhost:6379/5"),
+      redis_url: ENV.fetch("REDIS_URL", "redis://localhost:6379"),
       redis_sentinels: nil,
       redis_channel: "__anycable__",
       redis_tls_verify: false,
