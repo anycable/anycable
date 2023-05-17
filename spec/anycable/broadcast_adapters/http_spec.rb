@@ -26,6 +26,20 @@ describe AnyCable::BroadcastAdapters::Http do
     expect(adapter.headers).to eq("Authorization" => "Bearer tshhh")
   end
 
+  describe "#announce" do
+    around do |ex|
+      old_logger = AnyCable.logger
+      AnyCable.remove_instance_variable(:@logger)
+      ex.run
+      AnyCable.logger = old_logger
+      AnyCable.config.reload
+    end
+
+    specify do
+      expect { described_class.new.announce! }.to output(%r{Broadcasting HTTP url: http://ws.example.com/_broadcast}).to_stdout_from_any_process
+    end
+  end
+
   describe "#broadcast" do
     let(:adapter) { described_class.new(url: "http://ws.example.com:8090/_broadcast") }
 
