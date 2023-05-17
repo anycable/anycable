@@ -1,6 +1,7 @@
 # Download sources
 sources:
-  - name: ruby/gem_rbs_collection
+  - type: git
+    name: ruby/gem_rbs_collection
     remote: https://github.com/ruby/gem_rbs_collection.git
     revision: main
     repo_dir: gems
@@ -9,19 +10,14 @@ sources:
 path: .gem_rbs_collection
 
 gems:
+  # From manifest.yml
   - name: logger
-  - name: monitor
+  - name: openssl
   - name: optparse
   - name: json
-  - name: uri
   - name: pathname
-  - name: mutex_m
-  - name: date
-  - name: time
-  - name: set
-  - name: tempfile
-  - name: tsort
-  - name: openssl
+  # Vendor deps
+  - name: singleton
   # Skip loading rbs gem's RBS.
   # It's unnecessary if you don't use rbs as a library.
   - name: rbs
@@ -44,6 +40,7 @@ gems:
     ignore: true
   - name: simeplecov-lcov
     ignore: true
-  # Ignore self to avoid deadlocks
-  - name: anycable-core
+  - name: grpc
+    ignore: true
+  - name: grpc_kit
     ignore: true

@@ -1,0 +1,975 @@
+module GRPC
+  extend GRPC::DefaultLogger
+
+  VERSION: String
+
+  module DefaultLogger
+    public
+
+    def logger: () -> untyped
+
+    LOGGER: NoopLogger
+
+    class NoopLogger
+      public
+
+      def debug: (untyped _ignored) -> untyped
+
+      def info: (untyped _ignored) -> untyped
+
+      def warn: (untyped _ignored) -> untyped
+    end
+  end
+
+  class ClientStub
+  end
+
+  module GenericService
+    def self.included: (untyped o) -> untyped
+
+    def self.underscore: (untyped s) -> untyped
+
+    module Dsl
+      public
+
+      def assert_can_marshal: (untyped cls) -> untyped
+
+      def inherited: (untyped subclass) -> untyped
+
+      def marshal_class_method: () -> untyped
+
+      def marshal_class_method=: (untyped) -> untyped
+
+      def rpc: (untyped name, untyped input, untyped output) -> untyped
+
+      def rpc_descs: () -> untyped
+
+      def rpc_stub_class: () -> untyped
+
+      def service_name: () -> untyped
+
+      def service_name=: (untyped) -> untyped
+
+      def stream: (untyped cls) -> untyped
+
+      def unmarshal_class_method: () -> untyped
+
+      def unmarshal_class_method=: (untyped) -> untyped
+    end
+
+    class DuplicateRpcName < StandardError
+      private
+
+      def initialize: (untyped name) -> void
+    end
+  end
+
+  class RpcServer
+    public
+
+    def add_http2_port: (*untyped args, **untyped) -> untyped
+
+    def available?: (untyped an_rpc) -> untyped
+
+    def handle: (untyped service) -> untyped
+
+    def implemented?: (untyped an_rpc) -> untyped
+
+    def loop_handle_server_calls: () -> untyped
+
+    def new_active_server_call: (untyped an_rpc) -> untyped
+
+    def run: () -> untyped
+
+    alias run_till_terminated run
+
+    def run_till_terminated_or_interrupted: (untyped signals, ?untyped wait_interval) -> untyped
+
+    def running?: () -> untyped
+
+    def running_state: () -> untyped
+
+    def stop: () -> untyped
+
+    def stopped?: () -> untyped
+
+    def transition_running_state: (untyped target_state) -> untyped
+
+    def wait_till_running: (?untyped timeout) -> untyped
+
+    private
+
+    def initialize: (?pool_size: untyped, ?max_waiting_requests: untyped, ?poll_period: untyped, ?pool_keep_alive: untyped, ?connect_md_proc: untyped, ?server_args: untyped, ?interceptors: untyped) -> void
+
+    DEFAULT_MAX_WAITING_REQUESTS: Integer
+
+    DEFAULT_POLL_PERIOD: Integer
+
+    DEFAULT_POOL_SIZE: Integer
+
+    SIGNAL_CHECK_PERIOD: Float
+  end
+end
+
+# module Google
+#   module Protobuf
+#     def self.decode: (untyped klass, untyped proto, ?untyped options) -> untyped
+
+#     def self.decode_json: (untyped klass, untyped json, ?untyped options) -> untyped
+
+#     def self.deep_copy: (untyped) -> untyped
+
+#     def self.discard_unknown: (untyped) -> untyped
+
+#     def self.encode: (untyped msg, ?untyped options) -> untyped
+
+#     def self.encode_json: (untyped msg, ?untyped options) -> untyped
+
+#     class AbstractMessage
+#       include Google::Protobuf::MessageExts
+
+#       extend Google::Protobuf::MessageExts::ClassMethods
+
+#       def self.decode: (*untyped) -> untyped
+
+#       def self.decode_json: (*untyped) -> untyped
+
+#       def self.descriptor: () -> untyped
+
+#       def self.encode: (*untyped) -> untyped
+
+#       def self.encode_json: (*untyped) -> untyped
+
+#       public
+
+#       def ==: (untyped) -> untyped
+
+#       def []: (untyped) -> untyped
+
+#       def []=: (untyped, untyped) -> untyped
+
+#       def clone: () -> untyped
+
+#       def dup: () -> untyped
+
+#       def eql?: (untyped) -> untyped
+
+#       def freeze: () -> untyped
+
+#       def hash: () -> untyped
+
+#       def inspect: () -> untyped
+
+#       def method_missing: (*untyped) -> untyped
+
+#       def to_h: () -> untyped
+
+#       def to_s: () -> untyped
+
+#       private
+
+#       def initialize: (*untyped) -> void
+
+#       def respond_to_missing?: (*untyped) -> untyped
+#     end
+
+#     class Descriptor
+#       include Enumerable[untyped]
+
+#       public
+
+#       def each: () -> untyped
+
+#       def each_oneof: () -> untyped
+
+#       def file_descriptor: () -> untyped
+
+#       def lookup: (untyped) -> untyped
+
+#       def lookup_oneof: (untyped) -> untyped
+
+#       def msgclass: () -> untyped
+
+#       def name: () -> untyped
+
+#       private
+
+#       def initialize: (untyped, untyped, untyped) -> void
+#     end
+
+#     class DescriptorPool
+#       def self.generated_pool: () -> untyped
+
+#       public
+
+#       def add_serialized_file: (untyped) -> untyped
+
+#       def build: () { (*untyped) -> untyped } -> untyped
+
+#       def lookup: (untyped) -> untyped
+#     end
+
+#     class DescriptorProto < Google::Protobuf::AbstractMessage
+#       class ExtensionRange < Google::Protobuf::AbstractMessage
+#       end
+
+#       class ReservedRange < Google::Protobuf::AbstractMessage
+#       end
+#     end
+
+#     class EnumDescriptor
+#       include Enumerable[untyped]
+
+#       public
+
+#       def each: () -> untyped
+
+#       def enummodule: () -> untyped
+
+#       def file_descriptor: () -> untyped
+
+#       def lookup_name: (untyped) -> untyped
+
+#       def lookup_value: (untyped) -> untyped
+
+#       def name: () -> untyped
+
+#       private
+
+#       def initialize: (untyped, untyped, untyped) -> void
+#     end
+
+#     class EnumDescriptorProto < Google::Protobuf::AbstractMessage
+#       class EnumReservedRange < Google::Protobuf::AbstractMessage
+#       end
+#     end
+
+#     class EnumOptions < Google::Protobuf::AbstractMessage
+#     end
+
+#     class EnumValueDescriptorProto < Google::Protobuf::AbstractMessage
+#     end
+
+#     class EnumValueOptions < Google::Protobuf::AbstractMessage
+#     end
+
+#     class Error < StandardError
+#     end
+
+#     class ExtensionRangeOptions < Google::Protobuf::AbstractMessage
+#     end
+
+#     class FieldDescriptor
+#       public
+
+#       def clear: (untyped) -> untyped
+
+#       def default: () -> untyped
+
+#       def get: (untyped) -> untyped
+
+#       def has?: (untyped) -> untyped
+
+#       def json_name: () -> untyped
+
+#       def label: () -> untyped
+
+#       def name: () -> untyped
+
+#       def number: () -> untyped
+
+#       def set: (untyped, untyped) -> untyped
+
+#       def submsg_name: () -> untyped
+
+#       def subtype: () -> untyped
+
+#       def type: () -> untyped
+
+#       private
+
+#       def initialize: (untyped, untyped, untyped) -> void
+#     end
+
+#     class FieldDescriptorProto < Google::Protobuf::AbstractMessage
+#       module Label
+#         def self.descriptor: () -> untyped
+
+#         def self.lookup: (untyped) -> untyped
+
+#         def self.resolve: (untyped) -> untyped
+
+#         LABEL_OPTIONAL: Integer
+
+#         LABEL_REPEATED: Integer
+
+#         LABEL_REQUIRED: Integer
+#       end
+
+#       module Type
+#         def self.descriptor: () -> untyped
+
+#         def self.lookup: (untyped) -> untyped
+
+#         def self.resolve: (untyped) -> untyped
+
+#         TYPE_BOOL: Integer
+
+#         TYPE_BYTES: Integer
+
+#         TYPE_DOUBLE: Integer
+
+#         TYPE_ENUM: Integer
+
+#         TYPE_FIXED32: Integer
+
+#         TYPE_FIXED64: Integer
+
+#         TYPE_FLOAT: Integer
+
+#         TYPE_GROUP: Integer
+
+#         TYPE_INT32: Integer
+
+#         TYPE_INT64: Integer
+
+#         TYPE_MESSAGE: Integer
+
+#         TYPE_SFIXED32: Integer
+
+#         TYPE_SFIXED64: Integer
+
+#         TYPE_SINT32: Integer
+
+#         TYPE_SINT64: Integer
+
+#         TYPE_STRING: Integer
+
+#         TYPE_UINT32: Integer
+
+#         TYPE_UINT64: Integer
+#       end
+#     end
+
+#     class FieldOptions < Google::Protobuf::AbstractMessage
+#       module CType
+#         def self.descriptor: () -> untyped
+
+#         def self.lookup: (untyped) -> untyped
+
+#         def self.resolve: (untyped) -> untyped
+
+#         CORD: Integer
+
+#         STRING: Integer
+
+#         STRING_PIECE: Integer
+#       end
+
+#       module JSType
+#         def self.descriptor: () -> untyped
+
+#         def self.lookup: (untyped) -> untyped
+
+#         def self.resolve: (untyped) -> untyped
+
+#         JS_NORMAL: Integer
+
+#         JS_NUMBER: Integer
+
+#         JS_STRING: Integer
+#       end
+
+#       module OptionRetention
+#         def self.descriptor: () -> untyped
+
+#         def self.lookup: (untyped) -> untyped
+
+#         def self.resolve: (untyped) -> untyped
+
+#         RETENTION_RUNTIME: Integer
+
+#         RETENTION_SOURCE: Integer
+
+#         RETENTION_UNKNOWN: Integer
+#       end
+
+#       module OptionTargetType
+#         def self.descriptor: () -> untyped
+
+#         def self.lookup: (untyped) -> untyped
+
+#         def self.resolve: (untyped) -> untyped
+
+#         TARGET_TYPE_ENUM: Integer
+
+#         TARGET_TYPE_ENUM_ENTRY: Integer
+
+#         TARGET_TYPE_EXTENSION_RANGE: Integer
+
+#         TARGET_TYPE_FIELD: Integer
+
+#         TARGET_TYPE_FILE: Integer
+
+#         TARGET_TYPE_MESSAGE: Integer
+
+#         TARGET_TYPE_METHOD: Integer
+
+#         TARGET_TYPE_ONEOF: Integer
+
+#         TARGET_TYPE_SERVICE: Integer
+
+#         TARGET_TYPE_UNKNOWN: Integer
+#       end
+#     end
+
+#     class FileDescriptor
+#       public
+
+#       def name: () -> untyped
+
+#       def syntax: () -> untyped
+
+#       private
+
+#       def initialize: (untyped, untyped, untyped) -> void
+#     end
+
+#     class FileDescriptorProto < Google::Protobuf::AbstractMessage
+#     end
+
+#     class FileDescriptorSet < Google::Protobuf::AbstractMessage
+#     end
+
+#     class FileOptions < Google::Protobuf::AbstractMessage
+#       module OptimizeMode
+#         def self.descriptor: () -> untyped
+
+#         def self.lookup: (untyped) -> untyped
+
+#         def self.resolve: (untyped) -> untyped
+
+#         CODE_SIZE: Integer
+
+#         LITE_RUNTIME: Integer
+
+#         SPEED: Integer
+#       end
+#     end
+
+#     class GeneratedCodeInfo < Google::Protobuf::AbstractMessage
+#       class Annotation < Google::Protobuf::AbstractMessage
+#         module Semantic
+#           def self.descriptor: () -> untyped
+
+#           def self.lookup: (untyped) -> untyped
+
+#           def self.resolve: (untyped) -> untyped
+
+#           ALIAS: Integer
+
+#           NONE: Integer
+
+#           SET: Integer
+#         end
+#       end
+#     end
+
+#     module Internal
+#       class Arena
+#       end
+
+#       class AtomicCounter
+#         public
+
+#         def get_and_increment: () -> untyped
+
+#         private
+
+#         def initialize: () -> void
+#       end
+
+#       class Builder
+#         public
+
+#         def add_enum: (untyped name) { (*untyped) -> untyped } -> untyped
+
+#         def add_file: (untyped name, ?untyped options) { (*untyped) -> untyped } -> untyped
+
+#         def add_message: (untyped name) { (*untyped) -> untyped } -> untyped
+
+#         def build: () -> untyped
+
+#         private
+
+#         def initialize: (untyped pool) -> void
+
+#         def internal_add_file: (untyped file_builder) -> untyped
+
+#         def internal_default_file: () -> untyped
+#       end
+
+#       class EnumBuilder
+#         public
+
+#         def value: (untyped name, untyped number) -> untyped
+
+#         private
+
+#         def initialize: (untyped name, untyped file_proto) -> void
+#       end
+
+#       class FileBuilder
+#         public
+
+#         def add_enum: (untyped name) { (*untyped) -> untyped } -> untyped
+
+#         def add_message: (untyped name) { (*untyped) -> untyped } -> untyped
+
+#         def build: () -> untyped
+
+#         def fix_nesting: () -> untyped
+
+#         def get_parent_msg: (untyped msgs_by_name, untyped name, untyped parent_name) -> untyped
+
+#         def infer_package: (untyped names) -> untyped
+
+#         def internal_file_proto: () -> untyped
+
+#         def rewrite_enum_default: (untyped field) -> untyped
+
+#         def rewrite_enum_defaults: () -> untyped
+
+#         def split_parent_name: (untyped msg_or_enum) -> untyped
+
+#         private
+
+#         def initialize: (untyped pool, untyped name, ?untyped options) -> void
+#       end
+
+#       class MessageBuilder
+#         public
+
+#         def internal_add_field: (untyped label, untyped name, untyped type, untyped number, untyped type_class, untyped options, ?oneof_index: untyped, ?proto3_optional: untyped) -> untyped
+
+#         def internal_add_synthetic_oneofs: () -> untyped
+
+#         def internal_msg_proto: () -> untyped
+
+#         def map: (untyped name, untyped key_type, untyped value_type, untyped number, ?untyped value_type_class) -> untyped
+
+#         def oneof: (untyped name) { (*untyped) -> untyped } -> untyped
+
+#         def optional: (untyped name, untyped type, untyped number, ?untyped type_class, ?untyped options) -> untyped
+
+#         def proto3_optional: (untyped name, untyped type, untyped number, ?untyped type_class, ?untyped options) -> untyped
+
+#         def repeated: (untyped name, untyped type, untyped number, ?untyped type_class, ?untyped options) -> untyped
+
+#         def required: (untyped name, untyped type, untyped number, ?untyped type_class, ?untyped options) -> untyped
+
+#         private
+
+#         def initialize: (untyped name, untyped file_builder, untyped file_proto) -> void
+#       end
+
+#       class OneofBuilder
+#         public
+
+#         def optional: (untyped name, untyped type, untyped number, ?untyped type_class, ?untyped options) -> untyped
+
+#         private
+
+#         def initialize: (untyped name, untyped msg_builder) -> void
+#       end
+#     end
+
+#     class Map
+#       include Enumerable[untyped]
+
+#       public
+
+#       def ==: (untyped) -> untyped
+
+#       def []: (untyped) -> untyped
+
+#       def []=: (untyped, untyped) -> untyped
+
+#       def clear: () -> untyped
+
+#       def clone: () -> untyped
+
+#       def delete: (untyped) -> untyped
+
+#       def dup: () -> untyped
+
+#       def each: () -> untyped
+
+#       def freeze: () -> untyped
+
+#       def has_key?: (untyped) -> untyped
+
+#       def hash: () -> untyped
+
+#       def inspect: () -> untyped
+
+#       def keys: () -> untyped
+
+#       def length: () -> untyped
+
+#       def merge: (untyped) -> untyped
+
+#       def size: () -> untyped
+
+#       def to_h: () -> untyped
+
+#       def values: () -> untyped
+
+#       private
+
+#       def initialize: (*untyped) -> void
+#     end
+
+#     module MessageExts
+#       def self.included: (untyped klass) -> untyped
+
+#       public
+
+#       def to_json: (?untyped options) -> untyped
+
+#       def to_proto: (?untyped options) -> untyped
+
+#       module ClassMethods
+#       end
+#     end
+
+#     class MessageOptions < Google::Protobuf::AbstractMessage
+#     end
+
+#     class MethodDescriptorProto < Google::Protobuf::AbstractMessage
+#     end
+
+#     class MethodOptions < Google::Protobuf::AbstractMessage
+#       module IdempotencyLevel
+#         def self.descriptor: () -> untyped
+
+#         def self.lookup: (untyped) -> untyped
+
+#         def self.resolve: (untyped) -> untyped
+
+#         IDEMPOTENCY_UNKNOWN: Integer
+
+#         IDEMPOTENT: Integer
+
+#         NO_SIDE_EFFECTS: Integer
+#       end
+#     end
+
+#     class OneofDescriptor
+#       include Enumerable[untyped]
+
+#       public
+
+#       def each: () -> untyped
+
+#       def name: () -> untyped
+
+#       private
+
+#       def initialize: (untyped, untyped, untyped) -> void
+#     end
+
+#     class OneofDescriptorProto < Google::Protobuf::AbstractMessage
+#     end
+
+#     class OneofOptions < Google::Protobuf::AbstractMessage
+#     end
+
+#     class ParseError < Google::Protobuf::Error
+#     end
+
+#     class RepeatedField
+#       include Enumerable[untyped]
+
+#       extend Forwardable
+
+#       public
+
+#       def &: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       def *: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       def +: (untyped) -> untyped
+
+#       def -: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       def <<: (untyped) -> untyped
+
+#       def <=>: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       def ==: (untyped) -> untyped
+
+#       def []: (*untyped) -> untyped
+
+#       def []=: (untyped, untyped) -> untyped
+
+#       def assoc: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       def at: (*untyped) -> untyped
+
+#       def bsearch: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       def bsearch_index: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       def clear: () -> untyped
+
+#       def clone: () -> untyped
+
+#       def collect!: (*untyped args) { (*untyped) -> untyped } -> untyped
+
+#       def combination: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       def compact: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       def compact!: (*untyped args) { (*untyped) -> untyped } -> untyped
+
+#       def concat: (untyped) -> untyped
+
+#       def count: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       def cycle: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       def delete: (*untyped args) { (*untyped) -> untyped } -> untyped
+
+#       def delete_at: (*untyped args) { (*untyped) -> untyped } -> untyped
+
+#       def delete_if: (*untyped args) { (*untyped) -> untyped } -> untyped
+
+#       def dig: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       def drop: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       def drop_while: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       def dup: () -> untyped
+
+#       def each: () -> untyped
+
+#       alias each_index each_with_index
+
+#       def empty?: () -> untyped
+
+#       def eql?: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       def fetch: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       def fill: (*untyped args) { (*untyped) -> untyped } -> untyped
+
+#       def find_index: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       def first: (?untyped n) -> untyped
+
+#       def flatten: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       def flatten!: (*untyped args) { (*untyped) -> untyped } -> untyped
+
+#       def freeze: () -> untyped
+
+#       def hash: () -> untyped
+
+#       def include?: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       def index: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       def insert: (*untyped args) { (*untyped) -> untyped } -> untyped
+
+#       def inspect: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       def join: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       alias keep_if select!
+
+#       def last: (?untyped n) -> untyped
+
+#       def length: () -> untyped
+
+#       alias map collect
+
+#       alias map! collect!
+
+#       def pack: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       def permutation: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       def pop: (?untyped n) -> untyped
+
+#       def pretty_print: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       def pretty_print_cycle: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       def product: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       def push: (*untyped) -> untyped
+
+#       def rassoc: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       alias reject! delete_if
+
+#       def repeated_combination: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       def repeated_permutation: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       def replace: (untyped) -> untyped
+
+#       def reverse: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       def reverse!: (*untyped args) { (*untyped) -> untyped } -> untyped
+
+#       def rindex: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       def rotate: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       def rotate!: (*untyped args) { (*untyped) -> untyped } -> untyped
+
+#       def sample: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       def select!: (*untyped args) { (*untyped) -> untyped } -> untyped
+
+#       def shelljoin: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       def shift: (*untyped args) { (*untyped) -> untyped } -> untyped
+
+#       def shuffle: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       def shuffle!: (*untyped args) { (*untyped) -> untyped } -> untyped
+
+#       def size: () -> untyped
+
+#       alias slice []
+
+#       def slice!: (*untyped args) { (*untyped) -> untyped } -> untyped
+
+#       def sort!: (*untyped args) { (*untyped) -> untyped } -> untyped
+
+#       def sort_by!: (*untyped args) { (*untyped) -> untyped } -> untyped
+
+#       def to_ary: () -> untyped
+
+#       def to_s: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       def transpose: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       def uniq: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       def uniq!: (*untyped args) { (*untyped) -> untyped } -> untyped
+
+#       def unshift: (*untyped args) { (*untyped) -> untyped } -> untyped
+
+#       alias values_at select
+
+#       def |: (*untyped args, **untyped) { (*untyped) -> untyped } -> untyped
+
+#       private
+
+#       def initialize: (*untyped) -> void
+
+#       def pop_one: () -> untyped
+
+#       class ProxyingEnumerator
+#         public
+
+#         def each: (*untyped args) { (*untyped) -> untyped } -> untyped
+#       end
+#     end
+
+#     class ServiceDescriptorProto < Google::Protobuf::AbstractMessage
+#     end
+
+#     class ServiceOptions < Google::Protobuf::AbstractMessage
+#     end
+
+#     class SourceCodeInfo < Google::Protobuf::AbstractMessage
+#       class Location < Google::Protobuf::AbstractMessage
+#       end
+#     end
+
+
+#     class UninterpretedOption < Google::Protobuf::AbstractMessage
+#       class NamePart < Google::Protobuf::AbstractMessage
+#       end
+#     end
+#   end
+# end
+
+module Grpc
+  module Health
+    class Checker < Grpc::Health::V1::Health::Service
+      public
+
+      def add_status: (untyped service, untyped status) -> untyped
+
+      def add_statuses: (?untyped service_statuses) -> untyped
+
+      def check: (untyped req, untyped _call) -> untyped
+
+      def clear_all: () -> untyped
+
+      def clear_status: (untyped service) -> untyped
+
+      def set_status_for_services: (untyped status, *untyped services) -> untyped
+
+      private
+
+      def initialize: () -> void
+    end
+
+    module V1
+      module Health
+        class Service
+          include GRPC::GenericService
+
+          extend GRPC::GenericService::Dsl
+
+          public
+
+          def check: (*untyped) -> untyped
+
+          def watch: (*untyped) -> untyped
+        end
+
+        class Stub < GRPC::ClientStub
+          public
+
+          def check: (untyped req, ?untyped metadata) -> untyped
+
+          def watch: (untyped req, ?untyped metadata) { (*untyped) -> untyped } -> untyped
+
+          private
+
+          def initialize: (untyped host, untyped creds, **untyped) -> void
+        end
+      end
+
+      class HealthCheckRequest < Google::Protobuf::AbstractMessage
+      end
+
+      class HealthCheckResponse < Google::Protobuf::AbstractMessage
+        module ServingStatus
+          def self.descriptor: () -> untyped
+
+          def self.lookup: (untyped) -> untyped
+
+          def self.resolve: (untyped) -> untyped
+
+          NOT_SERVING: Integer
+
+          SERVICE_UNKNOWN: Integer
+
+          SERVING: Integer
+
+          UNKNOWN: Integer
+        end
+      end
+    end
+  end
+end

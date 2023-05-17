@@ -5,11 +5,15 @@ on:
     branches:
     - master
     paths:
+    - "gemfiles/*"
+    - "Gemfile"
     - "**/*.rb"
     - "**/*.gemspec"
     - ".github/workflows/lint.yml"
   pull_request:
     paths:
+    - "gemfiles/*"
+    - "Gemfile"
     - "**/*.rb"
     - "**/*.gemspec"
     - ".github/workflows/lint.yml"
@@ -20,7 +24,7 @@ jobs:
     env:
       BUNDLE_GEMFILE: "gemfiles/rubocop.gemfile"
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - uses: ruby/setup-ruby@v1
       with:
         ruby-version: 3.1
@@ -39,7 +43,7 @@ jobs:
       matrix:
         ruby: ["3.2"]
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - uses: ruby/setup-ruby@v1
       with:
         ruby-version: ${{ matrix.ruby }}

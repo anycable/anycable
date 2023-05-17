@@ -23,7 +23,7 @@ Gem::Specification.new do |spec|
 
   spec.executables = %w[anycable anycabled]
   spec.files = Dir.glob("lib/**/*") + Dir.glob("bin/*") + %w[README.md MIT-LICENSE CHANGELOG.md] +
-    Dir.glob("sig/anycable/**/*.rbs") + %w[sig/anycable.rbs]
+    Dir.glob("sig/anycable/**/*.rbs") + %w[sig/anycable.rbs] + %w[sig/manifest.yml]
   spec.require_paths = ["lib"]
 
   spec.required_ruby_version = ">= 2.7.0"

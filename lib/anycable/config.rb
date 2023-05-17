@@ -71,7 +71,7 @@ module AnyCable
     flag_options :debug, :nats_dont_randomize_servers
     ignore_options :nats_options
 
-    def load(*)
+    def load(*_args)
       super.tap { load_presets }
     end
 

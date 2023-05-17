@@ -1,5 +1,4 @@
 source "https://rubygems.org" do
-  gem "rbs", "< 3.0"
-  gem "steep", "~> 1.2", "< 1.4"
-  gem "parallel", "< 1.23.0"
+  gem "rbs", "~> 3.0"
+  gem "steep", "~> 1.4"
 end
