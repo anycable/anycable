@@ -40,6 +40,8 @@ Redis X adapter uses [Redis Streams][redis-streams] instead of Publish/Subscribe
 
 Configuration options are the same as for the Redis adapter. The `redis_channel` option is treated as a stream name.
 
+**IMPORTANT:** Redis v6.2+ is required.
+
 See [configuration](./configuration.md) for available Redis options.
 
 ## Redis adapter (legacy)
