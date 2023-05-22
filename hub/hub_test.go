@@ -82,13 +82,13 @@ func TestUnsubscribeRaceConditions(t *testing.T) {
 	session3 := NewMockSession("213")
 
 	hub.AddSession(session)
-	hub.SubscribeSession("123", "test", "test_channel")
+	hub.SubscribeSession(session, "test", "test_channel")
 
 	hub.AddSession(session2)
-	hub.SubscribeSession("321", "test", "test_channel")
+	hub.SubscribeSession(session2, "test", "test_channel")
 
 	hub.AddSession(session3)
-	hub.SubscribeSession("213", "test", "test_channel")
+	hub.SubscribeSession(session3, "test", "test_channel")
 
 	hub.Broadcast("test", "hello")
 
@@ -135,8 +135,8 @@ func TestUnsubscribeSession(t *testing.T) {
 	session := NewMockSession("123")
 	hub.AddSession(session)
 
-	hub.SubscribeSession("123", "test", "test_channel")
-	hub.SubscribeSession("123", "test2", "test_channel")
+	hub.SubscribeSession(session, "test", "test_channel")
+	hub.SubscribeSession(session, "test2", "test_channel")
 
 	hub.Broadcast("test", "\"hello\"")
 
@@ -144,7 +144,7 @@ func TestUnsubscribeSession(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "{\"identifier\":\"test_channel\",\"message\":\"hello\"}", string(msg))
 
-	hub.UnsubscribeSession("123", "test", "test_channel")
+	hub.UnsubscribeSession(session, "test", "test_channel")
 
 	hub.Broadcast("test", "\"goodbye\"")
 
@@ -157,7 +157,7 @@ func TestUnsubscribeSession(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "{\"identifier\":\"test_channel\",\"message\":\"bye\"}", string(msg))
 
-	hub.unsubscribeSessionFromAllChannels("123")
+	hub.unsubscribeSessionFromAllChannels(session)
 
 	hub.Broadcast("test2", "\"goodbye\"")
 
@@ -175,7 +175,7 @@ func TestSubscribeSession(t *testing.T) {
 	hub.AddSession(session)
 
 	t.Run("Subscribe to a single channel", func(t *testing.T) {
-		hub.SubscribeSession("123", "test", "test_channel")
+		hub.SubscribeSession(session, "test", "test_channel")
 
 		hub.Broadcast("test", "\"hello\"")
 
@@ -185,8 +185,8 @@ func TestSubscribeSession(t *testing.T) {
 	})
 
 	t.Run("Successful to the same stream from multiple channels", func(t *testing.T) {
-		hub.SubscribeSession("123", "test", "test_channel")
-		hub.SubscribeSession("123", "test", "test_channel2")
+		hub.SubscribeSession(session, "test", "test_channel")
+		hub.SubscribeSession(session, "test", "test_channel2")
 
 		hub.Broadcast("test", "\"hello twice\"")
 
@@ -233,7 +233,7 @@ func TestBroadcastMessage(t *testing.T) {
 
 	session := NewMockSession("123")
 	hub.AddSession(session)
-	hub.SubscribeSession("123", "test", "test_channel")
+	hub.SubscribeSession(session, "test", "test_channel")
 
 	t.Run("Broadcast without stream data", func(t *testing.T) {
 		hub.BroadcastMessage(&common.StreamMessage{Stream: "test", Data: "\"ciao\""})
@@ -250,6 +250,53 @@ func TestBroadcastMessage(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, "{\"identifier\":\"test_channel\",\"message\":\"ciao\",\"stream_id\":\"test\",\"epoch\":\"xyz\",\"offset\":2022}", string(msg))
 	})
+}
+
+func TestBroadcastOrder(t *testing.T) {
+	hub := NewHub(10)
+
+	go hub.Run()
+	defer hub.Shutdown()
+
+	session := NewMockSession("123")
+	hub.AddSession(session)
+	hub.SubscribeSession(session, "test", "test_channel")
+
+	session2 := NewMockSession("321")
+	hub.AddSession(session2)
+	hub.SubscribeSession(session2, "test2", "test2_channel")
+
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		for i := 1; i <= 5; i++ {
+			hub.BroadcastMessage(&common.StreamMessage{Stream: "test", Data: fmt.Sprintf("%d", i)})
+		}
+		wg.Done()
+	}()
+
+	wg.Add(1)
+	go func() {
+		for i := 1; i <= 5; i++ {
+			hub.BroadcastMessage(&common.StreamMessage{Stream: "test2", Data: fmt.Sprintf("%d", i)})
+		}
+		wg.Done()
+	}()
+
+	wg.Wait()
+
+	for i := 1; i <= 5; i++ {
+		msg, err := session.Read()
+		assert.Nil(t, err)
+		assert.Equal(t, fmt.Sprintf("{\"identifier\":\"test_channel\",\"message\":%d}", i), string(msg))
+	}
+
+	for i := 1; i <= 5; i++ {
+		msg, err := session2.Read()
+		assert.Nil(t, err)
+		assert.Equal(t, fmt.Sprintf("{\"identifier\":\"test2_channel\",\"message\":%d}", i), string(msg))
+	}
 }
 
 func TestBuildMessageJSON(t *testing.T) {
@@ -334,7 +381,7 @@ func BenchmarkBroadcast(b *testing.B) {
 
 					stream := streams[rand.Intn(len(streams))] // nolint:gosec
 
-					hub.SubscribeSession(sid, stream, channel)
+					hub.SubscribeSession(session, stream, channel)
 				}
 			}
 

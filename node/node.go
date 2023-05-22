@@ -337,7 +337,7 @@ func (n *Node) TryRestoreSession(s *Session) (restored bool) {
 	for identifier, channel_streams := range s.subscriptions.channels {
 		for stream := range channel_streams {
 			streamId := n.broker.Subscribe(stream)
-			n.hub.SubscribeSession(sid, streamId, identifier)
+			n.hub.SubscribeSession(s, streamId, identifier)
 		}
 	}
 
@@ -625,10 +625,8 @@ func (n *Node) handleCommandReply(s *Session, msg *common.Message, reply *common
 		defer s.Disconnect("Command Failed", ws.CloseAbnormalClosure)
 	}
 
-	uid := s.GetID()
-
 	if reply.StopAllStreams {
-		n.hub.UnsubscribeSessionFromChannel(uid, msg.Identifier)
+		n.hub.UnsubscribeSessionFromChannel(s, msg.Identifier)
 		removedStreams := s.subscriptions.RemoveChannelStreams(msg.Identifier)
 
 		for _, stream := range removedStreams {
@@ -641,7 +639,7 @@ func (n *Node) handleCommandReply(s *Session, msg *common.Message, reply *common
 
 		for _, stream := range reply.StoppedStreams {
 			streamId := n.broker.Unsubscribe(stream)
-			n.hub.UnsubscribeSession(uid, streamId, msg.Identifier)
+			n.hub.UnsubscribeSession(s, streamId, msg.Identifier)
 			s.subscriptions.RemoveChannelStream(msg.Identifier, streamId)
 		}
 	}
@@ -651,7 +649,7 @@ func (n *Node) handleCommandReply(s *Session, msg *common.Message, reply *common
 
 		for _, stream := range reply.Streams {
 			streamId := n.broker.Subscribe(stream)
-			n.hub.SubscribeSession(uid, streamId, msg.Identifier)
+			n.hub.SubscribeSession(s, streamId, msg.Identifier)
 			s.subscriptions.AddChannelStream(msg.Identifier, streamId)
 		}
 	}

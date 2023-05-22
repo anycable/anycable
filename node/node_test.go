@@ -144,7 +144,7 @@ func TestUnsubscribe(t *testing.T) {
 
 	t.Run("Successful unsubscribe", func(t *testing.T) {
 		session.subscriptions.AddChannel("test_channel")
-		node.hub.SubscribeSession("14", "streamo", "test_channel")
+		node.hub.SubscribeSession(session, "streamo", "test_channel")
 
 		node.hub.Broadcast("streamo", `"before"`)
 		msg, err := session.conn.Read()
@@ -215,7 +215,7 @@ func TestPerform(t *testing.T) {
 
 	t.Run("With stopped streams", func(t *testing.T) {
 		session.subscriptions.AddChannelStream("test_channel", "stop_stream")
-		node.hub.SubscribeSession("14", "stop_stream", "test_channel")
+		node.hub.SubscribeSession(session, "stop_stream", "test_channel")
 
 		node.hub.BroadcastMessage(&common.StreamMessage{Stream: "stop_stream", Data: "40"})
 
@@ -663,10 +663,10 @@ func TestHandlePubSub(t *testing.T) {
 	session2 := NewMockSession("15", node)
 
 	node.hub.AddSession(session)
-	node.hub.SubscribeSession("14", "test", "test_channel")
+	node.hub.SubscribeSession(session, "test", "test_channel")
 
 	node.hub.AddSession(session2)
-	node.hub.SubscribeSession("15", "test", "test_channel")
+	node.hub.SubscribeSession(session2, "test", "test_channel")
 
 	node.broker.Subscribe("test")
 
