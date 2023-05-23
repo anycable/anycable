@@ -2,6 +2,12 @@
 
 ## master
 
+- Refactor broadcasting to preserve the order of messages within a single stream. ([@palkan][])
+
+Previously, we used a Go routine pool to concurrently delivery broadcasts, which led to nondeterministic order of messages within a single stream delivered in a short period of time. Now, we preserve the order of messages within a stream—the delivered as they were accepted by the server.
+
+**NOTE:** Keep in mind that in a clustered setup with a non fan-out broadcaster (i.e., when using a broker), each broadcasted message is delivered to only a single node in the cluster (picked randomly). In this case, we cannot guarantee the resulting order.
+
 - Add `redisx` broadcast adapter. ([@palkan][])
 
 - Set HTTP broadcast to `$PORT` on Heroku by default. ([@palkan][])
