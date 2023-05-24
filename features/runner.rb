@@ -4,6 +4,8 @@
 # Only use bundler/inline if gems are not installed yet
 begin
   require "childprocess"
+  require "jwt"
+  require "active_support/message_verifier"
 rescue LoadError
   require "bundler/inline"
 
@@ -11,9 +13,12 @@ rescue LoadError
     source "https://rubygems.org"
 
     gem "childprocess"
+    gem "jwt"
+    gem "activesupport"
   end
 
   require "childprocess"
+  require "active_support/message_verifier"
 end
 
 require "socket"

@@ -1,0 +1,61 @@
+launch :anycable,
+  "./dist/anycable-go --turbo_rails_key=s3Krit --jwt_id_key=qwerty " \
+  "--metrics_rotate_interval=1 --metrics_log --metrics_log_filter=rpc_call_total,rpc_error_total,rpc_retries_total",
+  capture_output: true
+
+wait_tcp 8080
+
+payload = {ext: {}.to_json, exp: (Time.now.to_i + 60)}
+
+token = ::JWT.encode(payload, "qwerty", "HS256")
+
+verifier = ActiveSupport::MessageVerifier.new("s3Krit", digest: "SHA256", serializer: JSON)
+signed_stream_name = verifier.generate("chat/2023")
+
+scenario = [
+  {
+    client: {
+      protocol: "action_cable",
+      name: "turbo",
+      connection_options: {
+        query: {
+          jid: token
+        }
+      },
+      actions: [
+        {
+          subscribe: {
+            channel: "Turbo::StreamsChannel",
+            params: {
+              signed_stream_name: signed_stream_name
+            }
+          }
+        },
+      ]
+    }
+  }
+]
+
+TEST_COMMAND = <<~CMD
+  bundle exec wsdirector ws://localhost:8080/cable -i #{scenario.to_json}
+CMD
+
+run :wsdirector, TEST_COMMAND
+
+result = stdout(:wsdirector)
+
+unless result.include?("1 clients, 0 failures")
+  fail "Unexpected scenario result:\n#{result}"
+end
+
+# Wait for metrics to be logged
+sleep 2
+
+stop :anycable
+
+logs = stdout(:anycable)
+
+# We should not see any rpc calls
+if logs =~ /rpc_call_total=[1-9] rpc_error_total=[1-9] rpc_retries_total=[1-9]/
+  fail "Expected metrics logs not found:\n#{logs}"
+end
