@@ -47,6 +47,12 @@ func (c *IdentifiableController) Authenticate(sid string, env *common.SessionEnv
 		return c.controller.Authenticate(sid, env)
 	}
 
+	if res.CState == nil {
+		res.CState = make(map[string]string)
+	}
+
+	res.DisconnectInterest = -1
+
 	return res, err
 }
 

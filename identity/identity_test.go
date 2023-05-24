@@ -17,9 +17,6 @@ func TestIdentifiableController(t *testing.T) {
 
 	subject := NewIdentifiableController(&controller, &identifier)
 
-	t.Run("Authenticate", func(t *testing.T) {
-	})
-
 	t.Run("Start", func(t *testing.T) {
 		controller.On("Start").Return(nil)
 
@@ -37,7 +34,12 @@ func TestIdentifiableController(t *testing.T) {
 	})
 
 	t.Run("Authenticate (success)", func(t *testing.T) {
-		expected := &common.ConnectResult{Identifier: "test_ids", Transmissions: []string{`{"type":"welcome","sid":"2021"}`}, Status: common.SUCCESS}
+		expected := &common.ConnectResult{
+			Identifier:         "test_ids",
+			Transmissions:      []string{`{"type":"welcome","sid":"2021"}`},
+			DisconnectInterest: -1,
+			Status:             common.SUCCESS,
+		}
 
 		controller.On("Authenticate", "2021", env).Return(nil, errors.New("shouldn't be called"))
 		identifier.On("Identify", "2021", env).Return(expected, nil)
@@ -60,7 +62,6 @@ func TestIdentifiableController(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, expected, res)
 		controller.AssertNotCalled(t, "Authenticate", "2020", env)
-
 	})
 
 	t.Run("Authenticate (error)", func(t *testing.T) {

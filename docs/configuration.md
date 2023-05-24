@@ -206,7 +206,13 @@ The number of seconds to wait before forcefully shutting down a disconnect queue
 
 Thus, the default configuration can handle a backlog of up to 500 calls. By increasing both values, you can reduce the number of lost disconnect notifications.
 
-If your application code doesn't rely on `disconnect` / `unsubscribe` callbacks, you can disable `Disconnect` calls completely (to avoid unnecessary load) by setting `--disable_disconnect` option or `ANYCABLE_DISABLE_DISCONNECT` env var.
+**--disconnect_mode** (`ANYCABLE_DISCONNECT_MODE`)
+
+This parameter defines when a Disconnect call should be made for a session. The default is "auto", which means that the Disconnect call is made only if we detected the client _interest_ in it. Currently, we only skip Disconnect calls for sessions authenticated via [JWT](./jwt_identification.md) and using [signed streams](./signed_streams.md) (Hotwire or CableReady).
+
+Other available modes are "always" and "never". Thus, to disable Disconnect call completely, use `--disconnect_mode=never`.
+
+Using `--disconnect_mode=always` is useful when you have some logic in the `ApplicationCable::Connetion#disconnect` method and you want to invoke it even for JWT and signed streams sessions.
 
 \* It's (almost) impossible to guarantee that `disconnect` callbacks would be called for 100%. There is always a chance of a server crash or `kill -9` or something worse. Consider an alternative approach to tracking client states (see [example](https://github.com/anycable/anycable/issues/99#issuecomment-611998267)).
 

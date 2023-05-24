@@ -61,9 +61,10 @@ func (c *CableReadyController) Subscribe(sid string, env *common.SessionEnv, id 
 	c.log.WithField("identifier", channel).Debugf("verified stream: %s", stream)
 
 	return &common.CommandResult{
-		Status:        common.SUCCESS,
-		Transmissions: []string{common.ConfirmationMessage(channel)},
-		Streams:       []string{stream},
+		Status:             common.SUCCESS,
+		Transmissions:      []string{common.ConfirmationMessage(channel)},
+		Streams:            []string{stream},
+		DisconnectInterest: -1,
 	}, nil
 }
 

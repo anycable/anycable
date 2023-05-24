@@ -282,16 +282,34 @@ func TestDisconnect(t *testing.T) {
 	go node.hub.Run()
 	defer node.hub.Shutdown()
 
-	session := NewMockSession("14", node)
+	t.Run("Disconnectable session", func(t *testing.T) {
+		session := NewMockSessionWithEnv("1", node, "/cable", &map[string]string{"id": "test_id"})
+		// Authenticate via controller marks session as disconnectable automatically
+		_, err := node.Authenticate(session)
+		require.NoError(t, err)
 
-	assert.Nil(t, node.Disconnect(session))
+		assert.True(t, session.IsDisconnectable())
 
-	assert.Equal(t, node.disconnector.Size(), 1, "Expected disconnect to have 1 task in a queue")
+		assert.Nil(t, node.Disconnect(session))
 
-	task := <-node.disconnector.(*DisconnectQueue).disconnect
-	assert.Equal(t, session, task, "Expected to disconnect session")
+		assert.Equal(t, 1, node.disconnector.Size(), "Expected disconnect to have 1 task in a queue")
 
-	assert.Equal(t, node.hub.Size(), 0)
+		task := <-node.disconnector.(*DisconnectQueue).disconnect
+		assert.Equal(t, session, task, "Expected to disconnect session")
+	})
+
+	t.Run("Non-disconnectable session", func(t *testing.T) {
+		session := NewMockSessionWithEnv("1", node, "/cable", &map[string]string{"id": "test_id"})
+		// Authenticate via controller marks session as disconnectable automatically
+		_, err := node.Authenticate(session)
+		require.NoError(t, err)
+
+		session.disconnectInterest = false
+
+		assert.Nil(t, node.Disconnect(session))
+
+		assert.Equal(t, 0, node.disconnector.Size(), "Expected disconnect to have 0 tasks in a queue")
+	})
 }
 
 func TestHistory(t *testing.T) {

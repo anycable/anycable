@@ -227,6 +227,8 @@ func TestCacheEntry(t *testing.T) {
 	session.env.MergeConnectionState(&map[string]string{"tenant": "x", "locale": "it"})
 	session.env.MergeChannelState("chat_1", &map[string]string{"presence": "on"})
 
+	session.MarkDisconnectable(true)
+
 	cached, err := session.ToCacheEntry()
 	require.NoError(t, err)
 
@@ -248,6 +250,8 @@ func TestCacheEntry(t *testing.T) {
 	assert.Equal(t, "x", new_session.env.GetConnectionStateField("tenant"))
 	assert.Equal(t, "it", new_session.env.GetConnectionStateField("locale"))
 	assert.Equal(t, "on", new_session.env.GetChannelStateField("chat_1", "presence"))
+
+	assert.True(t, new_session.IsDisconnectable())
 }
 
 func TestCacheEntryEmptySession(t *testing.T) {
@@ -282,4 +286,20 @@ func TestPrevSid(t *testing.T) {
 
 	session.env = common.NewSessionEnv("http://example.dev/cable?jid=xxxx&sid=213", &headers)
 	assert.Equal(t, "456", session.PrevSid())
+}
+
+func TestMarkDisconnectable(t *testing.T) {
+	session := Session{}
+
+	session.MarkDisconnectable(false)
+
+	assert.False(t, session.IsDisconnectable())
+
+	session.MarkDisconnectable(true)
+
+	assert.True(t, session.IsDisconnectable())
+
+	session.MarkDisconnectable(false)
+
+	assert.True(t, session.IsDisconnectable())
 }

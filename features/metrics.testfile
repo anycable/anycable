@@ -2,7 +2,7 @@ launch :rpc, "bundle exec anyt --only-rpc"
 wait_tcp 50051
 
 launch :anycable,
-  "./dist/anycable-go --disable_disconnect --metrics_rotate_interval=3 --ping_interval=1 --metrics_log --metrics_log_filter=rpc_call_total,failed_auths_total",
+  "./dist/anycable-go --disconnect_mode=never --metrics_rotate_interval=3 --ping_interval=1 --metrics_log --metrics_log_filter=rpc_call_total,failed_auths_total",
   capture_output: true
 wait_tcp 8080
 

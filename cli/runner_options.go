@@ -24,7 +24,7 @@ func WithName(name string) Option {
 	}
 }
 
-// WithName is an Option to set Runner controller
+// WithController is an Option to set Runner controller
 func WithController(fn controllerFactory) Option {
 	return func(r *Runner) error {
 		if r.controllerFactory != nil {
@@ -40,6 +40,14 @@ func WithDefaultRPCController() Option {
 	return WithController(func(m *metrics.Metrics, c *config.Config) (node.Controller, error) {
 		return rpc.NewController(m, &c.RPC), nil
 	})
+}
+
+// WithDisconnector is a an Option to set Runner disconnector
+func WithDisconnector(fn disconnectorFactory) Option {
+	return func(r *Runner) error {
+		r.disconnectorFactory = fn
+		return nil
+	}
 }
 
 // WithBroadcaster is an Option to set Runner broadaster

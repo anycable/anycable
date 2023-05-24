@@ -28,6 +28,7 @@ func TestTurboController(t *testing.T) {
 		require.Equal(t, common.SUCCESS, res.Status)
 		assert.Equal(t, []string{common.ConfirmationMessage(channel)}, res.Transmissions)
 		assert.Equal(t, []string{"chat:2021"}, res.Streams)
+		assert.Equal(t, -1, res.DisconnectInterest)
 	})
 
 	t.Run("Subscribe (failure)", func(t *testing.T) {

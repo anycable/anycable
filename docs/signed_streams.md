@@ -1,8 +1,8 @@
 # Speedy Hotwire and CableReady streams
 
-AnyCable provides an ability to terminate Hotwire ([Turbo Streams](https://turbo.hotwired.dev/handbook/streams)) and [CableReady](https://cableready.stimulusreflex.com) (v5+) subscriptions at the WS server without performing RPC calls. Thus, you can make subscriptions blazingly fast and reduce the load on the RPC server.
+AnyCable provides an ability to terminate Hotwire ([Turbo Streams](https://turbo.hotwired.dev/handbook/streams)) and [CableReady](https://cableready.stimulusreflex.com) (v5+) subscriptions at the WS server without _touching_ your Ruby/Rails application (i.e., without performing RPC calls). Thus, you can make subscriptions blazingly fast and reduce the load on the RPC server.
 
-In combination with [JWT identification](./jwt_identification.md), this feature makes it possible to avoid running RPC server at all in case you only need Hotwire/CableReady functionality. **NOTE:** You should also disable disconnect calls (`anycable-go --disable_disconnect` or `ANYCABLE_DISABLE_DISCONNECT=1`).
+In combination with [JWT identification](./jwt_identification.md), this feature makes it possible to avoid running RPC server at all in case you only need Hotwire/CableReady functionality.
 
 > 🎥 Check out this [AnyCasts episode](https://anycable.io/blog/anycasts-rails-7-hotwire-and-anycable/) to learn how to use AnyCable with Hotwire Rails application in a RPC-less way.
 

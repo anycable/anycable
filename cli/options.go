@@ -7,6 +7,7 @@ import (
 
 	"github.com/anycable/anycable-go/broker"
 	"github.com/anycable/anycable-go/config"
+	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/version"
 	"github.com/nats-io/nats.go"
 	"github.com/urfave/cli/v2"
@@ -175,6 +176,14 @@ Use metrics_rotate_interval instead.`)
 	// Automatically set the URL of the embedded NATS as the pub/sub server URL
 	if c.EmbedNats && c.NATS.Servers == nats.DefaultURL {
 		c.NATS.Servers = c.EmbeddedNats.ServiceAddr
+	}
+
+	if c.DisconnectorDisabled {
+		fmt.Println(`DEPRECATION WARNING: disable_disconnect option is deprecated
+and will be removed in the next major release of anycable-go.
+Use disconnect_mode=never instead.`)
+
+		c.App.DisconnectMode = node.DISCONNECT_MODE_NEVER
 	}
 
 	return &c, nil, false
@@ -542,6 +551,13 @@ func rpcCLIFlags(c *config.Config, headers, cookieFilter *string) []cli.Flag {
 // rpcCLIFlags returns CLI flags for disconnect options
 func disconnectorCLIFlags(c *config.Config) []cli.Flag {
 	return withDefaults(disconnectorCategoryDescription, []cli.Flag{
+		&cli.StringFlag{
+			Name:        "disconnect_mode",
+			Usage:       "Define when to call Disconnect callback (always, never, auto)",
+			Destination: &c.App.DisconnectMode,
+			Value:       c.App.DisconnectMode,
+		},
+
 		&cli.IntFlag{
 			Name:        "disconnect_rate",
 			Usage:       "Max number of Disconnect calls per second",
@@ -560,6 +576,7 @@ func disconnectorCLIFlags(c *config.Config) []cli.Flag {
 			Name:        "disable_disconnect",
 			Usage:       "Disable calling Disconnect callback",
 			Destination: &c.DisconnectorDisabled,
+			Hidden:      true,
 		},
 	})
 }

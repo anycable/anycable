@@ -137,12 +137,13 @@ type CallResult struct {
 
 // ConnectResult is a result of initializing a connection (calling a Connect method)
 type ConnectResult struct {
-	Identifier    string
-	Transmissions []string
-	Broadcasts    []*StreamMessage
-	CState        map[string]string
-	IState        map[string]string
-	Status        int
+	Identifier         string
+	Transmissions      []string
+	Broadcasts         []*StreamMessage
+	CState             map[string]string
+	IState             map[string]string
+	DisconnectInterest int
+	Status             int
 }
 
 // ToCallResult returns the corresponding CallResult
@@ -162,15 +163,16 @@ func (c *ConnectResult) ToCallResult() *CallResult {
 // messages to sent and broadcast.
 // It's a communication "protocol" between a node and a controller.
 type CommandResult struct {
-	StopAllStreams bool
-	Disconnect     bool
-	Streams        []string
-	StoppedStreams []string
-	Transmissions  []string
-	Broadcasts     []*StreamMessage
-	CState         map[string]string
-	IState         map[string]string
-	Status         int
+	StopAllStreams     bool
+	Disconnect         bool
+	Streams            []string
+	StoppedStreams     []string
+	Transmissions      []string
+	Broadcasts         []*StreamMessage
+	CState             map[string]string
+	IState             map[string]string
+	DisconnectInterest int
+	Status             int
 }
 
 // ToCallResult returns the corresponding CallResult

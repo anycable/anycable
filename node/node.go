@@ -278,10 +278,7 @@ func (n *Node) AuthenticateWithOptions(s *Session, options ...AuthOption) (res *
 	}
 
 	if res.Status == common.SUCCESS {
-		s.SetIdentifiers(res.Identifier)
-		s.Connected = true
-
-		n.hub.AddSession(s)
+		n.Authenticated(s, res.Identifier)
 	} else {
 		if res.Status == common.FAILURE {
 			n.metrics.CounterIncrement(metricsFailedAuths)
@@ -293,12 +290,21 @@ func (n *Node) AuthenticateWithOptions(s *Session, options ...AuthOption) (res *
 	}
 
 	n.handleCallReply(s, res.ToCallResult())
+	n.markDisconnectable(s, res.DisconnectInterest)
 
 	if berr := n.broker.CommitSession(s.GetID(), s); berr != nil {
 		s.Log.Errorf("Failed to persist session in cache: %v", berr)
 	}
 
 	return
+}
+
+// Mark session as authenticated and register it with a hub.
+// Useful when you perform authentication manually, not using a controller.
+func (n *Node) Authenticated(s *Session, ids string) {
+	s.SetIdentifiers(ids)
+	s.Connected = true
+	n.hub.AddSession(s)
 }
 
 func (n *Node) TryRestoreSession(s *Session) (restored bool) {
@@ -381,6 +387,7 @@ func (n *Node) Subscribe(s *Session, msg *common.Message) (res *common.CommandRe
 
 	if res != nil {
 		n.handleCommandReply(s, msg, res)
+		n.markDisconnectable(s, res.DisconnectInterest)
 	}
 
 	if berr := n.broker.CommitSession(s.GetID(), s); berr != nil {
@@ -579,7 +586,12 @@ func (n *Node) ExecuteRemoteCommand(msg *common.RemoteCommandMessage) {
 func (n *Node) Disconnect(s *Session) error {
 	n.hub.RemoveSessionLater(s)
 	n.broker.FinishSession(s.GetID()) // nolint:errcheck
-	return n.disconnector.Enqueue(s)
+
+	if s.IsDisconnectable() {
+		return n.disconnector.Enqueue(s)
+	}
+
+	return nil
 }
 
 // DisconnectNow execute disconnect on controller
@@ -609,6 +621,19 @@ func (n *Node) RemoteDisconnect(msg *common.RemoteDisconnectMessage) {
 	n.metrics.CounterIncrement(metricsBroadcastMsg)
 	n.log.Debugf("Incoming pubsub command: %v", msg)
 	n.hub.RemoteDisconnect(msg)
+}
+
+// Interest is represented as a int; -1 indicates no interest, 0 indicates lack of such information,
+// and 1 indicates interest.
+func (n *Node) markDisconnectable(s *Session, interest int) {
+	switch n.config.DisconnectMode {
+	case "always":
+		s.MarkDisconnectable(true)
+	case "never":
+		s.MarkDisconnectable(false)
+	case "auto":
+		s.MarkDisconnectable(interest >= 0)
+	}
 }
 
 func transmit(s *Session, transmissions []string) {

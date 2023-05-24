@@ -162,6 +162,9 @@ type Session struct {
 	subscriptions *SubscriptionState
 	closed        bool
 
+	// Defines if we should perform Disconnect RPC for this session
+	disconnectInterest bool
+
 	// Main mutex (for read/write and important session updates)
 	mu sync.Mutex
 	// Mutex for protocol-related state (env, subscriptions)
@@ -312,6 +315,20 @@ func (s *Session) ReadInternalState(key string) (interface{}, bool) {
 	return val, ok
 }
 
+func (s *Session) IsDisconnectable() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.disconnectInterest
+}
+
+func (s *Session) MarkDisconnectable(val bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.disconnectInterest = s.disconnectInterest || val
+}
+
 // Serve enters a loop to read incoming data
 func (s *Session) Serve(callback func()) error {
 	go func() {
@@ -435,6 +452,7 @@ type cacheEntry struct {
 	Subscriptions   map[string][]string          `json:"subs"`
 	ConnectionState map[string]string            `json:"cstate"`
 	ChannelsState   map[string]map[string]string `json:"istate"`
+	Disconnectable  bool
 }
 
 func (s *Session) ToCacheEntry() ([]byte, error) {
@@ -446,6 +464,7 @@ func (s *Session) ToCacheEntry() ([]byte, error) {
 		Subscriptions:   s.subscriptions.ToMap(),
 		ConnectionState: *s.env.ConnectionState,
 		ChannelsState:   *s.env.ChannelStates,
+		Disconnectable:  s.disconnectInterest,
 	}
 
 	return json.Marshal(&entry)
@@ -463,6 +482,7 @@ func (s *Session) RestoreFromCache(cached []byte) error {
 	s.smu.Lock()
 	defer s.smu.Unlock()
 
+	s.MarkDisconnectable(entry.Disconnectable)
 	s.SetIdentifiers(entry.Identifiers)
 	s.env.MergeConnectionState(&entry.ConnectionState)
 

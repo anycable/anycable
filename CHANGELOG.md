@@ -2,6 +2,10 @@
 
 ## master
 
+- Introduce `--disconnect_mode` and deprecate `--disable_disconnect`. ([@palkan][])
+
+You can use `--disconnect_mode=never` to achieve the same behaviour as with `--disable_disconnect`. The new (and default) `--disconnect_mode=auto` automatically detects if a Disconnect call is needed for a session (for example, Hotwire clients don't need it).
+
 - Refactor broadcasting to preserve the order of messages within a single stream. ([@palkan][])
 
 Previously, we used a Go routine pool to concurrently delivery broadcasts, which led to nondeterministic order of messages within a single stream delivered in a short period of time. Now, we preserve the order of messages within a stream—the delivered as they were accepted by the server.
