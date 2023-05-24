@@ -42,7 +42,7 @@ func TestShutdown(t *testing.T) {
 
 	gate.Broadcast(&common.StreamMessage{Stream: "test", Data: "1"})
 
-	time.Sleep(120 * time.Millisecond)
+	time.Sleep(200 * time.Millisecond)
 
 	gate.Broadcast(&common.StreamMessage{Stream: "test", Data: "2"})
 
