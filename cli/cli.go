@@ -61,7 +61,8 @@ type Runner struct {
 	broadcastersFactory broadcastersFactory
 	websocketEndpoints  map[string]websocketHandler
 
-	router *router.RouterController
+	router  *router.RouterController
+	metrics *metricspkg.Metrics
 
 	errChan       chan error
 	shutdownables []Shutdownable
@@ -135,6 +136,14 @@ func (r *Runner) checkAndSetDefaults() error {
 		r.websocketHandlerFactory = r.defaultWebSocketHandler
 	}
 
+	metrics, err := r.initMetrics(&r.config.Metrics)
+
+	if err != nil {
+		return errorx.Decorate(err, "!!! Failed to initialize metrics writer !!!")
+	}
+
+	r.metrics = metrics
+
 	return nil
 }
 
@@ -147,10 +156,7 @@ func (r *Runner) Run() error {
 
 	r.log.Infof("Starting %s %s%s (pid: %d, open file limit: %s, gomaxprocs: %d)", r.name, version.Version(), mrubySupport, os.Getpid(), utils.OpenFileLimit(), numProcs)
 
-	metrics, err := r.initMetrics(&r.config.Metrics)
-	if err != nil {
-		return errorx.Decorate(err, "!!! Failed to initialize metrics writer !!!")
-	}
+	metrics := r.metrics
 
 	r.shutdownables = append(r.shutdownables, metrics)
 
@@ -399,6 +405,10 @@ func (r *Runner) Router() *router.RouterController {
 
 func (r *Runner) SetRouter(router *router.RouterController) {
 	r.router = router
+}
+
+func (r *Runner) Instrumenter() metricspkg.Instrumenter {
+	return r.metrics
 }
 
 func (r *Runner) defaultRouter() *router.RouterController {
