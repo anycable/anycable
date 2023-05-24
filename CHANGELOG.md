@@ -2,6 +2,10 @@
 
 ## master
 
+- Add `--turbo_rails_cleartext` and `--cable_ready_cleartext`. ([@palkan][])
+
+In a clear-text mode, stream names are passed as-is from the client, no signing is required. This mode is meant for experimenting with Turbo Streams or Cable Ready streams in non-Rails applications.
+
 - Introduce `--disconnect_mode` and deprecate `--disable_disconnect`. ([@palkan][])
 
 You can use `--disconnect_mode=never` to achieve the same behaviour as with `--disable_disconnect`. The new (and default) `--disconnect_mode=auto` automatically detects if a Disconnect call is needed for a session (for example, Hotwire clients don't need it).

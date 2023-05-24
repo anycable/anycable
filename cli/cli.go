@@ -414,12 +414,12 @@ func (r *Runner) Instrumenter() metricspkg.Instrumenter {
 func (r *Runner) defaultRouter() *router.RouterController {
 	router := router.NewRouterController(nil)
 
-	if r.config.Rails.TurboRailsKey != "" {
+	if r.config.Rails.TurboRailsKey != "" || r.config.Rails.TurboRailsClearText {
 		turboController := rails.NewTurboController(r.config.Rails.TurboRailsKey)
 		router.Route("Turbo::StreamsChannel", turboController) // nolint:errcheck
 	}
 
-	if r.config.Rails.CableReadyKey != "" {
+	if r.config.Rails.CableReadyKey != "" || r.config.Rails.CableReadyClearText {
 		crController := rails.NewCableReadyController(r.config.Rails.CableReadyKey)
 		router.Route("CableReady::Stream", crController) // nolint:errcheck
 	}

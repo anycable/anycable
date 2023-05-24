@@ -765,10 +765,22 @@ func signedStreamsCLIFlags(c *config.Config) []cli.Flag {
 			Destination: &c.Rails.TurboRailsKey,
 		},
 
+		&cli.BoolFlag{
+			Name:        "turbo_rails_cleartext",
+			Usage:       "Enable Turbo Streams fastlane without stream names signing",
+			Destination: &c.Rails.TurboRailsClearText,
+		},
+
 		&cli.StringFlag{
 			Name:        "cable_ready_key",
 			Usage:       "Enable CableReady fastlane with the specified signing key",
 			Destination: &c.Rails.CableReadyKey,
+		},
+
+		&cli.BoolFlag{
+			Name:        "cable_ready_cleartext",
+			Usage:       "Enable Cable Ready fastlane without stream names signing",
+			Destination: &c.Rails.CableReadyClearText,
 		},
 	})
 }

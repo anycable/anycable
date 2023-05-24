@@ -18,7 +18,12 @@ type TurboController struct {
 var _ node.Controller = (*TurboController)(nil)
 
 func NewTurboController(key string) *TurboController {
-	verifier := utils.NewMessageVerifier(key)
+	var verifier *utils.MessageVerifier
+
+	if key != "" {
+		verifier = utils.NewMessageVerifier(key)
+	}
+
 	return &TurboController{verifier, log.WithField("context", "turbo")}
 }
 
@@ -46,19 +51,27 @@ func (c *TurboController) Subscribe(sid string, env *common.SessionEnv, id strin
 		return nil, err
 	}
 
-	stream, err := c.verifier.Verified(params.SignedStreamID)
+	var stream string
 
-	if err != nil {
-		c.log.WithField("identifier", channel).Debugf("verification failed for %s: %v", params.SignedStreamID, err)
+	if c.IsCleartext() {
+		stream = params.SignedStreamID
 
-		return &common.CommandResult{
-				Status:        common.FAILURE,
-				Transmissions: []string{common.RejectionMessage(channel)},
-			},
-			nil
+		c.log.WithField("identifier", channel).Debugf("unsigned stream: %s", stream)
+	} else {
+		stream, err = c.verifier.Verified(params.SignedStreamID)
+
+		if err != nil {
+			c.log.WithField("identifier", channel).Debugf("verification failed for %s: %v", params.SignedStreamID, err)
+
+			return &common.CommandResult{
+					Status:        common.FAILURE,
+					Transmissions: []string{common.RejectionMessage(channel)},
+				},
+				nil
+		}
+
+		c.log.WithField("identifier", channel).Debugf("verified stream: %s", stream)
 	}
-
-	c.log.WithField("identifier", channel).Debugf("verified stream: %s", stream)
 
 	return &common.CommandResult{
 		Status:             common.SUCCESS,
@@ -83,4 +96,8 @@ func (c *TurboController) Perform(sid string, env *common.SessionEnv, id string,
 
 func (c *TurboController) Disconnect(sid string, env *common.SessionEnv, id string, subscriptions []string) error {
 	return nil
+}
+
+func (c *TurboController) IsCleartext() bool {
+	return c.verifier == nil
 }

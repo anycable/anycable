@@ -55,3 +55,21 @@ func TestCableReadyController(t *testing.T) {
 		assert.Equal(t, true, res.StopAllStreams)
 	})
 }
+
+func TestCableReadyControllerWithClearText(t *testing.T) {
+	env := common.NewSessionEnv("ws://demo.anycable.io/cable", &map[string]string{"cookie": "val=1;"})
+	subject := NewCableReadyController("")
+
+	t.Run("Subscribe (success)", func(t *testing.T) {
+		channel := "{\"channel\":\"CableReady::Stream\",\"identifier\":\"stream:2023\"}"
+
+		res, err := subject.Subscribe("42", env, "name=jack", channel)
+
+		require.NoError(t, err)
+		require.NotNil(t, res)
+		require.Equal(t, common.SUCCESS, res.Status)
+		assert.Equal(t, []string{common.ConfirmationMessage(channel)}, res.Transmissions)
+		assert.Equal(t, []string{"stream:2023"}, res.Streams)
+		assert.Equal(t, -1, res.DisconnectInterest)
+	})
+}
