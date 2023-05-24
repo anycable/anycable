@@ -1,29 +1,27 @@
 # frozen_string_literal: true
 
+retried = false
+require "bundler/inline"
 
-# Only use bundler/inline if gems are not installed yet
 begin
-  require "childprocess"
-  require "jwt"
-  require "active_support/message_verifier"
-rescue LoadError
-  require "bundler/inline"
-
-  gemfile(true, quiet: true) do
+  gemfile(retried, quiet: true) do
     source "https://rubygems.org"
 
-    gem "childprocess"
+    gem "childprocess", "~> 4.1"
     gem "jwt"
-    gem "activesupport"
+    gem "activesupport", "~> 7.0"
   end
-
-  require "childprocess"
-  require "active_support/message_verifier"
+rescue
+  raise if retried
+  retried = true
+  retry
 end
 
 require "socket"
 require "time"
 require "json"
+
+require "active_support/message_verifier"
 
 class BenchRunner
   LOG_LEVEL_TO_NUM = {
