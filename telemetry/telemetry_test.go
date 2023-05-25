@@ -1,6 +1,7 @@
 package telemetry
 
 import (
+	"os"
 	"testing"
 	"time"
 
@@ -62,6 +63,9 @@ func TestTracking(t *testing.T) {
 	metrics.GaugeSet("clients_num", 10)
 	metrics.GaugeSet("mem_sys_bytes", 100)
 
+	os.Setenv("AWS_EXECUTION_ENV", "AWS_ECS_FARGATE")
+	defer os.Unsetenv("AWS_EXECUTION_ENV")
+
 	conf := config.NewConfig()
 	tracker := NewTracker(metrics, &conf, &Config{})
 	defer tracker.Shutdown() // nolint: errcheck
@@ -77,6 +81,7 @@ func TestTracking(t *testing.T) {
 
 	assert.Equal(t, "boot", event.Event)
 	assert.Equal(t, version.Version(), event.Properties["version"])
+	assert.Equal(t, "ecs-fargate", event.Properties["deploy"])
 
 	time.Sleep(100 * time.Millisecond)
 

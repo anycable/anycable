@@ -1,6 +1,7 @@
 package telemetry
 
 import (
+	"os"
 	"runtime"
 	"sync"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"github.com/anycable/anycable-go/mrb"
 	"github.com/anycable/anycable-go/version"
 	"github.com/apex/log"
+	"github.com/hofstadter-io/cinful"
 	"github.com/posthog/posthog-go"
 
 	nanoid "github.com/matoous/go-nanoid"
@@ -136,6 +138,15 @@ func (t *Tracker) bootProperties() map[string]interface{} {
 	props.Set("os", runtime.GOOS)
 	props.Set("mruby", mrb.Supported())
 
+	ciVendor := cinful.Info()
+	props.Set("ci", ciVendor != nil)
+
+	if ciVendor != nil {
+		props.Set("ci-name", ciVendor.Name)
+	}
+
+	props.Set("deploy", guessPlatform())
+
 	// Features
 	props.Set("jwt", t.config.JWT.Enabled())
 	props.Set("turbo", t.config.Rails.TurboRailsKey != "")
@@ -152,4 +163,48 @@ func (t *Tracker) bootProperties() map[string]interface{} {
 	props.Set("prom", t.config.Metrics.HTTPEnabled())
 
 	return props
+}
+
+func guessPlatform() string {
+	if _, ok := os.LookupEnv("FLY_APP_NAME"); ok {
+		return "fly"
+	}
+
+	if _, ok := os.LookupEnv("HEROKU_APP_ID"); ok {
+		return "heroku"
+	}
+
+	if _, ok := os.LookupEnv("RENDER_SERVICE_ID"); ok {
+		return "render"
+	}
+
+	if _, ok := os.LookupEnv("HATCHBOX_APP_NAME"); ok {
+		return "hatchbox"
+	}
+
+	if awsEnv, ok := os.LookupEnv("AWS_EXECUTION_ENV"); ok {
+		if awsEnv == "AWS_ECS_FARGATE" {
+			return "ecs-fargate"
+		}
+
+		if awsEnv == "AWS_ECS_EC2" {
+			return "ecs-ec2"
+		}
+
+		return "ecs"
+	}
+
+	if _, ok := os.LookupEnv("ECS_CONTAINER_METADATA_URI"); ok {
+		return "ecs"
+	}
+
+	if _, ok := os.LookupEnv("ECS_CONTAINER_METADATA_URI_V4"); ok {
+		return "ecs"
+	}
+
+	if _, ok := os.LookupEnv("K_SERVICE"); ok {
+		return "cloud-run"
+	}
+
+	return ""
 }

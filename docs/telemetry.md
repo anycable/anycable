@@ -14,6 +14,8 @@ We collect the following information:
 
 - AnyCable version.
 - OS name.
+- CI name (to distinguish CI runs from other runs).
+- Deployment platform (e.g., Heroku, Fly, etc.).
 - Specific features enabled (e.g., JWT identification, signed streams, etc.).
 - Max observed amount of RAM used by the process.
 - Max observed number of concurrent connections (this helps us to distinguish development/test runs from production ones).
