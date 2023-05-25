@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMessageVerifier(t *testing.T) {
@@ -13,10 +14,21 @@ func TestMessageVerifier(t *testing.T) {
 	// Turbo::StreamsChannel.signed_stream_name([:chat, "2021"])
 	example := "ImNoYXQ6MjAyMSI=--f9ee45dbccb1da04d8ceb99cc820207804370ba0d06b46fc3b8b373af1315628"
 
+	generated, err := verifier.Generate("chat:2021")
+	require.NoError(t, err)
+
+	assert.Equal(t, example, generated)
+
 	res, err := verifier.Verified(example)
 
 	assert.NoError(t, err)
 	assert.Equal(t, "chat:2021", res)
+
+	a_verifier := NewMessageVerifier("secret")
+	a_generated, _ := a_verifier.Generate("chat:2021")
+
+	_, err = verifier.Verified(a_generated)
+	assert.Error(t, err)
 }
 
 func TestMessageVerifierNotString(t *testing.T) {

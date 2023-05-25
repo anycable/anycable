@@ -19,6 +19,21 @@ func NewMessageVerifier(key string) *MessageVerifier {
 	return &MessageVerifier{key: []byte(key)}
 }
 
+func (m *MessageVerifier) Generate(payload interface{}) (string, error) {
+	payloadJson, err := json.Marshal(payload)
+
+	if err != nil {
+		return "", err
+	}
+
+	encoded := base64.StdEncoding.EncodeToString(payloadJson)
+	digest := hmac.New(sha256.New, m.key)
+	digest.Write([]byte(encoded))
+	signature := []byte(fmt.Sprintf("%x", digest.Sum(nil)))
+	signed := encoded + "--" + string(signature)
+	return signed, nil
+}
+
 func (m *MessageVerifier) Verified(msg string) (interface{}, error) {
 	if !m.isValid(msg) {
 		return "", errors.New("Invalid message")
