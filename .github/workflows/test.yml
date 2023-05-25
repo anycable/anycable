@@ -134,6 +134,7 @@ jobs:
       BUNDLE_PATH: ./vendor/bundle
       # Specify REDIS_URL explicitly, so Makefile doesn't check the presence of Redis
       REDIS_URL: redis://localhost:6379/
+      ANYCABLE_DISABLE_TELEMETRY: "true"
     services:
       redis:
         image: redis:6.2-alpine

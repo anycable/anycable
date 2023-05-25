@@ -23,6 +23,7 @@ import (
 	"github.com/anycable/anycable-go/rails"
 	"github.com/anycable/anycable-go/router"
 	"github.com/anycable/anycable-go/server"
+	"github.com/anycable/anycable-go/telemetry"
 	"github.com/anycable/anycable-go/utils"
 	"github.com/anycable/anycable-go/version"
 	"github.com/anycable/anycable-go/ws"
@@ -61,8 +62,9 @@ type Runner struct {
 	broadcastersFactory broadcastersFactory
 	websocketEndpoints  map[string]websocketHandler
 
-	router  *router.RouterController
-	metrics *metricspkg.Metrics
+	router           *router.RouterController
+	metrics          *metricspkg.Metrics
+	telemetryEnabled bool
 
 	errChan       chan error
 	shutdownables []Shutdownable
@@ -166,6 +168,16 @@ func (r *Runner) Run() error {
 	}
 
 	appNode := node.NewNode(controller, metrics, &r.config.App)
+
+	if r.telemetryEnabled {
+		telemetryConfig := telemetry.NewConfig()
+		tracker := telemetry.NewTracker(metrics, r.config, telemetryConfig)
+
+		tracker.Announce()
+		go tracker.Collect()
+
+		r.shutdownables = append(r.shutdownables, tracker)
+	}
 
 	subscriber, err := r.subscriberFactory(appNode, r.config)
 

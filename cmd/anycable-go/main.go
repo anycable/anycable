@@ -24,6 +24,7 @@ func main() {
 		cli.WithDefaultBroker(),
 		cli.WithDefaultSubscriber(),
 		cli.WithDefaultBroadcaster(),
+		cli.WithTelemetry(),
 	}
 
 	runner, err := cli.NewRunner(c, opts)

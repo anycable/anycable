@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"os"
 	"strings"
 
 	"github.com/anycable/anycable-go/broadcast"
@@ -165,4 +166,11 @@ func WithDefaultBroker() Option {
 			return nil, errorx.IllegalArgument.New("Unsupported broker adapter: %s", c.BrokerAdapter)
 		}
 	})
+}
+
+func WithTelemetry() Option {
+	return func(r *Runner) error {
+		r.telemetryEnabled = os.Getenv("ANYCABLE_DISABLE_TELEMETRY") != "true"
+		return nil
+	}
 }

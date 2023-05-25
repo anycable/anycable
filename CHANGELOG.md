@@ -2,6 +2,8 @@
 
 ## master
 
+- Added telemetry data collection. ([@palkan][])
+
 - Add `--turbo_rails_cleartext` and `--cable_ready_cleartext`. ([@palkan][])
 
 In a clear-text mode, stream names are passed as-is from the client, no signing is required. This mode is meant for experimenting with Turbo Streams or Cable Ready streams in non-Rails applications.

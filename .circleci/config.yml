@@ -172,6 +172,7 @@ jobs:
       GORACE: "halt_on_error=1"
       BUNDLE_GEMFILE: .circleci/Gemfile
       ANYCABLE_RPC_HOST: "127.0.0.1:50051"
+      ANYCABLE_DISABLE_TELEMETRY: "true"
     steps:
     - attach_workspace:
         at: .
@@ -296,6 +297,7 @@ jobs:
       BUILD_ARGS: "-race"
       GORACE: "halt_on_error=1"
       REDIS_URL: redis://localhost:6379/3
+      ANYCABLE_DISABLE_TELEMETRY: "true"
     steps:
     - attach_workspace:
         at: .
