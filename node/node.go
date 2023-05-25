@@ -42,6 +42,7 @@ type AppNode interface {
 	HandlePubSub(msg []byte)
 	LookupSession(id string) *Session
 	Authenticate(s *Session) (*common.ConnectResult, error)
+	Authenticated(s *Session, identifiers string)
 	Subscribe(s *Session, msg *common.Message) (*common.CommandResult, error)
 	Unsubscribe(s *Session, msg *common.Message) (*common.CommandResult, error)
 	Perform(s *Session, msg *common.Message) (*common.CommandResult, error)
