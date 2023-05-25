@@ -19,7 +19,7 @@ func NewMessageVerifier(key string) *MessageVerifier {
 	return &MessageVerifier{key: []byte(key)}
 }
 
-func (m *MessageVerifier) Verified(msg string) (string, error) {
+func (m *MessageVerifier) Verified(msg string) (interface{}, error) {
 	if !m.isValid(msg) {
 		return "", errors.New("Invalid message")
 	}
@@ -33,7 +33,7 @@ func (m *MessageVerifier) Verified(msg string) (string, error) {
 		return "", err
 	}
 
-	var result string
+	var result interface{}
 
 	if err = json.Unmarshal(jsonStr, &result); err != nil {
 		return "", err

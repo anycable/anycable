@@ -42,6 +42,18 @@ func TestCableReadyController(t *testing.T) {
 		assert.Equal(t, []string{common.RejectionMessage(channel)}, res.Transmissions)
 	})
 
+	t.Run("Subscribe (failure + not a string)", func(t *testing.T) {
+		signed := "WyJjaGF0LzIwMjMiLDE2ODUwMjQwMTdd--5b6661024d4c463c4936cd1542bc9a7672dd8039ac407d0b6c901697190e8aeb"
+		channel := fmt.Sprintf("{\"channel\":\"CableReady::Stream\",\"identifier\":\"%s\"}", signed)
+
+		res, err := subject.Subscribe("42", env, "name=jack", channel)
+
+		require.NoError(t, err)
+		require.NotNil(t, res)
+		require.Equal(t, common.FAILURE, res.Status)
+		assert.Equal(t, []string{common.RejectionMessage(channel)}, res.Transmissions)
+	})
+
 	t.Run("Unsubscribe", func(t *testing.T) {
 		channel := fmt.Sprintf("{\"channel\":\"CableReady::Stream\",\"identifier\":\"%s\"}", stream)
 

@@ -58,10 +58,24 @@ func (c *TurboController) Subscribe(sid string, env *common.SessionEnv, id strin
 
 		c.log.WithField("identifier", channel).Debugf("unsigned stream: %s", stream)
 	} else {
-		stream, err = c.verifier.Verified(params.SignedStreamID)
+		verified, err := c.verifier.Verified(params.SignedStreamID)
 
 		if err != nil {
 			c.log.WithField("identifier", channel).Debugf("verification failed for %s: %v", params.SignedStreamID, err)
+
+			return &common.CommandResult{
+					Status:        common.FAILURE,
+					Transmissions: []string{common.RejectionMessage(channel)},
+				},
+				nil
+		}
+
+		var ok bool
+
+		stream, ok = verified.(string)
+
+		if !ok {
+			c.log.WithField("identifier", channel).Debugf("verification failed: stream name is not a string: %v", verified)
 
 			return &common.CommandResult{
 					Status:        common.FAILURE,

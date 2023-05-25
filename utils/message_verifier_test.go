@@ -18,3 +18,15 @@ func TestMessageVerifier(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "chat:2021", res)
 }
+
+func TestMessageVerifierNotString(t *testing.T) {
+	verifier := NewMessageVerifier("s3Krit")
+	example := "WyJjaGF0LzIwMjMiLDE2ODUwMjQwMTdd--5b6661024d4c463c4936cd1542bc9a7672dd8039ac407d0b6c901697190e8aeb"
+
+	res, err := verifier.Verified(example)
+
+	arr := res.([]interface{})
+
+	assert.NoError(t, err)
+	assert.Equal(t, "chat/2023", arr[0])
+}
