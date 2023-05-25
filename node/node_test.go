@@ -125,9 +125,15 @@ func TestSubscribe(t *testing.T) {
 	})
 
 	t.Run("Rejected subscription", func(t *testing.T) {
+		session := NewMockSession("15", node)
+
+		node.hub.AddSession(session)
+		defer node.hub.RemoveSession(session)
+
 		res, err := node.Subscribe(session, &common.Message{Identifier: "failure"})
 
 		assert.Equal(t, common.FAILURE, res.Status)
+		assert.Equal(t, 0, len(session.subscriptions.Channels()))
 		assert.NoError(t, err)
 	})
 }

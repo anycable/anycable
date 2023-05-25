@@ -1,7 +1,6 @@
 package telemetry
 
 import (
-	"os"
 	"testing"
 	"time"
 
@@ -63,8 +62,7 @@ func TestTracking(t *testing.T) {
 	metrics.GaugeSet("clients_num", 10)
 	metrics.GaugeSet("mem_sys_bytes", 100)
 
-	os.Setenv("AWS_EXECUTION_ENV", "AWS_ECS_FARGATE")
-	defer os.Unsetenv("AWS_EXECUTION_ENV")
+	t.Setenv("AWS_EXECUTION_ENV", "AWS_ECS_FARGATE")
 
 	conf := config.NewConfig()
 	tracker := NewTracker(metrics, &conf, &Config{})

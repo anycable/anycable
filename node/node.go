@@ -374,13 +374,18 @@ func (n *Node) Subscribe(s *Session, msg *common.Message) (res *common.CommandRe
 
 	res, err = n.controller.Subscribe(s.GetID(), s.env, s.GetIdentifiers(), msg.Identifier)
 
-	if err != nil {
+	var confirmed bool
+
+	if err != nil { // nolint: gocritic
 		if res == nil || res.Status == common.ERROR {
 			s.Log.Errorf("Subscribe error: %v", err)
 		}
-	} else {
+	} else if res.Status == common.SUCCESS {
+		confirmed = true
 		s.subscriptions.AddChannel(msg.Identifier)
 		s.Log.Debugf("Subscribed to channel: %s", msg.Identifier)
+	} else {
+		s.Log.Debugf("Subscription rejected: %s", msg.Identifier)
 	}
 
 	s.smu.Unlock()
@@ -390,12 +395,14 @@ func (n *Node) Subscribe(s *Session, msg *common.Message) (res *common.CommandRe
 		n.markDisconnectable(s, res.DisconnectInterest)
 	}
 
-	if berr := n.broker.CommitSession(s.GetID(), s); berr != nil {
-		s.Log.Errorf("Failed to persist session in cache: %v", berr)
-	}
+	if confirmed {
+		if berr := n.broker.CommitSession(s.GetID(), s); berr != nil {
+			s.Log.Errorf("Failed to persist session in cache: %v", berr)
+		}
 
-	if msg.History.Since > 0 || msg.History.Streams != nil {
-		return res, n.History(s, msg)
+		if msg.History.Since > 0 || msg.History.Streams != nil {
+			return res, n.History(s, msg)
+		}
 	}
 
 	return
