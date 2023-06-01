@@ -48,7 +48,7 @@ workflows:
         - build_darwin_mruby
         filters:
           tags:
-            only: /^v[0-9]+\.[0-9]+\.[0-9]+((\-|\.)(preview|beta|rc)\d+)?$/
+            only: /^v[0-9]+\.[0-9]+\.[0-9]+((\-|\.)(preview|beta|rc)[\.\d+])?$/
           branches:
             ignore: /.*/
   benchmark:
