@@ -2,6 +2,8 @@
 
 ## master
 
+## 1.4.0.rc.1 (2023-06-01)
+
 - Add `redisx` broadcast adapter. ([@palkan][])
 
 A next-gen (Broker-compatible) broadcasting adapter using Redis Streams.
