@@ -119,6 +119,11 @@ func (n *Node) SetBroker(b broker.Broker) {
 	n.broker = b
 }
 
+// Return current instrumenter for the node
+func (n *Node) Instrumenter() metrics.Instrumenter {
+	return n.metrics
+}
+
 // HandleCommand parses incoming message from client and
 // execute the command (if recognized)
 func (n *Node) HandleCommand(s *Session, msg *common.Message) (err error) {
