@@ -195,7 +195,7 @@ class AsyncApp
   end
 end
 
-platform = RUBY_PLATFORM.match(/(\w+)\-([a-z]+)\d+/).captures.reverse.join('-')
+platform = RUBY_PLATFORM.match(/(\w+)\-([a-z\d]+)/).captures.reverse.join('-')
 
 case $benchmark_server
 when :anycable
@@ -206,7 +206,7 @@ when :anycable
   cli.run(["--server-command", "#{ENV.fetch("ANYCABLE_GO_BIN", "./anycable-go")}-#{platform} --host 0.0.0.0"])
 when :puma
   require "puma/cli"
-  cli = Puma::CLI.new(["-w", "#{ENV.fetch("WEB_CONCURRENCY", 2)}", "-t", "5", "-p", "8080", "-b", "tcp://0.0.0.0"])
+  cli = Puma::CLI.new(["-w", "#{ENV.fetch("WEB_CONCURRENCY", 4)}", "-t", "5", "-p", "8080", "-b", "tcp://0.0.0.0"])
   cli.instance_variable_get(:@conf).options[:app] = Rails.application
   $stdout.puts "Running Puma server"
   cli.run

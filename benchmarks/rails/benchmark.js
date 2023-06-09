@@ -8,22 +8,21 @@ import { randomIntBetween } from "https://jslib.k6.io/k6-utils/1.1.0/index.js";
 const rampingOptions = {
   scenarios: {
     default: {
-      executor: 'ramping-vus',
+      executor: "ramping-vus",
       startVUs: 100,
       stages: [
-        { duration: '20s', target: 300 },
-        { duration: '20s', target: 500 },
-        { duration: '30s', target: 1000 },
-        { duration: '30s', target: 1400 },
-        { duration: '30s', target: 1800 },
-        { duration: '50s', target: 2500 },
-        { duration: '60s', target: 2500 },
-        { duration: '120s', target: 0 },
+        { duration: "20s", target: 300 },
+        { duration: "20s", target: 500 },
+        { duration: "30s", target: 1000 },
+        { duration: "30s", target: 1300 },
+        { duration: "30s", target: 1500 },
+        { duration: "50s", target: 1500 },
+        { duration: "60s", target: 0 },
       ],
-      gracefulStop: '5m',
-      gracefulRampDown: '5m',
-    }
-  }
+      gracefulStop: "5m",
+      gracefulRampDown: "5m",
+    },
+  },
 };
 
 export const options = __ENV.SKIP_OPTIONS ? {} : rampingOptions;
@@ -38,43 +37,42 @@ let acksRcvd = new Counter("acks_rcvd");
 // Load ENV from .env
 function loadDotEnv() {
   try {
-    let dotenv = open("./.env")
-    dotenv.split(/[\n\r]/m).forEach( (line) => {
+    let dotenv = open("./.env");
+    dotenv.split(/[\n\r]/m).forEach((line) => {
       // Ignore comments
-      if (line[0] === "#") return
+      if (line[0] === "#") return;
 
-      let parts = line.split("=", 2)
+      let parts = line.split("=", 2);
 
-      __ENV[parts[0]] = parts[1]
-    })
-  } catch(_err) {
-  }
+      __ENV[parts[0]] = parts[1];
+    });
+  } catch (_err) {}
 }
 
-loadDotEnv()
+loadDotEnv();
 
-let config = __ENV
+let config = __ENV;
 
 config.URL = config.URL || "ws://localhost:8080/cable";
 
 let url = config.URL;
-let channelName = (config.CHANNEL_ID || 'BenchmarkChannel');
+let channelName = config.CHANNEL_ID || "BenchmarkChannel";
 
-let sendersRatio = parseFloat((config.SENDERS_RATIO || '0.2')) || 1;
+let sendersRatio = parseFloat(config.SENDERS_RATIO || "0.2") || 1;
 let sendersMod = (1 / sendersRatio) | 0;
 let sender = __VU % sendersMod == 0;
 
-let sendingRate = parseFloat(config.SENDING_RATE || '0.2');
+let sendingRate = parseFloat(config.SENDING_RATE || "0.2");
 
-let iterations = (config.N || '100') | 0;
+let iterations = (config.N || "100") | 0;
 
 export default function () {
   let cableOptions = {
-    receiveTimeoutMs: 15000
-  }
+    receiveTimeoutMs: 15000,
+  };
 
   // Prevent from creating a lot of connections at once
-  sleep(randomIntBetween(5, 10) / 10);
+  sleep(randomIntBetween(2, 10) / 5);
 
   let client = cable.connect(url, cableOptions);
 
@@ -83,6 +81,8 @@ export default function () {
       "successful connection": (obj) => obj,
     })
   ) {
+    // Cooldown
+    sleep(randomIntBetween(5, 10) / 5);
     fail("connection failed");
   }
 
@@ -93,23 +93,28 @@ export default function () {
       "successful subscription": (obj) => obj,
     })
   ) {
+    // Cooldown
+    sleep(randomIntBetween(5, 10) / 5);
     fail("failed to subscribe");
   }
 
-  for(let i = 0; ; i++) {
+  for (let i = 0; ; i++) {
     // Sampling
-    if (sender && (randomIntBetween(1, 10) / 10) <= sendingRate) {
+    if (sender && randomIntBetween(1, 10) / 10 <= sendingRate) {
       let start = Date.now();
       broadcastsSent.add(1);
       // Create message via cable instead of a form
-      channel.perform("broadcast", { ts: start, content: `hello from ${__VU} numero ${i+1}` });
+      channel.perform("broadcast", {
+        ts: start,
+        content: `hello from ${__VU} numero ${i + 1}`,
+      });
     }
 
     sleep(randomIntBetween(5, 10) / 100);
 
     let incoming = channel.receiveAll(1);
 
-    for(let message of incoming) {
+    for (let message of incoming) {
       let received = message.__timestamp__ || Date.now();
 
       if (message.action == "broadcastResult") {
@@ -125,10 +130,12 @@ export default function () {
       }
     }
 
-    sleep(randomIntBetween(5, 10) / 100);
+    sleep(randomIntBetween(5, 10) / 10);
 
     if (i > iterations) break;
   }
+
+  sleep(randomIntBetween(5, 10) / 10);
 
   client.disconnect();
 }
