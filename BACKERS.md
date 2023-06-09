@@ -8,3 +8,4 @@
 - [Gianluca Bargelli](https://github.com/proudlygeek)
 - [David Karlsson](https://github.com/davidklsn)
 - [Alexey Zatsepin](https://github.com/alexey)
+- [Sebastian Pöll](https://github.com/SebastianPoell)
