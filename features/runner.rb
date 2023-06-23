@@ -149,6 +149,20 @@ class BenchRunner
     end
   end
 
+  def retrying(delay: 1, attempts: 2, &block)
+    begin
+      block.call
+    rescue => e
+      attempts -= 1
+      raise if attempts <= 0
+
+      log(:info) { "Retrying after error: #{e.message}" }
+
+      sleep delay
+      retry
+    end
+  end
+
   private
 
   attr_reader :processes, :pipes, :log_level
