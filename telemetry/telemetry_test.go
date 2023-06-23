@@ -81,6 +81,7 @@ func TestTracking(t *testing.T) {
 
 	assert.Equal(t, "boot", event.Event)
 	assert.Equal(t, version.Version(), event.Properties["version"])
+	assert.Equal(t, true, event.Properties["pro"])
 
 	time.Sleep(100 * time.Millisecond)
 

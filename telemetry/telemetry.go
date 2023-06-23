@@ -156,6 +156,7 @@ func (t *Tracker) bootProperties() map[string]interface{} {
 
 	props.Set("version", version.Version())
 	props.Set("os", runtime.GOOS)
+	props.Set("pro", true)
 
 	return props
 }
@@ -200,6 +201,12 @@ func (t *Tracker) appProperties() map[string]interface{} {
 	if ok {
 		props.Set("plus-name", name)
 	}
+
+	// PRO features
+	props.Set("pro", true)
+	props.Set("apollo", t.config.GraphQL.Enabled())
+	props.Set("ocpp", t.config.OCPP.Enabled())
+	props.Set("auto-rpc", t.config.RPC.Concurrency == 0)
 
 	return props
 }
