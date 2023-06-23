@@ -183,8 +183,18 @@ type Session struct {
 	Log           *log.Entry
 }
 
+type SessionOption = func(*Session)
+
+// WithPingInterval allows to set a custom ping interval for a session
+// or disable pings at all (by passing 0)
+func WithPingInterval(interval time.Duration) SessionOption {
+	return func(s *Session) {
+		s.pingInterval = interval
+	}
+}
+
 // NewSession build a new Session struct from ws connetion and http request
-func NewSession(node *Node, conn Connection, url string, headers *map[string]string, uid string) *Session {
+func NewSession(node *Node, conn Connection, url string, headers *map[string]string, uid string, opts ...SessionOption) *Session {
 	session := &Session{
 		conn:                   conn,
 		metrics:                node.metrics,
@@ -209,7 +219,14 @@ func NewSession(node *Node, conn Connection, url string, headers *map[string]str
 
 	session.Log = ctx
 
-	session.addPing()
+	for _, opt := range opts {
+		opt(session)
+	}
+
+	if session.pingInterval > 0 {
+		session.addPing()
+	}
+
 	go session.SendMessages()
 
 	return session
