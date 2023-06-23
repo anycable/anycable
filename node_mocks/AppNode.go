@@ -14,25 +14,32 @@ type AppNode struct {
 	mock.Mock
 }
 
-// Authenticate provides a mock function with given fields: s
-func (_m *AppNode) Authenticate(s *node.Session) (*common.ConnectResult, error) {
-	ret := _m.Called(s)
+// Authenticate provides a mock function with given fields: s, opts
+func (_m *AppNode) Authenticate(s *node.Session, opts ...func(*node.AuthOptions)) (*common.ConnectResult, error) {
+	_va := make([]interface{}, len(opts))
+	for _i := range opts {
+		_va[_i] = opts[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, s)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
 
 	var r0 *common.ConnectResult
 	var r1 error
-	if rf, ok := ret.Get(0).(func(*node.Session) (*common.ConnectResult, error)); ok {
-		return rf(s)
+	if rf, ok := ret.Get(0).(func(*node.Session, ...func(*node.AuthOptions)) (*common.ConnectResult, error)); ok {
+		return rf(s, opts...)
 	}
-	if rf, ok := ret.Get(0).(func(*node.Session) *common.ConnectResult); ok {
-		r0 = rf(s)
+	if rf, ok := ret.Get(0).(func(*node.Session, ...func(*node.AuthOptions)) *common.ConnectResult); ok {
+		r0 = rf(s, opts...)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*common.ConnectResult)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(*node.Session) error); ok {
-		r1 = rf(s)
+	if rf, ok := ret.Get(1).(func(*node.Session, ...func(*node.AuthOptions)) error); ok {
+		r1 = rf(s, opts...)
 	} else {
 		r1 = ret.Error(1)
 	}

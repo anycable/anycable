@@ -12,6 +12,7 @@ const (
 	actionCableDisconnectUnauthorizedMessage = "{\"type\":\"disconnect\",\"reason\":\"unauthorized\",\"reconnect\":false}"
 )
 
+//go:generate mockery --name Identifier --output "../mocks" --outpkg mocks
 type Identifier interface {
 	Identify(sid string, env *common.SessionEnv) (*common.ConnectResult, error)
 }

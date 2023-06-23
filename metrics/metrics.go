@@ -20,6 +20,7 @@ type IntervalWriter interface {
 	Write(m *Metrics) error
 }
 
+//go:generate mockery --name Instrumenter --output "../mocks" --outpkg mocks
 type Instrumenter interface {
 	CounterIncrement(name string)
 	CounterAdd(name string, val uint64)

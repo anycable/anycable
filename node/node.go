@@ -38,20 +38,17 @@ const (
 )
 
 // AppNode describes a basic node interface
+//
+//go:generate mockery --name AppNode --output "../node_mocks" --outpkg node_mocks
 type AppNode interface {
 	HandlePubSub(msg []byte)
 	LookupSession(id string) *Session
-	Authenticate(s *Session) (*common.ConnectResult, error)
+	Authenticate(s *Session, opts ...AuthOption) (*common.ConnectResult, error)
 	Authenticated(s *Session, identifiers string)
 	Subscribe(s *Session, msg *common.Message) (*common.CommandResult, error)
 	Unsubscribe(s *Session, msg *common.Message) (*common.CommandResult, error)
 	Perform(s *Session, msg *common.Message) (*common.CommandResult, error)
 	Disconnect(s *Session) error
-}
-
-type AppNodeExt interface {
-	AppNode
-	AuthenticateWithOptions(s *Session, opts ...AuthOption) (*common.ConnectResult, error)
 }
 
 // Connection represents underlying connection
@@ -236,12 +233,12 @@ func (n *Node) Shutdown() (err error) {
 	return
 }
 
-type authOptions struct {
+type AuthOptions struct {
 	DisconnectOnFailure bool
 }
 
-func newAuthOptions(modifiers []AuthOption) *authOptions {
-	base := &authOptions{
+func newAuthOptions(modifiers []AuthOption) *AuthOptions {
+	base := &AuthOptions{
 		DisconnectOnFailure: true,
 	}
 
@@ -252,22 +249,17 @@ func newAuthOptions(modifiers []AuthOption) *authOptions {
 	return base
 }
 
-type AuthOption = func(*authOptions)
+type AuthOption = func(*AuthOptions)
 
 func WithDisconnectOnFailure(disconnect bool) AuthOption {
-	return func(opts *authOptions) {
+	return func(opts *AuthOptions) {
 		opts.DisconnectOnFailure = disconnect
 	}
 }
 
 // Authenticate calls controller to perform authentication.
 // If authentication is successful, session is registered with a hub.
-func (n *Node) Authenticate(s *Session) (res *common.ConnectResult, err error) {
-	return n.AuthenticateWithOptions(s)
-}
-
-// AuthenticateWithOptions provides more control on how authentication is performed.
-func (n *Node) AuthenticateWithOptions(s *Session, options ...AuthOption) (res *common.ConnectResult, err error) {
+func (n *Node) Authenticate(s *Session, options ...AuthOption) (res *common.ConnectResult, err error) {
 	opts := newAuthOptions(options)
 
 	restored := n.TryRestoreSession(s)

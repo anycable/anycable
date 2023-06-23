@@ -4,6 +4,8 @@ import "github.com/anycable/anycable-go/common"
 
 // Subscriber is responsible for subscribing to individual streams and
 // and publishing messages to streams
+//
+//go:generate mockery --name Subscriber --output "../mocks" --outpkg mocks
 type Subscriber interface {
 	Start(done chan (error)) error
 	Shutdown() error

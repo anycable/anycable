@@ -32,6 +32,8 @@ type Cacheable interface {
 // - Managing streams history.
 // - Keeping client states for recovery.
 // - Distributing broadcasts across nodes.
+//
+//go:generate mockery --name Broker --output "../mocks" --outpkg mocks
 type Broker interface {
 	Start() error
 	Shutdown() error

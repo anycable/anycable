@@ -5,6 +5,7 @@
 // NOTE: There could be multiple broadcast handlers running at the same time.
 package broadcast
 
+//go:generate mockery --name Broadcaster --output "../mocks" --outpkg mocks
 type Broadcaster interface {
 	Start(done chan (error)) error
 	Shutdown() error
@@ -14,6 +15,7 @@ type Broadcaster interface {
 	IsFanout() bool
 }
 
+//go:generate mockery --name Handler --output "../mocks" --outpkg mocks
 type Handler interface {
 	// Handle broadcast message delivered only to this node (and pass it through the broker)
 	// (Used by single-node broadcasters)
