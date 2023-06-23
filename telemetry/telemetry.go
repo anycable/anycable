@@ -274,6 +274,12 @@ func (t *Tracker) appProperties() map[string]interface{} {
 		props.Set("plus-name", name)
 	}
 
+	// PRO features
+	props.Set("pro", true)
+	props.Set("apollo", t.config.GraphQL.Enabled())
+	props.Set("ocpp", t.config.OCPP.Enabled())
+	props.Set("auto-rpc", t.config.RPC.Concurrency == 0)
+
 	// Custom properties
 	for k, v := range t.customizations {
 		props.Set(k, v)
