@@ -15,42 +15,43 @@ common_tags_filter: &common_tags_filter
 
 # Workflow definition
 workflows:
-  test_and_release:
-    jobs:
-    - prepare_code:
-        <<: *common_tags_filter
-    - build_darwin_mruby:
-        <<: *common_tags_filter
-    - prepare_mruby:
-        <<: *requires_prepared_code
-        <<: *common_tags_filter
-    - test:
-        <<: *common_tags_filter
-        requires:
-        - prepare_mruby
-    - build:
-        <<: *requires_prepared_code
-        <<: *common_tags_filter
-    - build_linux_mruby:
-        <<: *common_tags_filter
-        requires:
-        - prepare_mruby
-    - conformance:
-        <<: *common_tags_filter
-        requires:
-         - prepare_mruby
-    - github_release:
-        requires:
-        - test
-        - conformance
-        - build
-        - build_linux_mruby
-        - build_darwin_mruby
-        filters:
-          tags:
-            only: /^v[0-9]+\.[0-9]+\.[0-9]+((\-|\.)(preview|beta|rc)[\.\d+])?$/
-          branches:
-            ignore: /.*/
+  # test_and_release:
+  #   jobs:
+  #   - prepare_code:
+  #       <<: *common_tags_filter
+  #   - build_darwin_mruby:
+  #       <<: *common_tags_filter
+  #   - prepare_mruby:
+  #       <<: *requires_prepared_code
+  #       <<: *common_tags_filter
+  #   - test:
+  #       <<: *common_tags_filter
+  #       requires:
+  #       - prepare_mruby
+  #   - build:
+  #       <<: *requires_prepared_code
+  #       <<: *common_tags_filter
+  #   - build_linux_mruby:
+  #       <<: *common_tags_filter
+  #       requires:
+  #       - prepare_mruby
+  #   - conformance:
+  #       <<: *common_tags_filter
+  #       requires:
+  #        - prepare_mruby
+  #   - github_release:
+  #       requires:
+  #       - test
+  #       - conformance
+  #       - build
+  #       - build_linux_mruby
+  #       - build_darwin_mruby
+  #       filters:
+  #         tags:
+  #           only: /^v[0-9]+\.[0-9]+\.[0-9]+((\-|\.)(preview|beta|rc)[\.\d+])?$/
+  #         branches:
+  #           ignore: /.*/
+
   benchmark:
     jobs:
     - prepare_code
@@ -60,6 +61,7 @@ workflows:
     - benchmark:
         requires:
         - prepare_mruby
+
 executors:
   golang:
     docker:

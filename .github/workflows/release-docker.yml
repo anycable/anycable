@@ -62,7 +62,7 @@ jobs:
             type=sha,prefix=
             type=edge,branch=master
       - name: Build and push base images
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           context: .
           file: .docker/Dockerfile.universal
@@ -94,7 +94,7 @@ jobs:
             type=sha,prefix=
             type=edge,branch=master
       - name: Build and push alpine images
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           context: .
           file: .docker/Dockerfile.alpine
@@ -132,7 +132,7 @@ jobs:
             type=sha,prefix=
             type=edge,branch=master
       - name: Build and push mrb images
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v4
         with:
           context: .
           file: .docker/Dockerfile.mrb-linux-amd64
