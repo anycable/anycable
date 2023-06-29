@@ -2,6 +2,7 @@ package ocpp
 
 import (
 	"errors"
+	"log/slog"
 	"strconv"
 	"testing"
 
@@ -10,7 +11,6 @@ import (
 	"github.com/anycable/anycable-go/mocks"
 	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/node_mocks"
-	"github.com/apex/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -249,7 +249,7 @@ func buildSession(conn node.Connection, n *node.Node, executor node.Executor) *n
 	sessionCounter++
 	s := node.NewSession(n, conn, "ws://anycable.io/ocpp/43", nil, strconv.Itoa(sessionCounter), node.WithEncoder(Encoder{}), node.WithExecutor(executor))
 	s.Connected = true
-	s.Log = log.WithField("context", "test")
+	s.Log = slog.With("context", "test")
 	return s
 }
 

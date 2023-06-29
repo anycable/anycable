@@ -6,6 +6,7 @@ import (
 	"github.com/anycable/anycable-go/enats"
 	"github.com/anycable/anycable-go/graphql"
 	"github.com/anycable/anycable-go/identity"
+	"github.com/anycable/anycable-go/lp"
 	"github.com/anycable/anycable-go/metrics"
 	nconfig "github.com/anycable/anycable-go/nats"
 	"github.com/anycable/anycable-go/node"
@@ -60,6 +61,7 @@ type Config struct {
 	GraphQL              graphql.Config
 	LegacyGraphQL        graphql.Config
 	OCPP                 ocpp.Config
+	LongPolling          lp.Config
 }
 
 // NewConfig returns a new empty config
@@ -93,6 +95,7 @@ func NewConfig() Config {
 		GraphQL:          graphql.NewConfig(),
 		LegacyGraphQL:    graphql.NewConfig(),
 		OCPP:             ocpp.NewConfig(),
+		LongPolling:      lp.NewConfig(),
 	}
 
 	return config

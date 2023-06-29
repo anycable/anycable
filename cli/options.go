@@ -93,6 +93,7 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 	flags = append(flags, sseCLIFlags(&c)...)
 	flags = append(flags, ocppCLIFlags(&c)...)
 	flags = append(flags, miscCLIFlags(&c, &presets)...)
+	flags = append(flags, longPollingCLIFlags(&c)...)
 
 	app := &cli.App{
 		Name:            "anycable-go",
@@ -355,6 +356,9 @@ Use graphql_action instead.`)
 		c.GraphQL.JWTParam = c.JWT.Param
 	}
 
+	// Inherit allowed origins from WS config
+	c.LongPolling.AllowedOrigins = c.WS.AllowedOrigins
+
 	return &c, nil, false
 }
 
@@ -393,6 +397,7 @@ const (
 	sseCategoryDescription           = "SERVER-SENT EVENTS:"
 	graphqlCategoryDescription       = "GRAPHQL:"
 	ocppCategoryDescription          = "OCCP:"
+	longPollingCategoryDescription   = "LONG POLLING:"
 
 	envPrefix = "ANYCABLE_"
 )
@@ -1358,6 +1363,48 @@ func ocppCLIFlags(c *config.Config) []cli.Flag {
 				When disabled, all commands are sent to the #receive method`,
 			Value:       c.OCPP.GranularActions,
 			Destination: &c.OCPP.GranularActions,
+		},
+	})
+}
+
+// longPollingCLIFlags returns CLI flags for long polling settings
+func longPollingCLIFlags(c *config.Config) []cli.Flag {
+	return withDefaults(longPollingCategoryDescription, []cli.Flag{
+		&cli.BoolFlag{
+			Name:        "poll",
+			Usage:       "Enable long polling support",
+			Value:       c.LongPolling.Enabled,
+			Destination: &c.LongPolling.Enabled,
+		},
+		&cli.IntFlag{
+			Name:        "poll_interval",
+			Usage:       "Long polling interval (in seconds)",
+			Value:       c.LongPolling.PollInterval,
+			Destination: &c.LongPolling.PollInterval,
+		},
+		&cli.IntFlag{
+			Name:        "poll_flush_interval",
+			Usage:       "Long polling flush interval (in milliseconds) defines for how long to buffer server-to-client messages before flushing them to the client",
+			Value:       c.LongPolling.FlushInterval,
+			Destination: &c.LongPolling.FlushInterval,
+		},
+		&cli.StringFlag{
+			Name:        "poll_path",
+			Usage:       "Long polling endpoint path",
+			Value:       c.LongPolling.Path,
+			Destination: &c.LongPolling.Path,
+		},
+		&cli.IntFlag{
+			Name:        "poll_max_request_size",
+			Usage:       "Long polling maximum request body size (in bytes)",
+			Value:       c.LongPolling.MaxBodySize,
+			Destination: &c.LongPolling.MaxBodySize,
+		},
+		&cli.IntFlag{
+			Name:        "poll_keepalive_timeout",
+			Usage:       "Long polling keepalive timeout (in seconds) defines for how long to wait between poll requests before marking client as disconnected.",
+			Value:       c.LongPolling.KeepaliveTimeout,
+			Destination: &c.LongPolling.KeepaliveTimeout,
 		},
 	})
 }

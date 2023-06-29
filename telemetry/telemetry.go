@@ -207,6 +207,7 @@ func (t *Tracker) appProperties() map[string]interface{} {
 	props.Set("apollo", t.config.GraphQL.Enabled())
 	props.Set("ocpp", t.config.OCPP.Enabled())
 	props.Set("auto-rpc", t.config.RPC.Concurrency == 0)
+	props.Set("lp", t.config.LongPolling.Enabled)
 
 	return props
 }

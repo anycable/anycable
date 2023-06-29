@@ -1,0 +1,131 @@
+launch :rpc, "bundle exec anyt --only-rpc"
+wait_tcp 50051
+
+launch :anycable, "./dist/anycable-go --poll --poll_interval=1 --poll_keepalive_timeout=2 --broadcast_adapter=http " \
+                  "--metrics_rotate_interval=2 --metrics_log --metrics_log_filter=longpoll_clients_num,longpoll_stale_requests_total"
+wait_tcp 8080
+
+require "net/http"
+require "json"
+
+def post(url, body = nil, headers: {}, cookies: {})
+  uri = URI.parse(url)
+  http = Net::HTTP.new(uri.host, uri.port)
+  request = Net::HTTP::Post.new(uri.request_uri, headers)
+  request.body = body if body
+  request['Cookie'] = cookies.map { |k, v| "#{k}=#{v}" }.join('; ') unless cookies.empty?
+
+  log(:info) { "POST #{url} #{request.body} [#{request.to_hash}]" }
+
+  http.request(request).tap do |response|
+    log(:info) { "Response: #{response.code} #{response.body}" }
+  end
+end
+
+# perform HTTP polling request with subscription to BenchmarkChannel
+response = post("http://localhost:8080/lp", '{"command":"subscribe","identifier":"{\\"channel\\":\\"BenchmarkChannel\\"}"}')
+
+# check that response is 200 OK
+if response.code != '200'
+  fail "Polling initialization failed: expected 200 OK, got #{response.code}: #{response.body}"
+end
+
+messages =
+  begin
+    response.body.lines.map { JSON.parse(_1) }
+  rescue
+    fail "Polling initialization failed: unexpected response: #{response.body}"
+  end
+
+if messages.map { _1["type"] } != %w[welcome confirm_subscription]
+  fail "Polling initialization failed: unexpected response: #{response.body}"
+end
+
+poll_id = response.get_fields("X-AnyCable-Poll-ID").first
+
+# perform a long-polling request and verify that it responds with 204 No Content
+# if no messages are available
+response = post("http://localhost:8080/lp", headers: {"X-AnyCable-Poll-ID" => poll_id})
+
+if response.code != '204'
+  fail "Polling failed: expected 204 No Content, got #{response.code}: #{response.body}"
+end
+
+# broadcast a message
+response = post("http://localhost:8090/_broadcast", '{"stream":"all","data":"{\"text\":\"Hello, world!\"}"}')
+
+if response.code != '201'
+  fail "Broadcast failed: expected 201 Created, got #{response.code}: #{response.body}"
+end
+
+# perform another long-polling request and check that message is received
+response = post("http://localhost:8080/lp", headers: {"X-AnyCable-Poll-ID" => poll_id})
+
+# check that response is 200 OK
+if response.code != '200'
+  fail "Polling initialization failed: expected 200 OK, got #{response.code}: #{response.body}"
+end
+
+message = JSON.parse(response.body)
+
+if message != { "identifier" => "{\"channel\":\"BenchmarkChannel\"}", "message" => {"text" => "Hello, world!"}}
+  fail "Polling failed: unexpected response: #{response.body}"
+end
+
+# broadcast another message
+response = post("http://localhost:8090/_broadcast", '{"stream":"all","data":"{\"text\":\"The end of the world is near\"}"}')
+
+# sleep for at least keep alive time to make sure session is removed
+sleep 3
+
+response = post("http://localhost:8080/lp", headers: {"X-AnyCable-Poll-ID" => poll_id})
+
+# check that response is 401
+if response.code != '401'
+  fail "Polling failed: expected 401 Unauthorized, got #{response.code}: #{response.body}"
+end
+
+# check that we received unauthorized error
+message = JSON.parse(response.body)
+
+if message["type"] != "disconnect" && message["reason"] != "session_expired"
+  fail "Polling failed: unexpected response: #{response.body}"
+end
+
+# Re-connect
+response = post("http://localhost:8080/lp")
+
+# check that response is 200 OK
+if response.code != '200'
+  fail "Polling initialization failed: expected 200 OK, got #{response.code}: #{response.body}"
+end
+
+# check that we received unauthorized error
+message = JSON.parse(response.body)
+
+if message["type"] != "welcome"
+  fail "Polling failed: unexpected response: #{response.body}"
+end
+
+# New polling session id
+poll_id = response.get_fields("X-AnyCable-Poll-ID").first
+
+# now let's remotely disconnect the new session
+response = post("http://localhost:8090/_broadcast", '{"command":"disconnect","payload":{"identifier":"{}"}}')
+if response.code != '201'
+  fail "Broadcast failed: expected 201 Created, got #{response.code}: #{response.body}"
+end
+
+response = post("http://localhost:8080/lp", headers: {"X-AnyCable-Poll-ID" => poll_id})
+
+# check that response is 401
+if response.code != '401'
+  fail "Polling failed: expected 401 Unauthorized, got #{response.code}: #{response.body}"
+end
+
+# check that we received unauthorized error
+message = JSON.parse(response.body)
+
+if message["type"] != "disconnect" && message["reason"] != "session_expired"
+  fail "Polling failed: unexpected response: #{response.body}"
+end
