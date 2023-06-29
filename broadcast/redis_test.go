@@ -13,7 +13,7 @@ import (
 	"github.com/anycable/anycable-go/mocks"
 	rconfig "github.com/anycable/anycable-go/redis"
 	"github.com/anycable/anycable-go/utils"
-	"github.com/rueian/rueidis"
+	"github.com/redis/rueidis"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -49,7 +49,7 @@ func init() {
 		return
 	}
 
-	c.Do(context.Background(), c.B().XgroupDestroy().Key("__anycable__").Groupname("bx").Build())
+	c.Do(context.Background(), c.B().XgroupDestroy().Key("__anycable__").Group("bx").Build())
 }
 
 func TestRedisBroadcaster(t *testing.T) {

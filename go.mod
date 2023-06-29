@@ -20,14 +20,14 @@ require (
 	github.com/namsral/flag v1.7.4-pre
 	github.com/nats-io/nats.go v1.24.0
 	github.com/posthog/posthog-go v0.0.0-20221221115252-24dfed35d71a
-	github.com/rueian/rueidis v0.0.90
+	github.com/redis/rueidis v1.0.10
 	github.com/smira/go-statsd v1.3.2
 	github.com/stretchr/testify v1.8.2
 	github.com/syossan27/tebata v0.0.0-20180602121909-b283fe4bc5ba
 	github.com/urfave/cli/v2 v2.11.1
 	go.uber.org/automaxprocs v1.5.1
 	golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df
-	golang.org/x/net v0.7.0
+	golang.org/x/net v0.8.0
 	google.golang.org/grpc v1.53.0
 )
 
@@ -54,8 +54,8 @@ require (
 	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	golang.org/x/crypto v0.6.0 // indirect
-	golang.org/x/sys v0.5.0 // indirect
-	golang.org/x/text v0.7.0 // indirect
+	golang.org/x/sys v0.8.0 // indirect
+	golang.org/x/text v0.8.0 // indirect
 	google.golang.org/genproto v0.0.0-20230216225411-c8e22ba71e44 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

@@ -11,7 +11,7 @@ import (
 
 	"github.com/anycable/anycable-go/common"
 	rconfig "github.com/anycable/anycable-go/redis"
-	"github.com/rueian/rueidis"
+	"github.com/redis/rueidis"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

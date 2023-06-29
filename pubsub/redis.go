@@ -12,7 +12,7 @@ import (
 	rconfig "github.com/anycable/anycable-go/redis"
 	"github.com/anycable/anycable-go/utils"
 	"github.com/apex/log"
-	"github.com/rueian/rueidis"
+	"github.com/redis/rueidis"
 )
 
 type subscriptionState = int
