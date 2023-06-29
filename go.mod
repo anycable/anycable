@@ -12,18 +12,21 @@ require (
 	github.com/gomodule/redigo v1.8.8
 	github.com/google/gops v0.3.27
 	github.com/gorilla/websocket v1.5.0
+	github.com/hofstadter-io/cinful v1.0.0
 	github.com/joomcode/errorx v1.1.0
 	github.com/matoous/go-nanoid v1.5.0
 	github.com/mattn/go-isatty v0.0.14
 	github.com/mitchellh/go-mruby v0.0.0-20200315023956-207cedc21542
 	github.com/namsral/flag v1.7.4-pre
 	github.com/nats-io/nats.go v1.24.0
+	github.com/posthog/posthog-go v0.0.0-20221221115252-24dfed35d71a
 	github.com/rueian/rueidis v0.0.90
 	github.com/smira/go-statsd v1.3.2
 	github.com/stretchr/testify v1.8.2
 	github.com/syossan27/tebata v0.0.0-20180602121909-b283fe4bc5ba
 	github.com/urfave/cli/v2 v2.11.1
 	go.uber.org/automaxprocs v1.5.1
+	golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df
 	golang.org/x/net v0.7.0
 	google.golang.org/grpc v1.53.0
 )
@@ -32,25 +35,11 @@ require (
 replace github.com/stretchr/testify => github.com/palkan/testify v0.0.0-20220714120938-9ebebef47942
 
 require (
-	github.com/go-ole/go-ole v1.2.6 // indirect
-	github.com/hofstadter-io/cinful v1.0.0 // indirect
-	github.com/inconshreveable/mousetrap v1.0.1 // indirect
 	github.com/klauspost/compress v1.16.0 // indirect
-	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/minio/highwayhash v1.0.2 // indirect
 	github.com/nats-io/jwt/v2 v2.3.0 // indirect
-	github.com/posthog/posthog-go v0.0.0-20221221115252-24dfed35d71a // indirect
-	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
-	github.com/shirou/gopsutil/v3 v3.23.1 // indirect
-	github.com/spf13/cobra v1.6.1 // indirect
-	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/tklauser/go-sysconf v0.3.11 // indirect
-	github.com/tklauser/numcpus v0.6.0 // indirect
-	github.com/xlab/treeprint v1.1.0 // indirect
 	github.com/xtgo/uuid v0.0.0-20140804021211-a0b114877d4c // indirect
-	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	golang.org/x/time v0.3.0 // indirect
-	rsc.io/goversion v1.2.0 // indirect
 )
 
 require (
