@@ -252,6 +252,17 @@ func (s *Session) SetEnv(env *common.SessionEnv) {
 	s.env = env
 }
 
+func (s *Session) UnderlyingConn() Connection {
+	return s.conn
+}
+
+func (s *Session) IsConnected() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.Connected
+}
+
 func (s *Session) SetIdleTimeout(val time.Duration) {
 	time.AfterFunc(val, s.maybeDisconnectIdle)
 }
@@ -378,13 +389,17 @@ func (s *Session) Serve(callback func()) error {
 
 // SendMessages waits for incoming messages and send them to the client connection
 func (s *Session) SendMessages() {
-	defer s.disconnectNow("Write Failed", ws.CloseAbnormalClosure)
-
 	for message := range s.sendCh {
 		err := s.writeFrame(message)
 
+		if message.FrameType == ws.CloseFrame {
+			s.disconnectNow("Close frame sent", ws.CloseNormalClosure)
+			return
+		}
+
 		if err != nil {
 			s.metrics.CounterIncrement(metricsFailedSent)
+			s.disconnectNow("Write Failed", ws.CloseAbnormalClosure)
 			return
 		}
 
