@@ -31,7 +31,7 @@ func NewExecutor(node node.AppNode, c *Config) *Executor {
 }
 
 func (ex *Executor) HandleCommand(s *node.Session, msg *common.Message) error {
-	s.Log.Debugf("Incoming message: %v", msg)
+	s.Log.Debug("incoming message", "data", msg)
 
 	var sn string
 
@@ -104,7 +104,7 @@ func (ex *Executor) HandleCommand(s *node.Session, msg *common.Message) error {
 
 		// Subscription was rejected
 		if subRes != nil && subRes.Status == common.FAILURE {
-			s.Log.Debugf("boot notification rejected")
+			s.Log.Debug("boot notification rejected")
 			ex.sendStatus(s, msg.Identifier, "Rejected", nil)
 			ex.Disconnect(s) // nolint: errcheck
 			return nil

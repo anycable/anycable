@@ -22,6 +22,7 @@ import (
 	"github.com/anycable/anycable-go/graphql"
 	"github.com/anycable/anycable-go/identity"
 	"github.com/anycable/anycable-go/logger"
+	"github.com/anycable/anycable-go/lp"
 	metricspkg "github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/mrb"
 	"github.com/anycable/anycable-go/netpoll"
@@ -304,6 +305,27 @@ func (r *Runner) Run() error {
 
 	if err := r.startAPIServer(appNode, r.broker); err != nil {
 		return err
+	}
+
+	if r.config.LongPolling.Enabled {
+		r.log.Info(
+			fmt.Sprintf("Handle long polling requests at %s%s (poll_interval: %d, keepalive_timeout: %d)",
+				wsServer.Address(), r.config.LongPolling.Path,
+				r.config.LongPolling.PollInterval, r.config.LongPolling.KeepaliveTimeout),
+		)
+
+		lpHub := lp.NewHub(appNode, r.metrics, &r.config.LongPolling, r.log)
+
+		go lpHub.Run()
+		r.shutdownables = append(r.shutdownables, lpHub)
+
+		lpHandler, err := r.defaultLongPollingHandler(lpHub, wsServer.ShutdownCtx(), r.config)
+
+		if err != nil {
+			return errorx.Decorate(err, "!!! Failed to initialize long polling handler !!!")
+		}
+
+		wsServer.SetupHandler(r.config.LongPolling.Path, lpHandler)
 	}
 
 	go r.startWSServer(wsServer)
@@ -760,6 +782,11 @@ func (r *Runner) ocppWebsocketHandler(n *node.Node, c *config.Config) http.Handl
 
 		return session.Serve(callback)
 	})
+}
+
+func (r *Runner) defaultLongPollingHandler(hub *lp.Hub, shutdownCtx context.Context, c *config.Config) (http.Handler, error) {
+	extractor := server.DefaultHeadersExtractor{Headers: c.RPC.ProxyHeaders, Cookies: c.RPC.ProxyCookies}
+	return lp.LongPollingHandler(hub, shutdownCtx, &extractor, &c.LongPolling, r.log), nil
 }
 
 func (r *Runner) initMRuby() string {

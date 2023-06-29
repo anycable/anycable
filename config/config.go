@@ -14,6 +14,7 @@ import (
 	"github.com/anycable/anycable-go/graphql"
 	"github.com/anycable/anycable-go/identity"
 	"github.com/anycable/anycable-go/logger"
+	"github.com/anycable/anycable-go/lp"
 	"github.com/anycable/anycable-go/metrics"
 	nconfig "github.com/anycable/anycable-go/nats"
 	"github.com/anycable/anycable-go/node"
@@ -69,6 +70,7 @@ type Config struct {
 	GraphQL              graphql.Config             `toml:"graphql"`
 	LegacyGraphQL        graphql.Config
 	OCPP                 ocpp.Config
+	LongPolling          lp.Config
 
 	ConfigFilePath string
 }
@@ -107,6 +109,7 @@ func NewConfig() Config {
 		GraphQL:              graphql.NewConfig(),
 		LegacyGraphQL:        graphql.NewConfig(),
 		OCPP:                 ocpp.NewConfig(),
+		LongPolling:          lp.NewConfig(),
 	}
 
 	return config // nolint:govet
@@ -228,6 +231,9 @@ func (c *Config) ToToml() string {
 
 	result.WriteString("# API configuration\n[api]\n")
 	result.WriteString(c.API.ToToml())
+
+	result.WriteString("# Long polling configuration\n[lp]\n")
+	result.WriteString(c.LongPolling.ToToml())
 
 	result.WriteString("# Redis configuration\n[redis]\n")
 	result.WriteString(c.Redis.ToToml())
