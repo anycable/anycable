@@ -91,7 +91,7 @@ The following options are available:
 - `--poll_path` (`ANYCABLE_POLL_PATH`) (default: `/lp`): a long polling endpoint path.
 - `--poll_interval` (`ANYCABLE_POLL_INTERVAL`) (default: 15): polling interval in seconds.
 - `--poll_flush_interval` (`ANYCABLE_POLL_FLUSH_INTERVAL`) (default: 500): defines for how long to buffer server-to-client messages before flushing them to the client (in milliseconds).
-- `--poll_max_request_size` (`ANYCABLE_POLL_MAX_REQEUEST_SIZE`) (default: 64kB): maximum acceptible request body size (in bytes).
+- `--poll_max_request_size` (`ANYCABLE_POLL_MAX_REQEUEST_SIZE`) (default: 64kB): maximum acceptable request body size (in bytes).
 - `--poll_keepalive_timeout` (`ANYCABLE_POLL_KEEPALIVE_TIMEOUT`) (default: 5): defines for how long to keep a poll session alive between requests (in seconds).
 
 ## CORS
