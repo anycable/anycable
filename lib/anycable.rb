@@ -16,6 +16,8 @@ require "anycable/socket"
 require "anycable/rpc"
 require "anycable/health_server"
 
+require "anycable/httrpc/server"
+
 # AnyCable allows to use any websocket service (written in any language) as a replacement
 # for ActionCable server.
 #

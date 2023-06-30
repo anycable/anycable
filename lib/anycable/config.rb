@@ -53,6 +53,9 @@ module AnyCable
       http_health_port: nil,
       http_health_path: "/health",
 
+      ### HTTP RPC options
+      http_rpc_secret: nil,
+
       ### Misc options
       version_check_enabled: true,
       sid_header_enabled: true
@@ -110,6 +113,9 @@ module AnyCable
       HTTP PUB/SUB
           --http-broadcast-url              HTTP pub/sub endpoint URL, default: "http://localhost:8090/_broadcast"
           --http-broadcast-secret           HTTP pub/sub authorization secret, default: <none> (disabled)
+
+      HTTP RPC
+          --http-rpc-secret                 HTTP RPC authorization secret, default: <none> (disabled)
     TXT
 
     # Build Redis parameters

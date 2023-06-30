@@ -73,6 +73,7 @@ module AnyCable
   class ConnectionRequest
     include _WithEnv
 
+    def self.decode_json: (String) -> instance
     %a{rbs:test:skip} def initialize: (?env: Env) -> void
     def to_h: () -> Hash[Symbol, untyped]
   end
@@ -99,6 +100,8 @@ module AnyCable
 
   class CommandMessage
     include _WithEnv
+
+    def self.decode_json: (String) -> instance
 
     attr_accessor command: String
     attr_accessor identifier: String
@@ -143,6 +146,8 @@ module AnyCable
 
   class DisconnectRequest
     include _WithEnv
+
+    def self.decode_json: (String) -> instance
 
     attr_accessor identifiers: String
     attr_accessor subscriptions: Array[String]

@@ -41,6 +41,8 @@ module AnyCable
     def http_health_port=: (Integer) -> void
     def http_health_path: () -> String
     def http_health_path=: (String) -> void
+    def http_rpc_secret: () -> String
+    def http_rpc_secret=: (String) -> void
     def version_check_enabled: () -> bool
     def version_check_enabled=: (bool) -> void
     def version_check_enabled?: () -> bool

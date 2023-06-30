@@ -1,0 +1,11 @@
+module AnyCable
+  module HTTRPC
+    class Server
+      def initialize: (?token: String?) -> void
+      def call: (Hash[String, untyped] env) -> [Integer, Hash[String, String], Array[String]]
+      private
+      attr_reader token: String?
+      def build_meta: (Hash[String, untyped] env) -> Hash[String, String]
+    end
+  end
+end

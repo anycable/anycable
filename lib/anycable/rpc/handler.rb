@@ -23,6 +23,10 @@ module AnyCable
         end
       end
 
+      def supported?(cmd)
+        %i[connect disconnect command].include?(cmd)
+      end
+
       private
 
       attr_reader :commands, :middleware

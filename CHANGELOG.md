@@ -2,6 +2,8 @@
 
 ## master
 
+- Add HTTP RPC support. ([@palkan][])
+
 ## 1.4.0.rc.1 (2023-06-01)
 
 - Add `redisx` broadcast adapter. ([@palkan][])
