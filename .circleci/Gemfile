@@ -3,6 +3,7 @@ source "https://rubygems.org"
 
 gem "nats-pure"
 gem "colorize"
+gem "puma"
 
 if File.directory?(File.join(__dir__, "../../anycable"))
   $stdout.puts "\n=== Using local gems for Anyt ===\n\n"

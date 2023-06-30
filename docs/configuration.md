@@ -26,6 +26,10 @@ Server host and port (default: `"localhost:8080"`).
 
 RPC service address (default: `"localhost:50051"`).
 
+**--rpc_impl** (`ANYCABLE_RPC_IMPL`)
+
+RPC implementation to use, HTTP or gRPC (default: `"grpc"`). See below for more details on [HTTP RPC](#http-rpc).
+
 **--path** (`ANYCABLE_PATH`)
 
 WebSocket endpoint path (default: `"/cable"`).
@@ -136,6 +140,17 @@ The preset provides the following defaults:
 
 - `host`: "0.0.0.0".
 - `http_broadcast_port`: `$PORT` (to make HTTP endpoint accessible from other applications).
+
+## HTTP RPC
+
+When using HTTP RPC, you can specify the following additional options:
+
+- `http_rpc_secret`: a secret token used to authenticate RPC requests.
+- `http_rpc_timeout`: timeout for RPC requests (default: 3s).
+
+You MUST use `rpc_host` configuration option to provide the URL for HTTP RPC, e.g.: `https://my.web.app/anycable`.
+
+Please, refer to the [RPC over](../ruby/http_rpc.md) documentation for more information about this communication mode.
 
 ## TLS
 

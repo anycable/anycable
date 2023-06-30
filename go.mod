@@ -41,6 +41,7 @@ require (
 	github.com/klauspost/compress v1.16.0 // indirect
 	github.com/minio/highwayhash v1.0.2 // indirect
 	github.com/nats-io/jwt/v2 v2.3.0 // indirect
+	github.com/sony/gobreaker v0.5.0 // indirect
 	github.com/xtgo/uuid v0.0.0-20140804021211-a0b114877d4c // indirect
 	golang.org/x/time v0.3.0 // indirect
 )

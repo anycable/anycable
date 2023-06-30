@@ -554,10 +554,17 @@ func rpcCLIFlags(c *config.Config, headers, cookieFilter *string) []cli.Flag {
 		},
 
 		&cli.StringFlag{
-			Name:        "rpc_secret",
+			Name:        "http_rpc_secret",
 			Usage:       "Authentication secret for RPC over HTTP",
 			Value:       c.RPC.Secret,
 			Destination: &c.RPC.Secret,
+		},
+
+		&cli.IntFlag{
+			Name:        "http_rpc_timeout",
+			Usage:       "HTTP RPC timeout (in ms)",
+			Value:       c.RPC.RequestTimeout,
+			Destination: &c.RPC.RequestTimeout,
 		},
 	})
 }

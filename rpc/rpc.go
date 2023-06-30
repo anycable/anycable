@@ -193,7 +193,11 @@ func (c *Controller) Start() error {
 	if dialer == nil {
 		switch impl {
 		case "http":
-			dialer = NewHTTPDialer(c.config)
+			var err error
+			dialer, err = NewHTTPDialer(c.config)
+			if err != nil {
+				return err
+			}
 		case "grpc":
 			dialer = defaultDialer
 		default:

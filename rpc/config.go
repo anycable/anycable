@@ -37,9 +37,11 @@ type Config struct {
 	DialFun Dialer
 	// Secret for HTTP RPC authentication
 	Secret string
+	// Timeout for HTTP RPC requests (in ms)
+	RequestTimeout int
 }
 
 // NewConfig builds a new config
 func NewConfig() Config {
-	return Config{Concurrency: 28, EnableTLS: false, Host: defaultRPCHost, Implementation: "grpc"}
+	return Config{Concurrency: 28, EnableTLS: false, Host: defaultRPCHost, Implementation: "grpc", RequestTimeout: 3000}
 }
