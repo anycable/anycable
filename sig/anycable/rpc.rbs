@@ -96,6 +96,7 @@ module AnyCable
     ) -> void
 
     def to_h: () -> Hash[Symbol, untyped]
+    def to_json: (?Hash[Symbol, untyped] options) -> String
   end
 
   class CommandMessage
@@ -142,6 +143,7 @@ module AnyCable
     ) -> void
 
     def to_h: () -> Hash[Symbol, untyped]
+    def to_json: (?Hash[Symbol, untyped] options) -> String
   end
 
   class DisconnectRequest
@@ -164,6 +166,7 @@ module AnyCable
 
     %a{rbs:test:skip} def initialize: (status: rpcStatus, ?error_msg: String) -> void
     def to_h: () -> Hash[Symbol, untyped]
+    def to_json: (?Hash[Symbol, untyped] options) -> String
   end
 
   type rpcRequest = ConnectionRequest | DisconnectRequest | CommandMessage
