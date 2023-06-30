@@ -30,7 +30,7 @@ These are the vital metrics of the RPC communication channel.
 
 The `rpc_error_total` describes the number of failed RPC calls. This is the actual number of _commands_ that failed. The most common reason for the is a lack of network connectivity with the RPC service. Another potential reason is the RPC schema incompatibility (in that case, most RPC requests would fail, i.e., `rpc_call_total / rpc_error_total` tends to 1).
 
-The `rpc_retries_total` describes the number of retried RPC calls. Retries could happen if the RPC server is exhausted or unavailable (no network connectivity). The former indicates that **concurrency settings for RPC and anycable-go went out of sync** (see [./configuration.md]).
+The `rpc_retries_total` describes the number of retried RPC calls. Retries could happen if the RPC server is exhausted or unavailable (no network connectivity). The former indicates that **concurrency settings for RPC and anycable-go went out of sync** (see [here](./configuration.md)).
 
 The `rpc_pending_num` is the **key latency metrics** of AnyCable-Go. We limit the number of concurrent RPC requests (to prevent the RPC server exhaustion and retries). If the number of pending requests grows (which means we can not keep up with the rate of incoming messages), you should consider either tuning concurrency settings or scale up your cluster.
 
