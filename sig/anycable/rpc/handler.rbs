@@ -15,6 +15,7 @@ module AnyCable
 
       def initialize: (?middleware: MiddlewareChain) -> void
       def handle: (Symbol cmd, rpcRequest data, ?rpcMetadata meta) -> rpcResponse
+      def supported?: (Symbol cmd) -> bool
 
       private
 
