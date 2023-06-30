@@ -175,7 +175,7 @@ func NewController(metrics metrics.Instrumenter, config *Config) *Controller {
 		metrics.GaugeSet(metricsRPCCapacity, uint64(barrier.Capacity()))
 	}
 
-	if config.DialFun == nil {
+	if config.Implementation == "grpc" {
 		metrics.RegisterGauge(metricsGRPCActiveConns, "The number of active HTTP connections used by gRPC")
 	}
 
@@ -186,19 +186,25 @@ func NewController(metrics metrics.Instrumenter, config *Config) *Controller {
 func (c *Controller) Start() error {
 	host := c.config.Host
 	enableTLS := c.config.EnableTLS
+	impl := c.config.Implementation
 
-	var dialer Dialer
+	dialer := c.config.DialFun
 
-	if c.config.DialFun != nil {
-		dialer = c.config.DialFun
-	} else {
-		dialer = defaultDialer
+	if dialer == nil {
+		switch impl {
+		case "http":
+			dialer = NewHTTPDialer(c.config)
+		case "grpc":
+			dialer = defaultDialer
+		default:
+			return fmt.Errorf("unknown RPC implementation: %s", impl)
+		}
 	}
 
 	client, state, err := dialer(c.config)
 
 	if err == nil {
-		c.log.Infof("RPC controller initialized: %s (concurrency: %s, enable_tls: %t, proto_versions: %s)", host, c.barrier.CapacityInfo(), enableTLS, ProtoVersions)
+		c.log.Infof("RPC controller initialized: %s (concurrency: %s, impl: %s, enable_tls: %t, proto_versions: %s)", host, c.barrier.CapacityInfo(), impl, enableTLS, ProtoVersions)
 	} else {
 		return err
 	}

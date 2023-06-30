@@ -31,11 +31,15 @@ type Config struct {
 	MaxRecvSize int
 	// Max send msg size (bytes)
 	MaxSendSize int
+	// Underlying implementation (grpc, http)
+	Implementation string
 	// Alternative dialer implementation
 	DialFun Dialer
+	// Secret for HTTP RPC authentication
+	Secret string
 }
 
 // NewConfig builds a new config
 func NewConfig() Config {
-	return Config{Concurrency: 28, EnableTLS: false, Host: defaultRPCHost}
+	return Config{Concurrency: 28, EnableTLS: false, Host: defaultRPCHost, Implementation: "grpc"}
 }

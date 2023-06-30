@@ -501,7 +501,7 @@ func rpcCLIFlags(c *config.Config, headers, cookieFilter *string) []cli.Flag {
 	return withDefaults(rpcCategoryDescription, []cli.Flag{
 		&cli.StringFlag{
 			Name:        "rpc_host",
-			Usage:       "RPC service address",
+			Usage:       "RPC service address (full URL in case of HTTP RPC)",
 			Value:       c.RPC.Host,
 			Destination: &c.RPC.Host,
 		},
@@ -544,6 +544,20 @@ func rpcCLIFlags(c *config.Config, headers, cookieFilter *string) []cli.Flag {
 			Name:        "proxy-cookies",
 			Usage:       "Cookie keys to send to RPC, default is all",
 			Destination: cookieFilter,
+		},
+
+		&cli.StringFlag{
+			Name:        "rpc_impl",
+			Usage:       "RPC implementation (grpc, http)",
+			Value:       c.RPC.Implementation,
+			Destination: &c.RPC.Implementation,
+		},
+
+		&cli.StringFlag{
+			Name:        "rpc_secret",
+			Usage:       "Authentication secret for RPC over HTTP",
+			Value:       c.RPC.Secret,
+			Destination: &c.RPC.Secret,
 		},
 	})
 }
