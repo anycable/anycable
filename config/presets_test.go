@@ -65,19 +65,51 @@ func TestHerokuPresets(t *testing.T) {
 	assert.Equal(t, 4321, config.HTTPBroadcast.Port)
 }
 
-func TestTryBroker(t *testing.T) {
+func TestBroker(t *testing.T) {
 	config := NewConfig()
-	config.UserPresets = []string{"try-broker"}
+	config.UserPresets = []string{"broker"}
 
-	require.Equal(t, []string{"try-broker"}, config.Presets())
+	require.Equal(t, []string{"broker"}, config.Presets())
 
 	err := config.LoadPresets()
 
 	require.NoError(t, err)
 
 	assert.Equal(t, "memory", config.BrokerAdapter)
-	assert.Equal(t, "http,redis", config.BroadcastAdapter)
+	assert.Equal(t, "http", config.BroadcastAdapter)
+	assert.Equal(t, "", config.PubSubAdapter)
+}
+
+func TestBrokerWhenRedisConfigured(t *testing.T) {
+	config := NewConfig()
+	config.UserPresets = []string{"broker"}
+	config.Redis.URL = "redis://localhost:6379/1"
+
+	require.Equal(t, []string{"broker"}, config.Presets())
+
+	err := config.LoadPresets()
+
+	require.NoError(t, err)
+
+	assert.Equal(t, "memory", config.BrokerAdapter)
+	assert.Equal(t, "http,redisx,redis", config.BroadcastAdapter)
 	assert.Equal(t, "redis", config.PubSubAdapter)
+}
+
+func TestBrokerWhenENATSConfigured(t *testing.T) {
+	config := NewConfig()
+	config.UserPresets = []string{"broker"}
+	config.EmbedNats = true
+
+	require.Equal(t, []string{"broker"}, config.Presets())
+
+	err := config.LoadPresets()
+
+	require.NoError(t, err)
+
+	assert.Equal(t, "memory", config.BrokerAdapter)
+	assert.Equal(t, "http,nats", config.BroadcastAdapter)
+	assert.Equal(t, "nats", config.PubSubAdapter)
 }
 
 func TestOverrideSomePresetSettings(t *testing.T) {

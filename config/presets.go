@@ -39,8 +39,8 @@ func (c *Config) LoadPresets() error {
 			if err := c.loadHerokuPreset(&defaults); err != nil {
 				return err
 			}
-		case "try-broker":
-			if err := c.loadTryBrokerPreset(&defaults); err != nil {
+		case "broker":
+			if err := c.loadBrokerPreset(&defaults); err != nil {
 				return err
 			}
 		}
@@ -114,17 +114,30 @@ func (c *Config) loadHerokuPreset(defaults *Config) error {
 	return nil
 }
 
-func (c *Config) loadTryBrokerPreset(defaults *Config) error {
+func (c *Config) loadBrokerPreset(defaults *Config) error {
 	if c.BrokerAdapter == defaults.BrokerAdapter {
 		c.BrokerAdapter = "memory"
 	}
 
+	redisEnabled := c.Redis.URL != defaults.Redis.URL
+	enatsEnabled := c.EmbedNats
+
 	if c.BroadcastAdapter == defaults.BroadcastAdapter {
-		c.BroadcastAdapter = "http,redis"
+		if redisEnabled {
+			c.BroadcastAdapter = "http,redisx,redis"
+		} else if enatsEnabled {
+			c.BroadcastAdapter = "http,nats"
+		} else {
+			c.BroadcastAdapter = "http"
+		}
 	}
 
 	if c.PubSubAdapter == defaults.PubSubAdapter {
-		c.PubSubAdapter = "redis"
+		if redisEnabled || strings.Contains(c.BroadcastAdapter, "redis") {
+			c.PubSubAdapter = "redis"
+		} else if enatsEnabled {
+			c.PubSubAdapter = "nats"
+		}
 	}
 
 	return nil
