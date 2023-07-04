@@ -2,6 +2,8 @@
 
 ## master
 
+## 1.4.0.rc.2 (2023-07-03)
+
 - Add HTTP RPC support. ([@palkan][])
 
 ## 1.4.0.rc.1 (2023-06-01)
