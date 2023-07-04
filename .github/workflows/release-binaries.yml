@@ -55,7 +55,7 @@ jobs:
           dist/anycable-go-mrb-linux-amd64 -v
       - uses: xresloader/upload-to-github-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           file: "dist/anycable-go-*"
           tags: true
@@ -106,7 +106,7 @@ jobs:
         dist/anycable-go-mrb-darwin-amd64 -v
     - uses: xresloader/upload-to-github-release@v1
       env:
-        GITHUB_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         file: "dist/anycable-go-*"
         tags: true
