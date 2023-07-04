@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -218,12 +219,18 @@ func TestHTTPServiceAuthentication(t *testing.T) {
 }
 
 func TestHTTPServiceRequestTimeout(t *testing.T) {
+	completed := int64(0)
+
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		res := pb.ConnectionResponse{
 			Status: pb.Status_SUCCESS,
 		}
 
-		time.Sleep(100 * time.Millisecond)
+		// Timers are not determenistic (especially on CI with OSX — don't know why)
+		// let's make sure the request is slow enough to be cancelled
+		for atomic.LoadInt64(&completed) == 0 {
+			time.Sleep(50 * time.Millisecond)
+		}
 
 		w.Write(utils.ToJSON(res)) // nolint: errcheck
 	}))
@@ -242,6 +249,7 @@ func TestHTTPServiceRequestTimeout(t *testing.T) {
 	ctx := context.Background()
 
 	_, err := service.Connect(ctx, request)
+	atomic.AddInt64(&completed, 1)
 
 	require.Error(t, err)
 
