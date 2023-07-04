@@ -20,6 +20,8 @@ production:
 
 That's it! Now configure your WebSocket to perform RPC over HTTP at your mount path (e.g., `/_anycable`).
 
+**IMPORTANT**: Make sure you use a recent version of the `google-protobuf` gem (>= 3.23.3).
+
 ## Security
 
 You can (and MUST in production) protect your HTTP RPC server with basic token-based authorization. To do so, you need to set the `http_rpc_secret` parameter (in YAML or via the `ANYCABLE_HTTP_RPC_SECRET` environment variable). Don't forget to set the same value in your WebSocket server configuration.
