@@ -2,6 +2,10 @@
 
 ## master
 
+## 1.4.0.rc.3 (2023-07-04)
+
+- Fix HTTP RPC protobuf-to-json encoding. ([@palkan][])
+
 ## 1.4.0.rc.2 (2023-07-03)
 
 - Add HTTP RPC support. ([@palkan][])

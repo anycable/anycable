@@ -36,7 +36,7 @@ module AnyCable
 
         response = AnyCable.rpc_handler.handle(rpc_command, payload, build_meta(env))
 
-        [200, {}, [response.to_json({format_enums_as_integers: true})]]
+        [200, {}, [response.to_json({format_enums_as_integers: true, preserve_proto_fieldnames: true})]]
       rescue JSON::ParserError, ArgumentError => e
         [422, {}, ["Invalid request body: #{e.message}"]]
       end

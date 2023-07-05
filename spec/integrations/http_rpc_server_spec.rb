@@ -78,7 +78,8 @@ describe "HTTP RPC" do
     let(:response) { post "/connect", request, request_headers }
 
     subject(:result) do
-      AnyCable::ConnectionResponse.decode_json(response)
+      # Use .new(JSON.parse) instead of .decode_json to match Go implementation
+      AnyCable::ConnectionResponse.new(**JSON.parse(response, symbolize_names: true))
     end
 
     it "responds with success", :aggregate_failures do
