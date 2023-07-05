@@ -68,6 +68,7 @@ func TestHerokuPresets(t *testing.T) {
 func TestBroker(t *testing.T) {
 	config := NewConfig()
 	config.UserPresets = []string{"broker"}
+	config.BroadcastAdapter = "http"
 
 	require.Equal(t, []string{"broker"}, config.Presets())
 

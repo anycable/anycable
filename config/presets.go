@@ -115,28 +115,30 @@ func (c *Config) loadHerokuPreset(defaults *Config) error {
 }
 
 func (c *Config) loadBrokerPreset(defaults *Config) error {
+	redisEnabled := (c.Redis.URL != defaults.Redis.URL) || strings.Contains(c.BroadcastAdapter, "redis")
+	enatsEnabled := c.EmbedNats
+
 	if c.BrokerAdapter == defaults.BrokerAdapter {
 		c.BrokerAdapter = "memory"
 	}
 
-	redisEnabled := c.Redis.URL != defaults.Redis.URL
-	enatsEnabled := c.EmbedNats
-
 	if c.BroadcastAdapter == defaults.BroadcastAdapter {
-		if redisEnabled {
-			c.BroadcastAdapter = "http,redisx,redis"
-		} else if enatsEnabled {
+		switch {
+		case enatsEnabled:
 			c.BroadcastAdapter = "http,nats"
-		} else {
+		case redisEnabled:
+			c.BroadcastAdapter = "http,redisx,redis"
+		default:
 			c.BroadcastAdapter = "http"
 		}
 	}
 
 	if c.PubSubAdapter == defaults.PubSubAdapter {
-		if redisEnabled || strings.Contains(c.BroadcastAdapter, "redis") {
-			c.PubSubAdapter = "redis"
-		} else if enatsEnabled {
+		switch {
+		case enatsEnabled:
 			c.PubSubAdapter = "nats"
+		case redisEnabled:
+			c.PubSubAdapter = "redis"
 		}
 	}
 
