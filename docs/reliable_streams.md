@@ -98,7 +98,7 @@ Currently, the configuration is global. We plan to add support for granular (per
 
 ## Resumed sessions vs. disconnect callbacks
 
-AnyCable WebSocket server notifies a main application about the client disconnection via the `Disconnect` RPC call (which translates into `Connection#disconnect` and `Channel#unsubscribed` calls in Rails). Currently, when the client's session is restored, no callbacks are invoked in the main application. Keep this limitation in mind when designing your busines logic (i.e., if you rely on connect/disconnect callbacks, you should consider disabling sessions cache by setting `sessions_ttl` to 0).
+AnyCable WebSocket server notifies a main application about the client disconnection via the `Disconnect` RPC call (which translates into `Connection#disconnect` and `Channel#unsubscribed` calls in Rails). Currently, when the client's session is restored, no callbacks are invoked in the main application. Keep this limitation in mind when designing your business logic (i.e., if you rely on connect/disconnect callbacks, you should consider disabling sessions cache by setting `sessions_ttl` to 0).
 
 **NOTE:** We consider introducing a new RPC method, `Restore`, along with the corresponding Ruby-side callbacks (`Connection#restored` and `Channel#resubscribed`) to handle this situation. Feel free to join [the discussion](https://github.com/orgs/anycable/discussions/209) and share your thoughts!
 
