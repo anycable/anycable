@@ -1,4 +1,4 @@
-# Reliable Streams
+# Reliable streams and resumable sessions
 
 Since v1.4, AnyCable allows you to enhance the consistency of your real-time data and go from **at-most-once** to **at-least-once** and even **exactly-once delivery**.
 
@@ -6,7 +6,9 @@ Since v1.4, AnyCable allows you to enhance the consistency of your real-time dat
 
 ## Overview
 
-The next-level delivery guarantees are achieved by introducing **reliable streams**. AnyCable keeps a _hot cache_\* of the messages sent to the streams and allows clients to request the missed messages on re-connection. AnyCable also stores sessions information in the cache to make it possible to restore the client state on re-connection (to avoid re-subscribing to the channels).
+The next-level delivery guarantees are achieved by introducing **reliable streams**. AnyCable keeps a _hot cache_\* of the messages sent to the streams and allows clients to request the missed messages on re-connection.
+
+In addition to reliable streams, AnyCable v1.4 also introduces **resumable sessions**. This feature allows clients to restore their state on re-connection and avoid re-authentication and re-subscription to channels.
 
 \* The "hot cache" here means that the cache is short-lived and is not intended to be used as a long-term storage. The primary purpose of this cache is to improve the reliability of the stream delivery for clients with unstable network connections.
 
@@ -93,6 +95,12 @@ There are several configuration options to control how to store messages and ses
 - `--sessions_ttl`: Max time to keep sessions in the cache. Default: `300s`.
 
 Currently, the configuration is global. We plan to add support for granular (per-stream) settings in the following releases.
+
+## Resumed sessions vs. disconnect callbacks
+
+AnyCable WebSocket server notifies a main application about the client disconnection via the `Disconnect` RPC call (which translates into `Connection#disconnect` and `Channel#unsubscribed` calls in Rails). Currently, when the client's session is restored, no callbacks are invoked in the main application. Keep this limitation in mind when designing your busines logic (i.e., if you rely on connect/disconnect callbacks, you should consider disabling sessions cache by setting `sessions_ttl` to 0).
+
+**NOTE:** We consider introducing a new RPC method, `Restore`, along with the corresponding Ruby-side callbacks (`Connection#restored` and `Channel#resubscribed`) to handle this situation. Feel free to join [the discussion](https://github.com/orgs/anycable/discussions/209) and share your thoughts!
 
 ## Cache backends
 
