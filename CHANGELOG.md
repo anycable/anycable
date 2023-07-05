@@ -2,6 +2,8 @@
 
 ## master
 
+- Add HTTP RPC implementation. ([@palkan][])
+
 - Added telemetry data collection. ([@palkan][])
 
 - Add `--turbo_rails_cleartext` and `--cable_ready_cleartext`. ([@palkan][])
@@ -22,7 +24,7 @@ Previously, we used a Go routine pool to concurrently delivery broadcasts, which
 
 - Set HTTP broadcast to `$PORT` on Heroku by default. ([@palkan][])
 
-- Add `try-broker` preset to configure required components to use an in-memory broker. ([@palkan][])
+- Add `broker` preset to configure required components to use an in-memory broker. ([@palkan][])
 
 - Add NATS pub/sub. ([@palkan][])
 
