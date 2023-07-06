@@ -6,7 +6,7 @@ Since v1.4, AnyCable allows you to enhance the consistency of your real-time dat
 
 ## Overview
 
-The next-level delivery guarantees are achieved by introducing **reliable streams**. AnyCable keeps a _hot cache_\* of the messages sent to the streams and allows clients to request the missed messages on re-connection.
+The next-level delivery guarantees are achieved by introducing **reliable streams**. AnyCable keeps a *hot cache* \* of the messages sent to the streams and allows clients to request the missed messages on re-connection.
 
 In addition to reliable streams, AnyCable v1.4 also introduces **resumable sessions**. This feature allows clients to restore their state on re-connection and avoid re-authentication and re-subscription to channels.
 
