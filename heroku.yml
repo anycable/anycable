@@ -1,0 +1,5 @@
+build:
+  config:
+    ANYCABLE_GO_TAG: latest
+  docker:
+    web: .docker/Dockerfile.heroku

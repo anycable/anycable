@@ -1,0 +1,25 @@
+{
+  "name": "anycable-go",
+  "description": "Performant and feature-rich WebSocket server for Rails and Ruby applications.",
+  "keywords": ["websockets", "rails", "hotwire"],
+  "repository": "https://github.com/anycable/anycable-go",
+  "logo": "https://docs.anycable.io/assets/images/logo.svg",
+  "stack": "container",
+  "env": {
+    "ANYCABLE_RPC_IMPL": {
+      "description": "RPC implementation (use HTTP for simplified Heroku deployments)",
+      "value": "http",
+      "required": true
+    },
+    "ANYCABLE_RPC_HOST": {
+      "description": "URL of the HTTP RPC embedded into your web application",
+      "value": "http",
+      "required": true
+    },
+    "ANYCABLE_HTTP_RPC_SECRET": {
+      "description": "A secret token to authenticate HTTP RPC requests (must be configured for both applications)",
+      "value": "",
+      "required": false
+    }
+  }
+}

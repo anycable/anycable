@@ -1,0 +1,4 @@
+ARG ANYCABLE_GO_TAG=latest
+
+FROM anycable/anycable-go:$ANYCABLE_GO_TAG
+LABEL maintainer="Vladimir Dementyev <palkan@hey.com>"
