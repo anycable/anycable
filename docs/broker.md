@@ -64,14 +64,13 @@ The overall broadcasting message flow looks as follows:
 graph LR
   Publisher[Publisher]
 
-
-  subgraph Node 2
+  subgraph node2[Node 2]
    PubSub2[Pub/Sub 2]
    ClientC[Client C]
    ClientD[Client D]
   end
 
-  subgraph Node 1
+  subgraph node1[Node 1]
    Broadcaster[Broadcaster]
    Broker[Broker]
    BrokerBackend[Broker Backend]
@@ -80,6 +79,9 @@ graph LR
    ClientB[Client B]
   end
 
+  class node1 lightbg
+  class node2 lightbg
+  classDef lightbg fill:#ffe,stroke:#333,stroke-width:2px
 
   Publisher -.->|Message| Broadcaster
   Broadcaster -->|Message| Broker
