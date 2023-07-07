@@ -2,6 +2,10 @@
 
 ## master
 
+## 1.4.0 (2023-07-07)
+
+- Add Redis broker.
+
 - Experimental OCPP v1.6 support.
 
 ## 1.3.0 (2023-02-28)
