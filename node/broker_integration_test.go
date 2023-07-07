@@ -39,11 +39,15 @@ import (
 // TEST 3 — expired cache:
 // - Wait for cache to expire
 // - Make sure it is not restored (uses controller.Authenticate)
-func TestIntegrationRestore(t *testing.T) {
+func TestIntegrationRestore_Memory(t *testing.T) {
 	node, controller := setupIntegrationNode()
 	go node.Start()       // nolint:errcheck
 	defer node.Shutdown() // nolint:errcheck
 
+	sharedIntegrationRestore(t, node, controller)
+}
+
+func sharedIntegrationRestore(t *testing.T, node *Node, controller *mocks.Controller) {
 	sid := "s18"
 	ids := "user:jack"
 
@@ -202,11 +206,15 @@ func TestIntegrationRestore(t *testing.T) {
 // - The session subscribes again.
 // - A history request is made with stream offsets.
 // - The session MUST receive the messages broadcasted during the unsubsciprtion period.
-func TestIntegrationHistory(t *testing.T) {
+func TestIntegrationHistory_Memory(t *testing.T) {
 	node, controller := setupIntegrationNode()
 	go node.Start()       // nolint:errcheck
 	defer node.Shutdown() // nolint:errcheck
 
+	sharedIntegrationHistory(t, node, controller)
+}
+
+func sharedIntegrationHistory(t *testing.T, node *Node, controller *mocks.Controller) {
 	node.HandleBroadcast([]byte(`{"stream": "messages_1","data":"Lorenzo: Ciao"}`))
 
 	// Use sleep to make sure Since option works (and we don't want
