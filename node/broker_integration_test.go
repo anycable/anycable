@@ -5,8 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net/url"
+	"os"
+	"strconv"
 	"testing"
 	"time"
+
+	rconfig "github.com/anycable/anycable-go/redis"
 
 	"github.com/anycable/anycable-go/broker"
 	"github.com/anycable/anycable-go/common"
@@ -15,12 +20,62 @@ import (
 	"github.com/anycable/anycable-go/mocks"
 	"github.com/anycable/anycable-go/pubsub"
 	"github.com/anycable/anycable-go/ws"
+	"github.com/redis/rueidis"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	natsconfig "github.com/anycable/anycable-go/nats"
 )
+
+var (
+	redisAvailable = false
+	redisURL       = os.Getenv("REDIS_URL")
+	redisConfig    = rconfig.NewRedisConfig()
+)
+
+// Check if Redis is available and skip tests otherwise
+func init() {
+	if redisURL != "" {
+		redisConfig.URL = redisURL
+	}
+
+	// Make sure we use different DB from unit tests,
+	// so parallel runs do not conflict
+	u, err := url.Parse(redisConfig.URL)
+	if err != nil {
+		fmt.Printf("Failed to parse Redis URL: %v", err)
+		return
+	}
+
+	db := 0
+	if u.Path != "" {
+		val, serr := strconv.Atoi(u.Path[1:])
+		if serr != nil {
+			db = val
+		}
+	}
+
+	u.Path = fmt.Sprintf("/%d", db+1)
+	redisConfig.URL = u.String()
+
+	options, _ := redisConfig.ToRueidisOptions() // nolint: errcheck
+
+	c, err := rueidis.NewClient(*options)
+
+	if err != nil {
+		fmt.Printf("Failed to connect to Redis: %v", err)
+		return
+	}
+
+	err = c.Do(context.Background(), c.B().Arbitrary("PING").Build()).Error()
+
+	redisAvailable = err == nil
+
+	if !redisAvailable {
+		return
+	}
+}
 
 // A test to verify the restore flow.
 //
@@ -82,6 +137,32 @@ func TestIntegrationRestore_NATS(t *testing.T) {
 
 	broadcaster := pubsub.NewLegacySubscriber(node)
 	broker := broker.NewNATSBroker(broadcaster, &bconf, &nconfig, slog.Default())
+	node.SetBroker(broker)
+
+	require.NoError(t, node.Start())
+	require.NoError(t, broker.Start(nil))
+
+	defer node.Shutdown(context.Background()) // nolint:errcheck
+
+	require.NoError(t, broker.Reset())
+	require.NoError(t, broker.SetEpoch("2022"))
+
+	sharedIntegrationRestore(t, node, controller)
+}
+
+func TestIntegrationRestore_Redis(t *testing.T) {
+	if !redisAvailable {
+		t.Skip("Redis is not available")
+		return
+	}
+
+	node, controller := setupIntegrationNode()
+
+	bconf := broker.NewConfig()
+	bconf.SessionsTTL = 2
+
+	subscriber := pubsub.NewLegacySubscriber(node)
+	broker := broker.NewRedisBroker(subscriber, &bconf, &redisConfig, slog.Default())
 	node.SetBroker(broker)
 
 	require.NoError(t, node.Start())
@@ -293,6 +374,32 @@ func TestIntegrationHistory_NATS(t *testing.T) {
 
 	require.NoError(t, node.Start())
 	require.NoError(t, broker.Start(nil))
+
+	defer node.Shutdown(context.Background()) // nolint:errcheck
+
+	require.NoError(t, broker.Reset())
+	require.NoError(t, broker.SetEpoch("2022"))
+
+	sharedIntegrationHistory(t, node, controller)
+}
+
+func TestIntegrationHistory_Redis(t *testing.T) {
+	if !redisAvailable {
+		t.Skip("Redis is not available")
+		return
+	}
+
+	node, controller := setupIntegrationNode()
+
+	bconf := broker.NewConfig()
+
+	subscriber := pubsub.NewLegacySubscriber(node)
+	broker := broker.NewRedisBroker(subscriber, &bconf, &redisConfig, slog.Default())
+	node.SetBroker(broker)
+
+	require.NoError(t, node.Start())
+	require.NoError(t, broker.Start(nil))
+
 	defer node.Shutdown(context.Background()) // nolint:errcheck
 
 	require.NoError(t, broker.Reset())

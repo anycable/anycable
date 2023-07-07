@@ -516,7 +516,7 @@ func broadcastCLIFlags(c *config.Config) []cli.Flag {
 		},
 		&cli.StringFlag{
 			Name:        "broker",
-			Usage:       "Broker engine to use (memory)",
+			Usage:       "Broker engine to use (memory or redis)",
 			Value:       c.BrokerAdapter,
 			Destination: &c.BrokerAdapter,
 		},
