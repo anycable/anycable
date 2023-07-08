@@ -6,6 +6,8 @@ HTTP RPC is a good alternative if you don't want to deal with gRPC or you are us
 
 You can embed AnyCable HTTP RPC _server_ (a Rack application) into your Ruby or Rails application's web server (e.g., Puma) and serve AnyCable RPC requests from the same process.
 
+> See the [demo](https://github.com/anycable/anycable_rails_demo/pull/1) of using HTTP RPC in a Rails application.
+
 ## Using with Rails
 
 To enable HTTP RPC in your Rails application, you must configure the `http_rpc_mount_path` parameter. For example, in your `config/anycable.yml`:
