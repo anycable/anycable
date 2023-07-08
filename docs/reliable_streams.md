@@ -116,7 +116,23 @@ The default broker adapter. It stores all data in memory. It can be used **only 
 
 <p class="pro-badge-header"></p>
 
-Coming soon ⏳
+AnyCable-Go Pro comes with a Redis-based broker adapter. It stores all data in Redis and, thus, can be used in multi-node installations.
+
+To use Redis broker, you need to provide the `--broker` option with the `redis` adapter name:
+
+```sh
+$ anycable-go --broker=redis
+
+ INFO 2023-07-08T00:46:55.491Z context=main Starting AnyCable 1.4.0-pro-eed05bc (with mruby 1.2.0 (2015-11-17)) (pid: 78585, open file limit: 122880, gomaxprocs: 8, netpoll: true)
+ INFO 2023-07-08T00:46:55.492Z context=main Using Redis broker at localhost:6379 (history limit: 100, history ttl: 300s, sessions ttl: 300s)
+ ...
+```
+
+When you use the `broker` preset with AnyCable-Go, it automatically configures the Redis broker (if Redis credentials are configured).
+
+#### Streams history expiration
+
+We use [Redis Streams](https://redis.io/docs/data-types/streams/) to store messages history. Redis doesn't support expiring individual messages in a stream, so we expire the whole stream instead. In other words, the `--history_ttl` option controls the expiration of the whole stream.
 
 ## Further reading
 

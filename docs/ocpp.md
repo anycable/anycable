@@ -4,7 +4,7 @@
 
 [OCPP][] (Open Charge Point Protocol) is a communication protocol for electric vehicle charging stations. It defines a WebSocket-based RPC communication protocol to manage station and receive status updates.
 
-AnyCable-Go Pro supports OCPP and allows you to _connect_ your charging stations to Ruby or Rails appliciations and control everything using Action Cable at the backend.
+AnyCable-Go Pro supports OCPP and allows you to _connect_ your charging stations to Ruby or Rails applications and control everything using Action Cable at the backend.
 
 **NOTE:** Currently, AnyCable-Go Pro supports OCPP v1.6 only. Please, contact us if you need support for other versions.
 
@@ -12,13 +12,13 @@ AnyCable-Go Pro supports OCPP and allows you to _connect_ your charging stations
 
 - EV charging station connects to AnyCable-Go via WebSocket
 - The station sends a `BootNotification` request to initialize the connection
-- AnyCable transforms this request into several AnyCable RPC calls to match the Action Cable inteface:
+- AnyCable transforms this request into several AnyCable RPC calls to match the Action Cable interface:
   1) `Authenticate -> Connection#connect` to authenticate the station.
   2) `Command{subscribe} -> OCCPChannel#subscribed` to initialize a channel entity to association with this station.
   3) `Command{perform} -> OCCPChannel#boot_notification` to handle the `BootNotification` request.
 - Subsequent requests from the station are converted into `OCCPChannel` action calls (e.g., `Authorize -> OCCPChannel#authorize`, `StartTransaction -> OCCPChannel#start_transaction`).
 
-AnyCable also takes care of heartbeats and ack messages (unless you send them manually, see below).
+AnyCable also takes care of heartbeats and acknowledgment messages (unless you send them manually, see below).
 
 ## Usage
 
