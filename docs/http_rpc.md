@@ -22,7 +22,7 @@ production:
 
 That's it! Now configure your WebSocket to perform RPC over HTTP at your mount path (e.g., `/_anycable`).
 
-**IMPORTANT**: Make sure you use a recent version of the `google-protobuf` gem (>= 3.23.3).
+**NOTE:** If you don't use AnyCable gRPC server in any environment, you can avoid installing gRPC dependencies by using the `anycable-rails-core` gem instead of `anycable-rails`.
 
 ## Security
 
