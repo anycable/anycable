@@ -519,6 +519,19 @@ func rpcCLIFlags(c *config.Config, headers, cookieFilter *string) []cli.Flag {
 			Destination: &c.RPC.EnableTLS,
 		},
 
+		&cli.BoolFlag{
+			Name:        "rpc_tls_verify",
+			Usage:       "Whether to verify the RPC server certificate",
+			Destination: &c.RPC.TLSVerify,
+			Value:       true,
+		},
+
+		&cli.StringFlag{
+			Name:        "rpc_tls_root_ca",
+			Usage:       "CA root certificate file path or contents in PEM format (if not set, system CAs will be used)",
+			Destination: &c.RPC.TLSRootCA,
+		},
+
 		&cli.IntFlag{
 			Name:        "rpc_max_call_recv_size",
 			Usage:       "Override default MaxCallRecvMsgSize for RPC client (bytes)",

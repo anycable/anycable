@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"math"
@@ -511,9 +510,9 @@ func defaultDialer(conf *Config) (pb.RPCClient, ClientHelper, error) {
 	}
 
 	if enableTLS {
-		tlsConfig := &tls.Config{
-			InsecureSkipVerify: false,
-			MinVersion:         tls.VersionTLS12,
+		tlsConfig, error := conf.TLSConfig()
+		if error != nil {
+			return nil, nil, error
 		}
 
 		dialOptions = append(dialOptions, grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)))

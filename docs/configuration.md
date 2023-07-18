@@ -164,6 +164,10 @@ anycable-go --port=443 -ssl_cert=path/to/ssl.cert -ssl_key=path/to/ssl.key
 
 If your RPC server requires TLS you can enable it via `--rpc_enable_tls` (`ANYCABLE_RPC_ENABLE_TLS`).
 
+If RPC server uses certificate issued by private CA, then you can pass either its file path or PEM contents with `--rpc_tls_root_ca` (`ANYCABLE_RPC_TLS_ROOT_CA`).
+
+If RPC uses self-signed certificate, you can disable RPC server certificate verification by setting `--rpc_tls_verify` (`ANYCABLE_RPC_TLS_VERIFY`) to `false`, but this is insecure, use only in test/development.
+
 ## Concurrency settings
 
 AnyCable-Go uses a single Go gRPC client\* to communicate with AnyCable RPC servers (see [the corresponding PR](https://github.com/anycable/anycable-go/pull/88)). We limit the number of concurrent RPC calls to avoid flooding servers (and getting `ResourceExhausted` exceptions in response).

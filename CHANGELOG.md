@@ -2,6 +2,11 @@
 
 ## master
 
+- Allow to configure secure gRPC connection. ([@Envek][])
+
+  Option `--rpc_tls_root_ca` allow to specify private root certificate authority certificate to verify RPC server certificate.
+  Option `--rpc_tls_verify` allow to disable RPC server certificate verification (insecure, use only in test/development).
+
 ## 1.4.0 (2023-07-07)
 
 - Add HTTP RPC implementation. ([@palkan][])

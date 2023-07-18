@@ -70,8 +70,13 @@ func NewHTTPDialer(c *Config) (Dialer, error) {
 }
 
 func NewHTTPService(c *Config) (*HTTPService, error) {
+	tlsConfig, error := c.TLSConfig()
+	if error != nil {
+		return nil, error
+	}
+
 	client := &http.Client{
-		Transport: &http.Transport{},
+		Transport: &http.Transport{TLSClientConfig: tlsConfig},
 	}
 
 	baseURL, err := url.Parse(c.Host)
