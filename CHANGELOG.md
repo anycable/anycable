@@ -2,6 +2,8 @@
 
 ## master
 
+- Add TLS support for gRPC server. ([@Envek][])
+
 ## 1.4.0 (2023-07-07)
 
 - Add HTTP RPC support. ([@palkan][])

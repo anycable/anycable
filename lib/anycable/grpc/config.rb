@@ -3,6 +3,8 @@
 AnyCable::Config.attr_config(
   ### gRPC options
   rpc_host: "127.0.0.1:50051",
+  rpc_tls_cert: nil,
+  rpc_tls_key: nil,
   rpc_pool_size: 30,
   rpc_max_waiting_requests: 20,
   rpc_poll_period: 1,
@@ -32,6 +34,7 @@ module AnyCable
           max_waiting_requests: rpc_max_waiting_requests,
           poll_period: rpc_poll_period,
           pool_keep_alive: rpc_pool_keep_alive,
+          server_credentials: server_credentials,
           server_args: enhance_grpc_server_args(normalized_grpc_server_args)
         }
       end
@@ -53,6 +56,15 @@ module AnyCable
         opts["grpc.max_connection_age_ms"] = rpc_max_connection_age.to_i * 1000
         opts
       end
+
+      def server_credentials
+        return :this_port_is_insecure unless rpc_tls_cert && rpc_tls_key
+
+        cert = File.exist?(rpc_tls_cert) ? File.read(rpc_tls_cert) : rpc_tls_cert
+        pkey = File.exist?(rpc_tls_key) ? File.read(rpc_tls_key) : rpc_tls_key
+
+        ::GRPC::Core::ServerCredentials.new(nil, [{private_key: pkey, cert_chain: cert}], false)
+      end
     end
   end
 end
@@ -62,6 +74,8 @@ AnyCable::Config.prepend AnyCable::GRPC::Config
 AnyCable::Config.usage <<~TXT
   GRPC OPTIONS
       --rpc-host=host                   Local address to run gRPC server on, default: "127.0.0.1:50051"
+      --rpc-tls-cert=path               TLS certificate file path or contents in PEM format, default: <none> (TLS disabled)
+      --rpc-tls-key=path                TLS private key file path or contents in PEM format, default: <none> (TLS disabled)
       --rpc-pool-size=size              gRPC workers pool size, default: 30
       --rpc-max-waiting-requests=num    Max waiting requests queue size, default: 20
       --rpc-poll-period=seconds         Poll period (sec), default: 1

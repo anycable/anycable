@@ -25,6 +25,10 @@ Here is the list of the most commonly used configuration parameters and the way 
 
 Local address to run gRPC server on (default: `"[::]:50051"`, deprecated, will be changed to `"127.0.0.1:50051"` in future versions).
 
+**rpc_tls_cert** (`ANYCABLE_RPC_TLS_CERT`, `--rpc-tls-cert`) and **rpc_tls_key** (`ANYCABLE_RPC_TLS_KEY`, `--rpc-tls-key`)
+
+Specify file paths or contents for TLS certificate and private key for gRPC server.
+
 **broadcast_adapter** (`ANYCABLE_BROADCAST_ADAPTER`, `--broadcast-adapter`)
 
 [Broadcast adapter](./broadcast_adapters.md) to use. Available options out-of-the-box: `redis` (default), `nats`, `http`.

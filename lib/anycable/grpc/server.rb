@@ -82,9 +82,9 @@ module AnyCable
         @logger ||= AnyCable.logger
       end
 
-      def build_server(**options)
+      def build_server(server_credentials:, **options)
         ::GRPC::RpcServer.new(**options).tap do |server|
-          server.add_http2_port(host, :this_port_is_insecure)
+          server.add_http2_port(host, server_credentials)
           server.handle(AnyCable::GRPC::Handler)
           server.handle(build_health_checker)
         end
