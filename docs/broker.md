@@ -9,7 +9,7 @@ Broker implements features that can be characterized as _hot cache utilities_:
 
 ## Client-server communication
 
-Below you can see the diagram demonstrating how clients can you the broker-backed features to keep up with the stream messages and restore their state:
+Below you can see the diagram demonstrating how clients can use the broker-backed features to keep up with the stream messages and restore their state:
 
 ```mermaid
 sequenceDiagram
@@ -52,7 +52,7 @@ You can use [AnyCable JS client](https://github.com/anycable/anycable-client) li
 
 ## Broadcasting messages
 
-Broker is responsible for **registering broadcast messages**. Each message MUST be registered once; thus, we MUST you a broadcasting method which publishes messages to a single node in a cluster (see [Broadcast adapters](../ruby/broadcast_adapters.md)). Currently, `http` and `redisx` adapters are supported.
+Broker is responsible for **registering broadcast messages**. Each message MUST be registered once; thus, we MUST use a broadcasting method which publishes messages to a single node in a cluster (see [Broadcast adapters](../ruby/broadcast_adapters.md)). Currently, `http` and `redisx` adapters are supported.
 
 **NOTE:** When legacy adapters are used, enabling a broker has no effect.
 
