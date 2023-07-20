@@ -39,7 +39,7 @@ NATS pus/sub channel for broadcasting (default: `"__anycable__"`).
 
 **redis_url** (`REDIS_URL`, `ANYCABLE_REDIS_URL`, `--redis-url`)
 
-Redis URL for pub/sub (default: `"redis://localhost:6379/5"`).
+Redis URL for pub/sub (default: `"redis://localhost:6379"`).
 
 **redis_channel** (`ANYCABLE_REDIS_CHANNEL`, `--redis-channel`)
 
