@@ -44,6 +44,7 @@ module AnyCable
         @hostname = host_parts[:hostname]
         @port = host_parts[:port].to_i
 
+        @tls_credentials = options.delete(:tls_credentials)
         @grpc_server = build_server(**options)
       end
 
@@ -56,7 +57,7 @@ module AnyCable
 
         logger.info "RPC server (grpc_kit) is starting..."
 
-        @sock = TCPServer.new(hostname, port)
+        @sock = build_server_socket
 
         server = grpc_server
 
@@ -66,6 +67,12 @@ module AnyCable
             server.run(conn)
           rescue IOError
             # ignore broken connections
+          rescue OpenSSL::SSL::SSLError => ssl_error
+            if ssl_error.message.match?(/SSL_read: unexpected eof while reading/i)
+              # ignore broken connections
+            else
+              raise
+            end
           end
         end
 
@@ -81,13 +88,18 @@ module AnyCable
 
         loop do
           sock = TCPSocket.new(hostname, port, connect_timeout: 1)
+          if @tls_credentials&.any?
+            sock = OpenSSL::SSL::SSLSocket.new(sock, tls_context)
+            sock.sync_close = true
+            sock.connect
+          end
           stub = ::Grpc::Health::V1::Health::Stub.new(sock)
           stub.check(::Grpc::Health::V1::HealthCheckRequest.new)
           sock.close
           break
-        rescue Errno::ECONNREFUSED, Errno::EHOSTUNREACH, SocketError
+        rescue Errno::ECONNREFUSED, Errno::EHOSTUNREACH, SocketError, OpenSSL::SSL::SSLError => e
           timeout -= 1
-          raise "Server is not responding" if timeout.zero?
+          raise "Server is not responding: #{e}" if timeout.zero?
         end
       end
 
@@ -123,6 +135,20 @@ module AnyCable
 
       def logger
         @logger ||= AnyCable.logger
+      end
+
+      def build_server_socket
+        tcp_server = TCPServer.new(hostname, port)
+        return tcp_server unless @tls_credentials&.any?
+
+        OpenSSL::SSL::SSLServer.new(tcp_server, tls_context)
+      end
+
+      def tls_context
+        OpenSSL::SSL::SSLContext.new.tap do |tls_context|
+          tls_context.cert = OpenSSL::X509::Certificate.new(@tls_credentials.fetch(:cert))
+          tls_context.key = OpenSSL::PKey.read(@tls_credentials.fetch(:pkey))
+        end
       end
 
       def build_server(**options)

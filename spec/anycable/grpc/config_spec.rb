@@ -57,22 +57,25 @@ describe AnyCable::Config do
     end
   end
 
-  describe "#server_credentials" do
-    subject :server_credentials do
-      described_class.new.server_credentials
+  describe "#tls_credentials" do
+    subject :tls_credentials do
+      described_class.new.tls_credentials
     end
 
     it "returns insecure config if rpc_tls_cert and rpc_tls_key are not set" do
-      expect(server_credentials).to eq :this_port_is_insecure
+      expect(tls_credentials).to be_empty
     end
 
     context "when rpc_tls_cert and rpc_tls_key are set" do
+      let(:cert) { "BASE64ABRACADABRA1" }
+      let(:pkey)  { "BASE64ABRACADABRA2" }
+
       around do |ex|
-        with_env("ANYCABLE_RPC_TLS_CERT" => "BASE64ABRACADABRA", "ANYCABLE_RPC_TLS_KEY" => "BASE64ABRACADABRA", &ex)
+        with_env("ANYCABLE_RPC_TLS_CERT" => cert, "ANYCABLE_RPC_TLS_KEY" => pkey, &ex)
       end
 
       it "returns TLS-enabled config" do
-        expect(server_credentials).to be_a GRPC::Core::ServerCredentials
+        expect(tls_credentials).to include(cert: cert, pkey: pkey)
       end
     end
   end
