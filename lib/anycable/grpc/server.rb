@@ -82,7 +82,8 @@ module AnyCable
         @logger ||= AnyCable.logger
       end
 
-      def build_server(server_credentials:, **options)
+      def build_server(**options)
+        server_credentials = options.delete(:server_credentials)
         ::GRPC::RpcServer.new(**options).tap do |server|
           server.add_http2_port(host, server_credentials)
           server.handle(AnyCable::GRPC::Handler)

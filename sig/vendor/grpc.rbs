@@ -109,6 +109,15 @@ module GRPC
 
     SIGNAL_CHECK_PERIOD: Float
   end
+
+  module Core
+    class ServerCredentials
+
+      private
+
+      def initialize: (untyped, Array[Hash[Symbol, String]], bool) -> void
+    end
+  end
 end
 
 # module Google

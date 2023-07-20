@@ -3,6 +3,10 @@ module AnyCable
     interface _Config
       def rpc_host: () -> String
       def rpc_host=: (String) -> void
+      def rpc_tls_cert: () -> String?
+      def rpc_tls_cert=: (String?) -> void
+      def rpc_tls_key: () -> String?
+      def rpc_tls_key=: (String?) -> void
       def rpc_pool_size: () -> Integer
       def rpc_pool_size=: (Integer) -> void
       def rpc_max_waiting_requests: () -> Integer
@@ -28,11 +32,13 @@ module AnyCable
         max_waiting_requests: Integer,
         poll_period: Numeric,
         pool_keep_alive: Numeric,
+        server_credentials: ::GRPC::Core::ServerCredentials | :this_port_is_insecure,
         server_args: Hash[String, untyped]
       }
 
       def normalized_grpc_server_args: () -> Hash[String, untyped]
       def enhance_grpc_server_args: (Hash[String, untyped]) -> Hash[String, untyped]
+      def server_credentials: () -> (::GRPC::Core::ServerCredentials | :this_port_is_insecure)
     end
   end
 end
