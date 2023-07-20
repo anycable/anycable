@@ -56,4 +56,24 @@ describe AnyCable::Config do
         .to eq({"grpc.max_connection_age_ms" => 60_000})
     end
   end
+
+  describe "#server_credentials" do
+    subject :server_credentials do
+      described_class.new.server_credentials
+    end
+
+    it "returns insecure config if rpc_tls_cert and rpc_tls_key are not set" do
+      expect(server_credentials).to eq :this_port_is_insecure
+    end
+
+    context "when rpc_tls_cert and rpc_tls_key are set" do
+      around do |ex|
+        with_env("ANYCABLE_RPC_TLS_CERT" => "BASE64ABRACADABRA", "ANYCABLE_RPC_TLS_KEY" => "BASE64ABRACADABRA", &ex)
+      end
+
+      it "returns TLS-enabled config" do
+        expect(server_credentials).to be_a GRPC::Core::ServerCredentials
+      end
+    end
+  end
 end
