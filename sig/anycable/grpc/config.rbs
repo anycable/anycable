@@ -32,13 +32,13 @@ module AnyCable
         max_waiting_requests: Integer,
         poll_period: Numeric,
         pool_keep_alive: Numeric,
-        server_credentials: ::GRPC::Core::ServerCredentials | :this_port_is_insecure,
+        tls_credentials: Hash[Symbol, String],
         server_args: Hash[String, untyped]
       }
 
       def normalized_grpc_server_args: () -> Hash[String, untyped]
       def enhance_grpc_server_args: (Hash[String, untyped]) -> Hash[String, untyped]
-      def server_credentials: () -> (::GRPC::Core::ServerCredentials | :this_port_is_insecure)
+      def tls_credentials: () -> Hash[Symbol, String]
     end
   end
 end

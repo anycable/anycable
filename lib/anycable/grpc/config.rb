@@ -34,7 +34,7 @@ module AnyCable
           max_waiting_requests: rpc_max_waiting_requests,
           poll_period: rpc_poll_period,
           pool_keep_alive: rpc_pool_keep_alive,
-          server_credentials: server_credentials,
+          tls_credentials: tls_credentials,
           server_args: enhance_grpc_server_args(normalized_grpc_server_args)
         }
       end
@@ -57,15 +57,15 @@ module AnyCable
         opts
       end
 
-      def server_credentials
+      def tls_credentials
         cert_path_or_content = rpc_tls_cert # Assign to local variable to make steep happy
         key_path_or_content = rpc_tls_key # Assign to local variable to make steep happy
-        return :this_port_is_insecure if cert_path_or_content.nil? || key_path_or_content.nil?
+        return {} if cert_path_or_content.nil? || key_path_or_content.nil?
 
         cert = File.exist?(cert_path_or_content) ? File.read(cert_path_or_content) : cert_path_or_content
         pkey = File.exist?(key_path_or_content) ? File.read(key_path_or_content) : key_path_or_content
 
-        ::GRPC::Core::ServerCredentials.new(nil, [{private_key: pkey, cert_chain: cert}], false)
+        {cert: cert, pkey: pkey}
       end
     end
   end

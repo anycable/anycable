@@ -83,9 +83,9 @@ module AnyCable
       end
 
       def build_server(**options)
-        server_credentials = options.delete(:server_credentials)
+        tls_credentials = options.delete(:tls_credentials)
         ::GRPC::RpcServer.new(**options).tap do |server|
-          server.add_http2_port(host, server_credentials)
+          server.add_http2_port(host, server_credentials(**tls_credentials))
           server.handle(AnyCable::GRPC::Handler)
           server.handle(build_health_checker)
         end
@@ -102,6 +102,12 @@ module AnyCable
           Grpc::Health::V1::HealthCheckResponse::ServingStatus::SERVING
         )
         health_checker
+      end
+
+      def server_credentials(cert: nil, pkey: nil)
+        return :this_port_is_insecure if cert.nil? || pkey.nil?
+
+        ::GRPC::Core::ServerCredentials.new(nil, [{private_key: pkey, cert_chain: cert}], false)
       end
     end
   end
