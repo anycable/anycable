@@ -58,10 +58,12 @@ module AnyCable
       end
 
       def server_credentials
-        return :this_port_is_insecure unless rpc_tls_cert && rpc_tls_key
+        cert_path_or_content = rpc_tls_cert # Assign to local variable to make steep happy
+        key_path_or_content = rpc_tls_key # Assign to local variable to make steep happy
+        return :this_port_is_insecure if cert_path_or_content.nil? || key_path_or_content.nil?
 
-        cert = File.exist?(rpc_tls_cert) ? File.read(rpc_tls_cert) : rpc_tls_cert
-        pkey = File.exist?(rpc_tls_key) ? File.read(rpc_tls_key) : rpc_tls_key
+        cert = File.exist?(cert_path_or_content) ? File.read(cert_path_or_content) : cert_path_or_content
+        pkey = File.exist?(key_path_or_content) ? File.read(key_path_or_content) : key_path_or_content
 
         ::GRPC::Core::ServerCredentials.new(nil, [{private_key: pkey, cert_chain: cert}], false)
       end
