@@ -184,7 +184,7 @@ func NewController(metrics metrics.Instrumenter, config *Config) *Controller {
 // Start initializes RPC connection pool
 func (c *Controller) Start() error {
 	host := c.config.Host
-	enableTLS := c.config.EnableTLS
+	enableTLS := c.config.TLSEnabled()
 	impl := c.config.Implementation
 
 	dialer := c.config.DialFun
@@ -492,7 +492,7 @@ func newContext(sessionID string) context.Context {
 
 func defaultDialer(conf *Config) (pb.RPCClient, ClientHelper, error) {
 	host := conf.Host
-	enableTLS := conf.EnableTLS
+	enableTLS := conf.TLSEnabled()
 
 	kacp := keepalive.ClientParameters{
 		Time:                10 * time.Second, // send pings every 10 seconds if there is no activity

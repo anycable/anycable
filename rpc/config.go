@@ -58,8 +58,14 @@ func NewConfig() Config {
 	return Config{Concurrency: 28, EnableTLS: false, TLSVerify: true, Host: defaultRPCHost, Implementation: "grpc", RequestTimeout: 3000}
 }
 
+// Whether secure connection to RPC server is enabled either explicitly or implicitly
+func (c *Config) TLSEnabled() bool {
+	return c.EnableTLS || c.TLSRootCA != ""
+}
+
+// TLSConfig builds TLS configuration for RPC client
 func (c *Config) TLSConfig() (*tls.Config, error) {
-	if !c.EnableTLS {
+	if !c.TLSEnabled() {
 		return nil, nil
 	}
 
