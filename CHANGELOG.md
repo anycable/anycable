@@ -2,6 +2,8 @@
 
 ## master
 
+## 1.4.1 (2024-07-24)
+
 - Allow to configure secure gRPC connection. ([@Envek][])
 
   Option `--rpc_tls_root_ca` allow to specify private root certificate authority certificate to verify RPC server certificate.
