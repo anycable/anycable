@@ -15,7 +15,7 @@ module AnyCable
       def logger: () -> Logger
       def build_server: (**untyped options) -> untyped
       def build_health_checker: () -> untyped
-      def server_credentials: () -> (::GRPC::Core::ServerCredentials | :this_port_is_insecure)
+      def server_credentials: (?cert: String?, ?pkey: String?) -> (::GRPC::Core::ServerCredentials | :this_port_is_insecure)
     end
   end
 end

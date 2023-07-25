@@ -68,7 +68,7 @@ describe AnyCable::Config do
 
     context "when rpc_tls_cert and rpc_tls_key are set" do
       let(:cert) { "BASE64ABRACADABRA1" }
-      let(:pkey)  { "BASE64ABRACADABRA2" }
+      let(:pkey) { "BASE64ABRACADABRA2" }
 
       around do |ex|
         with_env("ANYCABLE_RPC_TLS_CERT" => cert, "ANYCABLE_RPC_TLS_KEY" => pkey, &ex)
