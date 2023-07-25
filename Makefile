@@ -128,7 +128,11 @@ test-conformance: tmp/anycable-go-test
 	BUNDLE_GEMFILE=.circleci/Gemfile bundle exec anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable"
 
 test-conformance-ssl: tmp/anycable-go-test
-	BUNDLE_GEMFILE=.circleci/Gemfile bundle exec anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token --ssl_key=etc/ssl/server.key --ssl_cert=etc/ssl/server.crt --port=8443" --target-url="wss://localhost:8443/cable"
+	ANYCABLE_RPC_TLS_CERT=etc/ssl/server.crt \
+	ANYCABLE_RPC_TLS_KEY=etc/ssl/server.key \
+	BUNDLE_GEMFILE=.circleci/Gemfile bundle exec anyt -c \
+	"tmp/anycable-go-test --headers=cookie,x-api-token --rpc_enable_tls --rpc_tls_verify=false --ssl_key=etc/ssl/server.key --ssl_cert=etc/ssl/server.crt --port=8443" \
+	--target-url="wss://localhost:8443/cable"
 
 test-conformance-http: tmp/anycable-go-test
 	BUNDLE_GEMFILE=.circleci/Gemfile \
