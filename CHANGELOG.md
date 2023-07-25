@@ -2,6 +2,8 @@
 
 ## master
 
+## 1.4.1 (2023-07-24)
+
 - Add TLS support for gRPC server. ([@Envek][])
 
 ## 1.4.0 (2023-07-07)
