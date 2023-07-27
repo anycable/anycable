@@ -14,7 +14,7 @@ HTTP adapter has zero-dependencies and, thus, allows you to quickly start using 
 
 Since v1.4, HTTP adapter can also be considered for production (thanks to the new [pub/sub component](/anycable-go/pubsub.md) in AnyCable-Go). Moreover, it can be used with the new [broker feature](/anycable-go/broker.md) of AnyCable-Go.
 
-To use HTTP adapter specify `broadcast_adapter` configuration parameter (`--broadcast-adapter=http` or `ANYCABLE_BROADCAST_ADAPTER=http` or set in the code/YML) and make sure your AnyCable WebSocket server supports it. An URL to broadcast to could be specified via `http_broadcast_url` parameter (defaults to `http://localhost:8080/_broadcast`, which corresponds to the [AnyCable-Go](../anycable-go/getting_started.md#configuration-parameters) default).
+To use HTTP adapter specify `broadcast_adapter` configuration parameter (`--broadcast-adapter=http` or `ANYCABLE_BROADCAST_ADAPTER=http` or set in the code/YML) and make sure your AnyCable WebSocket server supports it. An URL to broadcast to could be specified via `http_broadcast_url` parameter (defaults to `http://localhost:8090/_broadcast`, which corresponds to the [AnyCable-Go](../anycable-go/getting_started.md#configuration-parameters) default).
 
 **NOTE:** For SSL connections, we use the `SSL_VERIFY_NONE` mode.
 
