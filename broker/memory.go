@@ -94,6 +94,10 @@ func (ms *memstream) filterByOffset(offset uint64, callback func(e *entry)) erro
 		return fmt.Errorf("Requested offset couldn't be found: %d, lowest: %d", offset, ms.low)
 	}
 
+	if ms.low == 0 {
+		return fmt.Errorf("Stream is empty")
+	}
+
 	start := (offset - ms.low) + 1
 
 	for _, v := range ms.data[start:] {

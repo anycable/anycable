@@ -94,3 +94,27 @@ func TestFromOffset(t *testing.T) {
 		require.Nil(t, history)
 	})
 }
+
+func TestMemstream_filterByOffset(t *testing.T) {
+	ms := &memstream{
+		ttl:   1,
+		limit: 5,
+	}
+
+	ms.add("test1")
+	ms.add("test2")
+
+	err := ms.filterByOffset(1, func(e *entry) {
+		assert.Equal(t, "test2", e.data)
+	})
+	require.NoError(t, err)
+
+	time.Sleep(2 * time.Second)
+
+	ms.expire()
+
+	err = ms.filterByOffset(1, func(e *entry) {
+		assert.Failf(t, "entry should be expired", "entry: %v", e)
+	})
+	require.Error(t, err)
+}
