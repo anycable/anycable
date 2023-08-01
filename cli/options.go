@@ -255,6 +255,13 @@ func serverCLIFlags(c *config.Config, path *string) []cli.Flag {
 			Usage:       "HTTP health endpoint path",
 			Destination: &c.HealthPath,
 		},
+
+		&cli.IntFlag{
+			Name:        "shutdown_timeout",
+			Usage:       "Graceful shutdown timeout (in seconds)",
+			Value:       c.App.ShutdownTimeout,
+			Destination: &c.App.ShutdownTimeout,
+		},
 	})
 }
 

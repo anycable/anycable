@@ -2,6 +2,8 @@
 
 ## master
 
+- Add `--shutdown_timeout` option to configure graceful shutdown timeout. ([@palkan][])
+
 ## 1.4.1 (2024-07-24)
 
 - Allow to configure secure gRPC connection. ([@Envek][])

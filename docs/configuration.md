@@ -103,6 +103,10 @@ Logging level (default: `"info"`).
 
 Enable debug mode (more verbose logging).
 
+**--shutdown_timeout** (`ANYCABLE_SHUTDOWN_TIMEOUT`)
+
+The number of seconds to wait for the server to shutdown gracefully, i.e., disconnect all active sessions and perform the corresponding Disconnect RPC calls (see below). Default: 30.
+
 ## Presets
 
 AnyCable-Go comes with a few built-in configuration presets for particular deployments environments, such as Heroku or Fly. The presets are detected and activated automatically. As an indication, you can find a line in the logs:
@@ -233,7 +237,7 @@ Other available modes are "always" and "never". Thus, to disable Disconnect call
 
 Using `--disconnect_mode=always` is useful when you have some logic in the `ApplicationCable::Connetion#disconnect` method and you want to invoke it even for JWT and signed streams sessions.
 
-\* It's (almost) impossible to guarantee that `disconnect` callbacks would be called for 100%. There is always a chance of a server crash or `kill -9` or something worse. Consider an alternative approach to tracking client states (see [example](https://github.com/anycable/anycable/issues/99#issuecomment-611998267)).
+**NOTE:** AnyCable tries to make a Disconnect call for active sessions during the server shutdown. However, if the server is killed with `kill -9` or crashes, the disconnect queue is not flushed, and some disconnect events may be lost. If you experience higher queue sizes during deployments, consider increasing the shutdown timeout by tuning the `--shutdown_timeout` parameter.
 
 ## GOMAXPROCS
 

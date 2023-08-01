@@ -293,7 +293,8 @@ func (r *Runner) Run() error {
 	go r.startWSServer(wsServer)
 	go r.startMetrics(metrics)
 
-	r.shutdownables = append(r.shutdownables, appBroker, appNode)
+	// We MUST first stop the server (=stop accepting new connections), then gracefully disconnect active clients
+	r.shutdownables = append([]Shutdownable{wsServer, appNode, appBroker}, r.shutdownables...)
 
 	r.announceGoPools()
 	r.setupSignalHandlers()
@@ -454,7 +455,7 @@ func (r *Runner) setupSignalHandlers() {
 	t := tebata.New(syscall.SIGINT, syscall.SIGTERM)
 
 	t.Reserve(func() { // nolint:errcheck
-		log.Infof("Shutting down... (hit Ctrl-C to stop immediately)")
+		log.Infof("Shutting down... (hit Ctrl-C to stop immediately or wait for up to %ds for graceful shutdown)", r.config.App.ShutdownTimeout)
 		go func() {
 			termSig := make(chan os.Signal, 1)
 			signal.Notify(termSig, syscall.SIGINT, syscall.SIGTERM)

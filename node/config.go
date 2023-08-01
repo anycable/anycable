@@ -20,6 +20,8 @@ type Config struct {
 	HubGopoolSize int
 	// How should ping message timestamp be formatted? ('s' => seconds, 'ms' => milli seconds, 'ns' => nano seconds)
 	PingTimestampPrecision string
+	// For how long to wait for disconnect callbacks to be processed before exiting (seconds)
+	ShutdownTimeout int
 }
 
 // NewConfig builds a new config
@@ -30,5 +32,6 @@ func NewConfig() Config {
 		HubGopoolSize:          16,
 		PingTimestampPrecision: "s",
 		DisconnectMode:         DISCONNECT_MODE_AUTO,
+		ShutdownTimeout:        30,
 	}
 }

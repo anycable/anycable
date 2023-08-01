@@ -1,11 +1,15 @@
 package node
 
-import "github.com/apex/log"
+import (
+	"context"
+
+	"github.com/apex/log"
+)
 
 // Disconnector is an interface for disconnect queue implementation
 type Disconnector interface {
 	Run() error
-	Shutdown() error
+	Shutdown(ctx context.Context) error
 	Enqueue(*Session) error
 	Size() int
 }
@@ -20,7 +24,7 @@ func (d *NoopDisconnectQueue) Run() error {
 }
 
 // Shutdown does nothing
-func (d *NoopDisconnectQueue) Shutdown() error {
+func (d *NoopDisconnectQueue) Shutdown(ctx context.Context) error {
 	return nil
 }
 

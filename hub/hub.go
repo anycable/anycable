@@ -361,12 +361,29 @@ func (h *Hub) FindByIdentifier(id string) HubSession {
 	return nil
 }
 
-func (h *Hub) DisconnectSesssions(msg encoders.EncodedMessage, code string) {
-	h.mu.RLock()
-	for _, info := range h.sessions {
-		info.session.DisconnectWithMessage(msg, code)
+func (h *Hub) DisconnectSesssions(ctx context.Context, callback func(s HubSession)) bool {
+	for {
+		select {
+		case <-ctx.Done():
+			return false
+		default:
+			h.mu.RLock()
+			if len(h.sessions) == 0 {
+				return true
+			}
+
+			var s HubSession
+			for _, info := range h.sessions {
+				s = info.session
+				callback(s)
+				break
+			}
+
+			h.mu.RUnlock()
+
+			h.RemoveSession(s)
+		}
 	}
-	h.mu.RUnlock()
 }
 
 func buildGates(ctx context.Context, num int) []*Gate {

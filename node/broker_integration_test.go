@@ -307,6 +307,7 @@ func sharedIntegrationHistory(t *testing.T, node *Node, controller *mocks.Contro
 func setupIntegrationNode() (*Node, *mocks.Controller) {
 	config := NewConfig()
 	config.HubGopoolSize = 2
+	config.DisconnectMode = DISCONNECT_MODE_NEVER
 
 	controller := &mocks.Controller{}
 	controller.On("Shutdown").Return(nil)

@@ -1,6 +1,7 @@
 package node
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -76,7 +77,7 @@ func (d *DisconnectQueue) Run() error {
 }
 
 // Shutdown stops throttling and makes requests one by one
-func (d *DisconnectQueue) Shutdown() error {
+func (d *DisconnectQueue) Shutdown(ctx context.Context) error {
 	d.mu.Lock()
 	if d.isStopped {
 		d.mu.Unlock()
@@ -93,7 +94,15 @@ func (d *DisconnectQueue) Shutdown() error {
 		return nil
 	}
 
-	d.log.Infof("Invoking remaining disconnects for %s: %d", d.timeout, left)
+	deadline, ok := ctx.Deadline()
+
+	if ok {
+		timeLeft := time.Until(deadline)
+
+		d.log.Infof("Invoking remaining disconnects for %2fs: %d", timeLeft.Seconds(), left)
+	} else {
+		d.log.Infof("Invoking remaining disconnects: %d", left)
+	}
 
 	for {
 		select {
@@ -109,7 +118,7 @@ func (d *DisconnectQueue) Shutdown() error {
 			if left == 0 {
 				return nil
 			}
-		case <-time.After(d.timeout):
+		case <-ctx.Done():
 			return fmt.Errorf("Had no time to invoke Disconnect calls: %d", len(d.disconnect))
 		}
 	}

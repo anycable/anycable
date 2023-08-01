@@ -1,6 +1,7 @@
 package node
 
 import (
+	"context"
 	"runtime"
 	"testing"
 
@@ -9,8 +10,9 @@ import (
 
 func TestDisconnectQueue_Run(t *testing.T) {
 	t.Run("Disconnects sessions", func(t *testing.T) {
+		ctx := context.Background()
 		q := newQueue()
-		defer q.Shutdown() //nolint:errcheck
+		defer q.Shutdown(ctx) //nolint:errcheck
 
 		assert.Nil(t, q.Enqueue(NewMockSession("1", q.node)))
 		assert.Equal(t, 1, q.Size())
@@ -30,13 +32,14 @@ func TestDisconnectQueue_Run(t *testing.T) {
 
 func TestDisconnectQueue_Shutdown(t *testing.T) {
 	t.Run("Disconnects sessions", func(t *testing.T) {
+		ctx := context.Background()
 		q := newQueue()
 
 		assert.Nil(t, q.Enqueue(NewMockSession("1", q.node)))
 		assert.Nil(t, q.Enqueue(NewMockSession("2", q.node)))
 		assert.Equal(t, 2, q.Size())
 
-		assert.Nil(t, q.Shutdown())
+		assert.Nil(t, q.Shutdown(ctx))
 		assert.Equal(t, 0, q.Size())
 	})
 
@@ -46,9 +49,10 @@ func TestDisconnectQueue_Shutdown(t *testing.T) {
 
 	t.Run("Allows multiple entering", func(t *testing.T) {
 		q := newQueue()
+		ctx := context.Background()
 
 		for i := 1; i <= 10; i++ {
-			q.Shutdown() // nolint:errcheck
+			q.Shutdown(ctx) // nolint:errcheck
 		}
 	})
 }
@@ -62,8 +66,9 @@ func TestDisconnectQueue_Enqueue(t *testing.T) {
 	})
 
 	t.Run("After shutdown", func(t *testing.T) {
+		ctx := context.Background()
 		q := newQueue()
-		q.Shutdown() // nolint:errcheck
+		q.Shutdown(ctx) // nolint:errcheck
 
 		assert.Nil(t, q.Enqueue(NewMockSession("1", q.node)))
 		assert.Equal(t, 0, q.Size())

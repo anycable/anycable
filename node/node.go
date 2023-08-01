@@ -1,6 +1,7 @@
 package node
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"runtime"
@@ -196,26 +197,23 @@ func (n *Node) Shutdown() (err error) {
 	n.closed = true
 	n.shutdownMu.Unlock()
 
-	if n.hub != nil {
-		n.hub.Shutdown()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(n.config.ShutdownTimeout)*time.Second)
+	defer cancel()
 
+	if n.hub != nil {
 		active := n.hub.Size()
 
 		if active > 0 {
 			n.log.Infof("Closing active connections: %d", active)
-			disconnectMessage := common.NewDisconnectMessage(common.SERVER_RESTART_REASON, true)
-
-			n.hub.DisconnectSesssions(disconnectMessage, common.SERVER_RESTART_REASON)
-
+			n.disconnectAll(ctx)
 			n.log.Info("All active connections closed")
-
-			// Wait to make sure that disconnect queue is not empty
-			time.Sleep(time.Second)
 		}
+
+		n.hub.Shutdown()
 	}
 
 	if n.disconnector != nil {
-		err := n.disconnector.Shutdown()
+		err := n.disconnector.Shutdown(ctx)
 
 		if err != nil {
 			n.log.Warnf("%v", err)
@@ -231,6 +229,13 @@ func (n *Node) Shutdown() (err error) {
 	}
 
 	return
+}
+
+func (n *Node) IsShuttingDown() bool {
+	n.shutdownMu.Lock()
+	defer n.shutdownMu.Unlock()
+
+	return n.closed
 }
 
 type AuthOptions struct {
@@ -589,11 +594,18 @@ func (n *Node) ExecuteRemoteCommand(msg *common.RemoteCommandMessage) {
 
 // Disconnect adds session to disconnector queue and unregister session from hub
 func (n *Node) Disconnect(s *Session) error {
-	n.hub.RemoveSessionLater(s)
 	n.broker.FinishSession(s.GetID()) // nolint:errcheck
 
-	if s.IsDisconnectable() {
-		return n.disconnector.Enqueue(s)
+	if n.IsShuttingDown() {
+		if s.IsDisconnectable() {
+			return n.DisconnectNow(s)
+		}
+	} else {
+		n.hub.RemoveSessionLater(s)
+
+		if s.IsDisconnectable() {
+			return n.disconnector.Enqueue(s)
+		}
 	}
 
 	return nil
@@ -718,6 +730,18 @@ func (n *Node) handleCallReply(s *Session, reply *common.CallResult) bool {
 	}
 
 	return isDirty
+}
+
+func (n *Node) disconnectAll(ctx context.Context) {
+	disconnectMessage := common.NewDisconnectMessage(common.SERVER_RESTART_REASON, true)
+
+	ok := n.hub.DisconnectSesssions(ctx, func(s hub.HubSession) {
+		s.DisconnectWithMessage(disconnectMessage, common.SERVER_RESTART_REASON)
+	})
+
+	if !ok {
+		n.log.Warnf("Timed out to disconnect all sessions, left: %d", n.hub.Size())
+	}
 }
 
 func (n *Node) collectStats() {
