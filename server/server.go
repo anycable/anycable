@@ -141,7 +141,7 @@ func (s *HTTPServer) SetupHandler(path string, handler http.Handler) {
 }
 
 // Shutdown shuts down server gracefully.
-func (s *HTTPServer) Shutdown() error {
+func (s *HTTPServer) Shutdown(ctx context.Context) error {
 	s.mu.Lock()
 	if s.shutdown {
 		s.mu.Unlock()
@@ -150,7 +150,7 @@ func (s *HTTPServer) Shutdown() error {
 	s.shutdown = true
 	s.mu.Unlock()
 
-	return s.server.Shutdown(context.Background())
+	return s.server.Shutdown(ctx)
 }
 
 // Stopped return true iff server has been stopped by user

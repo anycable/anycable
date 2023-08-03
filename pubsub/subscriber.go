@@ -1,6 +1,10 @@
 package pubsub
 
-import "github.com/anycable/anycable-go/common"
+import (
+	"context"
+
+	"github.com/anycable/anycable-go/common"
+)
 
 // Subscriber is responsible for subscribing to individual streams and
 // and publishing messages to streams
@@ -8,7 +12,7 @@ import "github.com/anycable/anycable-go/common"
 //go:generate mockery --name Subscriber --output "../mocks" --outpkg mocks
 type Subscriber interface {
 	Start(done chan (error)) error
-	Shutdown() error
+	Shutdown(ctx context.Context) error
 	Broadcast(msg *common.StreamMessage)
 	BroadcastCommand(msg *common.RemoteCommandMessage)
 	Subscribe(stream string)
@@ -36,7 +40,7 @@ func (LegacySubscriber) Start(done chan (error)) error {
 	return nil
 }
 
-func (LegacySubscriber) Shutdown() error {
+func (LegacySubscriber) Shutdown(ctx context.Context) error {
 	return nil
 }
 

@@ -6,6 +6,8 @@ import (
 	broker "github.com/anycable/anycable-go/broker"
 	common "github.com/anycable/anycable-go/common"
 
+	context "context"
+
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -144,13 +146,13 @@ func (_m *Broker) RestoreSession(from string) ([]byte, error) {
 	return r0, r1
 }
 
-// Shutdown provides a mock function with given fields:
-func (_m *Broker) Shutdown() error {
-	ret := _m.Called()
+// Shutdown provides a mock function with given fields: ctx
+func (_m *Broker) Shutdown(ctx context.Context) error {
+	ret := _m.Called(ctx)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func() error); ok {
-		r0 = rf()
+	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = rf(ctx)
 	} else {
 		r0 = ret.Error(0)
 	}

@@ -1,6 +1,7 @@
 package broker
 
 import (
+	"context"
 	"errors"
 	"sync"
 
@@ -36,7 +37,7 @@ type Cacheable interface {
 //go:generate mockery --name Broker --output "../mocks" --outpkg mocks
 type Broker interface {
 	Start() error
-	Shutdown() error
+	Shutdown(ctx context.Context) error
 
 	Announce() string
 
@@ -126,7 +127,7 @@ func (LegacyBroker) Start() error {
 	return nil
 }
 
-func (LegacyBroker) Shutdown() error {
+func (LegacyBroker) Shutdown(ctx context.Context) error {
 	return nil
 }
 

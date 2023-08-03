@@ -1,6 +1,7 @@
 package telemetry
 
 import (
+	"context"
 	"os"
 	"runtime"
 	"sync"
@@ -62,7 +63,7 @@ func (t *Tracker) Collect() {
 	t.timer = time.AfterFunc(usageMeasurementDelayMinutes*time.Minute, t.collectUsage)
 }
 
-func (t *Tracker) Shutdown() error {
+func (t *Tracker) Shutdown(ctx context.Context) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 

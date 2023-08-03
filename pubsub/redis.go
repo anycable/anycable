@@ -83,7 +83,7 @@ func (s *RedisSubscriber) Start(done chan (error)) error {
 	return nil
 }
 
-func (s *RedisSubscriber) Shutdown() error {
+func (s *RedisSubscriber) Shutdown(ctx context.Context) error {
 	s.clientMu.RLock()
 	defer s.clientMu.RUnlock()
 

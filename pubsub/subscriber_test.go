@@ -1,6 +1,7 @@
 package pubsub
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -66,7 +67,7 @@ func SharedSubscriberTests(t *testing.T, factory subscriberFactory, wait subscri
 
 	require.NoError(t, wait(subscriber, "internal"))
 
-	defer subscriber.Shutdown() // nolint:errcheck
+	defer subscriber.Shutdown(context.Background()) // nolint:errcheck
 
 	t.Run("Broadcast", func(t *testing.T) {
 		// Sbscribers may rely on known subscriptions
@@ -103,7 +104,7 @@ func SharedSubscriberTests(t *testing.T, factory subscriberFactory, wait subscri
 
 	require.NoError(t, wait(otherSubscriber, "internal"))
 
-	defer otherSubscriber.Shutdown() // nolint:errcheck
+	defer otherSubscriber.Shutdown(context.Background()) // nolint:errcheck
 
 	t.Run("Subscribe - Broadcast", func(t *testing.T) {
 		subscriber.Subscribe("a")

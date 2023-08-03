@@ -1,6 +1,7 @@
 package telemetry
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -66,7 +67,7 @@ func TestTracking(t *testing.T) {
 
 	conf := config.NewConfig()
 	tracker := NewTracker(metrics, &conf, &Config{})
-	defer tracker.Shutdown() // nolint: errcheck
+	defer tracker.Shutdown(context.Background()) // nolint: errcheck
 
 	client := NewMockClient()
 	tracker.client = client
@@ -97,7 +98,7 @@ func TestTracking(t *testing.T) {
 	assert.Equal(t, 14, int(event.Properties["clients_max"].(uint64)))
 	assert.Equal(t, 100, int(event.Properties["mem_sys_max"].(uint64)))
 
-	require.NoError(t, tracker.Shutdown())
+	require.NoError(t, tracker.Shutdown(context.Background()))
 
 	assert.True(t, client.closed)
 }

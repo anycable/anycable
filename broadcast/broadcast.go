@@ -5,10 +5,12 @@
 // NOTE: There could be multiple broadcast handlers running at the same time.
 package broadcast
 
+import "context"
+
 //go:generate mockery --name Broadcaster --output "../mocks" --outpkg mocks
 type Broadcaster interface {
 	Start(done chan (error)) error
-	Shutdown() error
+	Shutdown(ctx context.Context) error
 	// Returns true if the broadcaster fan-outs the same event
 	// to all nodes. Such subscriber shouldn't be used with real pub/sub
 	// engines (which are responsible for message distribution)

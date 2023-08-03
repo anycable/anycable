@@ -1,6 +1,7 @@
 package broadcast
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -91,9 +92,9 @@ func (s *HTTPBroadcaster) Start(done chan (error)) error {
 }
 
 // Shutdown stops the HTTP server
-func (s *HTTPBroadcaster) Shutdown() error {
+func (s *HTTPBroadcaster) Shutdown(ctx context.Context) error {
 	if s.server != nil {
-		s.server.Shutdown() //nolint:errcheck
+		s.server.Shutdown(ctx) //nolint:errcheck
 	}
 
 	return nil

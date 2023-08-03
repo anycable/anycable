@@ -4,6 +4,7 @@
 package enats
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -146,7 +147,7 @@ func (s *Service) Description() string {
 }
 
 // Shutdown shuts the NATS server down
-func (s *Service) Shutdown() error {
+func (s *Service) Shutdown(ctx context.Context) error {
 	s.server.Shutdown()
 	s.server.WaitForShutdown()
 	return nil

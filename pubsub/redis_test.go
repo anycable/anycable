@@ -48,7 +48,7 @@ func init() {
 		return
 	}
 
-	defer subscriber.Shutdown() // nolint:errcheck
+	defer subscriber.Shutdown(context.Background()) // nolint:errcheck
 
 	c := subscriber.client
 
@@ -101,7 +101,7 @@ func TestRedisReconnect(t *testing.T) {
 	err = subscriber.Start(done)
 	require.NoError(t, err)
 
-	defer subscriber.Shutdown() // nolint:errcheck
+	defer subscriber.Shutdown(context.Background()) // nolint:errcheck
 
 	require.NoError(t, waitRedisSubscription(subscriber, "internal"))
 

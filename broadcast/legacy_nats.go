@@ -1,6 +1,8 @@
 package broadcast
 
 import (
+	"context"
+
 	"github.com/apex/log"
 	"github.com/nats-io/nats.go"
 
@@ -70,7 +72,7 @@ func (s *LegacyNATSBroadcaster) Start(done chan (error)) error {
 	return nil
 }
 
-func (s *LegacyNATSBroadcaster) Shutdown() error {
+func (s *LegacyNATSBroadcaster) Shutdown(ctx context.Context) error {
 	if s.conn != nil {
 		s.conn.Close()
 	}

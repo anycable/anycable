@@ -3,7 +3,10 @@
 package mocks
 
 import (
+	context "context"
+
 	common "github.com/anycable/anycable-go/common"
+
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -36,13 +39,13 @@ func (_m *Subscriber) IsMultiNode() bool {
 	return r0
 }
 
-// Shutdown provides a mock function with given fields:
-func (_m *Subscriber) Shutdown() error {
-	ret := _m.Called()
+// Shutdown provides a mock function with given fields: ctx
+func (_m *Subscriber) Shutdown(ctx context.Context) error {
+	ret := _m.Called(ctx)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func() error); ok {
-		r0 = rf()
+	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = rf(ctx)
 	} else {
 		r0 = ret.Error(0)
 	}

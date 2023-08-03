@@ -1,6 +1,7 @@
 package node
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"testing"
@@ -41,8 +42,8 @@ import (
 // - Make sure it is not restored (uses controller.Authenticate)
 func TestIntegrationRestore_Memory(t *testing.T) {
 	node, controller := setupIntegrationNode()
-	go node.Start()       // nolint:errcheck
-	defer node.Shutdown() // nolint:errcheck
+	go node.Start()                           // nolint:errcheck
+	defer node.Shutdown(context.Background()) // nolint:errcheck
 
 	sharedIntegrationRestore(t, node, controller)
 }
@@ -208,8 +209,8 @@ func sharedIntegrationRestore(t *testing.T, node *Node, controller *mocks.Contro
 // - The session MUST receive the messages broadcasted during the unsubsciprtion period.
 func TestIntegrationHistory_Memory(t *testing.T) {
 	node, controller := setupIntegrationNode()
-	go node.Start()       // nolint:errcheck
-	defer node.Shutdown() // nolint:errcheck
+	go node.Start()                           // nolint:errcheck
+	defer node.Shutdown(context.Background()) // nolint:errcheck
 
 	sharedIntegrationHistory(t, node, controller)
 }

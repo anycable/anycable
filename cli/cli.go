@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -9,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/anycable/anycable-go/broadcast"
 	"github.com/anycable/anycable-go/broker"
@@ -43,7 +45,7 @@ type subscriberFactory = func(pubsub.Handler, *config.Config) (pubsub.Subscriber
 type websocketHandler = func(*node.Node, *config.Config) (http.Handler, error)
 
 type Shutdownable interface {
-	Shutdown() error
+	Shutdown(ctx context.Context) error
 }
 
 type Runner struct {
@@ -454,22 +456,51 @@ func (r *Runner) announceGoPools() {
 func (r *Runner) setupSignalHandlers() {
 	t := tebata.New(syscall.SIGINT, syscall.SIGTERM)
 
+	terminated := false
+	shutdown := make(chan struct{})
+	terminateCtx, terminateImmediately := context.WithCancel(context.Background())
+
 	t.Reserve(func() { // nolint:errcheck
-		log.Infof("Shutting down... (hit Ctrl-C to stop immediately or wait for up to %ds for graceful shutdown)", r.config.App.ShutdownTimeout)
 		go func() {
 			termSig := make(chan os.Signal, 1)
 			signal.Notify(termSig, syscall.SIGINT, syscall.SIGTERM)
 			<-termSig
+
+			// should be t.Dispose() but it's not available in tebata
+			terminated = true
+
 			log.Warnf("Immediate termination requested. Stopped")
+			terminateImmediately()
+
+			<-shutdown
 			r.errChan <- nil
 		}()
 	})
 
-	for _, shutdownable := range r.shutdownables {
-		t.Reserve(shutdownable.Shutdown) // nolint:errcheck
-	}
+	t.Reserve(func() { // nolint:errcheck
+		if terminated {
+			return
+		}
 
-	t.Reserve(func() { r.errChan <- nil }) // nolint:errcheck
+		timeoutCtx, cancelTimeout := context.WithTimeout(terminateCtx, time.Duration(r.config.App.ShutdownTimeout)*time.Second)
+		defer cancelTimeout()
+
+		log.Infof("Shutting down... (hit Ctrl-C to stop immediately or wait for up to %ds for graceful shutdown)", r.config.App.ShutdownTimeout)
+
+		for _, shutdownable := range r.shutdownables {
+			shutdownable.Shutdown(timeoutCtx) // nolint:errcheck
+		}
+
+		close(shutdown)
+	})
+
+	t.Reserve(func() { // nolint:errcheck
+		if terminated {
+			return
+		}
+
+		r.errChan <- nil
+	})
 }
 
 func (r *Runner) embedNATS(c *enats.Config) (*enats.Service, error) {

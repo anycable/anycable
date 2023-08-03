@@ -179,7 +179,7 @@ func (s *LegacyRedisBroadcaster) keepalive(done chan (error)) {
 }
 
 // Shutdown is no-op for Redis
-func (s *LegacyRedisBroadcaster) Shutdown() error {
+func (s *LegacyRedisBroadcaster) Shutdown(ctx context.Context) error {
 	return nil
 }
 

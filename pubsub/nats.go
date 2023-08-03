@@ -1,6 +1,7 @@
 package pubsub
 
 import (
+	"context"
 	"sync"
 
 	"github.com/anycable/anycable-go/common"
@@ -68,7 +69,7 @@ func (s *NATSSubscriber) Start(done chan (error)) error {
 	return nil
 }
 
-func (s *NATSSubscriber) Shutdown() error {
+func (s *NATSSubscriber) Shutdown(ctx context.Context) error {
 	if s.conn != nil {
 		s.conn.Close()
 	}

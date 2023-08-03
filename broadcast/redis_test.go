@@ -89,7 +89,7 @@ func TestRedisBroadcaster(t *testing.T) {
 		err := broadcaster.Start(errchan)
 		require.NoError(t, err)
 
-		defer broadcaster.Shutdown() // nolint:errcheck
+		defer broadcaster.Shutdown(context.Background()) // nolint:errcheck
 
 		require.NoError(t, broadcaster.initClient())
 
@@ -112,7 +112,7 @@ func TestRedisBroadcaster(t *testing.T) {
 		err := broadcaster.Start(errchan)
 		require.NoError(t, err)
 
-		defer broadcaster.Shutdown() // nolint:errcheck
+		defer broadcaster.Shutdown(context.Background()) // nolint:errcheck
 
 		require.NoError(t, broadcaster.initClient())
 
@@ -120,7 +120,7 @@ func TestRedisBroadcaster(t *testing.T) {
 		err = broadcaster2.Start(errchan)
 		require.NoError(t, err)
 
-		defer broadcaster2.Shutdown() // nolint:errcheck
+		defer broadcaster2.Shutdown(context.Background()) // nolint:errcheck
 
 		require.NoError(t, waitRedisStreamConsumers(broadcaster.client, 2))
 
@@ -181,7 +181,7 @@ func TestRedisBroadcasterAcksClaims(t *testing.T) {
 
 	err := broadcaster.Start(errchan)
 	require.NoError(t, err)
-	defer broadcaster.Shutdown() // nolint:errcheck
+	defer broadcaster.Shutdown(context.Background()) // nolint:errcheck
 
 	require.NoError(t, broadcaster.initClient())
 	require.NoError(t, waitRedisStreamConsumers(broadcaster.client, 1))
@@ -192,7 +192,7 @@ func TestRedisBroadcasterAcksClaims(t *testing.T) {
 	broadcaster2 := NewRedisBroadcaster(handler, &config)
 	err = broadcaster2.Start(errchan)
 	require.NoError(t, err)
-	defer broadcaster2.Shutdown() // nolint:errcheck
+	defer broadcaster2.Shutdown(context.Background()) // nolint:errcheck
 
 	require.NoError(t, broadcaster2.initClient())
 	require.NoError(t, waitRedisStreamConsumers(broadcaster2.client, 1))

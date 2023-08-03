@@ -362,14 +362,22 @@ func (h *Hub) FindByIdentifier(id string) HubSession {
 }
 
 func (h *Hub) DisconnectSesssions(ctx context.Context, callback func(s HubSession)) bool {
-	for {
-		select {
-		case <-ctx.Done():
-			return false
-		default:
+	done := make(chan struct{})
+	terminated := false
+
+	// A goroutine to process callbacks
+	// Run it concurrently to return immediately when the context is done
+	go func() {
+		defer close(done)
+
+		for {
+			if terminated {
+				return
+			}
+
 			h.mu.RLock()
 			if len(h.sessions) == 0 {
-				return true
+				return
 			}
 
 			var s HubSession
@@ -382,6 +390,16 @@ func (h *Hub) DisconnectSesssions(ctx context.Context, callback func(s HubSessio
 			h.mu.RUnlock()
 
 			h.RemoveSession(s)
+		}
+	}()
+
+	for {
+		select {
+		case <-ctx.Done():
+			terminated = true
+			return false
+		case <-done:
+			return true
 		}
 	}
 }

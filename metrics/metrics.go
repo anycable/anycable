@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -165,7 +166,7 @@ func (m *Metrics) Run() error {
 }
 
 // Shutdown stops metrics updates
-func (m *Metrics) Shutdown() (err error) {
+func (m *Metrics) Shutdown(ctx context.Context) (err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -178,7 +179,7 @@ func (m *Metrics) Shutdown() (err error) {
 	close(m.shutdownCh)
 
 	if m.server != nil {
-		m.server.Shutdown() //nolint:errcheck
+		m.server.Shutdown(ctx) //nolint:errcheck
 	}
 
 	for _, writer := range m.writers {

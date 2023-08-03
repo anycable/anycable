@@ -1,6 +1,7 @@
 package pubsub
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -20,7 +21,7 @@ func TestNATSCommon(t *testing.T) {
 	server := buildNATSServer()
 	err := server.Start()
 	require.NoError(t, err)
-	defer server.Shutdown() // nolint:errcheck
+	defer server.Shutdown(context.Background()) // nolint:errcheck
 
 	config := nats.NewNATSConfig()
 
@@ -39,7 +40,7 @@ func TestNATSReconnect(t *testing.T) {
 	server := buildNATSServer()
 	err := server.Start()
 	require.NoError(t, err)
-	defer server.Shutdown() // nolint:errcheck
+	defer server.Shutdown(context.Background()) // nolint:errcheck
 
 	handler := NewTestHandler()
 	config := nats.NewNATSConfig()
@@ -52,7 +53,7 @@ func TestNATSReconnect(t *testing.T) {
 	err = subscriber.Start(done)
 	require.NoError(t, err)
 
-	defer subscriber.Shutdown() // nolint:errcheck
+	defer subscriber.Shutdown(context.Background()) // nolint:errcheck
 
 	require.NoError(t, waitNATSSubscription(subscriber, "internal"))
 
@@ -66,7 +67,7 @@ func TestNATSReconnect(t *testing.T) {
 	assert.Equal(t, "2023", msg.Data)
 
 	// Reload NATS server
-	err = server.Shutdown()
+	err = server.Shutdown(context.Background())
 	require.NoError(t, err)
 	err = server.Start()
 	require.NoError(t, err)

@@ -79,7 +79,7 @@ func (s *RedisBroadcaster) Start(done chan error) error {
 	return nil
 }
 
-func (s *RedisBroadcaster) Shutdown() error {
+func (s *RedisBroadcaster) Shutdown(ctx context.Context) error {
 	s.clientMu.RLock()
 	defer s.clientMu.RUnlock()
 

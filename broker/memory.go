@@ -1,6 +1,7 @@
 package broker
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
@@ -181,7 +182,7 @@ func (b *Memory) Start() error {
 	return nil
 }
 
-func (b *Memory) Shutdown() error {
+func (b *Memory) Shutdown(ctx context.Context) error {
 	return nil
 }
 

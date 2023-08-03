@@ -4,6 +4,7 @@
 package enats
 
 import (
+	"context"
 	"errors"
 )
 
@@ -18,7 +19,7 @@ func (Service) Description() string { return "" }
 func (Service) Start() error {
 	return errors.New("embedded NATS is not supported for the current platform")
 }
-func (Service) Shutdown() error { return nil }
+func (Service) Shutdown(ctx context.Context) error { return nil }
 
 func NewService(c *Config) *Service {
 	return &Service{}

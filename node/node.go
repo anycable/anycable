@@ -185,7 +185,7 @@ func (n *Node) LookupSession(id string) *Session {
 }
 
 // Shutdown stops all services (hub, controller)
-func (n *Node) Shutdown() (err error) {
+func (n *Node) Shutdown(ctx context.Context) (err error) {
 	n.shutdownMu.Lock()
 	if n.closed {
 		n.shutdownMu.Unlock()
@@ -197,16 +197,12 @@ func (n *Node) Shutdown() (err error) {
 	n.closed = true
 	n.shutdownMu.Unlock()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(n.config.ShutdownTimeout)*time.Second)
-	defer cancel()
-
 	if n.hub != nil {
 		active := n.hub.Size()
 
 		if active > 0 {
 			n.log.Infof("Closing active connections: %d", active)
 			n.disconnectAll(ctx)
-			n.log.Info("All active connections closed")
 		}
 
 		n.hub.Shutdown()
@@ -739,8 +735,10 @@ func (n *Node) disconnectAll(ctx context.Context) {
 		s.DisconnectWithMessage(disconnectMessage, common.SERVER_RESTART_REASON)
 	})
 
-	if !ok {
-		n.log.Warnf("Timed out to disconnect all sessions, left: %d", n.hub.Size())
+	if ok {
+		n.log.Info("All active connections closed")
+	} else {
+		n.log.Warnf("Timed out to disconnect %d sessions", n.hub.Size())
 	}
 }
 
