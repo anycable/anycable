@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"os/signal"
 	"runtime"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/anycable/anycable-go/broadcast"
@@ -32,7 +30,6 @@ import (
 	"github.com/apex/log"
 	"github.com/gorilla/websocket"
 	"github.com/joomcode/errorx"
-	"github.com/syossan27/tebata"
 
 	"go.uber.org/automaxprocs/maxprocs"
 )
@@ -454,53 +451,28 @@ func (r *Runner) announceGoPools() {
 }
 
 func (r *Runner) setupSignalHandlers() {
-	t := tebata.New(syscall.SIGINT, syscall.SIGTERM)
+	s := utils.NewGracefulSignals(time.Duration(r.config.App.ShutdownTimeout) * time.Second)
 
-	terminated := false
-	shutdown := make(chan struct{})
-	terminateCtx, terminateImmediately := context.WithCancel(context.Background())
-
-	t.Reserve(func() { // nolint:errcheck
-		go func() {
-			termSig := make(chan os.Signal, 1)
-			signal.Notify(termSig, syscall.SIGINT, syscall.SIGTERM)
-			<-termSig
-
-			// should be t.Dispose() but it's not available in tebata
-			terminated = true
-
-			log.Warnf("Immediate termination requested. Stopped")
-			terminateImmediately()
-
-			<-shutdown
-			r.errChan <- nil
-		}()
-	})
-
-	t.Reserve(func() { // nolint:errcheck
-		if terminated {
-			return
-		}
-
-		timeoutCtx, cancelTimeout := context.WithTimeout(terminateCtx, time.Duration(r.config.App.ShutdownTimeout)*time.Second)
-		defer cancelTimeout()
-
-		log.Infof("Shutting down... (hit Ctrl-C to stop immediately or wait for up to %ds for graceful shutdown)", r.config.App.ShutdownTimeout)
-
-		for _, shutdownable := range r.shutdownables {
-			shutdownable.Shutdown(timeoutCtx) // nolint:errcheck
-		}
-
-		close(shutdown)
-	})
-
-	t.Reserve(func() { // nolint:errcheck
-		if terminated {
-			return
-		}
-
+	s.HandleForceTerminate(func() {
+		log.Warnf("Immediate termination requested. Stopped")
 		r.errChan <- nil
 	})
+
+	s.Handle(func(ctx context.Context) error {
+		log.Infof("Shutting down... (hit Ctrl-C to stop immediately or wait for up to %ds for graceful shutdown)", r.config.App.ShutdownTimeout)
+		return nil
+	})
+
+	for _, shutdownable := range r.shutdownables {
+		s.Handle(shutdownable.Shutdown)
+	}
+
+	s.Handle(func(ctx context.Context) error {
+		r.errChan <- nil
+		return nil
+	})
+
+	s.Listen()
 }
 
 func (r *Runner) embedNATS(c *enats.Config) (*enats.Service, error) {

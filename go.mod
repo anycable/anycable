@@ -26,7 +26,6 @@ require (
 	github.com/redis/rueidis v1.0.10
 	github.com/smira/go-statsd v1.3.2
 	github.com/stretchr/testify v1.8.2
-	github.com/syossan27/tebata v0.0.0-20180602121909-b283fe4bc5ba
 	github.com/urfave/cli/v2 v2.11.1
 	go.uber.org/automaxprocs v1.5.1
 	golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df
@@ -37,11 +36,12 @@ require (
 // https://github.com/stretchr/testify/pull/1229
 replace github.com/stretchr/testify => github.com/palkan/testify v0.0.0-20220714120938-9ebebef47942
 
+require github.com/sony/gobreaker v0.5.0
+
 require (
 	github.com/klauspost/compress v1.16.0 // indirect
 	github.com/minio/highwayhash v1.0.2 // indirect
 	github.com/nats-io/jwt/v2 v2.3.0 // indirect
-	github.com/sony/gobreaker v0.5.0 // indirect
 	github.com/xtgo/uuid v0.0.0-20140804021211-a0b114877d4c // indirect
 	golang.org/x/time v0.3.0 // indirect
 )
