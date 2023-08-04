@@ -89,7 +89,11 @@ func main() {
 
 	b.perform = options.mode == "perform"
 	b.metrics = metrics.NewMetrics(nil, 0)
-	b.rpc = rpc.NewController(b.metrics, &rpcConfig)
+	b.rpc, err = rpc.NewController(b.metrics, &rpcConfig)
+
+	if err != nil {
+		panic(err)
+	}
 
 	err = b.rpc.Start()
 

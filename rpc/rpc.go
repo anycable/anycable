@@ -160,14 +160,18 @@ type Controller struct {
 }
 
 // NewController builds new Controller
-func NewController(metrics metrics.Instrumenter, config *Config) *Controller {
+func NewController(metrics metrics.Instrumenter, config *Config) (*Controller, error) {
 	metrics.RegisterCounter(metricsRPCCalls, "The total number of RPC calls")
 	metrics.RegisterCounter(metricsRPCRetries, "The total number of RPC call retries")
 	metrics.RegisterCounter(metricsRPCFailures, "The total number of failed RPC calls")
 	metrics.RegisterGauge(metricsRPCPending, "The number of pending RPC calls")
 
 	capacity := config.Concurrency
-	barrier := NewFixedSizeBarrier(capacity)
+	barrier, err := NewFixedSizeBarrier(capacity)
+
+	if err != nil {
+		return nil, err
+	}
 
 	if barrier.HasDynamicCapacity() {
 		metrics.RegisterGauge(metricsRPCCapacity, "The max number of concurrent RPC calls allowed")
@@ -178,7 +182,7 @@ func NewController(metrics metrics.Instrumenter, config *Config) *Controller {
 		metrics.RegisterGauge(metricsGRPCActiveConns, "The number of active HTTP connections used by gRPC")
 	}
 
-	return &Controller{log: log.WithField("context", "rpc"), metrics: metrics, config: config, barrier: barrier}
+	return &Controller{log: log.WithField("context", "rpc"), metrics: metrics, config: config, barrier: barrier}, nil
 }
 
 // Start initializes RPC connection pool

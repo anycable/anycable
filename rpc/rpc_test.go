@@ -40,8 +40,9 @@ func (st MockState) ActiveConns() int {
 func NewTestController() *Controller {
 	config := NewConfig()
 	metrics := metrics.NewMetrics(nil, 0)
-	controller := NewController(metrics, &config)
-	controller.barrier = NewFixedSizeBarrier(5)
+	controller, _ := NewController(metrics, &config)
+	barrier, _ := NewFixedSizeBarrier(5)
+	controller.barrier = barrier
 	controller.clientState = MockState{true, false}
 	return controller
 }
@@ -452,7 +453,8 @@ func TestCustomDialFun(t *testing.T) {
 
 	config.DialFun = NewInprocessServiceDialer(&service, stateHandler)
 
-	controller := NewController(metrics.NewMetrics(nil, 0), &config)
+	controller, err := NewController(metrics.NewMetrics(nil, 0), &config)
+	require.NoError(t, err)
 	require.NoError(t, controller.Start())
 
 	t.Run("Connect", func(t *testing.T) {

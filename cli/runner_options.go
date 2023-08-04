@@ -39,7 +39,7 @@ func WithController(fn controllerFactory) Option {
 // WithDefaultRPCController is an Option to set Runner controller to default rpc.Controller
 func WithDefaultRPCController() Option {
 	return WithController(func(m *metrics.Metrics, c *config.Config) (node.Controller, error) {
-		return rpc.NewController(m, &c.RPC), nil
+		return rpc.NewController(m, &c.RPC)
 	})
 }
 

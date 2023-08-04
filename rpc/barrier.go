@@ -24,7 +24,11 @@ type FixedSizeBarrier struct {
 
 var _ Barrier = (*FixedSizeBarrier)(nil)
 
-func NewFixedSizeBarrier(capacity int) *FixedSizeBarrier {
+func NewFixedSizeBarrier(capacity int) (*FixedSizeBarrier, error) {
+	if capacity <= 0 {
+		return nil, fmt.Errorf("RPC concurrency must be > 0")
+	}
+
 	sem := make(chan struct{}, capacity)
 
 	for i := 0; i < capacity; i++ {
@@ -35,7 +39,7 @@ func NewFixedSizeBarrier(capacity int) *FixedSizeBarrier {
 		capacity:     capacity,
 		capacityInfo: fmt.Sprintf("%d", capacity),
 		sem:          sem,
-	}
+	}, nil
 }
 
 func (b *FixedSizeBarrier) Acquire() {
