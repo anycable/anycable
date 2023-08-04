@@ -211,7 +211,7 @@ $ anycable-go \
 
 You can also monitor the current concurrency value via the `rpc_capacity_num` metrics.
 
-## Disconnect events settings
+## Disconnect settings
 
 AnyCable-Go notifies an RPC server about disconnected clients asynchronously with a rate limit. We do that to allow other RPC calls to have higher priority (because _live_ clients are usually more important) and to avoid load spikes during mass disconnects (i.e., when a server restarts).
 
@@ -238,6 +238,18 @@ Other available modes are "always" and "never". Thus, to disable Disconnect call
 Using `--disconnect_mode=always` is useful when you have some logic in the `ApplicationCable::Connetion#disconnect` method and you want to invoke it even for JWT and signed streams sessions.
 
 **NOTE:** AnyCable tries to make a Disconnect call for active sessions during the server shutdown. However, if the server is killed with `kill -9` or crashes, the disconnect queue is not flushed, and some disconnect events may be lost. If you experience higher queue sizes during deployments, consider increasing the shutdown timeout by tuning the `--shutdown_timeout` parameter.
+
+### Slow drain mode
+
+<p class="pro-badge-header"></p>
+
+AnyCable-Go PRO provides the **slow drain** mode for disconnecting clients during shutdown. When it is enabled, AnyCable do not try to disconnect all active clients as soon as a shutdown signal is received. Instead, spread the disconnects over the shutdown timeout period.
+
+You can enable this feature by providing the `--shutdown_slowdrain` option or setting the `ANYCABLE_SHUTDOWN_SLOWDRAIN` environment variable to `true`.
+
+Use this feature to reduce the load on AnyCable servers during deployments (i.e., to avoid the _thundering herd_ situation).
+
+**NOTE:** This feature only makes sense if you perform rolling updates, or blue-green deployments, or similar.
 
 ## GOMAXPROCS
 
