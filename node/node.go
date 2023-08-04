@@ -879,6 +879,16 @@ func (n *Node) disconnectAll(ctx context.Context) {
 
 	scheduler = &noopScheduler{ctx}
 
+	if n.config.SlowDrainShutdown {
+		slowDrainDuration := (time.Duration(n.config.ShutdownTimeout) * time.Second) * 9 / 10
+
+		n.log.Info(fmt.Sprintf("draining %d active connections slowly for %s", len(sessions), slowDrainDuration.String()))
+		slowScheduler := newSlowDrainScheduler(ctx, len(sessions), slowDrainDuration, n.config.SlowDrainMaxInterval)
+		slowScheduler.Start()
+
+		scheduler = slowScheduler
+	}
+
 	var wg sync.WaitGroup
 
 	wg.Add(len(sessions))

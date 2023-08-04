@@ -32,6 +32,10 @@ type Config struct {
 	PongTimeout int
 	// For how long to wait for disconnect callbacks to be processed before exiting (seconds)
 	ShutdownTimeout int
+	// Enable slow draining of the connections during shutdown
+	SlowDrainShutdown bool
+	// The max interval between slow drain disconnect calls (milliseconds)
+	SlowDrainMaxInterval int
 }
 
 // NewConfig builds a new config
@@ -47,5 +51,6 @@ func NewConfig() Config {
 		PingTimestampPrecision:     "s",
 		DisconnectMode:             DISCONNECT_MODE_AUTO,
 		ShutdownTimeout:            30,
+		SlowDrainMaxInterval:       500,
 	}
 }
