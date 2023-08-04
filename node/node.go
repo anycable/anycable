@@ -731,14 +731,37 @@ func (n *Node) handleCallReply(s *Session, reply *common.CallResult) bool {
 func (n *Node) disconnectAll(ctx context.Context) {
 	disconnectMessage := common.NewDisconnectMessage(common.SERVER_RESTART_REASON, true)
 
-	ok := n.hub.DisconnectSesssions(ctx, func(s hub.HubSession) {
-		s.DisconnectWithMessage(disconnectMessage, common.SERVER_RESTART_REASON)
-	})
+	// To speed up the process we disconnect all sessions in parallel using a pool of workers
+	pool := utils.NewGoPool("disconnect", n.config.ShutdownDisconnectPoolSize)
 
-	if ok {
+	sessions := n.hub.Sessions()
+
+	var wg sync.WaitGroup
+
+	wg.Add(len(sessions))
+
+	for _, s := range sessions {
+		s := s.(*Session)
+		pool.Schedule(func() {
+			if s.IsConnected() {
+				s.DisconnectWithMessage(disconnectMessage, common.SERVER_RESTART_REASON)
+			}
+			wg.Done()
+		})
+	}
+
+	done := make(chan struct{})
+
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-ctx.Done():
+		n.log.Warnf("Terminated while disconnecting active sessions: %d", n.hub.Size())
+	case <-done:
 		n.log.Info("All active connections closed")
-	} else {
-		n.log.Warnf("Timed out to disconnect %d sessions", n.hub.Size())
 	}
 }
 

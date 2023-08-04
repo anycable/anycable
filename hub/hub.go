@@ -361,47 +361,17 @@ func (h *Hub) FindByIdentifier(id string) HubSession {
 	return nil
 }
 
-func (h *Hub) DisconnectSesssions(ctx context.Context, callback func(s HubSession)) bool {
-	done := make(chan struct{})
-	terminated := false
+func (h *Hub) Sessions() []HubSession {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 
-	// A goroutine to process callbacks
-	// Run it concurrently to return immediately when the context is done
-	go func() {
-		defer close(done)
+	sessions := make([]HubSession, 0, len(h.sessions))
 
-		for {
-			if terminated {
-				return
-			}
-
-			h.mu.RLock()
-			if len(h.sessions) == 0 {
-				return
-			}
-
-			var s HubSession
-			for _, info := range h.sessions {
-				s = info.session
-				callback(s)
-				break
-			}
-
-			h.mu.RUnlock()
-
-			h.RemoveSession(s)
-		}
-	}()
-
-	for {
-		select {
-		case <-ctx.Done():
-			terminated = true
-			return false
-		case <-done:
-			return true
-		}
+	for _, info := range h.sessions {
+		sessions = append(sessions, info.session)
 	}
+
+	return sessions
 }
 
 func buildGates(ctx context.Context, num int) []*Gate {

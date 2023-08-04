@@ -249,7 +249,7 @@ func (c *Controller) Shutdown() error {
 		busy := c.busy()
 
 		if busy > 0 {
-			return false, fmt.Errorf("There are %d active RPC connections left", busy)
+			return false, fmt.Errorf("Terminated while completing active RPC calls: %d", busy)
 		}
 
 		c.log.Info("All active RPC calls finished")

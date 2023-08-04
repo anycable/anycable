@@ -12,6 +12,8 @@ var DISCONNECT_MODES = []string{DISCONNECT_MODE_ALWAYS, DISCONNECT_MODE_AUTO, DI
 type Config struct {
 	// Define when to invoke Disconnect callback
 	DisconnectMode string
+	// The number of goroutines to use for disconnect calls on shutdown
+	ShutdownDisconnectPoolSize int
 	// How often server should send Action Cable ping messages (seconds)
 	PingInterval int
 	// How ofter to refresh node stats (seconds)
@@ -27,11 +29,12 @@ type Config struct {
 // NewConfig builds a new config
 func NewConfig() Config {
 	return Config{
-		PingInterval:           3,
-		StatsRefreshInterval:   5,
-		HubGopoolSize:          16,
-		PingTimestampPrecision: "s",
-		DisconnectMode:         DISCONNECT_MODE_AUTO,
-		ShutdownTimeout:        30,
+		PingInterval:               3,
+		StatsRefreshInterval:       5,
+		HubGopoolSize:              16,
+		ShutdownDisconnectPoolSize: 16,
+		PingTimestampPrecision:     "s",
+		DisconnectMode:             DISCONNECT_MODE_AUTO,
+		ShutdownTimeout:            30,
 	}
 }

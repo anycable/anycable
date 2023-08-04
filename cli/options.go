@@ -56,7 +56,7 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 	c := config.NewConfig()
 
 	var path, headers, cookieFilter, mtags string
-	var helpOrVersionWereShown bool = true
+	var helpOrVersionWereShown = true
 	var metricsFilter string
 	var enatsRoutes, enatsGateways string
 	var presets string
@@ -267,6 +267,14 @@ func serverCLIFlags(c *config.Config, path *string) []cli.Flag {
 			Usage:       "Graceful shutdown timeout (in seconds)",
 			Value:       c.App.ShutdownTimeout,
 			Destination: &c.App.ShutdownTimeout,
+		},
+
+		&cli.IntFlag{
+			Name:        "shutdown_pool_size",
+			Usage:       "The number of goroutines to use for disconnect calls on shutdown",
+			Value:       c.App.ShutdownDisconnectPoolSize,
+			Destination: &c.App.ShutdownDisconnectPoolSize,
+			Hidden:      true,
 		},
 	})
 }
