@@ -2,6 +2,8 @@
 
 ## master
 
+## 1.4.2 (2024-08-04)
+
 - Add `--shutdown_timeout` option to configure graceful shutdown timeout. ([@palkan][])
 
 This new option deprecates the older `--disconnect_timeout` option (which now has no effect).
