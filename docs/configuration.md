@@ -243,13 +243,15 @@ Using `--disconnect_mode=always` is useful when you have some logic in the `Appl
 
 <p class="pro-badge-header"></p>
 
-AnyCable-Go PRO provides the **slow drain** mode for disconnecting clients during shutdown. When it is enabled, AnyCable do not try to disconnect all active clients as soon as a shutdown signal is received. Instead, spread the disconnects over the shutdown timeout period.
+AnyCable-Go PRO provides the **slow drain** mode for disconnecting clients during shutdown. When it is enabled, AnyCable do not try to disconnect all active clients as soon as a shutdown signal is received. Instead, spread the disconnects over the graceful shutdown period. This way, you can reduce the load on AnyCable servers during deployments (i.e., avoid the _thundering herd_ situation).
 
-You can enable this feature by providing the `--shutdown_slowdrain` option or setting the `ANYCABLE_SHUTDOWN_SLOWDRAIN` environment variable to `true`.
+You can enable this feature by providing the `--shutdown_slowdrain` option or setting the `ANYCABLE_SHUTDOWN_SLOWDRAIN` environment variable to `true`. You should see the following log message on shutdown indicating that the slow drain mode is enabled:
 
-Use this feature to reduce the load on AnyCable servers during deployments (i.e., to avoid the _thundering herd_ situation).
+```sh
+INFO 2023-08-04T07:16:14.339Z context=node Draining 1234 active connections slowly for 24.7s
+```
 
-**NOTE:** This feature only makes sense if you perform rolling updates, or blue-green deployments, or similar.
+The actual _drain period_ is slightly less than the shutdown timeout—we need to reserve some time to complete RPC calls. Also, there is a maximum interval between disconnects (500ms), so we don't wait too long when the number of clients is not that big.
 
 ## GOMAXPROCS
 
