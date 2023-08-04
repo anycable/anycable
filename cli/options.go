@@ -186,6 +186,12 @@ Use disconnect_mode=never instead.`)
 		c.App.DisconnectMode = node.DISCONNECT_MODE_NEVER
 	}
 
+	if c.DisconnectQueue.ShutdownTimeout > 0 {
+		fmt.Println(`DEPRECATION WARNING: disconnect_timeout option is deprecated
+and will be removed in the next major release of anycable-go.
+Use shutdown_timeout instead.`)
+	}
+
 	return &c, nil, false
 }
 
@@ -608,9 +614,10 @@ func disconnectorCLIFlags(c *config.Config) []cli.Flag {
 
 		&cli.IntFlag{
 			Name:        "disconnect_timeout",
-			Usage:       "Graceful shutdown timeouts (in seconds)",
+			Usage:       "[DEPRECATED] Graceful shutdown timeout (in seconds)",
 			Value:       c.DisconnectQueue.ShutdownTimeout,
 			Destination: &c.DisconnectQueue.ShutdownTimeout,
+			Hidden:      true,
 		},
 
 		&cli.BoolFlag{

@@ -13,13 +13,13 @@ import (
 type DisconnectQueueConfig struct {
 	// Limit the number of Disconnect RPC calls per second
 	Rate int
-	// How much time wait to call all enqueued calls at exit (in seconds)
+	// How much time wait to call all enqueued calls at exit (in seconds) [DEPREACTED]
 	ShutdownTimeout int
 }
 
 // NewDisconnectQueueConfig builds a new config
 func NewDisconnectQueueConfig() DisconnectQueueConfig {
-	return DisconnectQueueConfig{ShutdownTimeout: 5, Rate: 100}
+	return DisconnectQueueConfig{Rate: 100}
 }
 
 // DisconnectQueue is a rate-limited executor
@@ -27,8 +27,6 @@ type DisconnectQueue struct {
 	node *Node
 	// Throttling rate
 	rate time.Duration
-	// Graceful shutdown timeout
-	timeout time.Duration
 	// Call RPC Disconnect for connections
 	disconnect chan *Session
 	// Logger with context
@@ -44,7 +42,6 @@ type DisconnectQueue struct {
 // NewDisconnectQueue builds new queue with a specified rate (max calls per second)
 func NewDisconnectQueue(node *Node, config *DisconnectQueueConfig) *DisconnectQueue {
 	rateDuration := time.Millisecond * time.Duration(1000/config.Rate)
-	timeout := time.Duration(config.ShutdownTimeout) * time.Second
 
 	ctx := log.WithField("context", "disconnector")
 
@@ -54,7 +51,6 @@ func NewDisconnectQueue(node *Node, config *DisconnectQueueConfig) *DisconnectQu
 		node:       node,
 		disconnect: make(chan *Session, 4096),
 		rate:       rateDuration,
-		timeout:    timeout,
 		log:        ctx,
 		shutdown:   make(chan struct{}, 1),
 	}

@@ -4,6 +4,8 @@
 
 - Add `--shutdown_timeout` option to configure graceful shutdown timeout. ([@palkan][])
 
+This new option deprecates the older `--disconnect_timeout` option (which now has no effect).
+
 ## 1.4.1 (2024-07-24)
 
 - Allow to configure secure gRPC connection. ([@Envek][])
