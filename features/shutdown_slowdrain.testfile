@@ -1,0 +1,46 @@
+launch :rpc, "bundle exec anyt --only-rpc", env: {"ANYCABLE_DEBUG" => "1", "ANYCABLE_DISCONNECT_DELAY" => "0.3"}, capture_output: true
+wait_tcp 50051
+
+launch :anycable,
+  "./dist/anycable-go --disconnect_mode=always --disconnect_rate=1 --shutdown_timeout=3 --shutdown_slowdrain"
+wait_tcp 8080
+
+scenario = [
+  client: {
+    multiplier: 10,
+    actions: [
+      {
+        receive: {
+          "data>": {
+            type: "welcome"
+          }
+        }
+      },
+      {
+        sleep: {
+          time: 4
+        }
+      }
+    ]
+  }
+]
+
+TEST_COMMAND = <<~CMD
+  bundle exec wsdirector ws://localhost:8080/cable -i #{scenario.to_json}
+CMD
+
+launch :wsdirector, TEST_COMMAND
+
+sleep 1
+
+stop :anycable
+stop :rpc
+
+result = stdout(:rpc)
+
+expected = 10
+disconnect_calls = result.scan(/^RPC Disconnect/).size
+
+if disconnect_calls != expected
+  fail "Expected to receive #{expected} Disconnect RPC calls. Got #{disconnect_calls}:\n#{result}"
+end

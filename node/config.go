@@ -41,6 +41,10 @@ type Config struct {
 	ShutdownTimeout int `toml:"shutdown_timeout"`
 	// For how long to sleep before shutting down
 	ShutdownDelay int `toml:"shutdown_delay"`
+	// Enable slow draining of the connections during shutdown
+	SlowDrainShutdown bool `toml:"slow_drain_shutdown"`
+	// The max interval between slow drain disconnect calls (milliseconds)
+	SlowDrainMaxInterval int `toml:"slow_drain_max_interval"`
 }
 
 // NewConfig builds a new config
@@ -56,6 +60,7 @@ func NewConfig() Config {
 		PingTimestampPrecision:     "s",
 		DisconnectMode:             DISCONNECT_MODE_AUTO,
 		ShutdownTimeout:            30,
+		SlowDrainMaxInterval:       500,
 	}
 }
 
@@ -87,6 +92,12 @@ func (c Config) ToToml() string {
 
 	result.WriteString("# Graceful shutdown period (seconds)\n")
 	result.WriteString(fmt.Sprintf("shutdown_timeout = %d\n", c.ShutdownTimeout))
+
+	result.WriteString("# Enable slow draining of the connections during shutdown\n")
+	result.WriteString(fmt.Sprintf("slow_drain_shutdown = %t\n", c.SlowDrainShutdown))
+
+	result.WriteString("# The max interval between slow drain disconnect calls (milliseconds)\n")
+	result.WriteString(fmt.Sprintf("slow_drain_max_interval = %d\n", c.SlowDrainMaxInterval))
 
 	result.WriteString("# How often to refresh system-wide metrics (seconds)\n")
 	result.WriteString(fmt.Sprintf("stats_refresh_interval = %d\n", c.StatsRefreshInterval))

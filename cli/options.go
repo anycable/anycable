@@ -649,6 +649,21 @@ func serverCLIFlags(c *config.Config, path *string) []cli.Flag {
 				return nil
 			},
 		},
+
+		&cli.BoolFlag{
+			Name:        "shutdown_slowdrain",
+			Usage:       "Enable slow draining of connections during shutdown",
+			Value:       c.App.SlowDrainShutdown,
+			Destination: &c.App.SlowDrainShutdown,
+		},
+
+		&cli.IntFlag{
+			Name:        "shutdown_slowdrain_max_interval",
+			Usage:       "The max interval between slow drain disconnect calls (milliseconds)",
+			Value:       c.App.SlowDrainMaxInterval,
+			Destination: &c.App.SlowDrainMaxInterval,
+			Hidden:      true,
+		},
 	})
 }
 
