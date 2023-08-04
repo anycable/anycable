@@ -728,6 +728,21 @@ func (n *Node) handleCallReply(s *Session, reply *common.CallResult) bool {
 	return isDirty
 }
 
+// disconnectScheduler controls how quickly to disconnect sessions
+type disconnectScheduler interface {
+	// This method is called when a session is ready to be disconnected,
+	// so it can block the operation or cancel it (by returning false).
+	Continue() bool
+}
+
+type noopScheduler struct {
+	ctx context.Context
+}
+
+func (s *noopScheduler) Continue() bool {
+	return s.ctx.Err() == nil
+}
+
 func (n *Node) disconnectAll(ctx context.Context) {
 	disconnectMessage := common.NewDisconnectMessage(common.SERVER_RESTART_REASON, true)
 
@@ -736,6 +751,10 @@ func (n *Node) disconnectAll(ctx context.Context) {
 
 	sessions := n.hub.Sessions()
 
+	var scheduler disconnectScheduler // nolint:gosimple
+
+	scheduler = &noopScheduler{ctx}
+
 	var wg sync.WaitGroup
 
 	wg.Add(len(sessions))
@@ -743,10 +762,12 @@ func (n *Node) disconnectAll(ctx context.Context) {
 	for _, s := range sessions {
 		s := s.(*Session)
 		pool.Schedule(func() {
-			if s.IsConnected() {
-				s.DisconnectWithMessage(disconnectMessage, common.SERVER_RESTART_REASON)
+			if scheduler.Continue() {
+				if s.IsConnected() {
+					s.DisconnectWithMessage(disconnectMessage, common.SERVER_RESTART_REASON)
+				}
+				wg.Done()
 			}
-			wg.Done()
 		})
 	}
 
