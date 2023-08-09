@@ -8,10 +8,6 @@ import (
 	"github.com/anycable/anycable-go/common"
 )
 
-const (
-	SESSION_ID_HEADER = "X-ANYCABLE-RESTORE-SID"
-)
-
 // Broadcaster is responsible for fanning-out messages to the stream clients
 // and other nodes
 type Broadcaster interface {

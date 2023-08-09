@@ -21,6 +21,20 @@ func ActionCableProtocols() []string {
 	return []string{ActionCableV1JSON, ActionCableV1ExtJSON}
 }
 
+func ActionCableExtendedProtocols() []string {
+	return []string{ActionCableV1ExtJSON}
+}
+
+func IsExtendedActionCableProtocol(protocol string) bool {
+	for _, p := range ActionCableExtendedProtocols() {
+		if p == protocol {
+			return true
+		}
+	}
+
+	return false
+}
+
 // Outgoing message types (according to Action Cable protocol)
 const (
 	WelcomeType    = "welcome"

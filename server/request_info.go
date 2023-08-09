@@ -17,7 +17,9 @@ type RequestInfo struct {
 	UID     string
 	URL     string
 	Headers *map[string]string
-	Params  map[string]string
+
+	anycableHeaders map[string]string
+	params          map[string]string
 }
 
 func NewRequestInfo(r *http.Request, extractor HeadersExtractor) (*RequestInfo, error) {
@@ -27,6 +29,15 @@ func NewRequestInfo(r *http.Request, extractor HeadersExtractor) (*RequestInfo, 
 		headers = make(map[string]string)
 	} else {
 		headers = extractor.FromRequest(r)
+	}
+
+	anycableHeaders := make(map[string]string)
+
+	// Extract headers prefixed with `X-AnyCable-` from request headers
+	for k, v := range r.Header {
+		if strings.HasPrefix(strings.ToLower(k), "x-anycable-") {
+			anycableHeaders[strings.ToLower(k)] = v[len(v)-1]
+		}
 	}
 
 	uid, err := FetchUID(r)
@@ -53,15 +64,23 @@ func NewRequestInfo(r *http.Request, extractor HeadersExtractor) (*RequestInfo, 
 		params[k] = v[len(v)-1]
 	}
 
-	return &RequestInfo{UID: uid, Headers: &headers, URL: url, Params: params}, nil
+	return &RequestInfo{UID: uid, Headers: &headers, URL: url, params: params, anycableHeaders: anycableHeaders}, nil
 }
 
 func (i *RequestInfo) Param(key string) string {
-	if i.Params == nil {
+	if i.params == nil {
 		return ""
 	}
 
-	return i.Params[key]
+	return i.params[key]
+}
+
+func (i *RequestInfo) AnyCableHeader(key string) string {
+	if i.anycableHeaders == nil {
+		return ""
+	}
+
+	return i.anycableHeaders[strings.ToLower(key)]
 }
 
 // FetchUID safely extracts uid from `X-Request-ID` header or generates a new one

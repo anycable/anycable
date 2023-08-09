@@ -564,7 +564,7 @@ func TestRestoreSession(t *testing.T) {
 	go node.hub.Run()
 	defer node.hub.Shutdown()
 
-	prev_session := NewMockSession("114", node)
+	prev_session := NewMockSession("114", node, WithResumable(true))
 	prev_session.subscriptions.AddChannel("fruits_channel")
 	prev_session.subscriptions.AddChannelStream("fruits_channel", "arancia")
 	prev_session.subscriptions.AddChannelStream("fruits_channel", "limoni")
@@ -584,11 +584,9 @@ func TestRestoreSession(t *testing.T) {
 		On("Subscribe", mock.Anything).
 		Return(func(name string) string { return name })
 
-	session := NewMockSession("214", node)
+	session := NewMockSession("214", node, WithResumable(true), WithPrevSID("114"))
 
 	t.Run("Successful restore via header", func(t *testing.T) {
-		session.env.SetHeader("X-ANYCABLE-RESTORE-SID", "114")
-
 		res, err := node.Authenticate(session)
 		require.NoError(t, err)
 		assert.Equal(t, common.SUCCESS, res.Status)
@@ -634,30 +632,10 @@ func TestRestoreSession(t *testing.T) {
 		)
 	})
 
-	t.Run("Successful restore via url", func(t *testing.T) {
-		session.env.URL = "/cable-test?sid=114"
-
-		res, err := node.Authenticate(session)
-		require.NoError(t, err)
-		assert.Equal(t, common.SUCCESS, res.Status)
-
-		welcome, err := session.conn.Read()
-		require.NoError(t, err)
-
-		require.Equalf(
-			t,
-			`{"type":"welcome","sid":"214","restored":true,"restored_ids":["fruits_channel"]}`,
-			string(welcome),
-			"Sent message is invalid: %s", welcome,
-		)
-	})
-
 	t.Run("Failed to restore", func(t *testing.T) {
 		broker.
 			On("RestoreSession", "114").
 			Return(nil, nil)
-
-		session.env.SetHeader("-anycable-restore-sid", "114")
 
 		session = NewMockSession("154", node)
 

@@ -26,7 +26,7 @@ func NewMockNode() *Node {
 }
 
 // NewMockSession returns a new session with a specified uid and identifiers equal to uid
-func NewMockSession(uid string, node *Node) *Session {
+func NewMockSession(uid string, node *Node, opts ...SessionOption) *Session {
 	session := Session{
 		executor:      node,
 		closed:        true,
@@ -41,14 +41,19 @@ func NewMockSession(uid string, node *Node) *Session {
 
 	session.SetIdentifiers(uid)
 	session.conn = mocks.NewMockConnection()
+
+	for _, opt := range opts {
+		opt(&session)
+	}
+
 	go session.SendMessages()
 
 	return &session
 }
 
 // NewMockSession returns a new session with a specified uid, path and headers, and identifiers equal to uid
-func NewMockSessionWithEnv(uid string, node *Node, url string, headers *map[string]string) *Session {
-	session := NewMockSession(uid, node)
+func NewMockSessionWithEnv(uid string, node *Node, url string, headers *map[string]string, opts ...SessionOption) *Session {
+	session := NewMockSession(uid, node, opts...)
 	session.env = common.NewSessionEnv(url, headers)
 	return session
 }

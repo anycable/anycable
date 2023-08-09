@@ -64,4 +64,18 @@ func TestRequestInfo(t *testing.T) {
 		blank_info := RequestInfo{}
 		assert.Equal(t, "", blank_info.Param("pi"))
 	})
+
+	t.Run("With AnyCable Headers", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "ws://anycable.io/cable?pi=3&pp=no&pi=5", nil)
+		req.Header.Set("x-anycable-sid", "432")
+		req.Header.Set("X-AnyCable-Ping-Interval", "10")
+		info, err := NewRequestInfo(req, nil)
+
+		require.NoError(t, err)
+		assert.Equal(t, "432", info.AnyCableHeader("X-ANYCABLE-SID"))
+		assert.Equal(t, "10", info.AnyCableHeader("x-anycable-ping-interval"))
+
+		blank_info := RequestInfo{}
+		assert.Equal(t, "", blank_info.AnyCableHeader("SID"))
+	})
 }

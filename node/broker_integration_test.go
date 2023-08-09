@@ -52,7 +52,7 @@ func sharedIntegrationRestore(t *testing.T, node *Node, controller *mocks.Contro
 	sid := "s18"
 	ids := "user:jack"
 
-	prev_session := NewMockSessionWithEnv(sid, node, "ws://test.anycable.io/cable", nil)
+	prev_session := NewMockSessionWithEnv(sid, node, "ws://test.anycable.io/cable", nil, WithResumable(true))
 
 	controller.
 		On("Authenticate", sid, prev_session.env).
@@ -115,7 +115,7 @@ func sharedIntegrationRestore(t *testing.T, node *Node, controller *mocks.Contro
 
 	prev_session.Disconnect("normal", ws.CloseNormalClosure)
 
-	session := NewMockSessionWithEnv("s21", node, fmt.Sprintf("ws://test.anycable.io/cable?sid=%s", sid), nil)
+	session := NewMockSessionWithEnv("s21", node, fmt.Sprintf("ws://test.anycable.io/cable?sid=%s", sid), nil, WithResumable(true), WithPrevSID(sid))
 
 	_, err = node.Authenticate(session)
 	require.NoError(t, err)
@@ -173,7 +173,7 @@ func sharedIntegrationRestore(t *testing.T, node *Node, controller *mocks.Contro
 				Transmissions: []string{`{"type":"welcome","restored":false}`},
 			}, nil)
 
-		new_session := NewMockSessionWithEnv("s42", node, fmt.Sprintf("ws://test.anycable.io/cable?sid=%s", sid), nil)
+		new_session := NewMockSessionWithEnv("s42", node, fmt.Sprintf("ws://test.anycable.io/cable?sid=%s", sid), nil, WithResumable(true), WithPrevSID(sid))
 
 		time.Sleep(4 * time.Second)
 

@@ -3,7 +3,6 @@ package node
 import (
 	"encoding/json"
 	"errors"
-	"net/url"
 	"sync"
 	"time"
 
@@ -16,9 +15,6 @@ import (
 
 const (
 	writeWait = 10 * time.Second
-
-	prevSessionHeader = "X-ANYCABLE-RESTORE-SID"
-	prevSessionParam  = "sid"
 )
 
 // Executor handles incoming commands (messages)
@@ -54,6 +50,9 @@ type Session struct {
 	pingTimestampPrecision string
 
 	handshakeDeadline time.Time
+
+	resumable bool
+	prevSid   string
 
 	Connected bool
 	// Could be used to store arbitrary data within a session
@@ -104,6 +103,20 @@ func WithHandshakeMessageDeadline(deadline time.Time) SessionOption {
 func WithMetrics(m metrics.Instrumenter) SessionOption {
 	return func(s *Session) {
 		s.metrics = m
+	}
+}
+
+// WithResumable allows marking session as resumable (so we store its state in cache)
+func WithResumable(val bool) SessionOption {
+	return func(s *Session) {
+		s.resumable = val
+	}
+}
+
+// WithPrevSID allows providing the previous session ID to restore from
+func WithPrevSID(sid string) SessionOption {
+	return func(s *Session) {
+		s.prevSid = sid
 	}
 }
 
@@ -172,6 +185,10 @@ func (s *Session) IsConnected() bool {
 	defer s.mu.Unlock()
 
 	return s.Connected
+}
+
+func (s *Session) IsResumeable() bool {
+	return s.resumable
 }
 
 func (s *Session) maybeDisconnectIdle() {
@@ -441,34 +458,8 @@ func (s *Session) RestoreFromCache(cached []byte) error {
 	return nil
 }
 
-func (s *Session) PrevSid() (psid string) {
-	if s.env.Headers != nil {
-		if v, ok := (*s.env.Headers)[prevSessionHeader]; ok {
-			psid = v
-			// This header is of one-time use,
-			// no need to leak it to the RPC app
-			delete(*s.env.Headers, prevSessionHeader)
-			return
-		}
-	}
-
-	u, err := url.Parse(s.env.URL)
-
-	if err != nil {
-		return
-	}
-
-	m, err := url.ParseQuery(u.RawQuery)
-
-	if err != nil {
-		return
-	}
-
-	if v, ok := m[prevSessionParam]; ok {
-		psid = v[0]
-	}
-
-	return
+func (s *Session) PrevSid() string {
+	return s.prevSid
 }
 
 func (s *Session) disconnectFromNode() {

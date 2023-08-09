@@ -5,7 +5,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/anycable/anycable-go/broker"
 	"github.com/anycable/anycable-go/config"
 	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/version"
@@ -124,11 +123,6 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 	}
 
 	c.Headers = strings.Split(strings.ToLower(headers), ",")
-
-	// Read session ID header if using a broker
-	if c.BrokerAdapter != "" {
-		c.Headers = append(c.Headers, broker.SESSION_ID_HEADER)
-	}
 
 	if len(cookieFilter) > 0 {
 		c.Cookies = strings.Split(cookieFilter, ",")

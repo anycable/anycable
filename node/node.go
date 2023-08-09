@@ -263,10 +263,12 @@ func WithDisconnectOnFailure(disconnect bool) AuthOption {
 func (n *Node) Authenticate(s *Session, options ...AuthOption) (res *common.ConnectResult, err error) {
 	opts := newAuthOptions(options)
 
-	restored := n.TryRestoreSession(s)
+	if s.IsResumeable() {
+		restored := n.TryRestoreSession(s)
 
-	if restored {
-		return &common.ConnectResult{Status: common.SUCCESS}, nil
+		if restored {
+			return &common.ConnectResult{Status: common.SUCCESS}, nil
+		}
 	}
 
 	res, err = n.controller.Authenticate(s.GetID(), s.env)
@@ -291,8 +293,10 @@ func (n *Node) Authenticate(s *Session, options ...AuthOption) (res *common.Conn
 	n.handleCallReply(s, res.ToCallResult())
 	n.markDisconnectable(s, res.DisconnectInterest)
 
-	if berr := n.broker.CommitSession(s.GetID(), s); berr != nil {
-		s.Log.Errorf("Failed to persist session in cache: %v", berr)
+	if s.IsResumeable() {
+		if berr := n.broker.CommitSession(s.GetID(), s); berr != nil {
+			s.Log.Errorf("Failed to persist session in cache: %v", berr)
+		}
 	}
 
 	return
@@ -354,8 +358,10 @@ func (n *Node) TryRestoreSession(s *Session) (restored bool) {
 		RestoredIDs: utils.Keys(s.subscriptions.channels),
 	})
 
-	if berr := n.broker.CommitSession(s.GetID(), s); berr != nil {
-		s.Log.Errorf("Failed to persist session in cache: %v", berr)
+	if s.IsResumeable() {
+		if berr := n.broker.CommitSession(s.GetID(), s); berr != nil {
+			s.Log.Errorf("Failed to persist session in cache: %v", berr)
+		}
 	}
 
 	return true
@@ -395,8 +401,10 @@ func (n *Node) Subscribe(s *Session, msg *common.Message) (res *common.CommandRe
 	}
 
 	if confirmed {
-		if berr := n.broker.CommitSession(s.GetID(), s); berr != nil {
-			s.Log.Errorf("Failed to persist session in cache: %v", berr)
+		if s.IsResumeable() {
+			if berr := n.broker.CommitSession(s.GetID(), s); berr != nil {
+				s.Log.Errorf("Failed to persist session in cache: %v", berr)
+			}
 		}
 
 		if msg.History.Since > 0 || msg.History.Streams != nil {
@@ -438,8 +446,10 @@ func (n *Node) Unsubscribe(s *Session, msg *common.Message) (res *common.Command
 		n.handleCommandReply(s, msg, res)
 	}
 
-	if berr := n.broker.CommitSession(s.GetID(), s); berr != nil {
-		s.Log.Errorf("Failed to persist session in cache: %v", berr)
+	if s.IsResumeable() {
+		if berr := n.broker.CommitSession(s.GetID(), s); berr != nil {
+			s.Log.Errorf("Failed to persist session in cache: %v", berr)
+		}
 	}
 
 	return
@@ -476,8 +486,10 @@ func (n *Node) Perform(s *Session, msg *common.Message) (res *common.CommandResu
 
 	if res != nil {
 		if n.handleCommandReply(s, msg, res) {
-			if berr := n.broker.CommitSession(s.GetID(), s); berr != nil {
-				s.Log.Errorf("Failed to persist session in cache: %v", berr)
+			if s.IsResumeable() {
+				if berr := n.broker.CommitSession(s.GetID(), s); berr != nil {
+					s.Log.Errorf("Failed to persist session in cache: %v", berr)
+				}
 			}
 		}
 	}
@@ -590,7 +602,9 @@ func (n *Node) ExecuteRemoteCommand(msg *common.RemoteCommandMessage) {
 
 // Disconnect adds session to disconnector queue and unregister session from hub
 func (n *Node) Disconnect(s *Session) error {
-	n.broker.FinishSession(s.GetID()) // nolint:errcheck
+	if s.IsResumeable() {
+		n.broker.FinishSession(s.GetID()) // nolint:errcheck
+	}
 
 	if n.IsShuttingDown() {
 		if s.IsDisconnectable() {

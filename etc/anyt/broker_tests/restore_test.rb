@@ -8,7 +8,7 @@ feature "Session cache" do
   end
 
   before do
-    client = build_client(ignore: ["ping"])
+    client = build_client(ignore: ["ping"], protocol: "actioncable-v1-ext-json")
 
     welcome_msg = client.receive
     assert_message({ "type" => "welcome" }, welcome_msg)
@@ -50,7 +50,8 @@ feature "Session cache" do
       ignore: ["ping"],
       headers: {
         "X-ANYCABLE-RESTORE-SID" => @sid
-      }
+      },
+      protocol: "actioncable-v1-ext-json"
     )
 
     assert_message({ "type" => "welcome", "restored" => true }, another_client.receive)
