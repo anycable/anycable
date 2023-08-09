@@ -145,6 +145,19 @@ The preset provides the following defaults:
 - `host`: "0.0.0.0".
 - `http_broadcast_port`: `$PORT` (to make HTTP endpoint accessible from other applications).
 
+## Per-client settings
+
+A client MAY override default values for the settings listed below by providing the corresponding parameters in the WebSocket URL query string:
+
+- `?pi=<seconds>`: ping interval (overrides `--ping_interval`).
+- `?ptp=<s | ms | ns>`: ping timestamp precision (overrides `--ping_timestamp_precision`).
+
+For example, using the following URL, you can set the ping interval to 10 seconds and the timestamp precision to milliseconds:
+
+```txt
+ws://localhost:8080/cable?pi=10&ptp=ms
+```
+
 ## HTTP RPC
 
 When using HTTP RPC, you can specify the following additional options:

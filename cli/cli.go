@@ -381,12 +381,19 @@ func (r *Runner) defaultWebSocketHandler(n *node.Node, c *config.Config) (http.H
 	extractor := server.DefaultHeadersExtractor{Headers: c.Headers, Cookies: c.Cookies}
 	return ws.WebsocketHandler(common.ActionCableProtocols(), &extractor, &c.WS, func(wsc *websocket.Conn, info *server.RequestInfo, callback func()) error {
 		wrappedConn := ws.NewConnection(wsc)
-		session := node.NewSession(n, wrappedConn, info.URL, info.Headers, info.UID)
 
-		_, err := n.Authenticate(session)
+		opts := []node.SessionOption{}
+		opts = append(opts, r.sessionOptionsFromProtocol(wsc.Subprotocol())...)
+		opts = append(opts, r.sessionOptionsFromParams(info)...)
 
-		if err != nil {
-			return err
+		session := node.NewSession(n, wrappedConn, info.URL, info.Headers, info.UID, opts...)
+
+		if session.AuthenticateOnConnect() {
+			_, err := n.Authenticate(session)
+
+			if err != nil {
+				return err
+			}
 		}
 
 		return session.Serve(callback)

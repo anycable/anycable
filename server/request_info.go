@@ -17,6 +17,7 @@ type RequestInfo struct {
 	UID     string
 	URL     string
 	Headers *map[string]string
+	Params  map[string]string
 }
 
 func NewRequestInfo(r *http.Request, extractor HeadersExtractor) (*RequestInfo, error) {
@@ -45,7 +46,22 @@ func NewRequestInfo(r *http.Request, extractor HeadersExtractor) (*RequestInfo, 
 		url = fmt.Sprintf("%s%s%s", scheme, r.Host, url)
 	}
 
-	return &RequestInfo{UID: uid, Headers: &headers, URL: url}, nil
+	params := make(map[string]string)
+	urlParams := r.URL.Query()
+
+	for k, v := range urlParams {
+		params[k] = v[len(v)-1]
+	}
+
+	return &RequestInfo{UID: uid, Headers: &headers, URL: url, Params: params}, nil
+}
+
+func (i *RequestInfo) Param(key string) string {
+	if i.Params == nil {
+		return ""
+	}
+
+	return i.Params[key]
 }
 
 // FetchUID safely extracts uid from `X-Request-ID` header or generates a new one

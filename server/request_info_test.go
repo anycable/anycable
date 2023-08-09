@@ -52,4 +52,16 @@ func TestRequestInfo(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "ws://anycable.io/cable", info.URL)
 	})
+
+	t.Run("With params", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "ws://anycable.io/cable?pi=3&pp=no&pi=5", nil)
+		info, err := NewRequestInfo(req, nil)
+
+		require.NoError(t, err)
+		assert.Equal(t, "5", info.Param("pi"))
+		assert.Equal(t, "no", info.Param("pp"))
+
+		blank_info := RequestInfo{}
+		assert.Equal(t, "", blank_info.Param("pi"))
+	})
 }

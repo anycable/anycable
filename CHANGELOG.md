@@ -2,6 +2,16 @@
 
 ## master
 
+- Allow configuring ping interval and ping timestamp precision per connection. ([@palkan][])
+
+You can use URL query params to configure ping interval and timestamp precision per connection:
+
+For example, using the following URL, you can set the ping interval to 10 seconds and the timestamp precision to milliseconds:
+
+```txt
+ws://localhost:8080/cable?pi=10&ptp=ms
+```
+
 - Fix in-memory streams history retrieval. ([@palkan][])
 
 Keep empty streams in the cache for a longer time, so we re-use the offset. In case the stream has been disposed, we should return an error when the requested offset is out of range.

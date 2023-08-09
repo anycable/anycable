@@ -53,6 +53,8 @@ type Session struct {
 
 	pingTimestampPrecision string
 
+	handshakeDeadline time.Time
+
 	Connected bool
 	// Could be used to store arbitrary data within a session
 	InternalState map[string]interface{}
@@ -66,6 +68,42 @@ type SessionOption = func(*Session)
 func WithPingInterval(interval time.Duration) SessionOption {
 	return func(s *Session) {
 		s.pingInterval = interval
+	}
+}
+
+// WithPingPrecision allows to configure precision for timestamps attached to pings
+func WithPingPrecision(val string) SessionOption {
+	return func(s *Session) {
+		s.pingTimestampPrecision = val
+	}
+}
+
+// WithEncoder allows to set a custom encoder for a session
+func WithEncoder(enc encoders.Encoder) SessionOption {
+	return func(s *Session) {
+		s.encoder = enc
+	}
+}
+
+// WithExecutor allows to set a custom executor for a session
+func WithExecutor(ex Executor) SessionOption {
+	return func(s *Session) {
+		s.executor = ex
+	}
+}
+
+// WithHandshakeMessageDeadline allows to set a custom deadline for handshake messages.
+// This option also indicates that we MUST NOT perform Authenticate on connect.
+func WithHandshakeMessageDeadline(deadline time.Time) SessionOption {
+	return func(s *Session) {
+		s.handshakeDeadline = deadline
+	}
+}
+
+// WithMetrics allows to set a custom metrics instrumenter for a session
+func WithMetrics(m metrics.Instrumenter) SessionOption {
+	return func(s *Session) {
+		s.metrics = m
 	}
 }
 
@@ -103,21 +141,14 @@ func NewSession(node *Node, conn Connection, url string, headers *map[string]str
 		session.addPing()
 	}
 
+	if !session.handshakeDeadline.IsZero() {
+		val := time.Until(session.handshakeDeadline)
+		time.AfterFunc(val, session.maybeDisconnectIdle)
+	}
+
 	go session.SendMessages()
 
 	return session
-}
-
-func (s *Session) SetEncoder(enc encoders.Encoder) {
-	s.encoder = enc
-}
-
-func (s *Session) SetExecutor(ex Executor) {
-	s.executor = ex
-}
-
-func (s *Session) SetMetrics(m metrics.Instrumenter) {
-	s.metrics = m
 }
 
 func (s *Session) GetEnv() *common.SessionEnv {
@@ -132,15 +163,15 @@ func (s *Session) UnderlyingConn() Connection {
 	return s.conn
 }
 
+func (s *Session) AuthenticateOnConnect() bool {
+	return s.handshakeDeadline.IsZero()
+}
+
 func (s *Session) IsConnected() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	return s.Connected
-}
-
-func (s *Session) SetIdleTimeout(val time.Duration) {
-	time.AfterFunc(val, s.maybeDisconnectIdle)
 }
 
 func (s *Session) maybeDisconnectIdle() {
