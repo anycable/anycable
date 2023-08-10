@@ -2,6 +2,8 @@
 
 ## master
 
+## 1.4.3 (2023-08-10)
+
 - Added ability to require `pong` messages from clients (for better detection of broken connections). ([@palkan][])
 
 Use `--pong_timoout=<number of seconds to wait for ping>` option to enable this feature. **NOTE:** This option is only applied to clients using the extended Action Cable protocol.
@@ -20,13 +22,13 @@ ws://localhost:8080/cable?pi=10&ptp=ms
 
 Keep empty streams in the cache for a longer time, so we re-use the offset. In case the stream has been disposed, we should return an error when the requested offset is out of range.
 
-## 1.4.2 (2024-08-04)
+## 1.4.2 (2023-08-04)
 
 - Add `--shutdown_timeout` option to configure graceful shutdown timeout. ([@palkan][])
 
 This new option deprecates the older `--disconnect_timeout` option (which now has no effect).
 
-## 1.4.1 (2024-07-24)
+## 1.4.1 (2023-07-24)
 
 - Allow to configure secure gRPC connection. ([@Envek][])
 
