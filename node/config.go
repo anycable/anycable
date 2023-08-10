@@ -22,6 +22,8 @@ type Config struct {
 	HubGopoolSize int
 	// How should ping message timestamp be formatted? ('s' => seconds, 'ms' => milli seconds, 'ns' => nano seconds)
 	PingTimestampPrecision string
+	// For how long to wait for pong message before disconnecting (seconds)
+	PongTimeout int
 	// For how long to wait for disconnect callbacks to be processed before exiting (seconds)
 	ShutdownTimeout int
 }

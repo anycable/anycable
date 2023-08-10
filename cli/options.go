@@ -779,6 +779,13 @@ func pingCLIFlags(c *config.Config) []cli.Flag {
 			Value:       c.App.PingTimestampPrecision,
 			Destination: &c.App.PingTimestampPrecision,
 		},
+
+		&cli.IntFlag{
+			Name:        "pong_timeout",
+			Usage:       `How long to wait for a pong response before disconnecting the client (in seconds). Zero means no pongs required`,
+			Value:       c.App.PongTimeout,
+			Destination: &c.App.PongTimeout,
+		},
 	})
 }
 

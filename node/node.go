@@ -127,6 +127,8 @@ func (n *Node) Instrumenter() metrics.Instrumenter {
 func (n *Node) HandleCommand(s *Session, msg *common.Message) (err error) {
 	s.Log.Debugf("Incoming message: %v", msg)
 	switch msg.Command {
+	case "pong":
+		s.handlePong(msg)
 	case "subscribe":
 		_, err = n.Subscribe(s, msg)
 	case "unsubscribe":

@@ -54,6 +54,7 @@ const (
 	SERVER_RESTART_REASON    = "server_restart"
 	REMOTE_DISCONNECT_REASON = "remote"
 	IDLE_TIMEOUT_REASON      = "idle_timeout"
+	NO_PONG_REASON           = "no_pong"
 	UNAUTHORIZED_REASON      = "unauthorized"
 )
 

@@ -23,6 +23,10 @@ func (r *Runner) sessionOptionsFromProtocol(protocol string) []node.SessionOptio
 
 	if common.IsExtendedActionCableProtocol(protocol) {
 		opts = append(opts, node.WithResumable(true))
+
+		if r.config.App.PongTimeout > 0 {
+			opts = append(opts, node.WithPongTimeout(time.Duration(r.config.App.PongTimeout)*time.Second))
+		}
 	}
 
 	return opts

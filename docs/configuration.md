@@ -107,6 +107,10 @@ Enable debug mode (more verbose logging).
 
 The number of seconds to wait for the server to shutdown gracefully, i.e., disconnect all active sessions and perform the corresponding Disconnect RPC calls (see below). Default: 30.
 
+**--pong_timeout** (`ANYCABLE_PONG_TIMEOUT`)
+
+For clients using the [extended Action Cable protocol](../misc/action_cable_protocol.md#action-cable-extended-protocol), the number of seconds to wait for the client to respond to the PING message with the PONG command. The default value is zero, meaning that no PONGs are expected. The recommended value to activate this feature is 10 seconds. Requiring pongs helps to detect broken connections faster.
+
 ## Presets
 
 AnyCable-Go comes with a few built-in configuration presets for particular deployments environments, such as Heroku or Fly. The presets are detected and activated automatically. As an indication, you can find a line in the logs:

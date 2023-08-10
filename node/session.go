@@ -52,6 +52,9 @@ type Session struct {
 
 	handshakeDeadline time.Time
 
+	pongTimeout time.Duration
+	pongTimer   *time.Timer
+
 	resumable bool
 	prevSid   string
 
@@ -118,6 +121,13 @@ func WithResumable(val bool) SessionOption {
 func WithPrevSID(sid string) SessionOption {
 	return func(s *Session) {
 		s.prevSid = sid
+	}
+}
+
+// WithPongTimeout allows to set a custom pong timeout for a session
+func WithPongTimeout(timeout time.Duration) SessionOption {
+	return func(s *Session) {
+		s.pongTimeout = timeout
 	}
 }
 
@@ -504,6 +514,10 @@ func (s *Session) close() {
 	if s.pingTimer != nil {
 		s.pingTimer.Stop()
 	}
+
+	if s.pongTimer != nil {
+		s.pongTimer.Stop()
+	}
 }
 
 func (s *Session) sendClose(reason string, code int) {
@@ -603,6 +617,10 @@ func (s *Session) startPing() {
 	initialInterval := time.Duration(rand.Int63n(int64(maxDuration-minDuration))) + minDuration // nolint:gosec
 
 	s.pingTimer = time.AfterFunc(initialInterval, s.sendPing)
+
+	if s.pongTimeout > 0 {
+		s.pongTimer = time.AfterFunc(s.pongTimeout+initialInterval, s.handleNoPong)
+	}
 }
 
 func (s *Session) addPing() {
@@ -625,6 +643,34 @@ func newPingMessage(format string) *common.PingMessage {
 	}
 
 	return (&common.PingMessage{Type: "ping", Message: ts})
+}
+
+func (s *Session) handlePong(msg *common.Message) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.pongTimer == nil {
+		s.Log.Debugf("Unexpected PONG received")
+		return
+	}
+
+	s.pongTimer.Reset(s.pongTimeout)
+}
+
+func (s *Session) handleNoPong() {
+	s.mu.Lock()
+
+	if !s.Connected {
+		s.mu.Unlock()
+		return
+	}
+
+	s.mu.Unlock()
+
+	s.Log.Warnf("Disconnecting session due to no pongs")
+
+	s.Send(common.NewDisconnectMessage(common.NO_PONG_REASON, true)) // nolint:errcheck
+	s.Disconnect("No Pong", ws.CloseNormalClosure)
 }
 
 func (s *Session) encodeMessage(msg encoders.EncodedMessage) (*ws.SentFrame, error) {
