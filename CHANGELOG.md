@@ -2,6 +2,10 @@
 
 ## master
 
+- Fix in-memory streams history retrieval. ([@palkan][])
+
+Keep empty streams in the cache for a longer time, so we re-use the offset. In case the stream has been disposed, we should return an error when the requested offset is out of range.
+
 ## 1.4.2 (2024-08-04)
 
 - Add `--shutdown_timeout` option to configure graceful shutdown timeout. ([@palkan][])

@@ -717,7 +717,7 @@ func (n *Node) handleCallReply(s *Session, reply *common.CallResult) bool {
 
 	if reply.Broadcasts != nil {
 		for _, broadcast := range reply.Broadcasts {
-			n.Broadcast(broadcast)
+			n.broker.HandleBroadcast(broadcast)
 		}
 	}
 

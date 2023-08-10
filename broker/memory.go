@@ -18,7 +18,8 @@ type entry struct {
 }
 
 type memstream struct {
-	offset uint64
+	offset   uint64
+	deadline int64
 	// The lowest available offset in the stream
 	low   uint64
 	data  []*entry
@@ -52,6 +53,10 @@ func (ms *memstream) add(data string) uint64 {
 	if ms.low == 0 {
 		ms.low = ms.data[0].offset
 	}
+
+	// Update memstream expiration deadline on every added item
+	// We keep memstream alive for 10 times longer than ttl (so we can re-use it and its offset)
+	ms.deadline = time.Now().Add(time.Duration(ms.ttl*10) * time.Second).Unix()
 
 	return ms.offset
 }
@@ -100,6 +105,10 @@ func (ms *memstream) filterByOffset(offset uint64, callback func(e *entry)) erro
 	}
 
 	start := (offset - ms.low) + 1
+
+	if start > uint64(len(ms.data)) {
+		return fmt.Errorf("Requested offset couldn't be found: %d, latest: %d", offset, ms.data[len(ms.data)-1].offset)
+	}
 
 	for _, v := range ms.data[start:] {
 		callback(v)
@@ -354,10 +363,12 @@ func (b *Memory) expire() {
 
 	toDelete := []string{}
 
+	now := time.Now().Unix()
+
 	for name, stream := range b.streams {
 		stream.expire()
 
-		if stream.low == 0 {
+		if stream.deadline < now {
 			toDelete = append(toDelete, name)
 		}
 	}
@@ -370,7 +381,6 @@ func (b *Memory) expire() {
 
 	b.sessionsMu.Lock()
 
-	now := time.Now().Unix()
 	i := 0
 
 	for _, expired := range b.expireSessions {

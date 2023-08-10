@@ -41,7 +41,7 @@ func TestExpire(t *testing.T) {
 
 	history, err = broker.HistorySince("test", start)
 	require.NoError(t, err)
-	assert.Nil(t, history)
+	assert.Empty(t, history)
 }
 
 func TestLimit(t *testing.T) {
@@ -104,7 +104,11 @@ func TestMemstream_filterByOffset(t *testing.T) {
 	ms.add("test1")
 	ms.add("test2")
 
-	err := ms.filterByOffset(1, func(e *entry) {
+	// Should return error if offset is out of range
+	err := ms.filterByOffset(10, func(e *entry) {})
+	require.Error(t, err)
+
+	err = ms.filterByOffset(1, func(e *entry) {
 		assert.Equal(t, "test2", e.data)
 	})
 	require.NoError(t, err)
