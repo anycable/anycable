@@ -3,6 +3,7 @@ package node
 import (
 	"encoding/json"
 	"errors"
+	"math/rand"
 	"sync"
 	"time"
 
@@ -151,7 +152,7 @@ func NewSession(node *Node, conn Connection, url string, headers *map[string]str
 	}
 
 	if session.pingInterval > 0 {
-		session.addPing()
+		session.startPing()
 	}
 
 	if !session.handshakeDeadline.IsZero() {
@@ -589,6 +590,19 @@ func (s *Session) sendPing() {
 	}
 
 	s.addPing()
+}
+
+func (s *Session) startPing() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Calculate the minimum and maximum durations
+	minDuration := s.pingInterval / 2
+	maxDuration := s.pingInterval * 3 / 2
+
+	initialInterval := time.Duration(rand.Int63n(int64(maxDuration-minDuration))) + minDuration // nolint:gosec
+
+	s.pingTimer = time.AfterFunc(initialInterval, s.sendPing)
 }
 
 func (s *Session) addPing() {
