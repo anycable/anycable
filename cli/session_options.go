@@ -36,7 +36,12 @@ func (r *Runner) sessionOptionsFromProtocol(protocol string) []node.SessionOptio
 	}
 
 	if common.IsProtobufProtocol(protocol) {
-		opts = append(opts, node.WithEncoder(encoders.Protobuf{}))
+		// Use legacy format for Action Cable v1
+		if protocol == common.ActionCableV1Protobuf {
+			opts = append(opts, node.WithEncoder(encoders.LegacyProtobuf{}))
+		} else {
+			opts = append(opts, node.WithEncoder(encoders.Protobuf{}))
+		}
 	}
 
 	if protocol == graphql.GraphqlWsProtocol {

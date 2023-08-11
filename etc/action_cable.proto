@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package action_cable;
 
+option go_package = ".";
+
 enum Type {
   no_type = 0;
   welcome = 1;
@@ -9,6 +11,8 @@ enum Type {
   ping = 3;
   confirm_subscription = 4;
   reject_subscription = 5;
+  confirm_history = 6;
+  reject_history = 7;
 }
 
 enum Command {
@@ -16,6 +20,18 @@ enum Command {
   subscribe = 1;
   unsubscribe = 2;
   message = 3;
+  history = 4;
+  pong = 5;
+}
+
+message StreamHistoryRequest {
+  string epoch = 2;
+  int64 offset = 3;
+}
+
+message HistoryRequest {
+  int64 since = 1;
+  map<string, StreamHistoryRequest> streams = 2;
 }
 
 message Message {
@@ -26,4 +42,19 @@ message Message {
   bytes message = 5;
   string reason = 6;
   bool reconnect = 7;
+  HistoryRequest history = 8;
+}
+
+message Reply {
+  Type type = 1;
+  string identifier = 2;
+  bytes message = 3;
+  string reason = 4;
+  bool reconnect = 5;
+  string stream_id = 6;
+  string epoch = 7;
+  int64 offset = 8;
+  string sid = 9;
+  bool restored = 10;
+  repeated string restored_ids = 11;
 }
