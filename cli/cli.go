@@ -75,6 +75,7 @@ type Runner struct {
 	streams *streams.Controller
 	metrics *metricspkg.Metrics
 	broker  broker.Broker
+	node    node.AppNode
 
 	telemetryEnabled bool
 	telemetryConfig  *telemetry.Config
@@ -378,6 +379,8 @@ func (r *Runner) runNode() (*node.Node, error) {
 		node.WithID(r.config.ID),
 	)
 
+	r.node = appNode
+
 	if r.telemetryEnabled {
 		tracker := telemetry.NewTracker(metrics, r.config, r.telemetryConfig)
 
@@ -618,10 +621,16 @@ func (r *Runner) defaultDisconnector(n *node.Node, c *config.Config, l *slog.Log
 
 func (r *Runner) defaultWebSocketHandler(n *node.Node, c *config.Config, l *slog.Logger) (http.Handler, error) {
 	extractor := server.DefaultHeadersExtractor{Headers: c.RPC.ProxyHeaders, Cookies: c.RPC.ProxyCookies}
+
 	if c.JWT.Enabled() {
 		extractor.AuthHeader = c.JWT.HeaderKey()
 	}
-	return ws.WebsocketHandler(common.ActionCableProtocols(), &extractor, &c.WS, r.log, func(wsc *websocket.Conn, info *server.RequestInfo, callback func()) error {
+
+	protocols := common.ActionCableProtocols()
+	protocols = append(protocols, graphql.GraphqlProtocols()...)
+	protocols = append(protocols, ocpp.Subprotocols()...)
+
+	return ws.WebsocketHandler(protocols, &extractor, &c.WS, r.log, func(wsc *websocket.Conn, info *server.RequestInfo, callback func()) error {
 		wrappedConn := ws.NewConnection(wsc)
 
 		if !n.AdmitNewClient() {
