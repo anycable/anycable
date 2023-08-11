@@ -8,7 +8,7 @@ AnyCable Pro allows you to use Msgpack or Protobufs instead of JSON to serialize
 
 ### Usage
 
-In order to initiate Msgpack-encoded connection, a client MUST use `"actioncable-v1-msgpack"` subprotocol during the connection (instead of the `"actioncable-v1-json"`).
+In order to initiate Msgpack-encoded connection, a client MUST use `"actioncable-v1-msgpack"` or `"actioncable-v1-ext-msgpack"` subprotocol during the connection.
 
 A client MUST encode outgoing and incoming messages using Msgpack.
 
@@ -22,6 +22,9 @@ import { createCable } from '@anycable/web'
 import { MsgpackEncoder } from '@anycable/msgpack-encoder'
 
 export default createCable({protocol: 'actioncable-v1-msgpack', encoder: new MsgpackEncoder()})
+
+// or for the extended Action Cable protocol
+// export default createCable({protocol: 'actioncable-v1-ext-msgpack', encoder: new MsgpackEncoder()})
 ```
 
 ### Action Cable JavaScript client patch
@@ -136,6 +139,8 @@ enum Type {
   ping = 3;
   confirm_subscription = 4;
   reject_subscription = 5;
+  confirm_history = 6;
+  reject_history = 7;
 }
 
 enum Command {
@@ -143,6 +148,18 @@ enum Command {
   subscribe = 1;
   unsubscribe = 2;
   message = 3;
+  history = 4;
+  pong = 5;
+}
+
+message StreamHistoryRequest {
+  string epoch = 2;
+  int64 offset = 3;
+}
+
+message HistoryRequest {
+  int64 since = 1;
+  map<string, StreamHistoryRequest> streams = 2;
 }
 
 message Message {
@@ -152,18 +169,32 @@ message Message {
   // Data is a JSON encoded string.
   // This is by Action Cable protocol design.
   string data = 4;
-  // Message has not structure.
+  // Message has no structure.
   // We use Msgpack to encode/decode it.
   bytes message = 5;
   string reason = 6;
   bool reconnect = 7;
+  HistoryRequest history = 8;
+}
+
+message Reply {
+  Type type = 1;
+  string identifier = 2;
+  bytes message = 3;
+  string reason = 4;
+  bool reconnect = 5;
+  string stream_id = 6;
+  string epoch = 7;
+  int64 offset = 8;
+  string sid = 9;
+  bool restored = 10;
+  repeated string restored_ids = 11;
 }
 ```
 
-Both incoming and outgoing message MUST be encoded as `action_cable.Message` type.
+When using the standard Action Cable protocol (v1), both incoming and outgoing messages are encoded as `action_cable.Message` type. When using the extended version, incoming messages are encoded as `action_cable.Reply` type.
 
-Note that `Message.message` field has the `bytes` type. This field carries the information sent from a server to clients,
-which could be of any form. We Msgpack to encode/decode this data. Thus, AnyCable Protobuf protocol is actually a mix of Protobufs and Msgpack.
+Note that `Message.message` field and `Reply.message` have the `bytes` type. This field carries the information sent from a server to clients, which could be of any form. We Msgpack to encode/decode this data. Thus, AnyCable Protobuf protocol is actually a mix of Protobufs and Msgpack.
 
 ### Using Protobuf with AnyCable JS client
 
@@ -178,6 +209,16 @@ export default createCable({protocol: 'actioncable-v1-protobuf', encoder: new Pr
 ```
 
 > See the [demo](https://github.com/anycable/anycable_rails_demo/pull/24) of using Protobuf encoder in a Rails project with AnyCable JS client.
+
+To use Protobuf with the extended Action Cable protocol, use the following configuration:
+
+```js
+// cable.js
+import { createCable } from '@anycable/web'
+import { ProtobufEncoderV2 } from '@anycable/protobuf-encoder'
+
+export default createCable({protocol: 'actioncable-v1-ext-protobuf', encoder: new ProtobufEncoderV2()})
+```
 
 ## Formats comparison
 
