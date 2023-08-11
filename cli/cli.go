@@ -70,6 +70,7 @@ type Runner struct {
 
 	router           *router.RouterController
 	metrics          *metricspkg.Metrics
+	node             node.AppNode
 	telemetryEnabled bool
 	poller           netpoll.Poller
 
@@ -304,6 +305,8 @@ func (r *Runner) runNode() (*node.Node, error) {
 		node.WithID(r.config.ID),
 	)
 
+	r.node = appNode
+
 	if r.telemetryEnabled {
 		telemetryConfig := telemetry.NewConfig()
 		tracker := telemetry.NewTracker(metrics, r.config, telemetryConfig)
@@ -498,7 +501,11 @@ func (r *Runner) defaultDisconnector(n *node.Node, c *config.Config, l *slog.Log
 
 func (r *Runner) defaultWebSocketHandler(n *node.Node, c *config.Config, l *slog.Logger) (http.Handler, error) {
 	extractor := server.DefaultHeadersExtractor{Headers: c.Headers, Cookies: c.Cookies}
-	return ws.WebsocketHandler(common.ActionCableProtocols(), &extractor, &c.WS, r.log, func(wsc *websocket.Conn, info *server.RequestInfo, callback func()) error {
+	protocols := common.ActionCableProtocols()
+	protocols = append(protocols, graphql.GraphqlProtocols()...)
+	protocols = append(protocols, ocpp.Subprotocols()...)
+
+	return ws.WebsocketHandler(protocols, &extractor, &c.WS, r.log, func(wsc *websocket.Conn, info *server.RequestInfo, callback func()) error {
 		wrappedConn := ws.NewConnection(wsc)
 
 		opts := []node.SessionOption{}

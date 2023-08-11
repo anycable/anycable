@@ -6,7 +6,9 @@ import (
 
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/encoders"
+	"github.com/anycable/anycable-go/graphql"
 	"github.com/anycable/anycable-go/node"
+	"github.com/anycable/anycable-go/ocpp"
 	"github.com/anycable/anycable-go/server"
 )
 
@@ -35,6 +37,33 @@ func (r *Runner) sessionOptionsFromProtocol(protocol string) []node.SessionOptio
 
 	if common.IsProtobufProtocol(protocol) {
 		opts = append(opts, node.WithEncoder(encoders.Protobuf{}))
+	}
+
+	if protocol == graphql.GraphqlWsProtocol {
+		opts = append(
+			opts,
+			node.WithEncoder(graphql.Encoder{}),
+			node.WithExecutor(graphql.NewExecutor(r.node, &r.config.GraphQL)),
+			node.WithHandshakeMessageDeadline(time.Now().Add(time.Duration(r.config.GraphQL.IdleTimeout)*time.Second)),
+		)
+	}
+
+	if protocol == graphql.LegacyGraphQLProtocol {
+		opts = append(
+			opts,
+			node.WithEncoder(graphql.LegacyEncoder{}),
+			node.WithExecutor(graphql.NewLegacyExecutor(r.node, &r.config.GraphQL)),
+			node.WithHandshakeMessageDeadline(time.Now().Add(time.Duration(r.config.GraphQL.IdleTimeout)*time.Second)),
+		)
+	}
+
+	if protocol == ocpp.Subprotocol16 {
+		opts = append(
+			opts,
+			node.WithEncoder(ocpp.Encoder{}),
+			node.WithExecutor(ocpp.NewExecutor(r.node, &r.config.OCPP)),
+			node.WithHandshakeMessageDeadline(time.Now().Add(time.Duration(r.config.OCPP.IdleTimeout)*time.Second)),
+		)
 	}
 
 	return opts
