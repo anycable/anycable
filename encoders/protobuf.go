@@ -23,7 +23,7 @@ func (Protobuf) ID() string {
 }
 
 func (Protobuf) Encode(msg EncodedMessage) (*ws.SentFrame, error) {
-	buf := &pb.Message{}
+	buf := &pb.Reply{}
 
 	var err error
 	var payload []byte
@@ -64,6 +64,14 @@ func (Protobuf) Encode(msg EncodedMessage) (*ws.SentFrame, error) {
 
 		if reply.Type == common.RejectedType {
 			buf.Type = pb.Type_reject_subscription
+		}
+
+		if reply.Type == common.HistoryConfirmedType {
+			buf.Type = pb.Type_confirm_history
+		}
+
+		if reply.Type == common.HistoryRejectedType {
+			buf.Type = pb.Type_reject_history
 		}
 
 		// Disconnect could be send either directly by server or via RPC,
@@ -120,6 +128,22 @@ func (Protobuf) Decode(raw []byte) (*common.Message, error) {
 	msg.Command = buf.Command.String()
 	msg.Identifier = buf.Identifier
 	msg.Data = buf.Data
+
+	if buf.History != nil {
+		msg.History = common.HistoryRequest{}
+		msg.History.Since = buf.History.Since
+
+		if buf.History.Streams != nil {
+			msg.History.Streams = make(map[string]common.HistoryPosition)
+
+			for i, s := range buf.History.Streams {
+				msg.History.Streams[i] = common.HistoryPosition{
+					Epoch:  s.Epoch,
+					Offset: uint64(s.Offset),
+				}
+			}
+		}
+	}
 
 	return &msg, nil
 }
