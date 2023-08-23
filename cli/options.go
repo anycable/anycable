@@ -615,6 +615,14 @@ func disconnectorCLIFlags(c *config.Config) []cli.Flag {
 		},
 
 		&cli.IntFlag{
+			Name:        "disconnect_backlog_size",
+			Usage:       "The size of the channel's buffer for disconnect requests",
+			Value:       c.DisconnectQueue.Backlog,
+			Destination: &c.DisconnectQueue.Backlog,
+			Hidden:      true,
+		},
+
+		&cli.IntFlag{
 			Name:        "disconnect_timeout",
 			Usage:       "[DEPRECATED] Graceful shutdown timeout (in seconds)",
 			Value:       c.DisconnectQueue.ShutdownTimeout,

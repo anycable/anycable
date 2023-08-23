@@ -13,13 +13,15 @@ import (
 type DisconnectQueueConfig struct {
 	// Limit the number of Disconnect RPC calls per second
 	Rate int
+	// The size of the channel's buffer for disconnect requests
+	Backlog int
 	// How much time wait to call all enqueued calls at exit (in seconds) [DEPREACTED]
 	ShutdownTimeout int
 }
 
 // NewDisconnectQueueConfig builds a new config
 func NewDisconnectQueueConfig() DisconnectQueueConfig {
-	return DisconnectQueueConfig{Rate: 100}
+	return DisconnectQueueConfig{Rate: 100, Backlog: 4096}
 }
 
 // DisconnectQueue is a rate-limited executor
@@ -49,7 +51,7 @@ func NewDisconnectQueue(node *Node, config *DisconnectQueueConfig) *DisconnectQu
 
 	return &DisconnectQueue{
 		node:       node,
-		disconnect: make(chan *Session, 4096),
+		disconnect: make(chan *Session, config.Backlog),
 		rate:       rateDuration,
 		log:        ctx,
 		shutdown:   make(chan struct{}, 1),
@@ -85,37 +87,36 @@ func (d *DisconnectQueue) Shutdown(ctx context.Context) error {
 	d.mu.Unlock()
 
 	left := len(d.disconnect)
+	actual := 0
 
 	if left == 0 {
 		return nil
 	}
+
+	defer func() {
+		d.log.Infof("Disconnected %d sessions", actual)
+	}()
 
 	deadline, ok := ctx.Deadline()
 
 	if ok {
 		timeLeft := time.Until(deadline)
 
-		d.log.Infof("Invoking remaining disconnects for %2fs: %d", timeLeft.Seconds(), left)
+		d.log.Infof("Invoking remaining disconnects for %2fs: ~%d", timeLeft.Seconds(), left)
 	} else {
-		d.log.Infof("Invoking remaining disconnects: %d", left)
+		d.log.Infof("Invoking remaining disconnects: ~%d", left)
 	}
 
 	for {
 		select {
 		case session := <-d.disconnect:
-			err := d.node.DisconnectNow(session)
+			d.node.DisconnectNow(session) // nolint:errcheck
 
-			left--
-
-			if err != nil {
-				return err
-			}
-
-			if left == 0 {
-				return nil
-			}
+			actual++
 		case <-ctx.Done():
-			return fmt.Errorf("Had no time to invoke Disconnect calls: %d", len(d.disconnect))
+			return fmt.Errorf("Had no time to invoke Disconnect calls: ~%d", len(d.disconnect))
+		default:
+			return nil
 		}
 	}
 }
@@ -123,12 +124,14 @@ func (d *DisconnectQueue) Shutdown(ctx context.Context) error {
 // Enqueue adds session to the disconnect queue
 func (d *DisconnectQueue) Enqueue(s *Session) error {
 	d.mu.Lock()
-	defer d.mu.Unlock()
 
 	// Check that we're not closed
 	if d.isStopped {
+		d.mu.Unlock()
 		return nil
 	}
+
+	d.mu.Unlock()
 
 	d.disconnect <- s
 

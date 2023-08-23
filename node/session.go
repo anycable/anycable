@@ -392,9 +392,9 @@ func (s *Session) SendJSONTransmission(msg string) {
 
 // Disconnect schedules connection disconnect
 func (s *Session) Disconnect(reason string, code int) {
-	s.disconnectFromNode()
 	s.sendClose(reason, code)
 	s.close()
+	s.disconnectFromNode()
 }
 
 func (s *Session) DisconnectWithMessage(msg encoders.EncodedMessage, code string) {

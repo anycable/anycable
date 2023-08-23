@@ -2,6 +2,8 @@
 
 ## master
 
+- Add `disconnect_backlog_size` option to control the buffer size for the disconnect queue.
+
 ## 1.4.3 (2023-08-10)
 
 - Added ability to require `pong` messages from clients (for better detection of broken connections). ([@palkan][])
