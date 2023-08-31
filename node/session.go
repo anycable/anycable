@@ -298,6 +298,10 @@ func (s *Session) Serve(callback func()) error {
 		defer callback()
 
 		for {
+			if s.IsClosed() {
+				return
+			}
+
 			message, err := s.conn.Read()
 
 			if err != nil {
@@ -518,6 +522,13 @@ func (s *Session) close() {
 	if s.pongTimer != nil {
 		s.pongTimer.Stop()
 	}
+}
+
+func (s *Session) IsClosed() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.closed
 }
 
 func (s *Session) sendClose(reason string, code int) {
