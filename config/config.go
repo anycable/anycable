@@ -12,6 +12,7 @@ import (
 	rconfig "github.com/anycable/anycable-go/redis"
 	"github.com/anycable/anycable-go/rpc"
 	"github.com/anycable/anycable-go/server"
+	"github.com/anycable/anycable-go/sse"
 	"github.com/anycable/anycable-go/ws"
 )
 
@@ -46,6 +47,7 @@ type Config struct {
 	Rails                rails.Config
 	EmbedNats            bool
 	EmbeddedNats         enats.Config
+	SSE                  sse.Config
 	UserPresets          []string
 }
 
@@ -73,6 +75,7 @@ func NewConfig() Config {
 		JWT:              identity.NewJWTConfig(""),
 		Rails:            rails.NewConfig(),
 		EmbeddedNats:     enats.NewConfig(),
+		SSE:              sse.NewConfig(),
 	}
 
 	return config

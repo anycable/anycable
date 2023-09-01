@@ -83,6 +83,7 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 	flags = append(flags, signedStreamsCLIFlags(&c)...)
 	flags = append(flags, statsdCLIFlags(&c)...)
 	flags = append(flags, embeddedNatsCLIFlags(&c, &enatsRoutes, &enatsGateways)...)
+	flags = append(flags, sseCLIFlags(&c)...)
 	flags = append(flags, miscCLIFlags(&c, &presets)...)
 
 	app := &cli.App{
@@ -186,6 +187,8 @@ and will be removed in the next major release of anycable-go.
 Use shutdown_timeout instead.`)
 	}
 
+	c.SSE.AllowedOrigins = c.WS.AllowedOrigins
+
 	return &c, nil, false
 }
 
@@ -210,6 +213,7 @@ const (
 	embeddedNatsCategoryDescription  = "EMBEDDED NATS:"
 	miscCategoryDescription          = "MISC:"
 	brokerCategoryDescription        = "BROKER:"
+	sseCategoryDescription           = "SERVER-SENT EVENTS:"
 
 	envPrefix = "ANYCABLE_"
 )
@@ -875,6 +879,24 @@ func statsdCLIFlags(c *config.Config) []cli.Flag {
 			Usage:       `One of "datadog", "influxdb", or "graphite"`,
 			Value:       c.Metrics.Statsd.TagFormat,
 			Destination: &c.Metrics.Statsd.TagFormat,
+		},
+	})
+}
+
+// sseCLIFlags returns CLI flags for SSE
+func sseCLIFlags(c *config.Config) []cli.Flag {
+	return withDefaults(sseCategoryDescription, []cli.Flag{
+		&cli.BoolFlag{
+			Name:        "sse",
+			Usage:       "Enable SSE endpoint",
+			Value:       c.SSE.Enabled,
+			Destination: &c.SSE.Enabled,
+		},
+		&cli.StringFlag{
+			Name:        "sse_path",
+			Usage:       "SSE endpoint path",
+			Value:       c.SSE.Path,
+			Destination: &c.SSE.Path,
 		},
 	})
 }

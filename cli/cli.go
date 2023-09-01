@@ -23,6 +23,7 @@ import (
 	"github.com/anycable/anycable-go/rails"
 	"github.com/anycable/anycable-go/router"
 	"github.com/anycable/anycable-go/server"
+	"github.com/anycable/anycable-go/sse"
 	"github.com/anycable/anycable-go/telemetry"
 	"github.com/anycable/anycable-go/utils"
 	"github.com/anycable/anycable-go/version"
@@ -289,6 +290,21 @@ func (r *Runner) Run() error {
 	wsServer.SetupHandler(r.config.HealthPath, http.HandlerFunc(server.HealthHandler))
 	r.log.Infof("Handle health requests at %s%s", wsServer.Address(), r.config.HealthPath)
 
+	if r.config.SSE.Enabled {
+		r.log.Infof(
+			"Handle SSE requests at %s%s",
+			wsServer.Address(), r.config.SSE.Path,
+		)
+
+		sseHandler, err := r.defaultSSEHandler(appNode, r.config)
+
+		if err != nil {
+			return errorx.Decorate(err, "!!! Failed to initialize SSE handler !!!")
+		}
+
+		wsServer.SetupHandler(r.config.SSE.Path, sseHandler)
+	}
+
 	go r.startWSServer(wsServer)
 	go r.startMetrics(metrics)
 
@@ -398,6 +414,13 @@ func (r *Runner) defaultWebSocketHandler(n *node.Node, c *config.Config) (http.H
 
 		return session.Serve(callback)
 	}), nil
+}
+
+func (r *Runner) defaultSSEHandler(n *node.Node, c *config.Config) (http.Handler, error) {
+	extractor := server.DefaultHeadersExtractor{Headers: c.Headers, Cookies: c.Cookies}
+	handler := sse.SSEHandler(n, &extractor, &c.SSE)
+
+	return handler, nil
 }
 
 func (r *Runner) initMRuby() string {
