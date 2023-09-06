@@ -2,9 +2,9 @@
 
 require "anycable/grpc/handler"
 
-require_relative "./health_pb"
-require_relative "./health_services_pb"
-require_relative "./health_checker"
+require_relative "health_pb"
+require_relative "health_services_pb"
+require_relative "health_checker"
 
 module AnyCable
   module GRPC
