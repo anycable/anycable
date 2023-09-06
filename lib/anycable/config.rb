@@ -171,7 +171,7 @@ module AnyCable
     private
 
     def parse_sentinel(sentinel)
-      return sentinel.transform_keys!(&:to_sym) if sentinel.is_a?(Hash)
+      return sentinel.to_hash.transform_keys(&:to_sym) if sentinel.respond_to?(:to_hash)
 
       uri = URI.parse("redis://#{sentinel}")
 

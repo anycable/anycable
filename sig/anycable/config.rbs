@@ -68,7 +68,7 @@ module AnyCable
 
     private
 
-    def parse_sentinel: ((String | Hash[untyped, untyped]) sentinel) -> Hash[Symbol, untyped]
+    def parse_sentinel: (untyped sentinel) -> Hash[Symbol, untyped]
     def load_presets: () -> void
     def detect_presets: () -> Array[String]
     def write_preset: (Symbol, untyped, preset: String) -> void
