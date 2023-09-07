@@ -491,6 +491,13 @@ func (s *Session) DisconnectNow(reason string, code int) {
 }
 
 func (s *Session) disconnectNow(reason string, code int) {
+	s.mu.Lock()
+	if !s.Connected {
+		s.mu.Unlock()
+		return
+	}
+	s.mu.Unlock()
+
 	s.disconnectFromNode()
 	s.writeFrame(&ws.SentFrame{ // nolint:errcheck
 		FrameType:   ws.CloseFrame,

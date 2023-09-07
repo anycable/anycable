@@ -2,7 +2,6 @@ package sse
 
 import (
 	"net/http"
-	"net/url"
 	"strings"
 
 	"github.com/anycable/anycable-go/common"
@@ -15,30 +14,17 @@ import (
 
 // SSEHandler generates a new http handler for SSE connections
 func SSEHandler(n *node.Node, headersExtractor server.HeadersExtractor, config *Config) http.Handler {
-	allowedHosts := strings.Split(config.AllowedOrigins, ",")
+	var allowedHosts []string
+
+	if config.AllowedOrigins == "" {
+		allowedHosts = []string{}
+	} else {
+		allowedHosts = strings.Split(config.AllowedOrigins, ",")
+	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Write CORS headers
-		if config.AllowedOrigins == "" {
-			w.Header().Set("Access-Control-Allow-Origin", "*")
-		} else {
-			origin := strings.ToLower(r.Header.Get("Origin"))
-			u, err := url.Parse(origin)
-			if err == nil {
-				for _, host := range allowedHosts {
-					if host[0] == '*' && strings.HasSuffix(u.Host, host[1:]) {
-						w.Header().Set("Access-Control-Allow-Origin", origin)
-					}
-					if u.Host == host {
-						w.Header().Set("Access-Control-Allow-Origin", origin)
-					}
-				}
-			}
-		}
-
-		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Credentials", "true")
-		w.Header().Set("Access-Control-Allow-Headers", "Origin, X-Requested-With, X-Request-ID, Content-Type, Accept, X-CSRF-Token, Authorization")
+		server.WriteCORSHeaders(w, r, allowedHosts)
 
 		// Respond to preflight requests
 		if r.Method == http.MethodOptions {
@@ -46,8 +32,8 @@ func SSEHandler(n *node.Node, headersExtractor server.HeadersExtractor, config *
 			return
 		}
 
-		// SSE only supports GET requests
-		if r.Method != http.MethodGet {
+		// SSE only supports GET and POST requests
+		if r.Method != http.MethodGet && r.Method != http.MethodPost {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
@@ -80,17 +66,10 @@ func SSEHandler(n *node.Node, headersExtractor server.HeadersExtractor, config *
 
 		sessionCtx := log.WithField("sid", info.UID).WithField("transport", "sse")
 
-		subscribeCmd, err := subscribeCommandFromRequest(r)
+		subscribeCmds, err := subscribeCommandsFromRequest(r)
 
 		if err != nil {
 			sessionCtx.Errorf("failed to build subscribe command: %v", err)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
-		// Handle subscription
-		if subscribeCmd == nil {
-			sessionCtx.Error("no channel provided")
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -110,22 +89,27 @@ func SSEHandler(n *node.Node, headersExtractor server.HeadersExtractor, config *
 			return
 		}
 
+		// Make sure we remove the session from the node when we're done (especially if we return earlier due to rejected subscription)
+		defer session.Disconnect("Closed", ws.CloseNormalClosure)
+
 		conn := session.UnderlyingConn().(*Connection)
 
-		// Subscribe to the channel
-		res, err := n.Subscribe(session, subscribeCmd)
+		for _, subscribeCmd := range subscribeCmds {
+			// Subscribe to the channel
+			res, err := n.Subscribe(session, subscribeCmd)
 
-		if err != nil || res == nil {
-			sessionCtx.Errorf("failed to subscribe: %v", err)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
+			if err != nil || res == nil {
+				sessionCtx.Errorf("failed to subscribe: %v", err)
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
 
-		// Subscription rejected
-		if res.Status != common.SUCCESS {
-			sessionCtx.Debugf("rejected: %v", err)
-			w.WriteHeader(http.StatusBadRequest)
-			return
+			// Subscription rejected
+			if res.Status != common.SUCCESS {
+				sessionCtx.Debugf("rejected: %v", err)
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
 		}
 
 		w.WriteHeader(http.StatusOK)

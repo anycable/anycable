@@ -665,6 +665,10 @@ func (n *Node) markDisconnectable(s *Session, interest int) {
 	}
 }
 
+func (n *Node) Size() int {
+	return n.hub.Size()
+}
+
 func transmit(s *Session, transmissions []string) {
 	for _, msg := range transmissions {
 		s.SendJSONTransmission(msg)

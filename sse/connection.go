@@ -10,8 +10,6 @@ import (
 	"time"
 
 	"github.com/anycable/anycable-go/node"
-	"github.com/anycable/anycable-go/ws"
-	"github.com/apex/log"
 )
 
 type Connection struct {
@@ -92,8 +90,6 @@ func (c *Connection) Close(code int, reason string) {
 		return
 	}
 
-	log.Warnf("Closing connection with code %d and reason %s", code, reason)
-
 	c.done = true
 
 	c.cancelFn()
@@ -115,23 +111,4 @@ func (c *Connection) Established() {
 
 func (c *Connection) Descriptor() net.Conn {
 	return nil
-}
-
-func wsCodeToHTTP(code int, reason string) int {
-	// Only convert known WS codes
-	switch code {
-	case ws.CloseNormalClosure:
-		if reason == "Auth Failed" {
-			return http.StatusUnauthorized
-		}
-		return http.StatusOK
-	case ws.CloseGoingAway:
-		return http.StatusServiceUnavailable
-	case ws.CloseAbnormalClosure:
-		return http.StatusInternalServerError
-	case ws.CloseInternalServerErr:
-		return http.StatusInternalServerError
-	}
-
-	return code
 }

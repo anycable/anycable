@@ -1,5 +1,9 @@
 package sse
 
+const (
+	defaultMaxBodySize = 65536 // 64 kB
+)
+
 // Long-polling configuration
 type Config struct {
 	Enabled bool

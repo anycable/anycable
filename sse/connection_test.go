@@ -79,15 +79,6 @@ func TestConnection_Read(t *testing.T) {
 	assert.Equal(t, []byte(nil), msg)
 }
 
-func TestWsCodeToHTTP(t *testing.T) {
-	// Verify that WebSocket codes are mapped to HTTP codes correctly
-	assert.Equal(t, http.StatusOK, wsCodeToHTTP(ws.CloseNormalClosure, "Ok"))
-	assert.Equal(t, http.StatusUnauthorized, wsCodeToHTTP(ws.CloseNormalClosure, "Auth Failed"))
-	assert.Equal(t, http.StatusServiceUnavailable, wsCodeToHTTP(ws.CloseGoingAway, "Server Restart"))
-	assert.Equal(t, http.StatusInternalServerError, wsCodeToHTTP(ws.CloseAbnormalClosure, "Internal Error"))
-	assert.Equal(t, http.StatusInternalServerError, wsCodeToHTTP(ws.CloseInternalServerErr, "Internal Error"))
-}
-
 func TestConnection_Descriptor(t *testing.T) {
 	w := httptest.NewRecorder()
 	c := NewConnection(w)

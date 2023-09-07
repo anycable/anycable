@@ -3,8 +3,10 @@ package sse
 import (
 	"bytes"
 	"context"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -94,6 +96,21 @@ func TestSSEHandler(t *testing.T) {
 		assert.Equal(t, "keep-alive", w.Header().Get("Connection"))
 	})
 
+	t.Run("headers + CORS", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/", nil)
+		req.Header.Set("Origin", "http://www.example.com")
+
+		corsConf := NewConfig()
+		corsConf.AllowedOrigins = "*.example.com"
+
+		corsHandler := SSEHandler(appNode, headersExtractor, &corsConf)
+
+		corsHandler.ServeHTTP(w, req)
+
+		assert.Equal(t, "http://www.example.com", w.Header().Get("Access-Control-Allow-Origin"))
+	})
+
 	t.Run("OPTIONS", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("OPTIONS", "/", nil)
@@ -103,9 +120,9 @@ func TestSSEHandler(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 	})
 
-	t.Run("non-GET/OPTIONS", func(t *testing.T) {
+	t.Run("non-GET/OPTIONS/POST", func(t *testing.T) {
 		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("POST", "/", nil)
+		req, _ := http.NewRequest("PUT", "/", nil)
 
 		handler.ServeHTTP(w, req)
 
@@ -213,6 +230,9 @@ func TestSSEHandler(t *testing.T) {
 		require.Equal(t, http.StatusBadRequest, w.Code)
 		assert.Empty(t, w.Body.String())
 
+		disconnector.Shutdown(ctx) // nolint:errcheck
+
+		assert.Equal(t, 0, appNode.Size())
 		controller.AssertCalled(t, "Subscribe", "sid-reject", mock.Anything, "se2034", `{"channel":"room_1"}`)
 	})
 
@@ -224,6 +244,103 @@ func TestSSEHandler(t *testing.T) {
 
 		require.Equal(t, http.StatusBadRequest, w.Code)
 		assert.Empty(t, w.Body.String())
+	})
+
+	t.Run("POST request without commands", func(t *testing.T) {
+		controller.
+			On("Authenticate", "sid-post-no-op", mock.Anything).
+			Return(&common.ConnectResult{
+				Identifier:    "se2023-09-06",
+				Status:        common.SUCCESS,
+				Transmissions: []string{`{"type":"welcome"}`},
+			}, nil)
+
+		req, _ := http.NewRequest("POST", "/", nil)
+		req.Header.Set("X-Request-ID", "sid-post-no-op")
+
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		req = req.WithContext(ctx)
+
+		w := httptest.NewRecorder()
+		sw := newStreamingWriter(w)
+
+		go handler.ServeHTTP(sw, req)
+
+		msg, err := sw.ReadEvent(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, "event: welcome\n"+`data: {"type":"welcome"}`, msg)
+
+		require.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("POST request with multiple subscriptions", func(t *testing.T) {
+		controller.
+			On("Authenticate", "sid-post", mock.Anything).
+			Return(&common.ConnectResult{
+				Identifier:    "se2023-09-06",
+				Status:        common.SUCCESS,
+				Transmissions: []string{`{"type":"welcome"}`},
+			}, nil)
+
+		controller.
+			On("Subscribe", "sid-post", mock.Anything, "se2023-09-06", "chat_1").
+			Return(&common.CommandResult{
+				Status:        common.SUCCESS,
+				Transmissions: []string{`{"type":"confirm","identifier":"chat_1"}`},
+				Streams:       []string{"messages_1"},
+			}, nil)
+
+		controller.
+			On("Subscribe", "sid-post", mock.Anything, "se2023-09-06", "presence_1").
+			Return(&common.CommandResult{
+				Status:        common.SUCCESS,
+				Transmissions: []string{`{"type":"confirm","identifier":"presence_1"}`},
+				Streams:       []string{"presence_1"},
+			}, nil)
+
+		req, _ := http.NewRequest("POST", "/", nil)
+		req.Header.Set("X-Request-ID", "sid-post")
+		req.Body = io.NopCloser(
+			strings.NewReader("{\"command\":\"subscribe\",\"identifier\":\"chat_1\"}\n{\"command\":\"subscribe\",\"identifier\":\"presence_1\"}"),
+		)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		req = req.WithContext(ctx)
+
+		w := httptest.NewRecorder()
+		sw := newStreamingWriter(w)
+
+		go handler.ServeHTTP(sw, req)
+
+		msg, err := sw.ReadEvent(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, "event: welcome\n"+`data: {"type":"welcome"}`, msg)
+
+		msg, err = sw.ReadEvent(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, "event: confirm\n"+`data: {"type":"confirm","identifier":"chat_1"}`, msg)
+
+		msg, err = sw.ReadEvent(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, "event: confirm\n"+`data: {"type":"confirm","identifier":"presence_1"}`, msg)
+
+		appNode.Broadcast(&common.StreamMessage{Stream: "messages_1", Data: `{"content":"hello"}`})
+
+		msg, err = sw.ReadEvent(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, `data: {"identifier":"chat_1","message":{"content":"hello"}}`, msg)
+
+		appNode.Broadcast(&common.StreamMessage{Stream: "presence_1", Data: `{"type":"join","user_id":1}`})
+
+		msg, err = sw.ReadEvent(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, `data: {"identifier":"presence_1","message":{"type":"join","user_id":1}}`, msg)
+
+		require.Equal(t, http.StatusOK, w.Code)
 	})
 }
 
