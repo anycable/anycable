@@ -130,6 +130,8 @@ func TestSSEHandler(t *testing.T) {
 	})
 
 	t.Run("when authentication fails", func(t *testing.T) {
+		defer assertNoSessions(t, appNode)
+
 		controller.
 			On("Authenticate", "sid-fail", mock.Anything).
 			Return(&common.ConnectResult{
@@ -153,6 +155,8 @@ func TestSSEHandler(t *testing.T) {
 	})
 
 	t.Run("request with identifier", func(t *testing.T) {
+		defer assertNoSessions(t, appNode)
+
 		controller.
 			On("Authenticate", "sid-gut", mock.Anything).
 			Return(&common.ConnectResult{
@@ -172,7 +176,10 @@ func TestSSEHandler(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/?identifier=chat_1", nil)
 		req.Header.Set("X-Request-ID", "sid-gut")
 
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		ctx_, release := context.WithTimeout(context.Background(), 2*time.Second)
+		defer release()
+
+		ctx, cancel := context.WithCancel(ctx_)
 		defer cancel()
 
 		req = req.WithContext(ctx)
@@ -200,6 +207,8 @@ func TestSSEHandler(t *testing.T) {
 	})
 
 	t.Run("request with channel + rejected", func(t *testing.T) {
+		defer assertNoSessions(t, appNode)
+
 		controller.
 			On("Authenticate", "sid-reject", mock.Anything).
 			Return(&common.ConnectResult{
@@ -218,7 +227,10 @@ func TestSSEHandler(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/?channel=room_1", nil)
 		req.Header.Set("X-Request-ID", "sid-reject")
 
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		ctx_, release := context.WithTimeout(context.Background(), 2*time.Second)
+		defer release()
+
+		ctx, cancel := context.WithCancel(ctx_)
 		defer cancel()
 
 		req = req.WithContext(ctx)
@@ -230,9 +242,6 @@ func TestSSEHandler(t *testing.T) {
 		require.Equal(t, http.StatusBadRequest, w.Code)
 		assert.Empty(t, w.Body.String())
 
-		disconnector.Shutdown(ctx) // nolint:errcheck
-
-		assert.Equal(t, 0, appNode.Size())
 		controller.AssertCalled(t, "Subscribe", "sid-reject", mock.Anything, "se2034", `{"channel":"room_1"}`)
 	})
 
@@ -247,6 +256,8 @@ func TestSSEHandler(t *testing.T) {
 	})
 
 	t.Run("POST request without commands + server shutdown", func(t *testing.T) {
+		defer assertNoSessions(t, appNode)
+
 		controller.
 			On("Authenticate", "sid-post-no-op", mock.Anything).
 			Return(&common.ConnectResult{
@@ -258,7 +269,10 @@ func TestSSEHandler(t *testing.T) {
 		req, _ := http.NewRequest("POST", "/", nil)
 		req.Header.Set("X-Request-ID", "sid-post-no-op")
 
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		ctx_, release := context.WithTimeout(context.Background(), 2*time.Second)
+		defer release()
+
+		ctx, cancel := context.WithCancel(ctx_)
 		defer cancel()
 
 		req = req.WithContext(ctx)
@@ -286,6 +300,8 @@ func TestSSEHandler(t *testing.T) {
 	})
 
 	t.Run("POST request with multiple subscriptions", func(t *testing.T) {
+		defer assertNoSessions(t, appNode)
+
 		controller.
 			On("Authenticate", "sid-post", mock.Anything).
 			Return(&common.ConnectResult{
@@ -316,7 +332,10 @@ func TestSSEHandler(t *testing.T) {
 			strings.NewReader("{\"command\":\"subscribe\",\"identifier\":\"chat_1\"}\n{\"command\":\"subscribe\",\"identifier\":\"presence_1\"}"),
 		)
 
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		ctx_, release := context.WithTimeout(context.Background(), 2*time.Second)
+		defer release()
+
+		ctx, cancel := context.WithCancel(ctx_)
 		defer cancel()
 
 		req = req.WithContext(ctx)
@@ -352,6 +371,32 @@ func TestSSEHandler(t *testing.T) {
 
 		require.Equal(t, http.StatusOK, w.Code)
 	})
+}
+
+// This a helper method to ensure no sessions left after test (so no global state is left).
+// Session may be removed from the hub asynchrounously, so we need to wait for it.
+func assertNoSessions(t *testing.T, n *node.Node) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	done := make(chan struct{})
+
+	go func() {
+		for {
+			if n.Size() == 0 {
+				close(done)
+				return
+			}
+
+			time.Sleep(100 * time.Millisecond)
+		}
+	}()
+
+	select {
+	case <-ctx.Done():
+		require.Fail(t, "Timeout waiting for sessions to be removed")
+	case <-done:
+	}
 }
 
 type immediateDisconnector struct {
