@@ -62,3 +62,5 @@ realtime-ification
 Posthog
 resumable
 ack
+caniuse
+reconnection
