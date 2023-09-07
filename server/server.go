@@ -26,6 +26,9 @@ type HTTPServer struct {
 	mu       sync.Mutex
 	log      *log.Entry
 
+	shutdownCtx context.Context
+	shutdownFn  context.CancelFunc
+
 	mux *chi.Mux
 }
 
@@ -75,15 +78,19 @@ func NewServer(host string, port string, ssl *SSLConfig, maxConn int) (*HTTPServ
 		server.TLSConfig = &tls.Config{Certificates: []tls.Certificate{cer}, MinVersion: tls.VersionTLS12}
 	}
 
+	shutdownCtx, shutdownFn := context.WithCancel(context.Background())
+
 	return &HTTPServer{
-		server:   server,
-		addr:     addr,
-		mux:      router,
-		secured:  secured,
-		shutdown: false,
-		started:  false,
-		maxConn:  maxConn,
-		log:      log.WithField("context", "http"),
+		server:      server,
+		addr:        addr,
+		mux:         router,
+		secured:     secured,
+		shutdown:    false,
+		started:     false,
+		shutdownCtx: shutdownCtx,
+		shutdownFn:  shutdownFn,
+		maxConn:     maxConn,
+		log:         log.WithField("context", "http"),
 	}, nil
 }
 
@@ -150,7 +157,15 @@ func (s *HTTPServer) Shutdown(ctx context.Context) error {
 	s.shutdown = true
 	s.mu.Unlock()
 
+	s.shutdownFn()
+
 	return s.server.Shutdown(ctx)
+}
+
+// ShutdownCtx returns context for graceful shutdown.
+// It must be used by HTTP handlers to termniates long-running requests (SSE, long-polling).
+func (s *HTTPServer) ShutdownCtx() context.Context {
+	return s.shutdownCtx
 }
 
 // Stopped return true iff server has been stopped by user

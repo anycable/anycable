@@ -74,7 +74,7 @@ func TestSSEHandler(t *testing.T) {
 
 	headersExtractor := &server.DefaultHeadersExtractor{}
 
-	handler := SSEHandler(appNode, headersExtractor, &conf)
+	handler := SSEHandler(appNode, context.Background(), headersExtractor, &conf)
 
 	controller.
 		On("Shutdown").
@@ -104,7 +104,7 @@ func TestSSEHandler(t *testing.T) {
 		corsConf := NewConfig()
 		corsConf.AllowedOrigins = "*.example.com"
 
-		corsHandler := SSEHandler(appNode, headersExtractor, &corsConf)
+		corsHandler := SSEHandler(appNode, context.Background(), headersExtractor, &corsConf)
 
 		corsHandler.ServeHTTP(w, req)
 
@@ -246,7 +246,7 @@ func TestSSEHandler(t *testing.T) {
 		assert.Empty(t, w.Body.String())
 	})
 
-	t.Run("POST request without commands", func(t *testing.T) {
+	t.Run("POST request without commands + server shutdown", func(t *testing.T) {
 		controller.
 			On("Authenticate", "sid-post-no-op", mock.Anything).
 			Return(&common.ConnectResult{
@@ -266,11 +266,21 @@ func TestSSEHandler(t *testing.T) {
 		w := httptest.NewRecorder()
 		sw := newStreamingWriter(w)
 
-		go handler.ServeHTTP(sw, req)
+		shutdownCtx, shutdownFn := context.WithCancel(context.Background())
+
+		shutdownHandler := SSEHandler(appNode, shutdownCtx, headersExtractor, &conf)
+
+		go shutdownHandler.ServeHTTP(sw, req)
 
 		msg, err := sw.ReadEvent(ctx)
 		require.NoError(t, err)
 		assert.Equal(t, "event: welcome\n"+`data: {"type":"welcome"}`, msg)
+
+		shutdownFn()
+
+		msg, err = sw.ReadEvent(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, "event: disconnect\n"+`data: {"type":"disconnect","reason":"server_restart","reconnect":true}`, msg)
 
 		require.Equal(t, http.StatusOK, w.Code)
 	})

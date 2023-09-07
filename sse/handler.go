@@ -1,6 +1,7 @@
 package sse
 
 import (
+	"context"
 	"net/http"
 	"strings"
 
@@ -13,7 +14,7 @@ import (
 )
 
 // SSEHandler generates a new http handler for SSE connections
-func SSEHandler(n *node.Node, headersExtractor server.HeadersExtractor, config *Config) http.Handler {
+func SSEHandler(n *node.Node, shutdownCtx context.Context, headersExtractor server.HeadersExtractor, config *Config) http.Handler {
 	var allowedHosts []string
 
 	if config.AllowedOrigins == "" {
@@ -118,15 +119,27 @@ func SSEHandler(n *node.Node, headersExtractor server.HeadersExtractor, config *
 		conn.Established()
 		sessionCtx.Debugf("session established")
 
-		// TODO: Handle server shutdown. Currently, server is waiting for SSE connections to be closed
-		select {
-		case <-r.Context().Done():
-			sessionCtx.Debugf("request terminated")
-			session.DisconnectNow("Closed", ws.CloseNormalClosure)
-			return
-		case <-conn.Context().Done():
-			sessionCtx.Debugf("session completed")
-			return
+		shutdownReceived := false
+
+		for {
+			select {
+			case <-shutdownCtx.Done():
+				if !shutdownReceived {
+					shutdownReceived = true
+					sessionCtx.Debugf("server shutdown")
+					session.DisconnectWithMessage(
+						&common.DisconnectMessage{Type: "disconnect", Reason: common.SERVER_RESTART_REASON, Reconnect: true},
+						common.SERVER_RESTART_REASON,
+					)
+				}
+			case <-r.Context().Done():
+				sessionCtx.Debugf("request terminated")
+				session.DisconnectNow("Closed", ws.CloseNormalClosure)
+				return
+			case <-conn.Context().Done():
+				sessionCtx.Debugf("session completed")
+				return
+			}
 		}
 	})
 }
