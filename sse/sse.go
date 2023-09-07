@@ -6,6 +6,8 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/node"
@@ -72,6 +74,29 @@ func subscribeCommandFromGetRequest(r *http.Request) (*common.Message, error) {
 	}
 
 	msg.Identifier = identifier
+
+	if lastId := r.Header.Get("last-event-id"); lastId != "" {
+		offsetParts := strings.SplitN(lastId, lastIdDelimeter, 3)
+
+		if len(offsetParts) == 3 {
+			offset, err := strconv.ParseUint(offsetParts[0], 10, 64)
+
+			if err != nil {
+				return nil, errorx.Decorate(err, "failed to parse last event id: %s", lastId)
+			}
+
+			epoch := offsetParts[1]
+			stream := offsetParts[2]
+
+			streams := make(map[string]common.HistoryPosition)
+
+			streams[stream] = common.HistoryPosition{Offset: offset, Epoch: epoch}
+
+			msg.History = common.HistoryRequest{
+				Streams: streams,
+			}
+		}
+	}
 
 	return msg, nil
 }

@@ -15,6 +15,8 @@ const sseEncoderID = "sse"
 // Tell the client to reconnect in a year in case we don't really want it to re-connect
 const retryNoReconnect = 31536000000
 
+const lastIdDelimeter = "/"
+
 // Encoder is responsible for converting messages to SSE format (event:, data:, etc.)
 // NOTE: It's only used to encode messages from server to client.
 type Encoder struct {
@@ -39,7 +41,7 @@ func (Encoder) Encode(msg encoders.EncodedMessage) (*ws.SentFrame, error) {
 
 	if reply, ok := msg.(*common.Reply); ok {
 		if reply.Offset > 0 && reply.Epoch != "" && reply.StreamID != "" {
-			payload += "\nid: " + fmt.Sprintf("%d/%s/%s", reply.Offset, reply.Epoch, reply.StreamID)
+			payload += "\nid: " + fmt.Sprintf("%d%s%s%s%s", reply.Offset, lastIdDelimeter, reply.Epoch, lastIdDelimeter, reply.StreamID)
 		}
 	}
 
