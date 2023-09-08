@@ -76,7 +76,7 @@ func SSEHandler(n *node.Node, shutdownCtx context.Context, headersExtractor serv
 		}
 
 		// Finally, we can establish a session
-		session, err := NewSSESession(n, w, info)
+		session, err := NewSSESession(n, w, r, info)
 
 		if err != nil {
 			sessionCtx.Errorf("failed to establish sesssion: %v", err)

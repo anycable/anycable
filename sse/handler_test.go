@@ -154,7 +154,7 @@ func TestSSEHandler(t *testing.T) {
 		assert.Empty(t, w.Body.String())
 	})
 
-	t.Run("request with identifier", func(t *testing.T) {
+	t.Run("GET request with identifier", func(t *testing.T) {
 		defer assertNoSessions(t, appNode)
 
 		controller.
@@ -201,12 +201,60 @@ func TestSSEHandler(t *testing.T) {
 
 		msg, err = sw.ReadEvent(ctx)
 		require.NoError(t, err)
-		assert.Equal(t, `data: {"identifier":"chat_1","message":{"content":"hello"}}`, msg)
+		assert.Equal(t, `data: {"content":"hello"}`, msg)
 
 		require.Equal(t, http.StatusOK, w.Code)
 	})
 
-	t.Run("request with channel + rejected", func(t *testing.T) {
+	t.Run("GET request with turbo_signed_stream_name", func(t *testing.T) {
+		defer assertNoSessions(t, appNode)
+
+		controller.
+			On("Authenticate", "sid-turbo", mock.Anything).
+			Return(&common.ConnectResult{
+				Identifier:    "se2023",
+				Status:        common.SUCCESS,
+				Transmissions: []string{`{"type":"welcome"}`},
+			}, nil)
+
+		turbo_identifier := `{"channel":"Turbo::StreamsChannel","signed_stream_name":"chat_1"}`
+
+		controller.
+			On("Subscribe", "sid-turbo", mock.Anything, "se2023", turbo_identifier).
+			Return(&common.CommandResult{
+				Status:        common.SUCCESS,
+				Transmissions: []string{`{"type":"confirm","identifier":"turbo_1"}`},
+				Streams:       []string{"chat_1"},
+			}, nil)
+
+		req, _ := http.NewRequest("GET", "/?turbo_signed_stream_name=chat_1", nil)
+		req.Header.Set("X-Request-ID", "sid-turbo")
+
+		ctx_, release := context.WithTimeout(context.Background(), 2*time.Second)
+		defer release()
+
+		ctx, cancel := context.WithCancel(ctx_)
+		defer cancel()
+
+		req = req.WithContext(ctx)
+
+		w := httptest.NewRecorder()
+		sw := newStreamingWriter(w)
+
+		go handler.ServeHTTP(sw, req)
+
+		msg, err := sw.ReadEvent(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, "event: welcome\n"+`data: {"type":"welcome"}`, msg)
+
+		msg, err = sw.ReadEvent(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, "event: confirm\n"+`data: {"type":"confirm","identifier":"turbo_1"}`, msg)
+
+		require.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("GET request with channel + rejected", func(t *testing.T) {
 		defer assertNoSessions(t, appNode)
 
 		controller.
@@ -245,7 +293,7 @@ func TestSSEHandler(t *testing.T) {
 		controller.AssertCalled(t, "Subscribe", "sid-reject", mock.Anything, "se2034", `{"channel":"room_1"}`)
 	})
 
-	t.Run("request without channel or identifier", func(t *testing.T) {
+	t.Run("GET request without channel or identifier", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/", nil)
 
 		w := httptest.NewRecorder()

@@ -16,10 +16,17 @@ import (
 	"github.com/joomcode/errorx"
 )
 
-func NewSSESession(n *node.Node, w http.ResponseWriter, info *server.RequestInfo) (*node.Session, error) {
+const (
+	turboStreamsParam   = "turbo_signed_stream_name"
+	turboStreamsChannel = "Turbo::StreamsChannel"
+)
+
+func NewSSESession(n *node.Node, w http.ResponseWriter, r *http.Request, info *server.RequestInfo) (*node.Session, error) {
 	conn := NewConnection(w)
 
-	session := node.NewSession(n, conn, info.URL, info.Headers, info.UID, node.WithEncoder(&Encoder{}))
+	unwrapData := r.Method == http.MethodGet
+
+	session := node.NewSession(n, conn, info.URL, info.Headers, info.UID, node.WithEncoder(&Encoder{unwrapData}))
 	res, err := n.Authenticate(session)
 
 	if err != nil {
@@ -66,6 +73,18 @@ func subscribeCommandFromGetRequest(r *http.Request) (*common.Message, error) {
 
 		if channel != "" {
 			identifier = string(utils.ToJSON(map[string]string{"channel": channel}))
+		}
+	}
+
+	// Then, check for Turbo Streams name
+	if identifier == "" {
+		stream := r.URL.Query().Get(turboStreamsParam)
+
+		if stream != "" {
+			identifier = string(utils.ToJSON(map[string]string{
+				"channel":            turboStreamsChannel,
+				"signed_stream_name": stream,
+			}))
 		}
 	}
 

@@ -81,7 +81,7 @@ data: {"type":"confirm_subscription","identifier":"{\"channel\":\"ChatChannel\"}
 event: ping
 data: {"type":"ping","message":1694041735}
 
-data: {"identifier":"{\"channel\":\"ChatChannel\"}","message":{"message":"hello"}}
+data: {"message":"hello"}
 ...
 ```
 
@@ -95,7 +95,7 @@ Note that you must process different event types yourself. See below for the for
 
 The server-client communication format is designed as follows:
 
-- The `data` field contains the message payload (JSON string)
+- The `data` field contains the message payload. **IMPORTANT**: for clients connecting via a GET request, the payload only contains the `message` part of the original Action Cable payload; clients connecting via POST requests receive the full payload (e.g., `{"identifier":, "message": {"foo":1}}`).
 - The optional `event` field contains the message type (if any); for example, `welcome`, `confirm_subscription`, `ping`
 - The optional `id` field contains the message ID if reliable streaming is enabled. The message ID has a form or `<offset>/<stream_id>/<epoch>` (see [Extended Action Cable protocol](/misc/action_cable_protocol.md#action-cable-extended-protocol))
 - The optional `retry` field contains the reconnection interval in milliseconds. We only set this field for `disconnect` messages with `reconnect: false` (it's set to a reasonably high number to prevent automatic reconnection attempts by EventSource).
@@ -115,6 +115,15 @@ event: ping
 data: {"type":"ping","message":1694041735}
 
 
+<!-- GET connection (e.g., EventSource) -->
+data: {"message":"hello"}
+id: 1/chat_42/y2023
+
+data: {"message":"good-bye"}
+id: 2/chat_42/y2023
+
+
+<!-- POST connection  -->
 data: {"identifier":"{\"channel\":\"ChatChannel\"}","message":{"message":"hello"}}
 id: 1/chat_42/y2023
 

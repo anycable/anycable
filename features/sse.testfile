@@ -104,7 +104,7 @@ streaming_request(URI(url)) do |stream|
 
   broadcast_event = stream.resume
 
-  if broadcast_event.data.fetch("message") != {"text" => "Hello, stream!"}
+  if broadcast_event.data != {"text" => "Hello, stream!"}
     fail "Expected broadcast data, got: #{broadcast_event.data}"
   end
 
@@ -125,7 +125,7 @@ streaming_request(URI(url), headers: {"Last-Event-ID" => last_id}) do |stream|
   # And now we should receive the missed message
   missed_message = stream.resume
 
-  if missed_message.data.fetch("message") != {"text" => "Where are you, stream?"}
+  if missed_message.data != {"text" => "Where are you, stream?"}
     fail "Expected missed message, got: #{missed_message.data}"
   end
 end

@@ -21,6 +21,17 @@ func TestEncoder_Encode(t *testing.T) {
 		assert.Equal(t, expected, string(actual.Payload))
 	})
 
+	t.Run("without type + unwrap data", func(t *testing.T) {
+		getCoder := Encoder{UnwrapData: true}
+		msg := &common.Reply{Identifier: "test_channel", Message: "hello"}
+		expected := `data: hello`
+
+		actual, err := getCoder.Encode(msg)
+
+		assert.NoError(t, err)
+		assert.Equal(t, expected, string(actual.Payload))
+	})
+
 	t.Run("with type", func(t *testing.T) {
 		msg := &common.Reply{Type: "test", Identifier: "test_channel", Message: "hello"}
 		expected := "event: test\n" +
