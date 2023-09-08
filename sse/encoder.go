@@ -14,7 +14,7 @@ import (
 const sseEncoderID = "sse"
 
 // Tell the client to reconnect in a year in case we don't really want it to re-connect
-const retryNoReconnect = 31536000000
+const retryNoReconnect = int64(31536000000)
 
 const lastIdDelimeter = "/"
 
