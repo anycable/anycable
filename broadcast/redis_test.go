@@ -32,9 +32,14 @@ func init() {
 		config.URL = redisURL
 	}
 
-	config.ToRueidisOptions() // nolint: errcheck
+	options, err := config.ToRueidisOptions()
 
-	c, err := rueidis.NewClient(rueidis.ClientOption{InitAddress: config.Hostnames()})
+	if err != nil {
+		fmt.Printf("Failed to create Redis URL: %v", err)
+		return
+	}
+
+	c, err := rueidis.NewClient(*options)
 
 	if err != nil {
 		fmt.Printf("Failed to connect to Redis: %v", err)
