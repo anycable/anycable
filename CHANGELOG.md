@@ -2,6 +2,8 @@
 
 ## master
 
+## 1.4.4 (2023-09-07)
+
 - Add Server-Sent Events support. ([@palkan][])
 
 - Add `disconnect_backlog_size` option to control the buffer size for the disconnect queue.
