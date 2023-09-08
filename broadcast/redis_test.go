@@ -32,7 +32,7 @@ func init() {
 		config.URL = redisURL
 	}
 
-	config.Parse() // nolint: errcheck
+	config.ToRueidisOptions() // nolint: errcheck
 
 	c, err := rueidis.NewClient(rueidis.ClientOption{InitAddress: config.Hostnames()})
 

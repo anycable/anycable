@@ -65,7 +65,7 @@ func (s *RedisBroadcaster) Start(done chan error) error {
 	}
 
 	if s.config.IsSentinel() { //nolint:gocritic
-		s.log.WithField("stream", s.config.Channel).WithField("consumer", s.consumerName).Infof("Starting Redis broadcaster at %v (sentinels)", s.config.SentinelHostnames())
+		s.log.WithField("stream", s.config.Channel).WithField("consumer", s.consumerName).Infof("Starting Redis broadcaster at %v (sentinels)", s.config.Hostnames())
 	} else if s.config.IsCluster() {
 		s.log.WithField("stream", s.config.Channel).WithField("consumer", s.consumerName).Infof("Starting Redis broadcaster at %v (cluster)", s.config.Hostnames())
 	} else {

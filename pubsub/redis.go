@@ -69,7 +69,7 @@ func NewRedisSubscriber(node Handler, config *rconfig.RedisConfig) (*RedisSubscr
 
 func (s *RedisSubscriber) Start(done chan (error)) error {
 	if s.config.IsSentinel() { //nolint:gocritic
-		s.log.Infof("Starting Redis pub/sub (sentinels): %v", s.config.SentinelHostnames())
+		s.log.Infof("Starting Redis pub/sub (sentinels): %v", s.config.Hostnames())
 	} else if s.config.IsCluster() {
 		s.log.Infof("Starting Redis pub/sub (cluster): %v", s.config.Hostnames())
 	} else {
