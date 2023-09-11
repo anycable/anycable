@@ -1,8 +1,9 @@
 package redis
 
 import (
-	"time"
 	"net/url"
+	"strings"
+	"time"
 
 	"github.com/redis/rueidis"
 )
@@ -31,10 +32,10 @@ type RedisConfig struct {
 	// Max number of reconnect attempts
 	MaxReconnectAttempts int
 
-	// List of parsed URLs
-	uris []*url.URL
-	// A parsed URL of Sentinel Master
-	sentinelMaster *url.URL
+	// List of hosts to connect
+	hosts []string
+	// Sentinel Master host to connect
+	sentinelMaster string
 }
 
 // NewRedisConfig builds a new config for Redis pubsub
@@ -52,54 +53,39 @@ func NewRedisConfig() RedisConfig {
 	}
 }
 
-func (config *RedisConfig) IsSentinel() bool {
-	return config.Sentinels != ""
-}
-
 func (config *RedisConfig) IsCluster() bool {
-	return len(config.uris) > 1
+	return len(config.hosts) > 1 && !config.IsSentinel()
 }
 
-func (config *RedisConfig) Hostname() string {
-	uri := config.uris[0]
-
-	return uri.Host
+func (config *RedisConfig) IsSentinel() bool {
+	return config.Sentinels != "" || config.sentinelMaster != ""
 }
 
 func (config *RedisConfig) Hostnames() []string {
-	hostnames := make([]string, len(config.uris))
-
-	for i, uri := range config.uris {
-		hostnames[i] = uri.Host
-	}
-
-	return hostnames
+	return config.hosts
 }
 
-func (config *RedisConfig) ToRueidisOptions() (*rueidis.ClientOption, error) {
-  options, err := rueidis.ParseURL(config.URL)
+func (config *RedisConfig) Hostname() string {
+	if config.IsSentinel() {
+		return config.sentinelMaster
+	} else {
+		return config.hosts[0]
+	}
+}
+
+func (config *RedisConfig) ToRueidisOptions() (options *rueidis.ClientOption, err error) {
+	if config.IsSentinel() {
+		options, err = config.parseSentinels()
+	} else {
+		options, err = parseRedisURL(config.URL)
+	}
 
 	if err != nil {
 		return nil, err
 	}
 
-	if config.IsSentinel() {
-		config.sentinelMaster, _ = url.Parse(options.InitAddress[0])
-
-	  options, err := rueidis.ParseURL(config.Sentinels)
-
-		if err != nil {
-			return nil, err
-		}
-
-		options.Sentinel.MasterSet = config.sentinelMaster.Host
-	}
-
-	config.uris = make([]*url.URL, len(options.InitAddress))
-	for i, addr := range options.InitAddress {
-		uri, _ := url.Parse(addr)
-		config.uris[i] = uri
-	}
+	config.hosts = options.InitAddress
+	config.sentinelMaster = options.Sentinel.MasterSet
 
 	options.Dialer.KeepAlive = time.Duration(config.KeepalivePingInterval) * time.Second
 
@@ -109,5 +95,51 @@ func (config *RedisConfig) ToRueidisOptions() (*rueidis.ClientOption, error) {
 		options.TLSConfig.InsecureSkipVerify = !config.TLSVerify
 	}
 
-	return &options, nil
+	return options, nil
+}
+
+func (config *RedisConfig) parseSentinels() (*rueidis.ClientOption, error) {
+	sentinelMaster, err := url.Parse(config.URL)
+
+	if err != nil {
+		return nil, err
+	}
+
+	options, err := parseRedisURL(config.Sentinels)
+
+	if err != nil {
+		return nil, err
+	}
+
+	options.Sentinel.MasterSet = sentinelMaster.Host
+
+	return options, nil
+}
+
+func parseRedisURL(url string) (options *rueidis.ClientOption, err error) {
+	urls := strings.Split(url, ",")
+
+	for _, addr := range urls {
+		currentOptions, err := rueidis.ParseURL(ensureRedisScheme(addr))
+
+		if err != nil {
+			return nil, err
+		}
+
+		if options == nil {
+			options = &currentOptions
+		} else {
+			options.InitAddress = append(options.InitAddress, currentOptions.InitAddress...)
+		}
+	}
+
+	return options, nil
+}
+
+func ensureRedisScheme(url string) string {
+	if strings.Contains(url, "://") {
+		return url
+	}
+
+	return "redis://" + url
 }

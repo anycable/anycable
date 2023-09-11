@@ -35,7 +35,7 @@ func init() {
 	options, err := config.ToRueidisOptions()
 
 	if err != nil {
-		fmt.Printf("Failed to create Redis URL: %v", err)
+		fmt.Printf("Failed to parse Redis URL: %v", err)
 		return
 	}
 
