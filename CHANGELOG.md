@@ -2,6 +2,10 @@
 
 ## master
 
+- Support to use a custom database number. ([@ardecvz][])
+
+Parse `--redis_url` (`ANYCABLE_REDIS_URL` or `REDIS_URL`) using the `rueidis` standard utility.
+
 ## 1.4.4 (2023-09-07)
 
 - Add Server-Sent Events support. ([@palkan][])
@@ -295,3 +299,4 @@ See [Changelog](https://github.com/anycable/anycable-go/blob/0-6-stable/CHANGELO
 [@Envek]: https://github.com/Envek
 [@rafaelrubbioli]: https://github.com/rafaelrubbioli
 [@gzigzigzeo]: https://github.com/gzigzigzeo
+[@ardecvz]: https://github.com/ardecvz
