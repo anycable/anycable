@@ -1,7 +1,7 @@
 # Gemfile for running conformance tests with Anyt
 source "https://rubygems.org"
 
-gem "nats-pure"
+gem "nats-pure", "< 2.3.0"
 gem "colorize"
 gem "puma"
 
