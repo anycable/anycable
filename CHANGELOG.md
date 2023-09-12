@@ -2,6 +2,10 @@
 
 ## master
 
+- Add support for REDIS_URL with trailing slash hostnames. ([@ardecvz][])
+
+`rueidis` doesn't tolerate the trailing slash hostnames.
+
 - Support to use a custom database number. ([@ardecvz][])
 
 Parse `--redis_url` (`ANYCABLE_REDIS_URL` or `REDIS_URL`) using the `rueidis` standard utility.
