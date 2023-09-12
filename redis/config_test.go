@@ -33,6 +33,7 @@ func TestTrailingSlashHostname(t *testing.T) {
 	options, err := config.ToRueidisOptions()
 	require.NoError(t, err)
 
+	assert.Equal(t, []string{"localhost:6379"}, options.InitAddress)
 	assert.Equal(t, 0, options.SelectDB)
 }
 
