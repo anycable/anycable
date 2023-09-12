@@ -120,6 +120,8 @@ func parseRedisURL(url string) (options *rueidis.ClientOption, err error) {
 	urls := strings.Split(url, ",")
 
 	for _, addr := range urls {
+		addr = chompTrailingSlashHostname(addr)
+
 		currentOptions, err := rueidis.ParseURL(ensureRedisScheme(addr))
 
 		if err != nil {
@@ -134,6 +136,12 @@ func parseRedisURL(url string) (options *rueidis.ClientOption, err error) {
 	}
 
 	return options, nil
+}
+
+// TODO: upstream this change to `rueidis` URL parsing
+// as the implementation doesn't tolerate the trailing slash hostnames (`redis-cli` does).
+func chompTrailingSlashHostname(url string) string {
+	return strings.TrimSuffix(url, "/")
 }
 
 func ensureRedisScheme(url string) string {

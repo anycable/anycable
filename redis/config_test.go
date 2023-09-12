@@ -27,6 +27,15 @@ func TestBasic(t *testing.T) {
 	assert.Nil(t, options.TLSConfig)
 }
 
+func TestTrailingSlashHostname(t *testing.T) {
+	config := NewRedisConfig()
+	config.URL = "redis://localhost:6379/"
+	options, err := config.ToRueidisOptions()
+	require.NoError(t, err)
+
+	assert.Equal(t, 0, options.SelectDB)
+}
+
 func TestCustomDatabase(t *testing.T) {
 	config := NewRedisConfig()
 	config.URL = "redis://localhost:6379/1"
