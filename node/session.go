@@ -3,6 +3,7 @@ package node
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/rand"
 	"sync"
 	"time"
@@ -416,6 +417,11 @@ func (s *Session) DisconnectWithMessage(msg encoders.EncodedMessage, code string
 	}
 
 	s.Disconnect(reason, wsCode)
+}
+
+// String returns session string representation (for %v in Printf-like functions)
+func (s *Session) String() string {
+	return fmt.Sprintf("Session(%s)", s.uid)
 }
 
 type cacheEntry struct {

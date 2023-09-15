@@ -25,16 +25,13 @@ require (
 	github.com/posthog/posthog-go v0.0.0-20221221115252-24dfed35d71a
 	github.com/redis/rueidis v1.0.17
 	github.com/smira/go-statsd v1.3.2
-	github.com/stretchr/testify v1.8.2
+	github.com/stretchr/testify v1.8.4
 	github.com/urfave/cli/v2 v2.11.1
 	go.uber.org/automaxprocs v1.5.1
 	golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df
 	golang.org/x/net v0.12.0
 	google.golang.org/grpc v1.53.0
 )
-
-// https://github.com/stretchr/testify/pull/1229
-replace github.com/stretchr/testify => github.com/palkan/testify v0.0.0-20220714120938-9ebebef47942
 
 require github.com/sony/gobreaker v0.5.0
 
