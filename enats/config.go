@@ -11,4 +11,5 @@ type Config struct {
 	GatewayAdvertise string
 	Gateways         []string
 	Routes           []string
+	JetStream        bool
 }

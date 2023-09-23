@@ -20,7 +20,7 @@ require (
 	github.com/mattn/go-isatty v0.0.14
 	github.com/mitchellh/go-mruby v0.0.0-20200315023956-207cedc21542
 	github.com/namsral/flag v1.7.4-pre
-	github.com/nats-io/nats.go v1.24.0
+	github.com/nats-io/nats.go v1.30.0
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/posthog/posthog-go v0.0.0-20221221115252-24dfed35d71a
 	github.com/redis/rueidis v1.0.17
@@ -36,7 +36,7 @@ require (
 require github.com/sony/gobreaker v0.5.0
 
 require (
-	github.com/klauspost/compress v1.16.0 // indirect
+	github.com/klauspost/compress v1.17.0 // indirect
 	github.com/minio/highwayhash v1.0.2 // indirect
 	github.com/nats-io/jwt/v2 v2.3.0 // indirect
 	github.com/xtgo/uuid v0.0.0-20140804021211-a0b114877d4c // indirect
@@ -47,7 +47,7 @@ require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/jhump/protoreflect v1.5.0 // indirect
 	github.com/nats-io/nats-server/v2 v2.9.14
-	github.com/nats-io/nkeys v0.3.0 // indirect
+	github.com/nats-io/nkeys v0.4.5 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect

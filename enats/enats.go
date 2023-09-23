@@ -88,14 +88,15 @@ func (s *Service) Start() error {
 	}
 
 	opts := &server.Options{
-		Host:    u.Hostname(),
-		Port:    int(port),
-		Debug:   s.config.Debug,
-		Trace:   s.config.Trace,
-		Cluster: clusterOpts,
-		Gateway: gatewayOpts,
-		Routes:  routes,
-		NoSigs:  true,
+		Host:      u.Hostname(),
+		Port:      int(port),
+		Debug:     s.config.Debug,
+		Trace:     s.config.Trace,
+		Cluster:   clusterOpts,
+		Gateway:   gatewayOpts,
+		Routes:    routes,
+		NoSigs:    true,
+		JetStream: s.config.JetStream,
 	}
 
 	s.server, err = server.NewServer(opts)
