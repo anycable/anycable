@@ -3,6 +3,7 @@ package broker
 import (
 	"context"
 	"fmt"
+	"math"
 	"sync"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	natsconfig "github.com/anycable/anycable-go/nats"
 	"github.com/apex/log"
 	"github.com/joomcode/errorx"
+	nanoid "github.com/matoous/go-nanoid"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 )
@@ -34,11 +36,12 @@ type NATS struct {
 
 const (
 	kvBucket        = "_anycable_"
+	epochBucket     = "_anycable_epoch_"
+	epochKey        = "_epoch_"
 	sessionsPrefix  = "ac/se/"
 	streamPrefix    = "ac/s/"
 	streamPosPrefix = "ac/spos/"
 	streamTsPrefix  = "ac/sts/"
-	epochKey        = "ac/e"
 )
 
 var _ Broker = (*NATS)(nil)
@@ -90,52 +93,23 @@ func (n *NATS) Start() error {
 	n.conn = nc
 	n.js = js
 
-	// Setup KV bucket
-	var bucket jetstream.KeyValue
-	newBucket := false
+	kv, err := n.fetchBucketWithTTL(kvBucket, time.Duration(n.conf.SessionsTTL*int64(time.Second)))
 
-bucketSetup:
-	bucket, err = n.js.KeyValue(context.Background(), kvBucket)
-
-	if err == jetstream.ErrBucketNotFound {
-		var berr error
-		bucket, berr = n.js.CreateKeyValue(context.Background(), jetstream.KeyValueConfig{
-			Bucket: kvBucket,
-			TTL:    time.Duration(n.conf.SessionsTTL * int64(time.Second)),
-		})
-
-		if berr != nil {
-			return errorx.Decorate(berr, "Failed to create JetStream KV bucket")
-		}
-
-		newBucket = true
-	} else if err != nil {
-		return errorx.Decorate(err, "Failed to retrieve JetStream KV bucket")
+	if err != nil {
+		return errorx.Decorate(err, "Failed to connect to JetStream KV")
 	}
 
-	// Invalidate TTL settings if the bucket is the new one.
-	// We discard the previous bucket and create a new one with the default TTL.
-	if !newBucket {
-		status, serr := bucket.Status(context.Background())
+	n.kv = kv
 
-		if serr != nil {
-			return errorx.Decorate(serr, "Failed to retrieve JetStream KV bucket status")
-		}
+	epoch, err := n.calculateEpoch()
 
-		ttl := time.Duration(n.conf.SessionsTTL * int64(time.Second))
-
-		if status.TTL() != ttl {
-			n.log.Warnf("JetStream KV bucket TTL has been changed, recreating the bucket: old=%s, new=%s", status.TTL().String(), ttl.String())
-			derr := n.js.DeleteKeyValue(context.Background(), kvBucket)
-			if derr != nil {
-				return errorx.Decorate(derr, "Failed to delete JetStream KV bucket")
-			}
-
-			goto bucketSetup
-		}
+	if err != nil {
+		return errorx.Decorate(err, "Failed to calculate epoch")
 	}
 
-	n.kv = bucket
+	n.epoch = epoch
+
+	n.log.Debugf("Current epoch: %s", n.epoch)
 
 	return nil
 }
@@ -245,7 +219,7 @@ func (n *NATS) RestoreSession(sid string) ([]byte, error) {
 		return nil, errorx.Decorate(err, "failed to restore session from NATS")
 	}
 
-	return []byte(entry.Value()), nil
+	return entry.Value(), nil
 }
 
 func (n *NATS) FinishSession(sid string) error {
@@ -258,7 +232,7 @@ func (n *NATS) FinishSession(sid string) error {
 		return errorx.Decorate(err, "failed to restore session from NATS")
 	}
 
-	_, err = n.kv.Put(ctx, key, []byte(entry.Value()))
+	_, err = n.kv.Put(ctx, key, entry.Value())
 
 	if err != nil {
 		return errorx.Decorate(err, "failed to touch session in NATS")
@@ -269,4 +243,80 @@ func (n *NATS) FinishSession(sid string) error {
 
 func (n *NATS) add(stream string, data string) (uint64, error) {
 	return 0, nil
+}
+
+func (n *NATS) calculateEpoch() (string, error) {
+	maybeNewEpoch, _ := nanoid.Nanoid(4)
+
+	ttl := time.Duration(10 * int64(math.Max(float64(n.conf.HistoryTTL), float64(n.conf.SessionsTTL))*float64(time.Second)))
+	// We must use a separate bucket due to a different TTL
+	bucketKey := epochBucket
+
+	kv, err := n.fetchBucketWithTTL(bucketKey, ttl)
+
+	if err != nil {
+		return "", errorx.Decorate(err, "Failed to connect to JetStream KV")
+	}
+
+	entry, err := kv.Get(context.Background(), epochKey)
+
+	if err == jetstream.ErrKeyNotFound {
+		_, perr := kv.Put(context.Background(), epochKey, []byte(maybeNewEpoch))
+
+		if perr != nil {
+			return "", errorx.Decorate(perr, "Failed to save JetStream KV epoch")
+		}
+
+		return maybeNewEpoch, nil
+	} else if err != nil {
+		return "", errorx.Decorate(err, "Failed to retrieve JetStream KV epoch")
+	}
+
+	return string(entry.Value()), nil
+}
+
+func (n *NATS) fetchBucketWithTTL(key string, ttl time.Duration) (jetstream.KeyValue, error) {
+	var bucket jetstream.KeyValue
+	newBucket := false
+
+bucketSetup:
+	bucket, err := n.js.KeyValue(context.Background(), key)
+
+	if err == jetstream.ErrBucketNotFound {
+		var berr error
+		bucket, berr = n.js.CreateKeyValue(context.Background(), jetstream.KeyValueConfig{
+			Bucket: kvBucket,
+			TTL:    time.Duration(n.conf.SessionsTTL * int64(time.Second)),
+		})
+
+		if berr != nil {
+			return nil, errorx.Decorate(berr, "Failed to create JetStream KV bucket: %s", key)
+		}
+
+		newBucket = true
+	} else if err != nil {
+		return nil, errorx.Decorate(err, "Failed to retrieve JetStream KV bucket: %s", key)
+	}
+
+	// Invalidate TTL settings if the bucket is the new one.
+	// We discard the previous bucket and create a new one with the default TTL.
+	if !newBucket {
+		status, serr := bucket.Status(context.Background())
+
+		if serr != nil {
+			return nil, errorx.Decorate(serr, "Failed to retrieve JetStream KV bucket status: %s", key)
+		}
+
+		if status.TTL() != ttl {
+			n.log.Warnf("JetStream KV bucket TTL has been changed, recreating the bucket: key=%s, old=%s, new=%s", key, status.TTL().String(), ttl.String())
+			derr := n.js.DeleteKeyValue(context.Background(), kvBucket)
+			if derr != nil {
+				return nil, errorx.Decorate(derr, "Failed to delete JetStream KV bucket: %s", key)
+			}
+
+			goto bucketSetup
+		}
+	}
+
+	return bucket, nil
 }

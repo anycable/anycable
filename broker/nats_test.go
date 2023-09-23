@@ -224,7 +224,7 @@ func TestNATSBroker_SessionsTTLChange(t *testing.T) {
 	require.NoError(t, err)
 
 	aConfig := NewConfig()
-	aConfig.SessionsTTL = 2
+	aConfig.SessionsTTL = 3
 
 	anotherBroker := NewNATSBroker(nil, &aConfig, &nconfig)
 	anotherBroker.Start()                              // nolint: errcheck
@@ -246,7 +246,17 @@ func TestNATSBroker_SessionsTTLChange(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equalf(t, []byte("cache-me-again"), restored, "Expected to restore session data: %s", restored)
 
+	// Touch session
+	err = anotherBroker.FinishSession("test234")
+	require.NoError(t, err)
+
 	time.Sleep(2 * time.Second)
+
+	restoredAgain, err := broker.RestoreSession("test234")
+	require.NoError(t, err)
+	assert.NotNil(t, restoredAgain)
+
+	time.Sleep(1 * time.Second)
 
 	expired, err := broker.RestoreSession("test234")
 	require.NoError(t, err)
