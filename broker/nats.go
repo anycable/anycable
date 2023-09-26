@@ -27,6 +27,12 @@ type NATS struct {
 	js jetstream.JetStream
 	kv jetstream.KeyValue
 
+	jstreams   *lru[string]
+	jconsumers *lru[jetstream.Consumer]
+
+	// Local broker is used to keep a copy of stream messages
+	local LocalBroker
+
 	clientMu sync.RWMutex
 
 	epoch string
@@ -35,25 +41,43 @@ type NATS struct {
 }
 
 const (
-	kvBucket        = "_anycable_"
-	epochBucket     = "_anycable_epoch_"
-	epochKey        = "_epoch_"
-	sessionsPrefix  = "ac/se/"
-	streamPrefix    = "ac/s/"
-	streamPosPrefix = "ac/spos/"
-	streamTsPrefix  = "ac/sts/"
+	kvBucket       = "_anycable_"
+	epochBucket    = "_anycable_epoch_"
+	epochKey       = "_epoch_"
+	sessionsPrefix = ""
+	streamPrefix   = "_ac_"
 )
 
 var _ Broker = (*NATS)(nil)
 
-func NewNATSBroker(broadcaster Broadcaster, c *Config, nc *natsconfig.NATSConfig) *NATS {
-	return &NATS{
+type NATSOption func(*NATS)
+
+func WithNATSLocalBroker(b LocalBroker) NATSOption {
+	return func(n *NATS) {
+		n.local = b
+	}
+}
+
+func NewNATSBroker(broadcaster Broadcaster, c *Config, nc *natsconfig.NATSConfig, opts ...NATSOption) *NATS {
+	n := NATS{
 		broadcaster: broadcaster,
 		conf:        c,
 		nconf:       nc,
 		tracker:     NewStreamsTracker(),
+		jstreams:    newLRU[string](time.Duration(c.HistoryTTL * int64(time.Second))),
+		jconsumers:  newLRU[jetstream.Consumer](time.Duration(c.HistoryTTL * int64(time.Second))),
 		log:         log.WithField("context", "broker").WithField("provider", "nats"),
 	}
+
+	for _, opt := range opts {
+		opt(&n)
+	}
+
+	if n.local == nil {
+		n.local = NewMemoryBroker(nil, c)
+	}
+
+	return &n
 }
 
 // Write Broker implementtaion here
@@ -109,6 +133,14 @@ func (n *NATS) Start() error {
 
 	n.epoch = epoch
 
+	n.local.SetEpoch(epoch)
+
+	err = n.local.Start()
+
+	if err != nil {
+		return errorx.Decorate(err, "Failed to start internal memory broker")
+	}
+
 	n.log.Debugf("Current epoch: %s", n.epoch)
 
 	return nil
@@ -121,6 +153,10 @@ func (n *NATS) Shutdown(ctx context.Context) error {
 	if n.conn != nil {
 		n.conn.Close()
 		n.conn = nil
+	}
+
+	if n.local != nil {
+		n.local.Shutdown(ctx) // nolint:errcheck
 	}
 
 	return nil
@@ -137,6 +173,30 @@ func (n *NATS) Epoch() string {
 	defer n.clientMu.RUnlock()
 
 	return n.epoch
+}
+
+func (n *NATS) SetEpoch(epoch string) error {
+	n.clientMu.RLock()
+	defer n.clientMu.RUnlock()
+
+	bucket, err := n.js.KeyValue(context.Background(), epochBucket)
+
+	if err != nil {
+		return err
+	}
+
+	_, err = bucket.Put(context.Background(), epochKey, []byte(epoch))
+	if err != nil {
+		return err
+	}
+
+	n.epoch = epoch
+
+	if n.local != nil {
+		n.local.SetEpoch(epoch)
+	}
+
+	return nil
 }
 
 func (n *NATS) HandleBroadcast(msg *common.StreamMessage) {
@@ -163,6 +223,7 @@ func (n *NATS) Subscribe(stream string) string {
 	isNew := n.tracker.Add(stream)
 
 	if isNew {
+		n.addStreamConsumer(stream)
 		n.broadcaster.Subscribe(stream)
 	}
 
@@ -180,11 +241,11 @@ func (n *NATS) Unsubscribe(stream string) string {
 }
 
 func (n *NATS) HistoryFrom(stream string, epoch string, offset uint64) ([]common.StreamMessage, error) {
-	return nil, nil
+	return n.local.HistoryFrom(stream, epoch, offset)
 }
 
 func (n *NATS) HistorySince(stream string, since int64) ([]common.StreamMessage, error) {
-	return nil, nil
+	return n.local.HistorySince(stream, since)
 }
 
 func (n *NATS) CommitSession(sid string, session Cacheable) error {
@@ -241,8 +302,128 @@ func (n *NATS) FinishSession(sid string) error {
 	return nil
 }
 
+func (n *NATS) Reset() error {
+	n.clientMu.Lock()
+	defer n.clientMu.Unlock()
+
+	// Delete all sessions
+	if n.kv != nil {
+		keys, err := n.kv.Keys(context.Background())
+		if err != nil {
+			if err != jetstream.ErrNoKeysFound {
+				return err
+			}
+		}
+
+		for _, key := range keys {
+			n.kv.Delete(context.Background(), key) // nolint:errcheck
+		}
+	}
+
+	lister := n.js.ListStreams(context.Background(), jetstream.WithStreamListSubject(sessionsPrefix+"*"))
+	for info := range lister.Info() {
+		n.js.DeleteStream(context.Background(), info.Config.Name) // nolint:errcheck
+	}
+
+	return nil
+}
+
 func (n *NATS) add(stream string, data string) (uint64, error) {
-	return 0, nil
+	err := n.ensureStreamExists(stream)
+
+	if err != nil {
+		return 0, errorx.Decorate(err, "failed to create JetStream Stream")
+	}
+
+	ctx := context.Background()
+	key := streamPrefix + stream
+
+	ack, err := n.js.Publish(ctx, key, []byte(data))
+
+	if err != nil {
+		return 0, errorx.Decorate(err, "failed to publish message to JetStream")
+	}
+
+	return ack.Sequence, nil
+}
+
+func (n *NATS) addStreamConsumer(stream string) {
+	err := n.ensureStreamExists(stream)
+
+	if err != nil {
+		n.log.Errorf("Failed to create JetStream stream %s: %s", stream, err)
+		return
+	}
+
+	prefixedStream := streamPrefix + stream
+
+	n.jconsumers.fetch(stream, func() (jetstream.Consumer, error) { // nolint:errcheck
+		cons, err := n.js.CreateConsumer(context.Background(), prefixedStream, jetstream.ConsumerConfig{
+			AckPolicy: jetstream.AckExplicitPolicy,
+		})
+
+		if err != nil {
+			n.log.Errorf("Failed to create JetStream stream consumer %s: %s", stream, err)
+			return nil, err
+		}
+
+		n.log.Debugf("Created JetStream consumer %s for stream: %s", cons.CachedInfo().Name, stream)
+
+		_, err = cons.Consume(func(msg jetstream.Msg) {
+			n.consumeMessage(stream, msg)
+		})
+
+		if err != nil {
+			return nil, err
+		}
+
+		return cons, nil
+	}, func(cons jetstream.Consumer) {
+		name := cons.CachedInfo().Name
+		n.log.Debugf("Deleting JetStream consumer %s for stream: %s", name, stream)
+		n.js.DeleteConsumer(context.Background(), prefixedStream, name) // nolint:errcheck
+	})
+}
+
+func (n *NATS) consumeMessage(stream string, msg jetstream.Msg) {
+	meta, err := msg.Metadata()
+	if err != nil {
+		n.log.Errorf("Failed to get JetStream message metadata: %s", err)
+		return
+	}
+
+	seq := meta.Sequence.Stream
+
+	_, err = n.local.Store(stream, msg.Data(), seq)
+	if err != nil {
+		n.log.Errorf("Failed to store message in local broker: %s", err)
+		return
+	}
+}
+
+func (n *NATS) ensureStreamExists(stream string) error {
+	prefixedStream := streamPrefix + stream
+
+	_, err := n.jstreams.fetch(stream, func() (string, error) {
+		ctx := context.Background()
+
+		_, err := n.js.CreateStream(ctx, jetstream.StreamConfig{
+			Name:    prefixedStream,
+			MaxMsgs: int64(n.conf.HistoryLimit),
+			MaxAge:  time.Duration(n.conf.HistoryTTL * int64(time.Second)),
+		})
+
+		if err != nil {
+			// That means we updated the stream config (TTL, limit, etc.)
+			if err != jetstream.ErrStreamNameAlreadyInUse {
+				return "", err
+			}
+		}
+
+		return stream, nil
+	}, func(stream string) {})
+
+	return err
 }
 
 func (n *NATS) calculateEpoch() (string, error) {
@@ -285,7 +466,7 @@ bucketSetup:
 	if err == jetstream.ErrBucketNotFound {
 		var berr error
 		bucket, berr = n.js.CreateKeyValue(context.Background(), jetstream.KeyValueConfig{
-			Bucket: kvBucket,
+			Bucket: key,
 			TTL:    time.Duration(n.conf.SessionsTTL * int64(time.Second)),
 		})
 
@@ -309,7 +490,7 @@ bucketSetup:
 
 		if status.TTL() != ttl {
 			n.log.Warnf("JetStream KV bucket TTL has been changed, recreating the bucket: key=%s, old=%s, new=%s", key, status.TTL().String(), ttl.String())
-			derr := n.js.DeleteKeyValue(context.Background(), kvBucket)
+			derr := n.js.DeleteKeyValue(context.Background(), key)
 			if derr != nil {
 				return nil, errorx.Decorate(derr, "Failed to delete JetStream KV bucket: %s", key)
 			}
@@ -319,4 +500,70 @@ bucketSetup:
 	}
 
 	return bucket, nil
+}
+
+type lru[T comparable] struct {
+	entries map[string]lruEntry[T]
+	ttl     time.Duration
+	mu      sync.RWMutex
+}
+
+type lruEntry[T comparable] struct {
+	value      T
+	lastActive time.Time
+	cleanup    func(T)
+}
+
+func newLRU[T comparable](ttl time.Duration) *lru[T] {
+	return &lru[T]{entries: make(map[string]lruEntry[T]), ttl: ttl}
+}
+
+func (m *lru[T]) fetch(key string, create func() (T, error), cleanup func(T)) (T, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if val, ok := m.read(key); ok {
+		return val, nil
+	}
+
+	val, err := create()
+
+	if err != nil {
+		var zero T
+		return zero, err
+	}
+
+	m.write(key, val, cleanup)
+
+	return val, nil
+}
+
+func (m *lru[T]) write(key string, value T, cleanup func(v T)) {
+	m.entries[key] = lruEntry[T]{value: value, lastActive: time.Now(), cleanup: cleanup}
+	// perform expiration on writes (which must happen rarely)
+	m.expire()
+}
+
+func (m *lru[T]) read(key string) (res T, found bool) {
+	if entry, ok := m.entries[key]; ok {
+		if entry.lastActive.Add(m.ttl).Before(time.Now()) {
+			return
+		}
+
+		// touch entry
+		entry.lastActive = time.Now()
+		res = entry.value
+		found = true
+	}
+
+	return
+}
+
+func (m *lru[T]) expire() {
+	for key, entry := range m.entries {
+		if entry.lastActive.Add(m.ttl).Before(time.Now()) {
+			delete(m.entries, key)
+			entry.cleanup(entry.value)
+		}
+	}
 }

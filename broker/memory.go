@@ -43,6 +43,35 @@ func (ms *memstream) add(data string) uint64 {
 		data:      data,
 	}
 
+	ms.appendEntry(entry)
+
+	return ms.offset
+}
+
+func (ms *memstream) insert(data string, offset uint64) (uint64, error) {
+	ms.mu.Lock()
+	defer ms.mu.Unlock()
+
+	ts := time.Now().Unix()
+
+	if ms.offset >= offset {
+		return 0, fmt.Errorf("Offset %d is already taken", offset)
+	}
+
+	ms.offset = offset
+
+	entry := &entry{
+		offset:    offset,
+		timestamp: ts,
+		data:      data,
+	}
+
+	ms.appendEntry(entry)
+
+	return ms.offset, nil
+}
+
+func (ms *memstream) appendEntry(entry *entry) {
 	ms.data = append(ms.data, entry)
 
 	if len(ms.data) > ms.limit {
@@ -57,8 +86,6 @@ func (ms *memstream) add(data string) uint64 {
 	// Update memstream expiration deadline on every added item
 	// We keep memstream alive for 10 times longer than ttl (so we can re-use it and its offset)
 	ms.deadline = time.Now().Add(time.Duration(ms.ttl*10) * time.Second).Unix()
-
-	return ms.offset
 }
 
 func (ms *memstream) expire() {
@@ -284,6 +311,24 @@ func (b *Memory) HistorySince(name string, ts int64) ([]common.StreamMessage, er
 	}
 
 	return history, nil
+}
+
+func (b *Memory) Store(name string, data []byte, offset uint64) (uint64, error) {
+	b.streamsMu.Lock()
+
+	if _, ok := b.streams[name]; !ok {
+		b.streams[name] = &memstream{
+			data:  []*entry{},
+			ttl:   b.config.HistoryTTL,
+			limit: b.config.HistoryLimit,
+		}
+	}
+
+	stream := b.streams[name]
+
+	b.streamsMu.Unlock()
+
+	return stream.insert(string(data), offset)
 }
 
 func (b *Memory) CommitSession(sid string, session Cacheable) error {

@@ -9,6 +9,7 @@ import (
 
 	"github.com/anycable/anycable-go/broker"
 	"github.com/anycable/anycable-go/common"
+	"github.com/anycable/anycable-go/enats"
 	"github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/mocks"
 	"github.com/anycable/anycable-go/pubsub"
@@ -16,6 +17,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	natsconfig "github.com/anycable/anycable-go/nats"
 )
 
 // A test to verify the restore flow.
@@ -44,6 +47,31 @@ func TestIntegrationRestore_Memory(t *testing.T) {
 	node, controller := setupIntegrationNode()
 	go node.Start()                           // nolint:errcheck
 	defer node.Shutdown(context.Background()) // nolint:errcheck
+
+	sharedIntegrationRestore(t, node, controller)
+}
+
+func TestIntegrationRestore_NATS(t *testing.T) {
+	server := buildNATSServer()
+	err := server.Start()
+	require.NoError(t, err)
+	defer server.Shutdown(context.Background()) // nolint:errcheck
+
+	node, controller := setupIntegrationNode()
+
+	bconf := broker.NewConfig()
+	bconf.SessionsTTL = 2
+
+	nconfig := natsconfig.NewNATSConfig()
+	broadcaster := pubsub.NewLegacySubscriber(node)
+	broker := broker.NewNATSBroker(broadcaster, &bconf, &nconfig)
+	node.SetBroker(broker)
+
+	require.NoError(t, node.Start())          // nolint:errcheck
+	defer node.Shutdown(context.Background()) // nolint:errcheck
+
+	require.NoError(t, broker.Reset())
+	require.NoError(t, broker.SetEpoch("2022"))
 
 	sharedIntegrationRestore(t, node, controller)
 }
@@ -215,6 +243,30 @@ func TestIntegrationHistory_Memory(t *testing.T) {
 	sharedIntegrationHistory(t, node, controller)
 }
 
+func TestIntegrationHistory_NATS(t *testing.T) {
+	server := buildNATSServer()
+	err := server.Start()
+	require.NoError(t, err)
+	defer server.Shutdown(context.Background()) // nolint:errcheck
+
+	node, controller := setupIntegrationNode()
+
+	bconf := broker.NewConfig()
+
+	nconfig := natsconfig.NewNATSConfig()
+	broadcaster := pubsub.NewLegacySubscriber(node)
+	broker := broker.NewNATSBroker(broadcaster, &bconf, &nconfig)
+	node.SetBroker(broker)
+
+	require.NoError(t, node.Start())          // nolint:errcheck
+	defer node.Shutdown(context.Background()) // nolint:errcheck
+
+	require.NoError(t, broker.Reset())
+	require.NoError(t, broker.SetEpoch("2022"))
+
+	sharedIntegrationHistory(t, node, controller)
+}
+
 func sharedIntegrationHistory(t *testing.T, node *Node, controller *mocks.Controller) {
 	node.HandleBroadcast([]byte(`{"stream": "messages_1","data":"Lorenzo: Ciao"}`))
 
@@ -373,4 +425,12 @@ func requireAuthenticatedSession(t *testing.T, node *Node, sid string) *Session 
 	)
 
 	return session
+}
+
+func buildNATSServer() *enats.Service {
+	conf := enats.NewConfig()
+	conf.JetStream = true
+	service := enats.NewService(&conf)
+
+	return service
 }

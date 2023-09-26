@@ -149,6 +149,7 @@ func (s *Service) Description() string {
 
 // Shutdown shuts the NATS server down
 func (s *Service) Shutdown(ctx context.Context) error {
+	s.server.DisableJetStream() // nolint:errcheck
 	s.server.Shutdown()
 	s.server.WaitForShutdown()
 	return nil

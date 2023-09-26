@@ -57,6 +57,16 @@ type Broker interface {
 	FinishSession(sid string) error
 }
 
+// LocalBroker is a single-node broker that can used to store streams data locally
+type LocalBroker interface {
+	Start() error
+	Shutdown(ctx context.Context) error
+	SetEpoch(epoch string)
+	HistoryFrom(stream string, epoch string, offset uint64) ([]common.StreamMessage, error)
+	HistorySince(stream string, ts int64) ([]common.StreamMessage, error)
+	Store(stream string, msg []byte, seq uint64) (uint64, error)
+}
+
 type StreamsTracker struct {
 	store map[string]uint64
 

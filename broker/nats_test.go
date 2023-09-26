@@ -2,16 +2,30 @@ package broker
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/enats"
 	natsconfig "github.com/anycable/anycable-go/nats"
+	"github.com/anycable/anycable-go/pubsub"
+	"github.com/nats-io/nats.go/jetstream"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+type FakeBroadastHandler struct {
+}
+
+func (FakeBroadastHandler) Broadcast(msg *common.StreamMessage) {
+}
+
+func (FakeBroadastHandler) ExecuteRemoteCommand(cmd *common.RemoteCommandMessage) {
+}
+
+var _ pubsub.Handler = (*FakeBroadastHandler)(nil)
 
 func TestNATSBroker_HistorySince_expiration(t *testing.T) {
 	server := buildNATSServer()
@@ -23,18 +37,27 @@ func TestNATSBroker_HistorySince_expiration(t *testing.T) {
 	config.HistoryTTL = 1
 
 	nconfig := natsconfig.NewNATSConfig()
-	broker := NewNATSBroker(nil, &config, &nconfig)
+	broadcastHandler := FakeBroadastHandler{}
+	broadcaster := pubsub.NewLegacySubscriber(broadcastHandler)
+	broker := NewNATSBroker(broadcaster, &config, &nconfig)
 
 	err = broker.Start()
 	require.NoError(t, err)
 	defer broker.Shutdown(context.Background()) // nolint: errcheck
+
+	// Ensure no stream exists
+	require.NoError(t, broker.Reset())
+
+	// We must subscribe to receive messages from the stream
+	broker.Subscribe("test")
+	defer broker.Unsubscribe("test")
 
 	start := time.Now().Unix() - 10
 
 	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "a"})
 	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "b"})
 
-	// Redis must expire the stream after 1 second
+	// Stream must be expired after 1 second
 	time.Sleep(2 * time.Second)
 
 	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "c"})
@@ -49,12 +72,12 @@ func TestNATSBroker_HistorySince_expiration(t *testing.T) {
 	assert.EqualValues(t, 4, history[1].Offset)
 	assert.Equal(t, "d", history[1].Data)
 
-	// Redis must expire the stream after 1 second
+	// Stream must be expired after 1 second
 	time.Sleep(2 * time.Second)
 
 	history, err = broker.HistorySince("test", start)
 	require.NoError(t, err)
-	assert.Nil(t, history)
+	assert.Empty(t, history)
 }
 
 func TestNATSBroker_HistorySince_with_limit(t *testing.T) {
@@ -67,11 +90,20 @@ func TestNATSBroker_HistorySince_with_limit(t *testing.T) {
 	config.HistoryLimit = 2
 
 	nconfig := natsconfig.NewNATSConfig()
-	broker := NewNATSBroker(nil, &config, &nconfig)
+	broadcastHandler := FakeBroadastHandler{}
+	broadcaster := pubsub.NewLegacySubscriber(broadcastHandler)
+	broker := NewNATSBroker(broadcaster, &config, &nconfig)
 
 	err = broker.Start()
 	require.NoError(t, err)
 	defer broker.Shutdown(context.Background()) // nolint: errcheck
+
+	// Ensure no stream exists
+	require.NoError(t, broker.Reset())
+
+	// We must subscribe to receive messages from the stream
+	broker.Subscribe("test")
+	defer broker.Unsubscribe("test")
 
 	start := time.Now().Unix() - 10
 
@@ -96,11 +128,23 @@ func TestNATSBroker_HistoryFrom(t *testing.T) {
 	config := NewConfig()
 
 	nconfig := natsconfig.NewNATSConfig()
-	broker := NewNATSBroker(nil, &config, &nconfig)
+	broadcastHandler := FakeBroadastHandler{}
+	broadcaster := pubsub.NewLegacySubscriber(broadcastHandler)
+	broker := NewNATSBroker(broadcaster, &config, &nconfig)
 
 	err = broker.Start()
 	require.NoError(t, err)
 	defer broker.Shutdown(context.Background()) // nolint: errcheck
+
+	// Ensure no stream exists
+	require.NoError(t, broker.Reset())
+
+	// We must subscribe to receive messages from the stream
+	broker.Subscribe("test")
+	defer broker.Unsubscribe("test")
+
+	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "y"})
+	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "z"})
 
 	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "a"})
 	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "b"})
@@ -108,33 +152,42 @@ func TestNATSBroker_HistoryFrom(t *testing.T) {
 	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "d"})
 	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "e"})
 
+	// We obtain sequence numbers with some offset to ensure that we use sequence numbers
+	// as stream offsets
+	seq := consumerSequence(broker.js, "test", 3)
+
+	offsets, err := seq.read(5)
+	require.NoError(t, err)
+
 	t.Run("With current epoch", func(t *testing.T) {
-		history, err := broker.HistoryFrom("test", broker.Epoch(), 2)
+		require.EqualValues(t, 4, offsets[1])
+
+		history, err := broker.HistoryFrom("test", broker.Epoch(), offsets[1])
 		require.NoError(t, err)
 
 		assert.Len(t, history, 3)
-		assert.EqualValues(t, 3, history[0].Offset)
+		assert.EqualValues(t, 5, history[0].Offset)
 		assert.Equal(t, "c", history[0].Data)
-		assert.EqualValues(t, 4, history[1].Offset)
+		assert.EqualValues(t, 6, history[1].Offset)
 		assert.Equal(t, "d", history[1].Data)
-		assert.EqualValues(t, 5, history[2].Offset)
+		assert.EqualValues(t, 7, history[2].Offset)
 		assert.Equal(t, "e", history[2].Data)
 	})
 
 	t.Run("When no new messages", func(t *testing.T) {
-		history, err := broker.HistoryFrom("test", broker.Epoch(), 5)
+		history, err := broker.HistoryFrom("test", broker.Epoch(), offsets[4])
 		require.NoError(t, err)
 		assert.Len(t, history, 0)
 	})
 
 	t.Run("When no stream", func(t *testing.T) {
-		history, err := broker.HistoryFrom("unknown", broker.Epoch(), 2)
+		history, err := broker.HistoryFrom("unknown", broker.Epoch(), offsets[1])
 		require.Error(t, err)
 		assert.Nil(t, history)
 	})
 
 	t.Run("With unknown epoch", func(t *testing.T) {
-		history, err := broker.HistoryFrom("test", "unknown", 2)
+		history, err := broker.HistoryFrom("test", "unknown", offsets[1])
 		require.Error(t, err)
 		require.Nil(t, history)
 	})
@@ -293,4 +346,52 @@ func buildNATSServer() *enats.Service {
 	service := enats.NewService(&conf)
 
 	return service
+}
+
+type consumerSequenceReader struct {
+	seq chan uint64
+}
+
+func (r *consumerSequenceReader) read(n int) ([]uint64, error) {
+	seq := make([]uint64, n)
+	i := 0
+
+	for {
+		select {
+		case v := <-r.seq:
+			seq[i] = v
+			i++
+			if i == n {
+				return seq, nil
+			}
+		case <-time.After(1 * time.Second):
+			return nil, fmt.Errorf("timed out to read from consumer; received %d messages, expected %d", i, n)
+		}
+	}
+}
+
+func consumerSequence(js jetstream.JetStream, stream string, offset uint64) *consumerSequenceReader {
+	seq := make(chan uint64)
+
+	conf := jetstream.ConsumerConfig{
+		AckPolicy: jetstream.AckExplicitPolicy,
+	}
+
+	if offset > 0 {
+		conf.OptStartSeq = offset
+		conf.DeliverPolicy = jetstream.DeliverByStartSequencePolicy
+	}
+
+	cons, err := js.CreateConsumer(context.Background(), streamPrefix+stream, conf)
+
+	if err != nil {
+		panic(err)
+	}
+
+	cons.Consume(func(msg jetstream.Msg) { // nolint:errcheck
+		meta, _ := msg.Metadata()
+		seq <- meta.Sequence.Stream
+	})
+
+	return &consumerSequenceReader{seq}
 }

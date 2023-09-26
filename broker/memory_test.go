@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestExpire(t *testing.T) {
+func TestMemory_Expire(t *testing.T) {
 	config := NewConfig()
 	config.HistoryTTL = 1
 
@@ -44,7 +44,7 @@ func TestExpire(t *testing.T) {
 	assert.Empty(t, history)
 }
 
-func TestLimit(t *testing.T) {
+func TestMemory_Limit(t *testing.T) {
 	config := NewConfig()
 	config.HistoryLimit = 2
 
@@ -64,7 +64,7 @@ func TestLimit(t *testing.T) {
 	assert.Equal(t, "c", history[1].Data)
 }
 
-func TestFromOffset(t *testing.T) {
+func TestMemory_FromOffset(t *testing.T) {
 	config := NewConfig()
 
 	broker := NewMemoryBroker(nil, &config)
@@ -93,6 +93,31 @@ func TestFromOffset(t *testing.T) {
 		require.Error(t, err)
 		require.Nil(t, history)
 	})
+}
+
+func TestMemory_Store(t *testing.T) {
+	config := NewConfig()
+
+	broker := NewMemoryBroker(nil, &config)
+	broker.SetEpoch("2023")
+
+	offset, err := broker.Store("test", []byte("a"), 10)
+	require.NoError(t, err)
+	assert.EqualValues(t, 10, offset)
+
+	_, err = broker.Store("test", []byte("b"), 11)
+	require.NoError(t, err)
+
+	_, err = broker.Store("tes2", []byte("c"), 1)
+	require.NoError(t, err)
+
+	history, err := broker.HistoryFrom("test", broker.epoch, 10)
+	require.NoError(t, err)
+	assert.Len(t, history, 1)
+	assert.EqualValues(t, 11, history[0].Offset)
+
+	_, err = broker.Store("test", []byte("c"), 3)
+	assert.Error(t, err)
 }
 
 func TestMemstream_filterByOffset(t *testing.T) {
