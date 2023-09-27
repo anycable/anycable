@@ -2,6 +2,10 @@
 
 ## master
 
+- Add support for batched broadcasts. ([@palkan][])
+
+It's now possible to publish an array of broadcasting messages (e.g., `[{"stream":"a","data":"..."},"stream":"b","data":"..."}]`). The messages will be delivered in the same order as they were published (within a stream).
+
 - Add support for REDIS_URL with trailing slash hostnames. ([@ardecvz][])
 
 `rueidis` doesn't tolerate the trailing slash hostnames.

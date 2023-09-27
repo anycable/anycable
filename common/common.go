@@ -339,6 +339,14 @@ func PubSubMessageFromJSON(raw []byte) (interface{}, error) {
 		}
 	}
 
+	batch := []*StreamMessage{}
+
+	if err := json.Unmarshal(raw, &batch); err == nil {
+		if len(batch) > 0 && batch[0].Stream != "" {
+			return batch, nil
+		}
+	}
+
 	rmsg := RemoteCommandMessage{}
 
 	if err := json.Unmarshal(raw, &rmsg); err != nil {

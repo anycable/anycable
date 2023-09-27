@@ -157,6 +157,10 @@ func (n *Node) HandleBroadcast(raw []byte) {
 	switch v := msg.(type) {
 	case common.StreamMessage:
 		n.broker.HandleBroadcast(&v)
+	case []*common.StreamMessage:
+		for _, el := range v {
+			n.broker.HandleBroadcast(el)
+		}
 	case common.RemoteCommandMessage:
 		n.broker.HandleCommand(&v)
 	}
@@ -175,6 +179,10 @@ func (n *Node) HandlePubSub(raw []byte) {
 	switch v := msg.(type) {
 	case common.StreamMessage:
 		n.Broadcast(&v)
+	case []*common.StreamMessage:
+		for _, el := range v {
+			n.Broadcast(el)
+		}
 	case common.RemoteCommandMessage:
 		n.ExecuteRemoteCommand(&v)
 	}
