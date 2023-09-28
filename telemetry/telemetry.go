@@ -37,8 +37,17 @@ type Tracker struct {
 	observations map[string]interface{}
 }
 
+type noopLogger struct{}
+
+func (l noopLogger) Logf(format string, args ...interface{})   {}
+func (l noopLogger) Errorf(format string, args ...interface{}) {}
+
 func NewTracker(instrumenter *metrics.Metrics, c *config.Config, tc *Config) *Tracker {
-	client, _ := posthog.NewWithConfig(tc.Token, posthog.Config{Endpoint: tc.Endpoint})
+	client, _ := posthog.NewWithConfig(tc.Token, posthog.Config{
+		Endpoint: tc.Endpoint,
+		// set to no-op to avoid logging
+		Logger: noopLogger{},
+	})
 
 	id, _ := nanoid.Nanoid(8)
 
