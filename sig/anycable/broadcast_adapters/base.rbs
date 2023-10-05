@@ -1,6 +1,8 @@
 module AnyCable
   interface _BroadcastAdapter
     def raw_broadcast: (String _data) -> void
+    def batching: (?bool enabled) { () -> untyped } -> untyped
+    def batching?: () -> (bool | NilClass)
     def broadcast: (String stream, String payload) -> void
     def broadcast_command: (String command, **untyped payload) -> void
     def announce!: () -> void
@@ -13,6 +15,10 @@ module AnyCable
       private
 
       def logger: () -> Logger
+      def current_batch: () -> Array[untyped]
+      def maybe_flush_batch: () -> void
+      def batching_enabled_stack: () -> Array[bool]
+      def batching_enabled=: (bool) -> void
     end
   end
 end

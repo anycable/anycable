@@ -8,6 +8,44 @@ AnyCable ships with three broadcast adapters by default: Redis (default), [NATS]
 
 **NOTE:** The broadcast adapters fall into two categories: legacy fan-out (distributed) and _singular_.
 
+## Broadcasting API
+
+To publish a message to a stream via AnyCable, you can use the following API:
+
+```ruby
+AnyCable.broadcast("my_stream", {text: "hoi"})
+
+# or directly via the singleton broadcast adapter instance
+AnyCable.broadcast_adapter.broadcast("my_stream", {text: "hoi"})
+```
+
+### Batching
+
+Since v1.4.5, AnyCable-Go supports publishing broadcast messages in batches. This is especially useful if you want to guarantee the order of delivered messages to clients (to be the same as the broadcasts order). To batch-broadcast messages, wrap your code with the `.batching` method of the broadcast adapter:
+
+```ruby
+AnyCable.broadcast_adapter.batching do
+  AnyCable.broadcast("my_stream", {text: "hoi"})
+  AnyCable.broadcast("my_stream", {text: "wereld"})
+end #=> the actual publishing happens as we exit the block
+```
+
+The `.batching` method supports nesting, if you need to broadcast some messages immediately:
+
+```ruby
+AnyCable.broadcast_adapter.batching do
+  AnyCable.broadcast("my_stream", {text: "hoi"}) # added to the current batch
+
+  AnyCable.broadcast_adapter.batching(false) do
+    AnyCable.broadcast("another_stream", {text: "some other story"}) #=> publish immediately
+
+    AnyCable.broadcast_adapter.batching do
+      AnyCable.broadcast("my_stream", {text: "wereld"}) # added to the current batch
+    end
+  end
+end #=> the current batch is published
+```
+
 ## HTTP adapter
 
 HTTP adapter has zero-dependencies and, thus, allows you to quickly start using AnyCable.

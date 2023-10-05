@@ -2,6 +2,8 @@
 
 ## master
 
+- Add batch-broadcasting support. ([@palkan][])
+
 ## 1.4.2 (2023-09-05)
 
 - Fix parsing sentinel configuration from YAML in Rails. ([@palkan][])
