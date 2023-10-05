@@ -44,3 +44,5 @@ gems:
     ignore: true
   - name: grpc_kit
     ignore: true
+  - name: nats-pure
+    ignore: true
