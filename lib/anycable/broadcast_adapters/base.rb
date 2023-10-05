@@ -7,8 +7,23 @@ module AnyCable
         raise NotImplementedError
       end
 
+      def batching(enabled = true)
+        self.batching_enabled = enabled
+        yield
+      ensure
+        maybe_flush_batch
+      end
+
+      def batching?
+        Thread.current[:anycable_batching]&.last
+      end
+
       def broadcast(stream, payload)
-        raw_broadcast({stream: stream, data: payload}.to_json)
+        if batching?
+          current_batch << {stream: stream, data: payload}
+        else
+          raw_broadcast({stream: stream, data: payload}.to_json)
+        end
       end
 
       def broadcast_command(command, **payload)
@@ -20,6 +35,32 @@ module AnyCable
       end
 
       private
+
+      def batching_enabled=(val)
+        # The stack must start with the true value,
+        # so we can check for emptiness to decide whether to flush
+        stack = batching_enabled_stack
+        stack << val if val || !stack.empty?
+      end
+
+      def batching_enabled_stack
+        Thread.current[:anycable_batching] ||= []
+      end
+
+      def current_batch
+        Thread.current[:anycable_batch] ||= []
+      end
+
+      def maybe_flush_batch
+        batching_enabled_stack.pop
+        return unless batching_enabled_stack.empty?
+
+        batch = current_batch
+        unless batch.empty?
+          raw_broadcast(batch.to_json)
+        end
+        current_batch.clear
+      end
 
       def logger
         AnyCable.logger
