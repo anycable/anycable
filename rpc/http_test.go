@@ -72,7 +72,7 @@ func TestHTTPServiceRPC(t *testing.T) {
 		}
 
 		md := metadata.Pairs("album", "Kamni", "year", "2008")
-		ctx := metadata.NewOutgoingContext(context.Background(), md)
+		ctx := metadata.NewIncomingContext(context.Background(), md)
 		res, err := service.Connect(ctx, protocol.NewConnectMessage(
 			common.NewSessionEnv("ws://anycable.io/cable", &map[string]string{"cookie": "foo=bar"}),
 		))
@@ -108,7 +108,7 @@ func TestHTTPServiceRPC(t *testing.T) {
 		}
 
 		md := metadata.Pairs("error", "test error")
-		ctx := metadata.NewOutgoingContext(context.Background(), md)
+		ctx := metadata.NewIncomingContext(context.Background(), md)
 		res, err := service.Disconnect(ctx, protocol.NewDisconnectMessage(
 			common.NewSessionEnv("ws://anycable.io/cable", &map[string]string{"cookie": "foo=bar"}),
 			"test-session",
@@ -147,7 +147,7 @@ func TestHTTPServiceRPC(t *testing.T) {
 		}
 
 		md := metadata.Pairs("track", "easy-way-out")
-		ctx := metadata.NewOutgoingContext(context.Background(), md)
+		ctx := metadata.NewIncomingContext(context.Background(), md)
 		res, err := service.Command(ctx, protocol.NewCommandMessage(
 			common.NewSessionEnv("ws://anycable.io/cable", &map[string]string{"cookie": "foo=bar"}),
 			"subscribe",

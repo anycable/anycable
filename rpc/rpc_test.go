@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/metadata"
 )
 
 type MockState struct {
@@ -478,5 +480,15 @@ func TestCustomDialFun(t *testing.T) {
 		assert.Equal(t, "user=john", res.Identifier)
 		assert.Equal(t, map[string]string{"_s_": "test-session"}, res.CState)
 		assert.Empty(t, res.Broadcasts)
+
+		call := service.Calls[0]
+		requestCtx, ok := call.Arguments[0].(context.Context)
+
+		require.True(t, ok)
+
+		md, ok := metadata.FromIncomingContext(requestCtx)
+		require.True(t, ok)
+
+		assert.Equal(t, []string{"42"}, md.Get("sid"))
 	})
 }

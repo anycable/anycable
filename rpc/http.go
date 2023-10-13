@@ -178,7 +178,7 @@ func (s *HTTPService) performRequest(ctx context.Context, path string, payload [
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", s.conf.Secret))
 	}
 
-	if md, _, ok := metadata.FromOutgoingContextRaw(ctx); ok {
+	if md, ok := metadata.FromIncomingContext(ctx); ok {
 		// Set headers from metadata
 		for k, v := range md {
 			req.Header.Set(fmt.Sprintf("x-anycable-meta-%s", k), v[0])
