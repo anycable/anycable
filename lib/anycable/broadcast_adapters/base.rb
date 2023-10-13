@@ -14,6 +14,14 @@ module AnyCable
         maybe_flush_batch
       end
 
+      def start_batching
+        self.batching_enabled = true
+      end
+
+      def finish_batching
+        maybe_flush_batch
+      end
+
       def batching?
         Thread.current[:anycable_batching]&.last
       end

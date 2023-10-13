@@ -79,4 +79,32 @@ describe AnyCable::BroadcastAdapters::Base do
       )
     end
   end
+
+  describe "#start_batching / #finish_batching" do
+    specify do
+      subject.broadcast("test", "a")
+
+      expect(subject.sent).to eq([
+        {stream: "test", data: "a"}.to_json
+      ])
+
+      subject.start_batching
+
+      subject.broadcast("test", "b")
+      subject.broadcast("test:2", "foo")
+
+      expect(subject.sent.size).to eq 1
+
+      subject.finish_batching
+
+      expect(subject.sent.size).to eq 2
+
+      expect(subject.sent.last).to eq(
+        [
+          {stream: "test", data: "b"},
+          {stream: "test:2", data: "foo"}
+        ].to_json
+      )
+    end
+  end
 end
