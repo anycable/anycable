@@ -2,6 +2,10 @@
 
 ## master
 
+- Fix passing RPC context via headers when using HTTP RPC. ([@palkan][])
+
+- Add `exclude_socket` option support to broadcasts. ([@palkan][])
+
 - Add support for batched broadcasts. ([@palkan][])
 
 It's now possible to publish an array of broadcasting messages (e.g., `[{"stream":"a","data":"..."},"stream":"b","data":"..."}]`). The messages will be delivered in the same order as they were published (within a stream).

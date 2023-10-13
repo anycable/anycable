@@ -224,10 +224,17 @@ type Message struct {
 	History    HistoryRequest `json:"history,omitempty"`
 }
 
+// StreamMessageMetadata describes additional information about a stream message
+// which can be used to modify delivery behavior
+type StreamMessageMetadata struct {
+	ExcludeSocket string `json:"exclude_socket,omitempty"`
+}
+
 // StreamMessage represents a pub/sub message to be sent to stream
 type StreamMessage struct {
-	Stream string `json:"stream"`
-	Data   string `json:"data"`
+	Stream string                 `json:"stream"`
+	Data   string                 `json:"data"`
+	Meta   *StreamMessageMetadata `json:"meta,omitempty"`
 
 	// Offset is the position of this message in the stream
 	Offset uint64

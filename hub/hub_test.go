@@ -12,6 +12,7 @@ import (
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/encoders"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type MockSession struct {
@@ -249,6 +250,39 @@ func TestBroadcastMessage(t *testing.T) {
 		msg, err := session.Read()
 		assert.Nil(t, err)
 		assert.Equal(t, "{\"identifier\":\"test_channel\",\"message\":\"ciao\",\"stream_id\":\"test\",\"epoch\":\"xyz\",\"offset\":2022}", string(msg))
+	})
+
+	t.Run("Broadcast with exclude_socket", func(t *testing.T) {
+		session2 := NewMockSession("234")
+		hub.AddSession(session2)
+		hub.SubscribeSession(session2, "test", "test_channel")
+
+		hub.BroadcastMessage(&common.StreamMessage{Stream: "test", Data: "\"ciao\""})
+
+		msg, err := session.Read()
+		assert.Nil(t, err)
+		assert.Equal(t, "{\"identifier\":\"test_channel\",\"message\":\"ciao\"}", string(msg))
+
+		msg, err = session2.Read()
+		assert.Nil(t, err)
+		assert.Equal(t, "{\"identifier\":\"test_channel\",\"message\":\"ciao\"}", string(msg))
+
+		hub.BroadcastMessage(&common.StreamMessage{
+			Stream: "test",
+			Data:   "\"hoi!\"",
+			Meta: &common.StreamMessageMetadata{
+				ExcludeSocket: "234",
+			},
+		})
+
+		msg, err = session.Read()
+		assert.Nil(t, err)
+		assert.Equal(t, "{\"identifier\":\"test_channel\",\"message\":\"hoi!\"}", string(msg))
+
+		msg, err = session2.Read()
+		assert.Nil(t, msg)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "hasn't received any messages")
 	})
 }
 

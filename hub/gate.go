@@ -144,6 +144,10 @@ func (g *Gate) performBroadcast(streamMsg *common.StreamMessage) {
 	g.mu.RUnlock()
 
 	for session, ids := range streamSessions {
+		if streamMsg.Meta != nil && streamMsg.Meta.ExcludeSocket == session.GetID() {
+			continue
+		}
+
 		for _, id := range ids {
 			if msg, ok := buf[id]; ok {
 				bdata = msg
