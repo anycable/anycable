@@ -224,11 +224,11 @@ export default createCable({protocol: 'actioncable-v1-ext-protobuf', encoder: ne
 
 Here is the in/out traffic comparison:
 
-Encoder | Sent | Rcvd
---------|------|-------
-protobuf | 315.32MB  | 327.1KB
-msgpack  | 339.58MB  | 473.6KB
-json     | 502.45MB  | 571.8KB
+|  Encoder | Sent | Rcvd |
+|----------|------|-------|
+| protobuf | 315.32MB  | 327.1KB |
+| msgpack  | 339.58MB  | 473.6KB |
+| json     | 502.45MB  | 571.8KB |
 
 The data above were captured while running a [websocket-bench][] benchmark with the following parameters:
 
@@ -240,15 +240,15 @@ websocket-bench broadcast ws://0.0.0.0:8080/cable —server-type=actioncable —
 
 Here is the encode/decode speed comparison:
 
-Encoder | Decode (ns/op) | Encode (ns/op)
---------|------|-------
-protobuf (base) | 425  | 1153
-msgpack (base) | 676  | 1512
-json (base)     | 1386  | 1266
-||
-protobuf (long) | 479  | 2370
-msgpack (long) | 763  | 2506
-json (long)   | 2457  | 2319
+| Encoder | Decode (ns/op) | Encode (ns/op) |
+|--------|------|-------|
+| protobuf (base) | 425  | 1153 |
+| msgpack (base) | 676  | 1512 |
+| json (base)     | 1386  | 1266 |
+||||
+| protobuf (long) | 479  | 2370 |
+| msgpack (long) | 763  | 2506 |
+| json (long)   | 2457  | 2319 |
 
 Where base payload is:
 
