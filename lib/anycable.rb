@@ -92,8 +92,8 @@ module AnyCable
 
     # Raw broadcast message to the channel, sends only string!
     # To send hash or object use ActionCable.server.broadcast instead!
-    def broadcast(channel, payload)
-      broadcast_adapter.broadcast(channel, payload)
+    def broadcast(...)
+      broadcast_adapter.broadcast(...)
     end
 
     def rpc_handler

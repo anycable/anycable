@@ -46,6 +46,18 @@ AnyCable.broadcast_adapter.batching do
 end #=> the current batch is published
 ```
 
+### Broadcast options
+
+Since v1.4.5, AnyCable supports additional broadcast options. You can pass them as the third argument to the `AnyCable.broadcast` method:
+
+```ruby
+AnyCable.broadcast("my_stream", {text: "hoi"}, {exclude_socket: "some-socket-id"})
+```
+
+The following options are supported:
+
+- `exclude_socket`: pass an AnyCable socket ID to exclude it from the broadcast recipients list. Useful if you want to broadcast to all clients except the one that initiated the broadcast.
+
 ## HTTP adapter
 
 HTTP adapter has zero-dependencies and, thus, allows you to quickly start using AnyCable.

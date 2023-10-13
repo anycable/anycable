@@ -36,6 +36,6 @@ module AnyCable
   def self.server_callbacks: () -> Array[^() -> void]
   def self.broadcast_adapter: () -> _BroadcastAdapter
   def self.broadcast_adapter=: (untyped adapter) -> void
-  def self.broadcast: (String channel, String payload) -> void
+  def self.broadcast: (String channel, String payload, ?broadcastOptions options) -> void
   def self.rpc_handler: () -> RPC::Handler
 end
