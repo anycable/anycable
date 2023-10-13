@@ -9,7 +9,7 @@ begin
 
     gem "childprocess", "~> 4.1"
     gem "jwt"
-    gem "activesupport", "~> 7.0"
+    gem "activesupport", "~> 7.0.0"
   end
 rescue
   raise if retried

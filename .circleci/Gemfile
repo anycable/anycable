@@ -5,6 +5,8 @@ gem "nats-pure", "< 2.3.0"
 gem "colorize"
 gem "puma"
 
+gem "activesupport", "~> 7.0.0"
+
 if File.directory?(File.join(__dir__, "../../anycable"))
   $stdout.puts "\n=== Using local gems for Anyt ===\n\n"
   gem "debug"
