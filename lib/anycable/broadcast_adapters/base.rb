@@ -26,11 +26,11 @@ module AnyCable
         Thread.current[:anycable_batching]&.last
       end
 
-      def broadcast(stream, payload)
+      def broadcast(stream, payload, options = nil)
         if batching?
-          current_batch << {stream: stream, data: payload}
+          current_batch << {stream: stream, data: payload, meta: options}.compact
         else
-          raw_broadcast({stream: stream, data: payload}.to_json)
+          raw_broadcast({stream: stream, data: payload, meta: options}.compact.to_json)
         end
       end
 

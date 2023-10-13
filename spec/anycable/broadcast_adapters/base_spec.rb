@@ -107,4 +107,14 @@ describe AnyCable::BroadcastAdapters::Base do
       )
     end
   end
+
+  context "with options" do
+    it "adds options to the payload as metadata" do
+      subject.broadcast("test", "a", exclude_socket: "123")
+
+      expect(subject.sent).to eq([
+        {stream: "test", data: "a", meta: {exclude_socket: "123"}}.to_json
+      ])
+    end
+  end
 end
