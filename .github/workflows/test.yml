@@ -130,7 +130,6 @@ jobs:
       GORACE: "halt_on_error=1"
       COVERAGE: "true"
       GOCOVERDIR: "_icoverdir_"
-      BUNDLE_GEMFILE: .circleci/Gemfile
       BUNDLE_PATH: ./vendor/bundle
       # Specify REDIS_URL explicitly, so Makefile doesn't check the presence of Redis
       REDIS_URL: redis://localhost:6379/

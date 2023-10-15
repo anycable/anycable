@@ -119,52 +119,52 @@ test:
 	go test -count=1 -timeout=30s -race -tags mrb ./... $(TEST_FLAGS)
 
 benchmarks: build
-	BUNDLE_GEMFILE=.circleci/Gemfile ruby features/runner.rb features/*.benchfile
+	ruby features/runner.rb features/*.benchfile
 
 tmp/anycable-go-test:
 	go build $(TEST_BUILD_FLAGS) -tags mrb -race -o tmp/anycable-go-test cmd/anycable-go/main.go
 
 test-conformance: tmp/anycable-go-test
-	BUNDLE_GEMFILE=.circleci/Gemfile bundle exec anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable"
+	bundle exec anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable"
 
 test-conformance-ssl: tmp/anycable-go-test
 	ANYCABLE_RPC_TLS_CERT=etc/ssl/server.crt \
 	ANYCABLE_RPC_TLS_KEY=etc/ssl/server.key \
-	BUNDLE_GEMFILE=.circleci/Gemfile bundle exec anyt -c \
+	bundle exec anyt -c \
 	"tmp/anycable-go-test --headers=cookie,x-api-token --rpc_enable_tls --rpc_tls_verify=false --ssl_key=etc/ssl/server.key --ssl_cert=etc/ssl/server.crt --port=8443" \
 	--target-url="wss://localhost:8443/cable"
 
 test-conformance-http: tmp/anycable-go-test
-	BUNDLE_GEMFILE=.circleci/Gemfile \
+	\
 	ANYCABLE_BROADCAST_ADAPTER=http ANYCABLE_HTTP_BROADCAST_SECRET=any_secret \
 	ANYCABLE_HTTP_RPC_SECRET=rpc_secret ANYCABLE_HTTP_RPC_MOUNT_PATH=/_anycable \
 	bundle exec anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token --rpc_impl=http --rpc_host=http://localhost:9292/_anycable" --target-url="ws://localhost:8080/cable" --require=etc/anyt/broadcast_tests/*.rb
 
 test-conformance-nats: tmp/anycable-go-test
-	BUNDLE_GEMFILE=.circleci/Gemfile ANYCABLE_BROADCAST_ADAPTER=nats bundle exec anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable" --require=etc/anyt/broadcast_tests/*.rb
+	ANYCABLE_BROADCAST_ADAPTER=nats bundle exec anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable" --require=etc/anyt/broadcast_tests/*.rb
 
 test-conformance-nats-embedded: tmp/anycable-go-test
-	BUNDLE_GEMFILE=.circleci/Gemfile ANYCABLE_BROADCAST_ADAPTER=nats ANYCABLE_NATS_SERVERS=nats://127.0.0.1:4242 ANYCABLE_EMBED_NATS=true ANYCABLE_ENATS_ADDR=nats://127.0.0.1:4242 bundle exec anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable" --require=etc/anyt/broadcast_tests/*.rb
+	ANYCABLE_BROADCAST_ADAPTER=nats ANYCABLE_NATS_SERVERS=nats://127.0.0.1:4242 ANYCABLE_EMBED_NATS=true ANYCABLE_ENATS_ADDR=nats://127.0.0.1:4242 bundle exec anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable" --require=etc/anyt/broadcast_tests/*.rb
 
 test-conformance-broker-http: tmp/anycable-go-test
-	BUNDLE_GEMFILE=.circleci/Gemfile ANYCABLE_BROKER=memory ANYCABLE_BROADCAST_ADAPTER=http ANYCABLE_HTTP_BROADCAST_SECRET=any_secret bundle exec anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable" --require=etc/anyt/**/*.rb
+	ANYCABLE_BROKER=memory ANYCABLE_BROADCAST_ADAPTER=http ANYCABLE_HTTP_BROADCAST_SECRET=any_secret bundle exec anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable" --require=etc/anyt/**/*.rb
 
 test-conformance-broker-redis: tmp/anycable-go-test
-	BUNDLE_GEMFILE=.circleci/Gemfile ANYCABLE_BROKER=memory ANYCABLE_BROADCAST_ADAPTER=redisx ANYCABLE_HTTP_BROADCAST_SECRET=any_secret ANYCABLE_PUBSUB=redis bundle exec anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable" --require=etc/anyt/**/*.rb
+	ANYCABLE_BROKER=memory ANYCABLE_BROADCAST_ADAPTER=redisx ANYCABLE_HTTP_BROADCAST_SECRET=any_secret ANYCABLE_PUBSUB=redis bundle exec anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable" --require=etc/anyt/**/*.rb
 
 test-conformance-broker-nats: tmp/anycable-go-test
-	BUNDLE_GEMFILE=.circleci/Gemfile ANYCABLE_BROKER=memory ANYCABLE_EMBED_NATS=true ANYCABLE_ENATS_ADDR=nats://127.0.0.1:4343 ANYCABLE_PUBSUB=nats ANYCABLE_BROADCAST_ADAPTER=http ANYCABLE_HTTP_BROADCAST_SECRET=any_secret bundle exec anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable" --require=etc/anyt/**/*.rb
+	ANYCABLE_BROKER=memory ANYCABLE_EMBED_NATS=true ANYCABLE_ENATS_ADDR=nats://127.0.0.1:4343 ANYCABLE_PUBSUB=nats ANYCABLE_BROADCAST_ADAPTER=http ANYCABLE_HTTP_BROADCAST_SECRET=any_secret bundle exec anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable" --require=etc/anyt/**/*.rb
 
 test-conformance-all: test-conformance test-conformance-ssl test-conformance-http
 
 TESTFILE ?= features/*.testfile
 test-features: build
-	BUNDLE_GEMFILE=.circleci/Gemfile ruby features/runner.rb $(TESTFILE)
+	ruby features/runner.rb $(TESTFILE)
 
 test-ci: prepare prepare-mruby test test-conformance
 
 prepare:
-	BUNDLE_GEMFILE=.circleci/Gemfile bundle install
+	bundle install
 
 gen-ssl:
 	mkdir -p tmp/ssl
