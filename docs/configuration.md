@@ -113,3 +113,21 @@ Increasing pool size makes sense if you have a lot of IO operations in your chan
 ### Redis connections
 
 Redis broadcast adapter uses a single connection to Redis.
+
+## Alternative gRPC implementations
+
+AnyCable uses the `grpc` gem to run its gRPC server by default. The gem heavily relies on native extensions, which may lead to complications during installation (e.g., on Alpine Linux) and compatibility issues with modern Ruby versions.
+
+To be closer to Ruby and depend less on extensions, AnyCable also supports an alternative gRPC implementation—[grpc_kit](https://github.com/cookpad/grpc_kit).
+
+You can opt-in to use `grpc_kit` by setting `ANYCABLE_GRPC_IMPL=grpc_kit` environment variable for your `bundle exec anycable` process. You also need to update your `Gemfile` to include the `grpc_kit` gem and gRPC-less versions of AnyCable gems:
+
+```ruby
+# For Rails applications
+gem "anycable-rails-core", require: ["anycable-rails"]
+gem "grpc_kit"
+
+# For non-Rails applications
+gem "anycable-core", require: ["anycable"]
+gem "grpc_kit"
+```
