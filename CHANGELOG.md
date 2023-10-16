@@ -2,6 +2,10 @@
 
 ## master
 
+## 1.4.3 (2023-10-15)
+
+- Add broadcast options support. ([@palkan][])
+
 - Add batch-broadcasting support. ([@palkan][])
 
 ## 1.4.2 (2023-09-05)

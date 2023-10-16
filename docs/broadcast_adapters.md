@@ -21,7 +21,7 @@ AnyCable.broadcast_adapter.broadcast("my_stream", {text: "hoi"})
 
 ### Batching
 
-Since v1.4.5, AnyCable-Go supports publishing broadcast messages in batches. This is especially useful if you want to guarantee the order of delivered messages to clients (to be the same as the broadcasts order). To batch-broadcast messages, wrap your code with the `.batching` method of the broadcast adapter:
+AnyCable-Go v1.4.5+ supports publishing broadcast messages in batches. This is especially useful if you want to guarantee the order of delivered messages to clients (to be the same as the broadcasts order). To batch-broadcast messages, wrap your code with the `.batching` method of the broadcast adapter:
 
 ```ruby
 AnyCable.broadcast_adapter.batching do
@@ -48,7 +48,7 @@ end #=> the current batch is published
 
 ### Broadcast options
 
-Since v1.4.5, AnyCable supports additional broadcast options. You can pass them as the third argument to the `AnyCable.broadcast` method:
+AnyCable-Go v1.4.5+ supports additional broadcast options. You can pass them as the third argument to the `AnyCable.broadcast` method:
 
 ```ruby
 AnyCable.broadcast("my_stream", {text: "hoi"}, {exclude_socket: "some-socket-id"})
