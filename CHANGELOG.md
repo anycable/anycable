@@ -2,6 +2,8 @@
 
 ## master
 
+## 1.4.5 (2023-10-15)
+
 - Fix passing RPC context via headers when using HTTP RPC. ([@palkan][])
 
 - Add `exclude_socket` option support to broadcasts. ([@palkan][])
