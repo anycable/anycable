@@ -42,7 +42,7 @@ type RedisConfig struct {
 func NewRedisConfig() RedisConfig {
 	return RedisConfig{
 		KeepalivePingInterval:       30,
-		URL:                         "redis://localhost:6379/5",
+		URL:                         "redis://localhost:6379",
 		Channel:                     "__anycable__",
 		Group:                       "bx",
 		StreamReadBlockMilliseconds: 2000,
