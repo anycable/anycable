@@ -9,3 +9,4 @@
 - [David Karlsson](https://github.com/davidklsn)
 - [Alexey Zatsepin](https://github.com/alexey)
 - [Sebastian Pöll](https://github.com/SebastianPoell)
+- [Kerry Ivan Kurian](https://github.com/kkurian)
