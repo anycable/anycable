@@ -2,6 +2,10 @@
 
 ## master
 
+- Infer RPC implementation from RPC host. ([@palkan][])
+
+Feel free to drop `rpc_impl` configuration parameter.
+
 - Enhance Fly configuration preset to enable embedded NATS and configure HTTP broadcaster port. ([@palkan][])
 
 ## 1.4.5 (2023-10-15)

@@ -28,7 +28,7 @@ RPC service address (default: `"localhost:50051"`).
 
 **--rpc_impl** (`ANYCABLE_RPC_IMPL`)
 
-RPC implementation to use, HTTP or gRPC (default: `"grpc"`). See below for more details on [HTTP RPC](#http-rpc).
+RPC implementation to use, HTTP or gRPC (default: inferred from the `rpc_host` value, so no need to specify manually in most cases). See below for more details on [HTTP RPC](#http-rpc).
 
 **--path** (`ANYCABLE_PATH`)
 

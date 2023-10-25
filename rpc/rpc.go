@@ -178,7 +178,7 @@ func NewController(metrics metrics.Instrumenter, config *Config) (*Controller, e
 		metrics.GaugeSet(metricsRPCCapacity, uint64(barrier.Capacity()))
 	}
 
-	if config.Implementation == "grpc" {
+	if config.Impl() == "grpc" {
 		metrics.RegisterGauge(metricsGRPCActiveConns, "The number of active HTTP connections used by gRPC")
 	}
 
@@ -189,7 +189,7 @@ func NewController(metrics metrics.Instrumenter, config *Config) (*Controller, e
 func (c *Controller) Start() error {
 	host := c.config.Host
 	enableTLS := c.config.TLSEnabled()
-	impl := c.config.Implementation
+	impl := c.config.Impl()
 
 	dialer := c.config.DialFun
 

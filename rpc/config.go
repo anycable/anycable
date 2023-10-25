@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 
 	pb "github.com/anycable/anycable-go/protos"
@@ -55,7 +56,34 @@ type Config struct {
 
 // NewConfig builds a new config
 func NewConfig() Config {
-	return Config{Concurrency: 28, EnableTLS: false, TLSVerify: true, Host: defaultRPCHost, Implementation: "grpc", RequestTimeout: 3000}
+	return Config{
+		Concurrency:    28,
+		EnableTLS:      false,
+		TLSVerify:      true,
+		Host:           defaultRPCHost,
+		Implementation: "",
+		RequestTimeout: 3000,
+	}
+}
+
+// Return chosen implementation either from the user provided value
+// or from the host scheme
+func (c *Config) Impl() string {
+	if c.Implementation != "" {
+		return c.Implementation
+	}
+
+	uri, err := url.Parse(c.Host)
+
+	if err != nil {
+		return "<invalid rpc host>"
+	}
+
+	if uri.Scheme == "http" || uri.Scheme == "https" {
+		return "http"
+	}
+
+	return "grpc"
 }
 
 // Whether secure connection to RPC server is enabled either explicitly or implicitly

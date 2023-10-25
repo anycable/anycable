@@ -171,7 +171,7 @@ func (t *Tracker) bootProperties() map[string]interface{} {
 	props.Set("mrb-printer", t.config.Metrics.LogFormatterEnabled())
 	props.Set("statsd", t.config.Metrics.Statsd.Enabled())
 	props.Set("prom", t.config.Metrics.HTTPEnabled())
-	props.Set("rpc-impl", t.config.RPC.Implementation)
+	props.Set("rpc-impl", t.config.RPC.Impl())
 
 	return props
 }
