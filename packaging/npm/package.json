@@ -1,0 +1,35 @@
+{
+  "name": "@anycable/anycable-go",
+  "version": "1.4.6",
+  "description": "A wrapper to install and run AnyCable-Go server",
+  "main": "index.js",
+  "bin": {
+    "anycable-go": "./bin/index.mjs"
+  },
+  "repository": "https://github.com/anycable/anycable-go",
+  "keywords": [
+    "websockets",
+    "anycable",
+    "real-times"
+  ],
+  "author": "Vladimir Dementyev",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/anycable/anycable-go/issues"
+  },
+  "homepage": "https://anycable.io",
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ],
+  "scripts": {
+  },
+  "dependencies": {
+    "node-downloader-helper": "^1.0.18"
+  }
+}

@@ -23,6 +23,21 @@ Of course, you can install it from source too:
 go get -u -f github.com/anycable/anycable-go/cmd/anycable-go
 ```
 
+### Via NPM
+
+For Node.js projects, there is also an option to install AnyCable-Go via NPM:
+
+```sh
+npm install --save-dev @anycable/anycable-go
+pnpm install --save-dev @anycable/anycable-go
+yarn add --dev @anycable/anycable-go
+
+# and run as follows
+npx anycable-go
+```
+
+**NOTE:** The version of the NPM package is the same as the version of the AnyCable-Go binary (which is downloaded automatically on the first run).
+
 ## Usage
 
 Run server:

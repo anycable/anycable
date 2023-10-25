@@ -38,6 +38,17 @@ Of course, you can install it from source too:
 go install github.com/anycable/anycable-go/cmd/anycable-go@latest
 ```
 
+For Node.js projects, there is also an option to install AnyCable-Go via NPM:
+
+```sh
+npm install --save-dev @anycable/anycable-go
+pnpm install --save-dev @anycable/anycable-go
+yarn add --dev @anycable/anycable-go
+
+# and run as follows
+npx anycable-go
+```
+
 ## Upgrade
 
 For instructions on how to upgrade to a newer version see [upgrade notes](https://docs.anycable.io/upgrade-notes/Readme.md).
