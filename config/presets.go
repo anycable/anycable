@@ -66,6 +66,11 @@ func (c *Config) loadFlyPreset(defaults *Config) error {
 		return errors.New("FLY_APP_NAME env is missing")
 	}
 
+	// Use the same port for HTTP broadcasts by default
+	if c.HTTPBroadcast.Port == defaults.HTTPBroadcast.Port {
+		c.HTTPBroadcast.Port = c.Port
+	}
+
 	if c.EmbeddedNats.ServiceAddr == defaults.EmbeddedNats.ServiceAddr {
 		c.EmbeddedNats.ServiceAddr = "nats://0.0.0.0:4222"
 	}
@@ -84,6 +89,22 @@ func (c *Config) loadFlyPreset(defaults *Config) error {
 
 	if c.EmbeddedNats.GatewayAdvertise == defaults.EmbeddedNats.GatewayAdvertise {
 		c.EmbeddedNats.GatewayAdvertise = fmt.Sprintf("%s.%s.internal:7222", region, appName)
+	}
+
+	// Enable embedded NATS by default unless another adapter is set for PubSub
+	// or Redis URL is provided
+	if c.PubSubAdapter == defaults.PubSubAdapter {
+		if c.Redis.URL != defaults.Redis.URL {
+			c.PubSubAdapter = "redis"
+		} else {
+			c.PubSubAdapter = "nats"
+
+			// NATS hasn't been configured, so we can embed it
+			if c.EmbedNats || c.NATS.Servers == defaults.NATS.Servers {
+				c.EmbedNats = true
+				c.NATS.Servers = c.EmbeddedNats.ServiceAddr
+			}
+		}
 	}
 
 	if rpcName, ok := os.LookupEnv("ANYCABLE_FLY_RPC_APP_NAME"); ok {

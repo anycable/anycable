@@ -2,6 +2,8 @@
 
 ## master
 
+- Enhance Fly configuration preset to enable embedded NATS and configure HTTP broadcaster port. ([@palkan][])
+
 ## 1.4.5 (2023-10-15)
 
 - Fix passing RPC context via headers when using HTTP RPC. ([@palkan][])
