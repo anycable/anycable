@@ -307,10 +307,10 @@ func (s *Session) Serve(callback func()) error {
 
 			if err != nil {
 				if ws.IsCloseError(err) {
-					s.Log.Debugf("Websocket closed: %v", err)
+					s.Log.Debugf("WebSocket closed: %v", err)
 					s.disconnectNow("Read closed", ws.CloseNormalClosure)
 				} else {
-					s.Log.Debugf("Websocket close error: %v", err)
+					s.Log.Debugf("WebSocket close error: %v", err)
 					s.disconnectNow("Read failed", ws.CloseAbnormalClosure)
 				}
 				return
@@ -319,6 +319,7 @@ func (s *Session) Serve(callback func()) error {
 			err = s.ReadMessage(message)
 
 			if err != nil {
+				s.Log.Debugf("WebSocket read failed: %v", err)
 				return
 			}
 		}
