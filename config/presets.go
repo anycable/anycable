@@ -136,7 +136,7 @@ func (c *Config) loadHerokuPreset(defaults *Config) error {
 }
 
 func (c *Config) loadBrokerPreset(defaults *Config) error {
-	redisEnabled := (c.Redis.URL != defaults.Redis.URL) || strings.Contains(c.BroadcastAdapter, "redis")
+	redisEnabled := (c.Redis.URL != defaults.Redis.URL)
 	enatsEnabled := c.EmbedNats
 
 	if c.BrokerAdapter == defaults.BrokerAdapter {
