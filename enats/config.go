@@ -12,4 +12,5 @@ type Config struct {
 	Gateways         []string
 	Routes           []string
 	JetStream        bool
+	StoreDir         string
 }

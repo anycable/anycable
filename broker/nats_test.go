@@ -28,7 +28,9 @@ func (FakeBroadastHandler) ExecuteRemoteCommand(cmd *common.RemoteCommandMessage
 var _ pubsub.Handler = (*FakeBroadastHandler)(nil)
 
 func TestNATSBroker_HistorySince_expiration(t *testing.T) {
-	server := buildNATSServer()
+	port := 32
+	addr := fmt.Sprintf("nats://127.0.0.1:44%d", port)
+	server := buildNATSServer(t, addr)
 	err := server.Start()
 	require.NoError(t, err)
 	defer server.Shutdown(context.Background()) // nolint:errcheck
@@ -37,6 +39,8 @@ func TestNATSBroker_HistorySince_expiration(t *testing.T) {
 	config.HistoryTTL = 1
 
 	nconfig := natsconfig.NewNATSConfig()
+	nconfig.Servers = addr
+
 	broadcastHandler := FakeBroadastHandler{}
 	broadcaster := pubsub.NewLegacySubscriber(broadcastHandler)
 	broker := NewNATSBroker(broadcaster, &config, &nconfig)
@@ -81,7 +85,9 @@ func TestNATSBroker_HistorySince_expiration(t *testing.T) {
 }
 
 func TestNATSBroker_HistorySince_with_limit(t *testing.T) {
-	server := buildNATSServer()
+	port := 33
+	addr := fmt.Sprintf("nats://127.0.0.1:44%d", port)
+	server := buildNATSServer(t, addr)
 	err := server.Start()
 	require.NoError(t, err)
 	defer server.Shutdown(context.Background()) // nolint:errcheck
@@ -90,6 +96,8 @@ func TestNATSBroker_HistorySince_with_limit(t *testing.T) {
 	config.HistoryLimit = 2
 
 	nconfig := natsconfig.NewNATSConfig()
+	nconfig.Servers = addr
+
 	broadcastHandler := FakeBroadastHandler{}
 	broadcaster := pubsub.NewLegacySubscriber(broadcastHandler)
 	broker := NewNATSBroker(broadcaster, &config, &nconfig)
@@ -120,7 +128,10 @@ func TestNATSBroker_HistorySince_with_limit(t *testing.T) {
 }
 
 func TestNATSBroker_HistoryFrom(t *testing.T) {
-	server := buildNATSServer()
+	port := 34
+	addr := fmt.Sprintf("nats://127.0.0.1:44%d", port)
+	server := buildNATSServer(t, addr)
+
 	err := server.Start()
 	require.NoError(t, err)
 	defer server.Shutdown(context.Background()) // nolint:errcheck
@@ -128,6 +139,8 @@ func TestNATSBroker_HistoryFrom(t *testing.T) {
 	config := NewConfig()
 
 	nconfig := natsconfig.NewNATSConfig()
+	nconfig.Servers = addr
+
 	broadcastHandler := FakeBroadastHandler{}
 	broadcaster := pubsub.NewLegacySubscriber(broadcastHandler)
 	broker := NewNATSBroker(broadcaster, &config, &nconfig)
@@ -202,7 +215,9 @@ func (t *TestCacheable) ToCacheEntry() ([]byte, error) {
 }
 
 func TestNATSBroker_Sessions(t *testing.T) {
-	server := buildNATSServer()
+	port := 41
+	addr := fmt.Sprintf("nats://127.0.0.1:44%d", port)
+	server := buildNATSServer(t, addr)
 	err := server.Start()
 	require.NoError(t, err)
 	defer server.Shutdown(context.Background()) // nolint:errcheck
@@ -211,6 +226,8 @@ func TestNATSBroker_Sessions(t *testing.T) {
 	config.SessionsTTL = 1
 
 	nconfig := natsconfig.NewNATSConfig()
+	nconfig.Servers = addr
+
 	broker := NewNATSBroker(nil, &config, &nconfig)
 
 	err = broker.Start()
@@ -257,7 +274,10 @@ func TestNATSBroker_Sessions(t *testing.T) {
 }
 
 func TestNATSBroker_SessionsTTLChange(t *testing.T) {
-	server := buildNATSServer()
+	port := 43
+	addr := fmt.Sprintf("nats://127.0.0.1:44%d", port)
+
+	server := buildNATSServer(t, addr)
 	err := server.Start()
 	require.NoError(t, err)
 	defer server.Shutdown(context.Background()) // nolint:errcheck
@@ -266,6 +286,8 @@ func TestNATSBroker_SessionsTTLChange(t *testing.T) {
 	config.SessionsTTL = 1
 
 	nconfig := natsconfig.NewNATSConfig()
+	nconfig.Servers = addr
+
 	broker := NewNATSBroker(nil, &config, &nconfig)
 
 	err = broker.Start()
@@ -317,7 +339,10 @@ func TestNATSBroker_SessionsTTLChange(t *testing.T) {
 }
 
 func TestNATSBroker_Epoch(t *testing.T) {
-	server := buildNATSServer()
+	port := 45
+	addr := fmt.Sprintf("nats://127.0.0.1:44%d", port)
+
+	server := buildNATSServer(t, addr)
 	err := server.Start()
 	require.NoError(t, err)
 	defer server.Shutdown(context.Background()) // nolint:errcheck
@@ -325,11 +350,15 @@ func TestNATSBroker_Epoch(t *testing.T) {
 	config := NewConfig()
 
 	nconfig := natsconfig.NewNATSConfig()
+	nconfig.Servers = addr
+
 	broker := NewNATSBroker(nil, &config, &nconfig)
 
 	err = broker.Start()
 	require.NoError(t, err)
 	defer broker.Shutdown(context.Background()) // nolint: errcheck
+
+	broker.Reset() // nolint: errcheck
 
 	epoch := broker.Epoch()
 
@@ -340,9 +369,11 @@ func TestNATSBroker_Epoch(t *testing.T) {
 	assert.Equal(t, epoch, anotherBroker.Epoch())
 }
 
-func buildNATSServer() *enats.Service {
+func buildNATSServer(t *testing.T, addr string) *enats.Service {
 	conf := enats.NewConfig()
 	conf.JetStream = true
+	conf.ServiceAddr = addr
+	conf.StoreDir = t.TempDir()
 	service := enats.NewService(&conf)
 
 	return service

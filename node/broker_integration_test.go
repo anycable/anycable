@@ -52,7 +52,10 @@ func TestIntegrationRestore_Memory(t *testing.T) {
 }
 
 func TestIntegrationRestore_NATS(t *testing.T) {
-	server := buildNATSServer()
+	port := 32
+	addr := fmt.Sprintf("nats://127.0.0.1:45%d", port)
+
+	server := buildNATSServer(t, addr)
 	err := server.Start()
 	require.NoError(t, err)
 	defer server.Shutdown(context.Background()) // nolint:errcheck
@@ -63,6 +66,8 @@ func TestIntegrationRestore_NATS(t *testing.T) {
 	bconf.SessionsTTL = 2
 
 	nconfig := natsconfig.NewNATSConfig()
+	nconfig.Servers = addr
+
 	broadcaster := pubsub.NewLegacySubscriber(node)
 	broker := broker.NewNATSBroker(broadcaster, &bconf, &nconfig)
 	node.SetBroker(broker)
@@ -244,7 +249,10 @@ func TestIntegrationHistory_Memory(t *testing.T) {
 }
 
 func TestIntegrationHistory_NATS(t *testing.T) {
-	server := buildNATSServer()
+	port := 33
+	addr := fmt.Sprintf("nats://127.0.0.1:45%d", port)
+
+	server := buildNATSServer(t, addr)
 	err := server.Start()
 	require.NoError(t, err)
 	defer server.Shutdown(context.Background()) // nolint:errcheck
@@ -254,6 +262,8 @@ func TestIntegrationHistory_NATS(t *testing.T) {
 	bconf := broker.NewConfig()
 
 	nconfig := natsconfig.NewNATSConfig()
+	nconfig.Servers = addr
+
 	broadcaster := pubsub.NewLegacySubscriber(node)
 	broker := broker.NewNATSBroker(broadcaster, &bconf, &nconfig)
 	node.SetBroker(broker)
@@ -427,9 +437,11 @@ func requireAuthenticatedSession(t *testing.T, node *Node, sid string) *Session 
 	return session
 }
 
-func buildNATSServer() *enats.Service {
+func buildNATSServer(t *testing.T, addr string) *enats.Service {
 	conf := enats.NewConfig()
 	conf.JetStream = true
+	conf.ServiceAddr = addr
+	conf.StoreDir = t.TempDir()
 	service := enats.NewService(&conf)
 
 	return service

@@ -491,10 +491,11 @@ bucketSetup:
 	bucket, err := n.js.KeyValue(context.Background(), key)
 
 	if err == jetstream.ErrBucketNotFound {
+		n.log.Debugf("no JetStream bucket found, creating a new one: %s", key)
 		var berr error
 		bucket, berr = n.js.CreateKeyValue(context.Background(), jetstream.KeyValueConfig{
 			Bucket: key,
-			TTL:    time.Duration(n.conf.SessionsTTL * int64(time.Second)),
+			TTL:    ttl,
 		})
 
 		if berr != nil {

@@ -99,6 +99,10 @@ func (s *Service) Start() error {
 		JetStream: s.config.JetStream,
 	}
 
+	if s.config.StoreDir != "" {
+		opts.StoreDir = s.config.StoreDir
+	}
+
 	s.server, err = server.NewServer(opts)
 	if err != nil {
 		return errorx.Decorate(err, "Failed to start NATS server")
