@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"time"
 
 	"github.com/anycable/anycable-go/common"
 )
@@ -64,7 +65,7 @@ type LocalBroker interface {
 	SetEpoch(epoch string)
 	HistoryFrom(stream string, epoch string, offset uint64) ([]common.StreamMessage, error)
 	HistorySince(stream string, ts int64) ([]common.StreamMessage, error)
-	Store(stream string, msg []byte, seq uint64) (uint64, error)
+	Store(stream string, msg []byte, seq uint64, ts time.Time) (uint64, error)
 }
 
 type StreamsTracker struct {

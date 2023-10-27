@@ -66,7 +66,7 @@ func TestNATSBroker_HistorySince_expiration(t *testing.T) {
 	history, err := broker.HistorySince("test", start)
 	require.NoError(t, err)
 
-	assert.Len(t, history, 2)
+	require.Len(t, history, 2)
 	assert.EqualValues(t, 3, history[0].Offset)
 	assert.Equal(t, "c", history[0].Data)
 	assert.EqualValues(t, 4, history[1].Offset)

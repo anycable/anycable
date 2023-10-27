@@ -29,6 +29,7 @@ type NATS struct {
 
 	jstreams   *lru[string]
 	jconsumers *lru[jetstream.Consumer]
+	streamSync *streamsSynchronizer
 
 	// Local broker is used to keep a copy of stream messages
 	local LocalBroker
@@ -64,6 +65,7 @@ func NewNATSBroker(broadcaster Broadcaster, c *Config, nc *natsconfig.NATSConfig
 		conf:        c,
 		nconf:       nc,
 		tracker:     NewStreamsTracker(),
+		streamSync:  newStreamsSynchronizer(),
 		jstreams:    newLRU[string](time.Duration(c.HistoryTTL * int64(time.Second))),
 		jconsumers:  newLRU[jetstream.Consumer](time.Duration(c.HistoryTTL * int64(time.Second))),
 		log:         log.WithField("context", "broker").WithField("provider", "nats"),
@@ -241,10 +243,12 @@ func (n *NATS) Unsubscribe(stream string) string {
 }
 
 func (n *NATS) HistoryFrom(stream string, epoch string, offset uint64) ([]common.StreamMessage, error) {
+	n.streamSync.sync(stream)
 	return n.local.HistoryFrom(stream, epoch, offset)
 }
 
 func (n *NATS) HistorySince(stream string, since int64) ([]common.StreamMessage, error) {
+	n.streamSync.sync(stream)
 	return n.local.HistorySince(stream, since)
 }
 
@@ -369,6 +373,25 @@ func (n *NATS) addStreamConsumer(stream string) {
 
 		n.log.Debugf("Created JetStream consumer %s for stream: %s", cons.CachedInfo().Name, stream)
 
+		n.streamSync.touch(stream)
+
+		batchSize := n.conf.HistoryLimit
+
+		if batchSize == 0 {
+			// TODO: what should we do if history is unlimited?
+			batchSize = 100
+		}
+
+		batch, err := cons.FetchNoWait(batchSize)
+		if err != nil {
+			n.log.Errorf("Failed to fetch initial messages from JetStream: %s", err)
+			return nil, err
+		}
+
+		for msg := range batch.Messages() {
+			n.consumeMessage(stream, msg)
+		}
+
 		_, err = cons.Consume(func(msg jetstream.Msg) {
 			n.consumeMessage(stream, msg)
 		})
@@ -381,11 +404,14 @@ func (n *NATS) addStreamConsumer(stream string) {
 	}, func(cons jetstream.Consumer) {
 		name := cons.CachedInfo().Name
 		n.log.Debugf("Deleting JetStream consumer %s for stream: %s", name, stream)
+		n.streamSync.remove(stream)
 		n.js.DeleteConsumer(context.Background(), prefixedStream, name) // nolint:errcheck
 	})
 }
 
 func (n *NATS) consumeMessage(stream string, msg jetstream.Msg) {
+	n.streamSync.touch(stream)
+
 	meta, err := msg.Metadata()
 	if err != nil {
 		n.log.Errorf("Failed to get JetStream message metadata: %s", err)
@@ -393,8 +419,9 @@ func (n *NATS) consumeMessage(stream string, msg jetstream.Msg) {
 	}
 
 	seq := meta.Sequence.Stream
+	ts := meta.Timestamp
 
-	_, err = n.local.Store(stream, msg.Data(), seq)
+	_, err = n.local.Store(stream, msg.Data(), seq, ts)
 	if err != nil {
 		n.log.Errorf("Failed to store message in local broker: %s", err)
 		return
@@ -566,4 +593,126 @@ func (m *lru[T]) expire() {
 			entry.cleanup(entry.value)
 		}
 	}
+}
+
+type streamsSynchronizer struct {
+	my       sync.RWMutex
+	enntries map[string]*streamSync
+}
+
+func newStreamsSynchronizer() *streamsSynchronizer {
+	return &streamsSynchronizer{
+		enntries: make(map[string]*streamSync),
+	}
+}
+
+func (s *streamsSynchronizer) sync(stream string) {
+	s.my.RLock()
+
+	syncer, ok := s.enntries[stream]
+
+	s.my.RUnlock()
+
+	if !ok {
+		return
+	}
+
+	syncer.sync()
+}
+
+func (s *streamsSynchronizer) touch(stream string) {
+	s.my.RLock()
+
+	syncer, ok := s.enntries[stream]
+
+	s.my.RUnlock()
+
+	if ok {
+		syncer.restart()
+		return
+	}
+
+	s.my.Lock()
+	defer s.my.Unlock()
+
+	s.enntries[stream] = newStreamSync()
+	s.enntries[stream].restart()
+}
+
+func (s *streamsSynchronizer) remove(stream string) {
+	s.my.Lock()
+	defer s.my.Unlock()
+
+	if syncer, ok := s.enntries[stream]; ok {
+		syncer.idle()
+		delete(s.enntries, stream)
+	}
+}
+
+type streamSync struct {
+	mu          sync.Mutex
+	active      bool
+	activeSince time.Time
+
+	cv    chan struct{}
+	timer *time.Timer
+}
+
+const (
+	streamHistorySyncTimeout = 200 * time.Millisecond
+	streamHistorySyncPeriod  = 50 * time.Millisecond
+)
+
+func newStreamSync() *streamSync {
+	return &streamSync{}
+}
+
+// sync waits for the gap in currently consumed messages
+func (s *streamSync) sync() {
+	s.mu.Lock()
+
+	if !s.active {
+		s.mu.Unlock()
+		return
+	}
+
+	s.mu.Unlock()
+
+	<-s.cv
+}
+
+// restart is called every time a message is consumed to
+// keep this stream locked from reading history
+func (s *streamSync) restart() {
+	s.mu.Lock()
+
+	if s.active {
+		if s.activeSince.Add(streamHistorySyncTimeout).Before(time.Now()) {
+			s.mu.Unlock()
+			s.idle()
+			return
+		}
+		s.timer.Reset(streamHistorySyncPeriod)
+		s.mu.Unlock()
+		return
+	}
+
+	defer s.mu.Unlock()
+
+	s.active = true
+	s.activeSince = time.Now()
+	s.timer = time.AfterFunc(streamHistorySyncPeriod, s.idle)
+	s.cv = make(chan struct{})
+}
+
+func (s *streamSync) idle() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if !s.active {
+		return
+	}
+
+	s.active = false
+	close(s.cv)
 }

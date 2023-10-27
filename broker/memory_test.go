@@ -101,14 +101,16 @@ func TestMemory_Store(t *testing.T) {
 	broker := NewMemoryBroker(nil, &config)
 	broker.SetEpoch("2023")
 
-	offset, err := broker.Store("test", []byte("a"), 10)
+	ts := time.Now()
+
+	offset, err := broker.Store("test", []byte("a"), 10, ts)
 	require.NoError(t, err)
 	assert.EqualValues(t, 10, offset)
 
-	_, err = broker.Store("test", []byte("b"), 11)
+	_, err = broker.Store("test", []byte("b"), 11, ts)
 	require.NoError(t, err)
 
-	_, err = broker.Store("tes2", []byte("c"), 1)
+	_, err = broker.Store("tes2", []byte("c"), 1, ts)
 	require.NoError(t, err)
 
 	history, err := broker.HistoryFrom("test", broker.epoch, 10)
@@ -116,7 +118,7 @@ func TestMemory_Store(t *testing.T) {
 	assert.Len(t, history, 1)
 	assert.EqualValues(t, 11, history[0].Offset)
 
-	_, err = broker.Store("test", []byte("c"), 3)
+	_, err = broker.Store("test", []byte("c"), 3, ts)
 	assert.Error(t, err)
 }
 

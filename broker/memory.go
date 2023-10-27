@@ -48,11 +48,15 @@ func (ms *memstream) add(data string) uint64 {
 	return ms.offset
 }
 
-func (ms *memstream) insert(data string, offset uint64) (uint64, error) {
+func (ms *memstream) insert(data string, offset uint64, t time.Time) (uint64, error) {
 	ms.mu.Lock()
 	defer ms.mu.Unlock()
 
-	ts := time.Now().Unix()
+	if t == (time.Time{}) {
+		t = time.Now()
+	}
+
+	ts := t.Unix()
 
 	if ms.offset >= offset {
 		return 0, fmt.Errorf("Offset %d is already taken", offset)
@@ -313,7 +317,7 @@ func (b *Memory) HistorySince(name string, ts int64) ([]common.StreamMessage, er
 	return history, nil
 }
 
-func (b *Memory) Store(name string, data []byte, offset uint64) (uint64, error) {
+func (b *Memory) Store(name string, data []byte, offset uint64, ts time.Time) (uint64, error) {
 	b.streamsMu.Lock()
 
 	if _, ok := b.streams[name]; !ok {
@@ -328,7 +332,7 @@ func (b *Memory) Store(name string, data []byte, offset uint64) (uint64, error) 
 
 	b.streamsMu.Unlock()
 
-	return stream.insert(string(data), offset)
+	return stream.insert(string(data), offset, ts)
 }
 
 func (b *Memory) CommitSession(sid string, session Cacheable) error {
