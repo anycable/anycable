@@ -162,6 +162,13 @@ func WithDefaultBroker() Option {
 		case "memory":
 			b := broker.NewMemoryBroker(br, &c.Broker)
 			return b, nil
+		case "nats":
+			// TODO: Figure out a better place for this hack.
+			// We don't want to enable JetStream by default (if NATS is used only for pub/sub),
+			// currently, we only need it when NATS is used as a broker.
+			c.EmbeddedNats.JetStream = true
+			b := broker.NewNATSBroker(br, &c.Broker, &c.NATS)
+			return b, nil
 		default:
 			return nil, errorx.IllegalArgument.New("Unsupported broker adapter: %s", c.BrokerAdapter)
 		}

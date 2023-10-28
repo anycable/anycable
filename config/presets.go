@@ -100,10 +100,16 @@ func (c *Config) loadFlyPreset(defaults *Config) error {
 			c.PubSubAdapter = "nats"
 
 			// NATS hasn't been configured, so we can embed it
-			if c.EmbedNats || c.NATS.Servers == defaults.NATS.Servers {
+			if !c.EmbedNats || c.NATS.Servers == defaults.NATS.Servers {
 				c.EmbedNats = true
 				c.NATS.Servers = c.EmbeddedNats.ServiceAddr
 			}
+		}
+	}
+
+	if c.BrokerAdapter == defaults.BrokerAdapter {
+		if c.EmbedNats {
+			c.BrokerAdapter = "nats"
 		}
 	}
 
@@ -140,7 +146,11 @@ func (c *Config) loadBrokerPreset(defaults *Config) error {
 	enatsEnabled := c.EmbedNats
 
 	if c.BrokerAdapter == defaults.BrokerAdapter {
-		c.BrokerAdapter = "memory"
+		if enatsEnabled {
+			c.BrokerAdapter = "nats"
+		} else {
+			c.BrokerAdapter = "memory"
+		}
 	}
 
 	if c.BroadcastAdapter == defaults.BroadcastAdapter {

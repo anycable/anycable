@@ -42,6 +42,7 @@ func TestFlyPresets(t *testing.T) {
 	assert.Equal(t, 8989, config.HTTPBroadcast.Port)
 	assert.Equal(t, true, config.EmbedNats)
 	assert.Equal(t, "nats", config.PubSubAdapter)
+	assert.Equal(t, "nats", config.BrokerAdapter)
 	assert.Equal(t, "nats://0.0.0.0:4222", config.EmbeddedNats.ServiceAddr)
 	assert.Equal(t, "nats://0.0.0.0:5222", config.EmbeddedNats.ClusterAddr)
 	assert.Equal(t, "any-test-mag-cluster", config.EmbeddedNats.ClusterName)
@@ -141,7 +142,7 @@ func TestBrokerWhenENATSConfigured(t *testing.T) {
 
 	require.NoError(t, err)
 
-	assert.Equal(t, "memory", config.BrokerAdapter)
+	assert.Equal(t, "nats", config.BrokerAdapter)
 	assert.Equal(t, "http,nats", config.BroadcastAdapter)
 	assert.Equal(t, "nats", config.PubSubAdapter)
 }
@@ -169,7 +170,7 @@ func TestFlyWithBrokerPresets(t *testing.T) {
 	assert.Equal(t, 8989, config.HTTPBroadcast.Port)
 	assert.Equal(t, true, config.EmbedNats)
 	assert.Equal(t, "nats", config.PubSubAdapter)
-	assert.Equal(t, "memory", config.BrokerAdapter)
+	assert.Equal(t, "nats", config.BrokerAdapter)
 	assert.Equal(t, "http,nats", config.BroadcastAdapter)
 	assert.Equal(t, "nats://0.0.0.0:4222", config.EmbeddedNats.ServiceAddr)
 	assert.Equal(t, "nats://0.0.0.0:5222", config.EmbeddedNats.ClusterAddr)

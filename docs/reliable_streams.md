@@ -112,6 +112,31 @@ The default broker adapter. It stores all data in memory. It can be used **only 
 
 **NOTE:** Storing data in memory may result into the increased RAM usage of an AnyCable-Go process.
 
+### NATS
+
+This adapter uses [NATS JetStream](https://nats.io/) as a shared distributed storage for sessions and streams cache and also keeps a local snapshot in memory (using the in-memory adapter described above).
+
+It can be used with both external NATS and [embedded NATS](./embedded_nats.md):
+
+```sh
+$ anycable-go --broker=nats --nats_servers=nats://localhost:4222
+
+  INFO 2023-10-28T00:57:53.937Z context=main Starting AnyCable 1.4.6-c31c153 (with mruby 1.2.0 (2015-11-17)) (pid: 29874, open file limit: 122880, gomaxprocs: 8)
+  INFO 2023-10-28T00:57:53.937Z context=main Starting NATS broker: nats://localhost:4222 (history limit: 100, history ttl: 300s, sessions ttl: 300s)
+  ...
+```
+
+Or with embedded NATS:
+
+```sh
+$ anycable-go --embed_nats --broker=nats
+
+  INFO 2023-10-28T00:59:01.177Z context=main Starting AnyCable 1.4.6-c31c153 (with mruby 1.2.0 (2015-11-17)) (pid: 30693, open file limit: 122880, gomaxprocs: 8)
+  INFO 2023-10-28T00:59:01.177Z context=main Starting NATS broker: nats://127.0.0.1:4222 (history limit: 100, history ttl: 300s, sessions ttl: 300s)
+  INFO 2023-10-28T00:59:01.205Z context=main Embedded NATS server started: nats://127.0.0.1:4222
+  ...
+```
+
 ### Redis
 
 <p class="pro-badge-header"></p>

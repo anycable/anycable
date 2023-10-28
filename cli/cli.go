@@ -203,12 +203,6 @@ func (r *Runner) Run() error {
 	go disconnector.Run() // nolint:errcheck
 	appNode.SetDisconnector(disconnector)
 
-	err = appNode.Start()
-
-	if err != nil {
-		return errorx.Decorate(err, "!!! Failed to initialize application !!!")
-	}
-
 	if r.config.EmbedNats {
 		service, enatsErr := r.embedNATS(&r.config.EmbeddedNats)
 
@@ -225,6 +219,12 @@ func (r *Runner) Run() error {
 		r.log.Infof("Embedded NATS server started: %s%s", r.config.EmbeddedNats.ServiceAddr, desc)
 
 		r.shutdownables = append(r.shutdownables, service)
+	}
+
+	err = appNode.Start()
+
+	if err != nil {
+		return errorx.Decorate(err, "!!! Failed to initialize application !!!")
 	}
 
 	err = subscriber.Start(r.errChan)

@@ -2,6 +2,8 @@
 
 ## master
 
+- Add NATS-based broker. ([@palkan][])
+
 ## 1.4.6 (2023-10-25)
 
 - Add `@anycable/anycable-go` NPM package to install `anycable-go` as a JS project dependency. ([@palkan][])
