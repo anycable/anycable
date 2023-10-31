@@ -4,6 +4,7 @@ package enats
 type Config struct {
 	Debug            bool
 	Trace            bool
+	Name             string
 	ServiceAddr      string
 	ClusterAddr      string
 	ClusterName      string

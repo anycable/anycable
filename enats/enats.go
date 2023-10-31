@@ -9,10 +9,12 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/apex/log"
 	"github.com/joomcode/errorx"
+	gonanoid "github.com/matoous/go-nanoid"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 )
@@ -25,6 +27,9 @@ const (
 type Service struct {
 	config *Config
 	server *server.Server
+	name   string
+
+	mu sync.Mutex
 }
 
 // LogEntry represents LoggerV2 decorator for nats server logger
@@ -88,15 +93,16 @@ func (s *Service) Start() error {
 	}
 
 	opts := &server.Options{
-		Host:      u.Hostname(),
-		Port:      int(port),
-		Debug:     s.config.Debug,
-		Trace:     s.config.Trace,
-		Cluster:   clusterOpts,
-		Gateway:   gatewayOpts,
-		Routes:    routes,
-		NoSigs:    true,
-		JetStream: s.config.JetStream,
+		Host:       u.Hostname(),
+		Port:       int(port),
+		Debug:      s.config.Debug,
+		Trace:      s.config.Trace,
+		ServerName: s.serverName(),
+		Cluster:    clusterOpts,
+		Gateway:    gatewayOpts,
+		Routes:     routes,
+		NoSigs:     true,
+		JetStream:  s.config.JetStream,
 	}
 
 	if s.config.StoreDir != "" {
@@ -132,8 +138,10 @@ func (s *Service) WaitReady() error {
 func (s *Service) Description() string {
 	var builder strings.Builder
 
+	builder.WriteString(fmt.Sprintf("server_name: %s", s.serverName()))
+
 	if s.config.ClusterAddr != "" {
-		builder.WriteString(fmt.Sprintf("cluster: %s, cluster_name: %s", s.config.ClusterAddr, s.config.ClusterName))
+		builder.WriteString(fmt.Sprintf(", cluster: %s, cluster_name: %s", s.config.ClusterAddr, s.config.ClusterName))
 	}
 
 	if s.config.Routes != nil {
@@ -268,4 +276,23 @@ func parseAddress(addr string) (string, int, error) {
 	}
 
 	return uri.Hostname(), int(port), nil
+}
+
+func (s *Service) serverName() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.name != "" {
+		return s.name
+	}
+
+	if s.config.Name != "" {
+		s.name = s.config.Name
+		return s.name
+	}
+
+	suf, _ := gonanoid.Nanoid(3) // nolint: errcheck
+
+	s.name = strings.ReplaceAll(strings.ReplaceAll(s.config.ServiceAddr, ":", "-"), "/", "") + "-" + suf
+	return s.name
 }

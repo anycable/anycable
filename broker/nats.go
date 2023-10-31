@@ -167,7 +167,7 @@ func (n *NATS) Shutdown(ctx context.Context) error {
 func (n *NATS) Announce() string {
 	brokerParams := fmt.Sprintf("(history limit: %d, history ttl: %ds, sessions ttl: %ds)", n.conf.HistoryLimit, n.conf.HistoryTTL, n.conf.SessionsTTL)
 
-	return fmt.Sprintf("Starting NATS broker: %s %s", n.nconf.Servers, brokerParams)
+	return fmt.Sprintf("Using NATS broker: %s %s", n.nconf.Servers, brokerParams)
 }
 
 func (n *NATS) Epoch() string {
