@@ -1,13 +1,7 @@
-# https://blog.codeship.com/building-minimal-docker-containers-for-go-applications
-FROM scratch
-
-ADD .docker/ca-certificates.crt /etc/ssl/certs/
-ADD .docker/passwd.nobody /etc/passwd
+FROM gcr.io/distroless/static
 
 ARG TARGETPLATFORM
 ADD .docker/${TARGETPLATFORM}/anycable-go /usr/local/bin/anycable-go
-
-USER nobody
 
 EXPOSE 8080
 

@@ -102,6 +102,11 @@ build-all: build-clean build-linux
 	env GOOS=freebsd GOARCH=arm   $(GOBUILD) -o "dist/anycable-go-freebsd-arm"   cmd/anycable-go/main.go
 	env GOOS=freebsd GOARCH=amd64 $(GOBUILD) -o "dist/anycable-go-freebsd-amd64" cmd/anycable-go/main.go
 
+build-docker-local:
+	env GOOS=linux   GOARCH=arm64 $(GOBUILD) -o ".docker/linux/arm64/anycable-go"   cmd/anycable-go/main.go
+	docker buildx build --platform linux/arm64 --file .docker/Dockerfile.universal --tag anycable/anycable-go:$(subst v,,$(VERSION))-dev --load .
+	docker buildx build --platform linux/arm64 --file .docker/Dockerfile.alpine --tag anycable/anycable-go:$(subst v,,$(VERSION))-alpine-dev --load .
+
 # Run server
 run:
 	go run -ldflags $(LD_FLAGS) -tags "mrb gops" ./cmd/anycable-go/main.go
