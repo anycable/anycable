@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/anycable/anycable-go/fly"
 	"github.com/apex/log"
 )
 
@@ -66,6 +67,18 @@ func (c *Config) loadFlyPreset(defaults *Config) error {
 		return errors.New("FLY_APP_NAME env is missing")
 	}
 
+	// Obtain cluster info
+	cluster, err := fly.Cluster(appName)
+
+	if err != nil {
+		log.Debugf("Failed to retrieve Fly app info from DNS: %v", err)
+	}
+
+	// Whether we can use embedded NATS broker with this setup
+	singleNode := cluster != nil && cluster.NumVMs() == 1
+	multiNode := cluster != nil && cluster.NumVMs() > 1
+	useNATSBroker := cluster != nil && cluster.NumRegions() == 1 && cluster.NumVMs() >= 3
+
 	// Use the same port for HTTP broadcasts by default
 	if c.HTTPBroadcast.Port == defaults.HTTPBroadcast.Port {
 		c.HTTPBroadcast.Port = c.Port
@@ -96,21 +109,31 @@ func (c *Config) loadFlyPreset(defaults *Config) error {
 	if c.PubSubAdapter == defaults.PubSubAdapter {
 		if c.Redis.URL != defaults.Redis.URL {
 			c.PubSubAdapter = "redis"
-		} else {
-			c.PubSubAdapter = "nats"
+		}
+	}
 
-			// NATS hasn't been configured, so we can embed it
-			if !c.EmbedNats || c.NATS.Servers == defaults.NATS.Servers {
-				c.EmbedNats = true
-				c.NATS.Servers = c.EmbeddedNats.ServiceAddr
+	if multiNode {
+		if c.PubSubAdapter == defaults.PubSubAdapter {
+			c.PubSubAdapter = "nats"
+		}
+
+		// NATS hasn't been configured, so we can embed it
+		if !c.EmbedNats || c.NATS.Servers == defaults.NATS.Servers {
+			c.EmbedNats = true
+			c.NATS.Servers = c.EmbeddedNats.ServiceAddr
+		}
+
+		if c.BrokerAdapter == defaults.BrokerAdapter {
+			if useNATSBroker {
+				log.WithField("context", "config").Infof("Discovered %d VMs in the same ragion -> enabling NATS broker", cluster.NumVMs())
+				c.BrokerAdapter = "nats"
 			}
 		}
 	}
 
-	if c.BrokerAdapter == defaults.BrokerAdapter {
-		if c.EmbedNats {
-			c.BrokerAdapter = "nats"
-		}
+	if singleNode {
+		log.WithField("context", "config").Infof("Discovered a single node cluster -> enabling in-memory broker")
+		c.BrokerAdapter = "memory"
 	}
 
 	if rpcName, ok := os.LookupEnv("ANYCABLE_FLY_RPC_APP_NAME"); ok {

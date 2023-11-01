@@ -2,6 +2,10 @@
 
 ## master
 
+- Infer default configuration for Fly apps based on the cluster formation. ([@palkan][])
+
+  Automatically enable broker (in-memory or embedded NATS-based) depending on the number of VMs in the cluster.
+
 - Add NATS-based broker. ([@palkan][])
 
 ## 1.4.6 (2023-10-25)
