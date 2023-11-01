@@ -435,9 +435,10 @@ func (n *NATS) ensureStreamExists(stream string) error {
 		ctx := context.Background()
 
 		_, err := n.js.CreateStream(ctx, jetstream.StreamConfig{
-			Name:    prefixedStream,
-			MaxMsgs: int64(n.conf.HistoryLimit),
-			MaxAge:  time.Duration(n.conf.HistoryTTL * int64(time.Second)),
+			Name:     prefixedStream,
+			MaxMsgs:  int64(n.conf.HistoryLimit),
+			MaxAge:   time.Duration(n.conf.HistoryTTL * int64(time.Second)),
+			Replicas: 1,
 		})
 
 		if err != nil {
@@ -494,8 +495,9 @@ bucketSetup:
 		n.log.Debugf("no JetStream bucket found, creating a new one: %s", key)
 		var berr error
 		bucket, berr = n.js.CreateKeyValue(context.Background(), jetstream.KeyValueConfig{
-			Bucket: key,
-			TTL:    ttl,
+			Bucket:   key,
+			TTL:      ttl,
+			Replicas: 1,
 		})
 
 		if berr != nil {

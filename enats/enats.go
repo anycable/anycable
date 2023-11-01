@@ -19,6 +19,15 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
+// NewConfig returns defaults for NATSServiceConfig
+func NewConfig() Config {
+	return Config{
+		ServiceAddr:           nats.DefaultURL,
+		ClusterName:           "anycable-cluster",
+		JetStreamReadyTimeout: 30, // seconds
+	}
+}
+
 const (
 	serverStartTimeout = 5 * time.Second
 )
@@ -45,14 +54,6 @@ func (e *LogEntry) Noticef(format string, v ...interface{}) {
 // Tracef is an alias for Debugf
 func (e *LogEntry) Tracef(format string, v ...interface{}) {
 	e.Debugf(format, v...)
-}
-
-// NewConfig returns defaults for NATSServiceConfig
-func NewConfig() Config {
-	return Config{
-		ServiceAddr: nats.DefaultURL,
-		ClusterName: "anycable-cluster",
-	}
 }
 
 // NewService returns an instance of NATS service
@@ -127,7 +128,7 @@ func (s *Service) Start() error {
 // WaitReady waits while NATS server is starting
 func (s *Service) WaitReady() error {
 	if s.server.ReadyForConnections(serverStartTimeout) {
-		return nil
+		return s.WaitJetStreamReady(s.config.JetStreamReadyTimeout)
 	}
 
 	return errorx.TimeoutElapsed.New(
@@ -295,4 +296,47 @@ func (s *Service) serverName() string {
 
 	s.name = strings.ReplaceAll(strings.ReplaceAll(s.config.ServiceAddr, ":", "-"), "/", "") + "-" + suf
 	return s.name
+}
+
+func (s *Service) WaitJetStreamReady(maxSeconds int) error {
+	if !s.config.JetStream {
+		return nil
+	}
+
+	start := time.Now()
+	for {
+		if time.Since(start) > time.Duration(maxSeconds)*time.Second {
+			return fmt.Errorf("JetStream is not ready after %d seconds", maxSeconds)
+		}
+
+		c, err := nats.Connect("", nats.InProcessServer(s.server))
+		if err != nil {
+			log.Debugf("NATS server not accepting connections: %v", err)
+			continue
+		}
+
+		j, err := c.JetStream()
+		if err != nil {
+			return err
+		}
+
+		st, err := j.StreamInfo("__anycable__ready__", nats.MaxWait(1*time.Second))
+		if err == nats.ErrStreamNotFound || st != nil {
+			leader := s.server.JetStreamIsLeader()
+			log.Debugf("JetStream cluster is ready: leader=%v", leader)
+
+			// FIXME: This hack is needed to give leader some time to prepare the state (e.g., broker epoch)
+			if !leader {
+				time.Sleep(1 * time.Second)
+			}
+
+			return nil
+		}
+
+		c.Close()
+
+		log.Debugf("JetStream cluster is not ready yet, waiting for 1 second...")
+
+		time.Sleep(1 * time.Second)
+	}
 }

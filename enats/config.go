@@ -14,4 +14,6 @@ type Config struct {
 	Routes           []string
 	JetStream        bool
 	StoreDir         string
+	// Seconds to wait for JetStream to become ready (can take a lot of time when connecting to a cluster)
+	JetStreamReadyTimeout int
 }

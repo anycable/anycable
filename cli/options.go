@@ -501,6 +501,13 @@ func embeddedNatsCLIFlags(c *config.Config, routes *string, gateways *string) []
 			Destination: &c.EmbeddedNats.GatewayAdvertise,
 		},
 
+		&cli.StringFlag{
+			Name:        "enats_store_dir",
+			Usage:       "Embedded NATS store directory (for JetStream)",
+			Value:       c.EmbeddedNats.StoreDir,
+			Destination: &c.EmbeddedNats.StoreDir,
+		},
+
 		&cli.BoolFlag{
 			Name:        "enats_debug",
 			Usage:       "Enable NATS server logs",

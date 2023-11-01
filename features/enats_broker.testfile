@@ -1,0 +1,131 @@
+launch :rpc, "bundle exec anyt --only-rpc",
+ env: {"ANYCABLE_BROADCAST_ADAPTER" => "http"}
+wait_tcp 50051
+
+store_path = File.expand_path("../tmp/nats-data", __dir__)
+FileUtils.rm_rf(store_path) if File.directory?(store_path)
+
+launch :anycable_1,
+  "./dist/anycable-go --broker=nats --pubsub=nats --broadcast_adapter=http --embed_nats --enats_addr=nats://localhost:4242 --enats_cluster=nats://localhost:4342 --enats_gateway=nats://localhost:4442 --enats_cluster_routes=nats://localhost:4342 --enats_store_dir=#{store_path}/one"
+
+launch :anycable_2,
+  "./dist/anycable-go --port 8081 --broker=nats --pubsub=nats --broadcast_adapter=nats --embed_nats --enats_addr=nats://localhost:4243 --enats_cluster=nats://localhost:4343 --enats_cluster_routes=nats://localhost:4342 --enats_store_dir=#{store_path}/two"
+
+wait_tcp 8080
+wait_tcp 8081
+
+# We need to wait a bit for the NATS servers to find each other
+sleep 2
+
+scenario = [
+  {
+    client: {
+      protocol: "action_cable",
+      name: "publisher",
+      actions: [
+        {
+          subscribe: {
+            channel: "BenchmarkChannel"
+          }
+        },
+        {
+          perform: {
+            channel: "BenchmarkChannel",
+            action: "broadcast",
+            data: {
+              message: "hello"
+            }
+          }
+        },
+        {
+          receive: {
+            channel: "BenchmarkChannel",
+            "data>": {
+              message: "hello",
+              action: "broadcast",
+            },
+            stream_id: "all"
+          }
+        },
+        {
+          receive: {
+            channel: "BenchmarkChannel",
+            data: {
+              message: "hello",
+              action: "broadcastResult"
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    client: {
+      protocol: "action_cable",
+      name: "subscriber",
+      connection_options: {
+        url: "http://localhost:8080/cable"
+      },
+      actions: [
+        {
+          subscribe: {
+            channel: "BenchmarkChannel"
+          }
+        },
+        {
+          receive: {
+            channel: "BenchmarkChannel",
+            "data>": {
+              message: "hello",
+              action: "broadcast"
+            },
+            stream_id: "all"
+          }
+        }
+      ]
+    }
+  },
+  {
+    client: {
+      protocol: "action_cable",
+      name: "another_subscriber",
+      connection_options: {
+        url: "http://localhost:8081/cable"
+      },
+      actions: [
+        {
+          subscribe: {
+            channel: "BenchmarkChannel"
+          }
+        },
+        {
+          receive: {
+            channel: "BenchmarkChannel",
+            "data>": {
+              message: "hello",
+              action: "broadcast"
+            },
+            stream_id: "all"
+          }
+        }
+      ]
+    }
+  }
+]
+
+TEST_COMMAND = <<~CMD
+  bundle exec wsdirector ws://localhost:8080/cable -i #{scenario.to_json}
+CMD
+
+# NATS super-cluster may take longer to fully connect
+retrying(delay: 2) do
+  run :wsdirector, TEST_COMMAND
+
+  result = stdout(:wsdirector)
+
+  unless result.include?("Group publisher: 1 clients, 0 failures") &&
+    result.include?("Group subscriber: 1 clients, 0 failures") &&
+    result.include?("Group another_subscriber: 1 clients, 0 failures")
+    fail "Unexpected scenario result:\n#{result}"
+  end
+end

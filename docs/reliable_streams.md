@@ -114,6 +114,8 @@ The default broker adapter. It stores all data in memory. It can be used **only 
 
 ### NATS
 
+_🧪 Experimental_
+
 This adapter uses [NATS JetStream](https://nats.io/) as a shared distributed storage for sessions and streams cache and also keeps a local snapshot in memory (using the in-memory adapter described above).
 
 It can be used with both external NATS and [embedded NATS](./embedded_nats.md):
