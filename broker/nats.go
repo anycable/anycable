@@ -363,7 +363,7 @@ func (n *NATS) addStreamConsumer(stream string) {
 
 	n.jconsumers.fetch(stream, func() (jetstream.Consumer, error) { // nolint:errcheck
 		cons, err := n.js.CreateConsumer(context.Background(), prefixedStream, jetstream.ConsumerConfig{
-			AckPolicy: jetstream.AckExplicitPolicy,
+			AckPolicy: jetstream.AckNonePolicy,
 		})
 
 		if err != nil {
