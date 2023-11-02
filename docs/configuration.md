@@ -131,6 +131,7 @@ The preset provide the following defaults:
 
 - `host`: "0.0.0.0"
 - `http_broadcast_port`: `$PORT` (set to the same value as the main HTTP port).
+- `broadcast_adapter`: "http" (unless Redis is configured)
 - `enats_server_addr`: "nats://0.0.0.0:4222"
 - `enats_cluster_addr`: "nats://0.0.0.0:5222"
 - `enats_cluster_name`: "\<FLY_APP_NAME\>-\<FLY_REGION\>-cluster"

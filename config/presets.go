@@ -67,6 +67,8 @@ func (c *Config) loadFlyPreset(defaults *Config) error {
 		return errors.New("FLY_APP_NAME env is missing")
 	}
 
+	redisEnabled := (c.Redis.URL != defaults.Redis.URL)
+
 	// Obtain cluster info
 	cluster, err := fly.Cluster(appName)
 
@@ -107,12 +109,16 @@ func (c *Config) loadFlyPreset(defaults *Config) error {
 	// Enable embedded NATS by default unless another adapter is set for PubSub
 	// or Redis URL is provided
 	if c.PubSubAdapter == defaults.PubSubAdapter {
-		if c.Redis.URL != defaults.Redis.URL {
+		if redisEnabled {
 			c.PubSubAdapter = "redis"
 		}
 	}
 
 	if multiNode {
+		if !redisEnabled && c.BroadcastAdapter == defaults.BroadcastAdapter {
+			c.BroadcastAdapter = "http,nats"
+		}
+
 		if c.PubSubAdapter == defaults.PubSubAdapter {
 			c.PubSubAdapter = "nats"
 		}
@@ -134,6 +140,10 @@ func (c *Config) loadFlyPreset(defaults *Config) error {
 	if singleNode {
 		log.WithField("context", "config").Infof("Discovered a single node cluster -> enabling in-memory broker")
 		c.BrokerAdapter = "memory"
+
+		if !redisEnabled && c.BroadcastAdapter == defaults.BroadcastAdapter {
+			c.BroadcastAdapter = "http"
+		}
 	}
 
 	if rpcName, ok := os.LookupEnv("ANYCABLE_FLY_RPC_APP_NAME"); ok {

@@ -77,6 +77,7 @@ func TestFlyPresets_when_single_vm_discovered(t *testing.T) {
 	// In-memory broker is good enough for single node, no pub/sub needed
 	assert.Equal(t, false, config.EmbedNats)
 	assert.Equal(t, "", config.PubSubAdapter)
+	assert.Equal(t, "http", config.BroadcastAdapter)
 	assert.Equal(t, "memory", config.BrokerAdapter)
 	assert.Equal(t, "nats://0.0.0.0:4222", config.EmbeddedNats.ServiceAddr)
 }
@@ -105,6 +106,7 @@ func TestFlyPresets_when_two_vms_discovered(t *testing.T) {
 	assert.Equal(t, "0.0.0.0", config.Host)
 	assert.Equal(t, 8989, config.Port)
 	assert.Equal(t, 8989, config.HTTPBroadcast.Port)
+	assert.Equal(t, "http,nats", config.BroadcastAdapter)
 	assert.Equal(t, true, config.EmbedNats)
 	assert.Equal(t, "nats", config.PubSubAdapter)
 	// We do not enable broker by default, since it requires at least 3 nodes or exactly 1
@@ -139,6 +141,7 @@ func TestFlyPresets_when_three_vms_discovered(t *testing.T) {
 	assert.Equal(t, "0.0.0.0", config.Host)
 	assert.Equal(t, 8989, config.Port)
 	assert.Equal(t, 8989, config.HTTPBroadcast.Port)
+	assert.Equal(t, "http,nats", config.BroadcastAdapter)
 	assert.Equal(t, true, config.EmbedNats)
 	assert.Equal(t, "nats", config.PubSubAdapter)
 	assert.Equal(t, "nats", config.BrokerAdapter)
@@ -173,6 +176,7 @@ func TestFlyPresets_when_three_vms_from_different_regions(t *testing.T) {
 	assert.Equal(t, 8989, config.Port)
 	assert.Equal(t, 8989, config.HTTPBroadcast.Port)
 	assert.Equal(t, true, config.EmbedNats)
+	assert.Equal(t, "http,nats", config.BroadcastAdapter)
 	assert.Equal(t, "nats", config.PubSubAdapter)
 	// Currently, we do not enable broker for multi-region setup; we need to figure this out later
 	assert.Equal(t, "", config.BrokerAdapter)
