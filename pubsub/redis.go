@@ -3,8 +3,6 @@ package pubsub
 import (
 	"context"
 	"errors"
-	"math"
-	"math/rand"
 	"sync"
 	"time"
 
@@ -302,7 +300,7 @@ func (s *RedisSubscriber) maybeReconnect(done chan (error)) {
 
 	s.reconnectAttempt++
 
-	delay := nextRetry(s.reconnectAttempt - 1)
+	delay := utils.NextRetry(s.reconnectAttempt - 1)
 
 	s.log.Infof("Next Redis reconnect attempt in %s", delay)
 	time.Sleep(delay)
@@ -320,16 +318,4 @@ func (s *RedisSubscriber) maybeReconnect(done chan (error)) {
 			s.streamsCh <- sub
 		}
 	}
-}
-
-func nextRetry(step int) time.Duration {
-	if step == 0 {
-		return 250 * time.Millisecond
-	}
-
-	left := math.Pow(2, float64(step))
-	right := 2 * left
-
-	secs := left + (right-left)*rand.Float64() // nolint:gosec
-	return time.Duration(secs) * time.Second
 }

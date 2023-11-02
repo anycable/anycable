@@ -10,6 +10,7 @@ import (
 
 	"github.com/FZambia/sentinel"
 	rconfig "github.com/anycable/anycable-go/redis"
+	"github.com/anycable/anycable-go/utils"
 
 	"github.com/apex/log"
 	"github.com/gomodule/redigo/redis"
@@ -169,7 +170,7 @@ func (s *LegacyRedisBroadcaster) keepalive(done chan (error)) {
 			return
 		}
 
-		delay := nextRetry(s.reconnectAttempt)
+		delay := utils.NextRetry(s.reconnectAttempt)
 
 		s.log.Infof("Next Redis reconnect attempt in %s", delay)
 		time.Sleep(delay)

@@ -10,6 +10,7 @@ import (
 
 	"github.com/anycable/anycable-go/common"
 	natsconfig "github.com/anycable/anycable-go/nats"
+	"github.com/anycable/anycable-go/utils"
 	"github.com/apex/log"
 	"github.com/joomcode/errorx"
 	nanoid "github.com/matoous/go-nanoid"
@@ -135,7 +136,7 @@ func (n *NATS) Start(done chan (error)) error {
 
 	// Initialize JetStream asynchronously, because we may need to wait for JetStream cluster to be ready
 	go func() {
-		err := n.initJetStream()
+		err := n.initJetStreamWithRetry()
 		readyFn(err)
 		if err != nil && done != nil {
 			done <- err
@@ -174,6 +175,33 @@ func (n *NATS) Ready(timeout ...time.Duration) error {
 		return nil
 	} else {
 		return cause
+	}
+}
+
+func (n *NATS) initJetStreamWithRetry() error {
+	attempt := 0
+
+	for {
+		err := n.initJetStream()
+
+		if err == nil {
+			return nil
+		}
+
+		// delay with exponentional backoff, min 1s, max 60s
+		delay := utils.NextRetry(attempt)
+		attempt++
+
+		if attempt > 5 {
+			return errorx.Decorate(err, "JetStream is unavailable")
+		}
+
+		n.log.Warnf("JetStream initialization failed: %v", err)
+
+		n.log.Infof("Next JetStream initialization attempt in %s", delay)
+		time.Sleep(delay)
+
+		n.log.Infof("Re-initializing JetStream...")
 	}
 }
 

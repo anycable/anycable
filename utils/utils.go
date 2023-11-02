@@ -2,7 +2,10 @@ package utils
 
 import (
 	"encoding/json"
+	"math"
+	"math/rand"
 	"os"
+	"time"
 
 	"github.com/apex/log"
 	"github.com/mattn/go-isatty"
@@ -32,4 +35,18 @@ func Keys[T any](val map[string]T) []string {
 	}
 
 	return res
+}
+
+// NextRetry returns a cooldown duration before next attempt using
+// a simple exponential backoff
+func NextRetry(step int) time.Duration {
+	if step == 0 {
+		return 250 * time.Millisecond
+	}
+
+	left := math.Pow(2, float64(step))
+	right := 2 * left
+
+	secs := left + (right-left)*rand.Float64() // nolint:gosec
+	return time.Duration(secs) * time.Second
 }

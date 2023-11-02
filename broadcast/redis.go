@@ -4,13 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
-	"math/rand"
 	"strings"
 	"sync"
 	"time"
 
 	rconfig "github.com/anycable/anycable-go/redis"
+	"github.com/anycable/anycable-go/utils"
 
 	"github.com/apex/log"
 	nanoid "github.com/matoous/go-nanoid"
@@ -280,7 +279,7 @@ func (s *RedisBroadcaster) maybeReconnect(done chan (error)) {
 
 	s.reconnectAttempt++
 
-	delay := nextRetry(s.reconnectAttempt - 1)
+	delay := utils.NextRetry(s.reconnectAttempt - 1)
 
 	s.log.Infof("Next Redis reconnect attempt in %s", delay)
 	time.Sleep(delay)
@@ -297,16 +296,4 @@ func (s *RedisBroadcaster) maybeReconnect(done chan (error)) {
 	s.clientMu.Unlock()
 
 	go s.runReader(done)
-}
-
-func nextRetry(step int) time.Duration {
-	if step == 0 {
-		return 250 * time.Millisecond
-	}
-
-	left := math.Pow(2, float64(step))
-	right := 2 * left
-
-	secs := left + (right-left)*rand.Float64() // nolint:gosec
-	return time.Duration(secs) * time.Second
 }
