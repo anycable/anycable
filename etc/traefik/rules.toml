@@ -1,0 +1,13 @@
+# rules.toml
+
+[http.routers.websocket]
+  rule = "Host(`localhost`) && Path(`/cable`)"
+  service = "websocket"
+
+[http.services.websocket.loadBalancer]
+  [[http.services.websocket.loadBalancer.servers]]
+    url = "http://localhost:8081"
+  [[http.services.websocket.loadBalancer.servers]]
+    url = "http://localhost:8082"
+  [[http.services.websocket.loadBalancer.servers]]
+    url = "http://localhost:8083"

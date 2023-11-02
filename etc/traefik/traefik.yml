@@ -1,0 +1,9 @@
+# traefik.yml
+
+entryPoints:
+  web:
+    address: ":8080"
+
+providers:
+  file:
+    filename: "./rules.toml"
