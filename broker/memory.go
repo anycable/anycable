@@ -181,6 +181,7 @@ type Memory struct {
 
 	streamsMu  sync.RWMutex
 	sessionsMu sync.RWMutex
+	epochMu    sync.RWMutex
 }
 
 var _ Broker = (*Memory)(nil)
@@ -201,7 +202,7 @@ func NewMemoryBroker(node Broadcaster, config *Config) *Memory {
 func (b *Memory) Announce() string {
 	return fmt.Sprintf(
 		"Using in-memory broker (epoch: %s, history limit: %d, history ttl: %ds, sessions ttl: %ds)",
-		b.epoch,
+		b.GetEpoch(),
 		b.config.HistoryLimit,
 		b.config.HistoryTTL,
 		b.config.SessionsTTL,
@@ -209,10 +210,16 @@ func (b *Memory) Announce() string {
 }
 
 func (b *Memory) GetEpoch() string {
+	b.epochMu.RLock()
+	defer b.epochMu.RUnlock()
+
 	return b.epoch
 }
 
 func (b *Memory) SetEpoch(v string) {
+	b.epochMu.Lock()
+	defer b.epochMu.Unlock()
+
 	b.epoch = v
 }
 
@@ -229,7 +236,7 @@ func (b *Memory) Shutdown(ctx context.Context) error {
 func (b *Memory) HandleBroadcast(msg *common.StreamMessage) {
 	offset := b.add(msg.Stream, msg.Data)
 
-	msg.Epoch = b.epoch
+	msg.Epoch = b.GetEpoch()
 	msg.Offset = offset
 
 	if b.tracker.Has(msg.Stream) {
@@ -264,8 +271,10 @@ func (b *Memory) Unsubscribe(stream string) string {
 }
 
 func (b *Memory) HistoryFrom(name string, epoch string, offset uint64) ([]common.StreamMessage, error) {
-	if b.epoch != epoch {
-		return nil, fmt.Errorf("Unknown epoch: %s, current: %s", epoch, b.epoch)
+	bepoch := b.GetEpoch()
+
+	if bepoch != epoch {
+		return nil, fmt.Errorf("Unknown epoch: %s, current: %s", epoch, bepoch)
 	}
 
 	stream := b.get(name)
@@ -281,7 +290,7 @@ func (b *Memory) HistoryFrom(name string, epoch string, offset uint64) ([]common
 			Stream: name,
 			Data:   entry.data,
 			Offset: entry.offset,
-			Epoch:  b.epoch,
+			Epoch:  bepoch,
 		})
 	})
 
@@ -299,6 +308,7 @@ func (b *Memory) HistorySince(name string, ts int64) ([]common.StreamMessage, er
 		return nil, nil
 	}
 
+	bepoch := b.GetEpoch()
 	history := []common.StreamMessage{}
 
 	err := stream.filterByTime(ts, func(entry *entry) {
@@ -306,7 +316,7 @@ func (b *Memory) HistorySince(name string, ts int64) ([]common.StreamMessage, er
 			Stream: name,
 			Data:   entry.data,
 			Offset: entry.offset,
-			Epoch:  b.epoch,
+			Epoch:  bepoch,
 		})
 	})
 

@@ -63,6 +63,7 @@ type LocalBroker interface {
 	Start() error
 	Shutdown(ctx context.Context) error
 	SetEpoch(epoch string)
+	GetEpoch() string
 	HistoryFrom(stream string, epoch string, offset uint64) ([]common.StreamMessage, error)
 	HistorySince(stream string, ts int64) ([]common.StreamMessage, error)
 	Store(stream string, msg []byte, seq uint64, ts time.Time) (uint64, error)

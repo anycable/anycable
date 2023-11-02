@@ -25,8 +25,9 @@ type NATS struct {
 	nconf *natsconfig.NATSConfig
 	conn  *nats.Conn
 
-	js jetstream.JetStream
-	kv jetstream.KeyValue
+	js      jetstream.JetStream
+	kv      jetstream.KeyValue
+	epochKV jetstream.KeyValue
 
 	jstreams   *lru[string]
 	jconsumers *lru[jetstream.Consumer]
@@ -36,8 +37,12 @@ type NATS struct {
 	local LocalBroker
 
 	clientMu sync.RWMutex
+	epochMu  sync.RWMutex
 
 	epoch string
+
+	shutdownCtx context.Context
+	shutdownFn  func()
 
 	log *log.Entry
 }
@@ -61,10 +66,14 @@ func WithNATSLocalBroker(b LocalBroker) NATSOption {
 }
 
 func NewNATSBroker(broadcaster Broadcaster, c *Config, nc *natsconfig.NATSConfig, opts ...NATSOption) *NATS {
+	shutdownCtx, shutdownFn := context.WithCancel(context.Background())
+
 	n := NATS{
 		broadcaster: broadcaster,
 		conf:        c,
 		nconf:       nc,
+		shutdownCtx: shutdownCtx,
+		shutdownFn:  shutdownFn,
 		tracker:     NewStreamsTracker(),
 		streamSync:  newStreamsSynchronizer(),
 		jstreams:    newLRU[string](time.Duration(c.HistoryTTL * int64(time.Second))),
@@ -134,17 +143,20 @@ func (n *NATS) Start() error {
 		return errorx.Decorate(err, "Failed to calculate epoch")
 	}
 
-	n.epoch = epoch
-
-	n.local.SetEpoch(epoch)
-
+	n.writeEpoch(epoch)
 	err = n.local.Start()
 
 	if err != nil {
 		return errorx.Decorate(err, "Failed to start internal memory broker")
 	}
 
-	n.log.Debugf("Current epoch: %s", n.epoch)
+	err = n.watchEpoch(n.shutdownCtx)
+
+	if err != nil {
+		n.log.Warnf("failed to set up epoch watcher: %s", err)
+	}
+
+	n.log.Debugf("Current epoch: %s", epoch)
 
 	return nil
 }
@@ -152,6 +164,8 @@ func (n *NATS) Start() error {
 func (n *NATS) Shutdown(ctx context.Context) error {
 	n.clientMu.Lock()
 	defer n.clientMu.Unlock()
+
+	n.shutdownFn()
 
 	if n.conn != nil {
 		n.conn.Close()
@@ -172,8 +186,8 @@ func (n *NATS) Announce() string {
 }
 
 func (n *NATS) Epoch() string {
-	n.clientMu.RLock()
-	defer n.clientMu.RUnlock()
+	n.epochMu.RLock()
+	defer n.epochMu.RUnlock()
 
 	return n.epoch
 }
@@ -193,13 +207,19 @@ func (n *NATS) SetEpoch(epoch string) error {
 		return err
 	}
 
-	n.epoch = epoch
-
-	if n.local != nil {
-		n.local.SetEpoch(epoch)
-	}
+	n.writeEpoch(epoch)
 
 	return nil
+}
+
+func (n *NATS) writeEpoch(val string) {
+	n.epochMu.Lock()
+	defer n.epochMu.Unlock()
+
+	n.epoch = val
+	if n.local != nil {
+		n.local.SetEpoch(val)
+	}
 }
 
 func (n *NATS) HandleBroadcast(msg *common.StreamMessage) {
@@ -210,7 +230,7 @@ func (n *NATS) HandleBroadcast(msg *common.StreamMessage) {
 		return
 	}
 
-	msg.Epoch = n.epoch
+	msg.Epoch = n.Epoch()
 	msg.Offset = offset
 
 	if n.tracker.Has(msg.Stream) {
@@ -487,6 +507,8 @@ fetchEpoch:
 		return "", errorx.Decorate(err, "failed to connect to JetStream KV")
 	}
 
+	n.epochKV = kv
+
 	_, err = kv.Create(context.Background(), epochKey, []byte(maybeNewEpoch))
 
 	if err != nil && strings.Contains(err.Error(), "key exists") {
@@ -506,6 +528,35 @@ fetchEpoch:
 	}
 
 	return maybeNewEpoch, nil
+}
+
+func (n *NATS) watchEpoch(ctx context.Context) error {
+	watcher, err := n.epochKV.Watch(context.Background(), epochKey, jetstream.IgnoreDeletes())
+
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				watcher.Stop() // nolint:errcheck
+				return
+			case entry := <-watcher.Updates():
+				if entry != nil {
+					newEpoch := string(entry.Value())
+
+					if n.Epoch() != newEpoch {
+						n.log.Warnf("epoch updated: %s", newEpoch)
+						n.writeEpoch(newEpoch)
+					}
+				}
+			}
+		}
+	}()
+
+	return nil
 }
 
 func (n *NATS) fetchBucketWithTTL(key string, ttl time.Duration) (jetstream.KeyValue, error) {

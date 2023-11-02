@@ -367,6 +367,29 @@ func TestNATSBroker_Epoch(t *testing.T) {
 	defer anotherBroker.Shutdown(context.Background()) // nolint: errcheck
 
 	assert.Equal(t, epoch, anotherBroker.Epoch())
+
+	// Now let's test that epoch changes are picked up
+	require.NoError(t, anotherBroker.SetEpoch("new-epoch"))
+
+	assert.Equal(t, "new-epoch", anotherBroker.Epoch())
+	assert.Equal(t, "new-epoch", anotherBroker.local.GetEpoch())
+
+	timer := time.After(2 * time.Second)
+
+wait:
+	for {
+		select {
+		case <-timer:
+			assert.Fail(t, "Epoch change wasn't picked up")
+			return
+		default:
+			if broker.Epoch() == "new-epoch" {
+				break wait
+			}
+
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
 }
 
 func buildNATSServer(t *testing.T, addr string) *enats.Service {
