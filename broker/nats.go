@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"strings"
 	"sync"
 	"time"
 
@@ -493,19 +494,19 @@ fetchEpoch:
 	kv, err := n.fetchBucketWithTTL(bucketKey, ttl)
 
 	if err != nil {
-		return "", errorx.Decorate(err, "Failed to connect to JetStream KV")
+		return "", errorx.Decorate(err, "failed to connect to JetStream KV")
 	}
 
-	entry, err := kv.Get(context.Background(), epochKey)
+	_, err = kv.Create(context.Background(), epochKey, []byte(maybeNewEpoch))
 
-	if err == jetstream.ErrKeyNotFound {
-		_, perr := kv.Put(context.Background(), epochKey, []byte(maybeNewEpoch))
+	if err != nil && strings.Contains(err.Error(), "key exists") {
+		entry, kerr := kv.Get(context.Background(), epochKey)
 
-		if perr != nil {
-			return "", errorx.Decorate(perr, "Failed to save JetStream KV epoch")
+		if kerr != nil {
+			return "", errorx.Decorate(kerr, "failed to retrieve key: %s", epochKey)
 		}
 
-		return maybeNewEpoch, nil
+		return string(entry.Value()), nil
 	} else if err != nil {
 		if context.DeadlineExceeded == err {
 			if attempts > 0 {
@@ -515,35 +516,25 @@ fetchEpoch:
 				goto fetchEpoch
 			}
 		}
-		return "", errorx.Decorate(err, "Failed to retrieve JetStream KV epoch")
+		return "", errorx.Decorate(err, "failed to create key: %s", epochKey)
 	}
 
-	return string(entry.Value()), nil
+	return maybeNewEpoch, nil
 }
 
 func (n *NATS) fetchBucketWithTTL(key string, ttl time.Duration) (jetstream.KeyValue, error) {
 	var bucket jetstream.KeyValue
-	newBucket := false
+	newBucket := true
 	attempts := 5
 
 bucketSetup:
-	bucket, err := n.js.KeyValue(context.Background(), key)
+	bucket, err := n.js.CreateKeyValue(context.Background(), jetstream.KeyValueConfig{
+		Bucket:   key,
+		TTL:      ttl,
+		Replicas: 1,
+	})
 
-	if err == jetstream.ErrBucketNotFound {
-		n.log.Debugf("no JetStream bucket found, creating a new one: %s", key)
-		var berr error
-		bucket, berr = n.js.CreateKeyValue(context.Background(), jetstream.KeyValueConfig{
-			Bucket:   key,
-			TTL:      ttl,
-			Replicas: 1,
-		})
-
-		if berr != nil {
-			return nil, errorx.Decorate(berr, "Failed to create JetStream KV bucket: %s", key)
-		}
-
-		newBucket = true
-	} else if err != nil {
+	if err != nil {
 		if context.DeadlineExceeded == err {
 			if attempts > 0 {
 				attempts--
@@ -551,9 +542,19 @@ bucketSetup:
 				time.Sleep(500 * time.Millisecond)
 				goto bucketSetup
 			}
+
+			return nil, errorx.Decorate(err, "failed to create JetStream KV bucket: %s", key)
 		}
 
-		return nil, errorx.Decorate(err, "Failed to retrieve JetStream KV bucket: %s", key)
+		// That means that bucket has been already created
+		if err == jetstream.ErrStreamNameAlreadyInUse {
+			newBucket = false
+			bucket, err = n.js.KeyValue(context.Background(), key)
+
+			if err != nil {
+				return nil, errorx.Decorate(err, "Failed to retrieve JetStream KV bucket: %s", key)
+			}
+		}
 	}
 
 	// Invalidate TTL settings if the bucket is the new one.

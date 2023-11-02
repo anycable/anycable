@@ -302,7 +302,7 @@ func TestNATSBroker_SessionsTTLChange(t *testing.T) {
 	aConfig.SessionsTTL = 3
 
 	anotherBroker := NewNATSBroker(nil, &aConfig, &nconfig)
-	anotherBroker.Start()                              // nolint: errcheck
+	require.NoError(t, anotherBroker.Start())          // nolint: errcheck
 	defer anotherBroker.Shutdown(context.Background()) // nolint: errcheck
 
 	// The session must be missing since we recreated the bucket due to TTL change
@@ -363,7 +363,7 @@ func TestNATSBroker_Epoch(t *testing.T) {
 	epoch := broker.Epoch()
 
 	anotherBroker := NewNATSBroker(nil, &config, &nconfig)
-	anotherBroker.Start()                              // nolint: errcheck
+	require.NoError(t, anotherBroker.Start())          // nolint: errcheck
 	defer anotherBroker.Shutdown(context.Background()) // nolint: errcheck
 
 	assert.Equal(t, epoch, anotherBroker.Epoch())

@@ -114,7 +114,7 @@ The default broker adapter. It stores all data in memory. It can be used **only 
 
 ### NATS
 
-_🧪 Experimental_
+_🧪 This adapter is currently in the experimental stage. Please, report any issues you may encounter._
 
 This adapter uses [NATS JetStream](https://nats.io/) as a shared distributed storage for sessions and streams cache and also keeps a local snapshot in memory (using the in-memory adapter described above).
 
@@ -138,6 +138,8 @@ $ anycable-go --embed_nats --broker=nats
   INFO 2023-10-28T00:59:01.205Z context=main Embedded NATS server started: nats://127.0.0.1:4222
   ...
 ```
+
+**IMPORTANT:** Your multi-node cluster MUST have at least **3 nodes** to use NATS JetStream. Super-cluster mode hasn't been tested yet.
 
 ### Redis
 

@@ -328,12 +328,6 @@ func (s *Service) WaitJetStreamReady(maxSeconds int) error {
 		if err == nats.ErrStreamNotFound || st != nil {
 			leader := s.server.JetStreamIsLeader()
 			log.Debugf("JetStream cluster is ready: leader=%v", leader)
-
-			// FIXME: This hack is needed to give leader some time to prepare the state (e.g., broker epoch)
-			if !leader {
-				time.Sleep(1 * time.Second)
-			}
-
 			return nil
 		}
 
