@@ -232,6 +232,13 @@ func (r *Runner) Run() error {
 		return errorx.Decorate(err, "!!! Subscriber failed !!!")
 	}
 
+	if appBroker != nil {
+		err = appBroker.Start(r.errChan)
+		if err != nil {
+			return errorx.Decorate(err, "!!! Broker failed !!!")
+		}
+	}
+
 	r.shutdownables = append(r.shutdownables, subscriber)
 
 	if r.broadcastersFactory != nil {

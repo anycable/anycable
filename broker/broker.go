@@ -33,7 +33,7 @@ type Cacheable interface {
 //
 //go:generate mockery --name Broker --output "../mocks" --outpkg mocks
 type Broker interface {
-	Start() error
+	Start(done chan (error)) error
 	Shutdown(ctx context.Context) error
 
 	Announce() string
@@ -60,7 +60,7 @@ type Broker interface {
 
 // LocalBroker is a single-node broker that can used to store streams data locally
 type LocalBroker interface {
-	Start() error
+	Start(done chan (error)) error
 	Shutdown(ctx context.Context) error
 	SetEpoch(epoch string)
 	GetEpoch() string
@@ -131,7 +131,7 @@ func NewLegacyBroker(broadcaster Broadcaster) *LegacyBroker {
 	}
 }
 
-func (LegacyBroker) Start() error {
+func (LegacyBroker) Start(done chan (error)) error {
 	return nil
 }
 

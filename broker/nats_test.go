@@ -30,8 +30,7 @@ var _ pubsub.Handler = (*FakeBroadastHandler)(nil)
 func TestNATSBroker_HistorySince_expiration(t *testing.T) {
 	port := 32
 	addr := fmt.Sprintf("nats://127.0.0.1:44%d", port)
-	server := buildNATSServer(t, addr)
-	err := server.Start()
+	server, err := startNATSServer(t, addr)
 	require.NoError(t, err)
 	defer server.Shutdown(context.Background()) // nolint:errcheck
 
@@ -45,7 +44,7 @@ func TestNATSBroker_HistorySince_expiration(t *testing.T) {
 	broadcaster := pubsub.NewLegacySubscriber(broadcastHandler)
 	broker := NewNATSBroker(broadcaster, &config, &nconfig)
 
-	err = broker.Start()
+	err = broker.Start(nil)
 	require.NoError(t, err)
 	defer broker.Shutdown(context.Background()) // nolint: errcheck
 
@@ -76,8 +75,8 @@ func TestNATSBroker_HistorySince_expiration(t *testing.T) {
 	assert.EqualValues(t, 4, history[1].Offset)
 	assert.Equal(t, "d", history[1].Data)
 
-	// Stream must be expired after 1 second
-	time.Sleep(2 * time.Second)
+	// Stream must be expired after 2 seconds
+	time.Sleep(3 * time.Second)
 
 	history, err = broker.HistorySince("test", start)
 	require.NoError(t, err)
@@ -87,8 +86,7 @@ func TestNATSBroker_HistorySince_expiration(t *testing.T) {
 func TestNATSBroker_HistorySince_with_limit(t *testing.T) {
 	port := 33
 	addr := fmt.Sprintf("nats://127.0.0.1:44%d", port)
-	server := buildNATSServer(t, addr)
-	err := server.Start()
+	server, err := startNATSServer(t, addr)
 	require.NoError(t, err)
 	defer server.Shutdown(context.Background()) // nolint:errcheck
 
@@ -102,7 +100,7 @@ func TestNATSBroker_HistorySince_with_limit(t *testing.T) {
 	broadcaster := pubsub.NewLegacySubscriber(broadcastHandler)
 	broker := NewNATSBroker(broadcaster, &config, &nconfig)
 
-	err = broker.Start()
+	err = broker.Start(nil)
 	require.NoError(t, err)
 	defer broker.Shutdown(context.Background()) // nolint: errcheck
 
@@ -130,9 +128,7 @@ func TestNATSBroker_HistorySince_with_limit(t *testing.T) {
 func TestNATSBroker_HistoryFrom(t *testing.T) {
 	port := 34
 	addr := fmt.Sprintf("nats://127.0.0.1:44%d", port)
-	server := buildNATSServer(t, addr)
-
-	err := server.Start()
+	server, err := startNATSServer(t, addr)
 	require.NoError(t, err)
 	defer server.Shutdown(context.Background()) // nolint:errcheck
 
@@ -145,7 +141,7 @@ func TestNATSBroker_HistoryFrom(t *testing.T) {
 	broadcaster := pubsub.NewLegacySubscriber(broadcastHandler)
 	broker := NewNATSBroker(broadcaster, &config, &nconfig)
 
-	err = broker.Start()
+	err = broker.Start(nil)
 	require.NoError(t, err)
 	defer broker.Shutdown(context.Background()) // nolint: errcheck
 
@@ -217,8 +213,7 @@ func (t *TestCacheable) ToCacheEntry() ([]byte, error) {
 func TestNATSBroker_Sessions(t *testing.T) {
 	port := 41
 	addr := fmt.Sprintf("nats://127.0.0.1:44%d", port)
-	server := buildNATSServer(t, addr)
-	err := server.Start()
+	server, err := startNATSServer(t, addr)
 	require.NoError(t, err)
 	defer server.Shutdown(context.Background()) // nolint:errcheck
 
@@ -230,7 +225,7 @@ func TestNATSBroker_Sessions(t *testing.T) {
 
 	broker := NewNATSBroker(nil, &config, &nconfig)
 
-	err = broker.Start()
+	err = broker.Start(nil)
 	require.NoError(t, err)
 
 	defer broker.Shutdown(context.Background()) // nolint: errcheck
@@ -239,8 +234,10 @@ func TestNATSBroker_Sessions(t *testing.T) {
 	require.NoError(t, err)
 
 	anotherBroker := NewNATSBroker(nil, &config, &nconfig)
-	anotherBroker.Start()                              // nolint: errcheck
+	require.NoError(t, anotherBroker.Start(nil))
 	defer anotherBroker.Shutdown(context.Background()) // nolint: errcheck
+
+	require.NoError(t, anotherBroker.Ready())
 
 	restored, err := anotherBroker.RestoreSession("test123")
 
@@ -277,8 +274,7 @@ func TestNATSBroker_SessionsTTLChange(t *testing.T) {
 	port := 43
 	addr := fmt.Sprintf("nats://127.0.0.1:44%d", port)
 
-	server := buildNATSServer(t, addr)
-	err := server.Start()
+	server, err := startNATSServer(t, addr)
 	require.NoError(t, err)
 	defer server.Shutdown(context.Background()) // nolint:errcheck
 
@@ -290,10 +286,12 @@ func TestNATSBroker_SessionsTTLChange(t *testing.T) {
 
 	broker := NewNATSBroker(nil, &config, &nconfig)
 
-	err = broker.Start()
+	err = broker.Start(nil)
 	require.NoError(t, err)
 
 	defer broker.Shutdown(context.Background()) // nolint: errcheck
+
+	require.NoError(t, broker.Ready())
 
 	err = broker.CommitSession("test123", &TestCacheable{"cache-me"})
 	require.NoError(t, err)
@@ -302,8 +300,10 @@ func TestNATSBroker_SessionsTTLChange(t *testing.T) {
 	aConfig.SessionsTTL = 3
 
 	anotherBroker := NewNATSBroker(nil, &aConfig, &nconfig)
-	require.NoError(t, anotherBroker.Start())          // nolint: errcheck
+	require.NoError(t, anotherBroker.Start(nil))
 	defer anotherBroker.Shutdown(context.Background()) // nolint: errcheck
+
+	require.NoError(t, anotherBroker.Ready())
 
 	// The session must be missing since we recreated the bucket due to TTL change
 	missing, err := anotherBroker.RestoreSession("test123")
@@ -342,8 +342,7 @@ func TestNATSBroker_Epoch(t *testing.T) {
 	port := 45
 	addr := fmt.Sprintf("nats://127.0.0.1:44%d", port)
 
-	server := buildNATSServer(t, addr)
-	err := server.Start()
+	server, err := startNATSServer(t, addr)
 	require.NoError(t, err)
 	defer server.Shutdown(context.Background()) // nolint:errcheck
 
@@ -354,17 +353,20 @@ func TestNATSBroker_Epoch(t *testing.T) {
 
 	broker := NewNATSBroker(nil, &config, &nconfig)
 
-	err = broker.Start()
+	err = broker.Start(nil)
 	require.NoError(t, err)
 	defer broker.Shutdown(context.Background()) // nolint: errcheck
 
+	require.NoError(t, broker.Ready())
 	broker.Reset() // nolint: errcheck
 
 	epoch := broker.Epoch()
 
 	anotherBroker := NewNATSBroker(nil, &config, &nconfig)
-	require.NoError(t, anotherBroker.Start())          // nolint: errcheck
+	require.NoError(t, anotherBroker.Start(nil))
 	defer anotherBroker.Shutdown(context.Background()) // nolint: errcheck
+
+	require.NoError(t, anotherBroker.Ready())
 
 	assert.Equal(t, epoch, anotherBroker.Epoch())
 
@@ -392,14 +394,24 @@ wait:
 	}
 }
 
-func buildNATSServer(t *testing.T, addr string) *enats.Service {
+func startNATSServer(t *testing.T, addr string) (*enats.Service, error) {
 	conf := enats.NewConfig()
 	conf.JetStream = true
 	conf.ServiceAddr = addr
 	conf.StoreDir = t.TempDir()
 	service := enats.NewService(&conf)
 
-	return service
+	err := service.Start()
+	if err != nil {
+		return nil, err
+	}
+
+	err = service.WaitJetStreamReady(5)
+	if err != nil {
+		return nil, err
+	}
+
+	return service, nil
 }
 
 type consumerSequenceReader struct {

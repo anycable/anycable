@@ -223,7 +223,7 @@ func (b *Memory) SetEpoch(v string) {
 	b.epoch = v
 }
 
-func (b *Memory) Start() error {
+func (b *Memory) Start(done chan (error)) error {
 	go b.expireLoop()
 
 	return nil

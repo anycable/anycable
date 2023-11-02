@@ -44,6 +44,10 @@ type NATS struct {
 	shutdownCtx context.Context
 	shutdownFn  func()
 
+	readyCtx         context.Context
+	broadcastBacklog []*common.StreamMessage
+	backlogMu        sync.Mutex
+
 	log *log.Entry
 }
 
@@ -53,6 +57,8 @@ const (
 	epochKey       = "_epoch_"
 	sessionsPrefix = ""
 	streamPrefix   = "_ac_"
+
+	jetstreamReadyTimeout = 1 * time.Second
 )
 
 var _ Broker = (*NATS)(nil)
@@ -69,16 +75,17 @@ func NewNATSBroker(broadcaster Broadcaster, c *Config, nc *natsconfig.NATSConfig
 	shutdownCtx, shutdownFn := context.WithCancel(context.Background())
 
 	n := NATS{
-		broadcaster: broadcaster,
-		conf:        c,
-		nconf:       nc,
-		shutdownCtx: shutdownCtx,
-		shutdownFn:  shutdownFn,
-		tracker:     NewStreamsTracker(),
-		streamSync:  newStreamsSynchronizer(),
-		jstreams:    newLRU[string](time.Duration(c.HistoryTTL * int64(time.Second))),
-		jconsumers:  newLRU[jetstream.Consumer](time.Duration(c.HistoryTTL * int64(time.Second))),
-		log:         log.WithField("context", "broker").WithField("provider", "nats"),
+		broadcaster:      broadcaster,
+		conf:             c,
+		nconf:            nc,
+		shutdownCtx:      shutdownCtx,
+		shutdownFn:       shutdownFn,
+		tracker:          NewStreamsTracker(),
+		broadcastBacklog: []*common.StreamMessage{},
+		streamSync:       newStreamsSynchronizer(),
+		jstreams:         newLRU[string](time.Duration(c.HistoryTTL * int64(time.Second))),
+		jconsumers:       newLRU[jetstream.Consumer](time.Duration(c.HistoryTTL * int64(time.Second))),
+		log:              log.WithField("context", "broker").WithField("provider", "nats"),
 	}
 
 	for _, opt := range opts {
@@ -93,7 +100,7 @@ func NewNATSBroker(broadcaster Broadcaster, c *Config, nc *natsconfig.NATSConfig
 }
 
 // Write Broker implementtaion here
-func (n *NATS) Start() error {
+func (n *NATS) Start(done chan (error)) error {
 	n.clientMu.Lock()
 	defer n.clientMu.Unlock()
 
@@ -120,13 +127,67 @@ func (n *NATS) Start() error {
 		return err
 	}
 
+	n.conn = nc
+
+	readyCtx, readyFn := context.WithCancelCause(context.Background())
+
+	n.readyCtx = readyCtx
+
+	// Initialize JetStream asynchronously, because we may need to wait for JetStream cluster to be ready
+	go func() {
+		err := n.initJetStream()
+		readyFn(err)
+		if err != nil && done != nil {
+			done <- err
+		}
+
+		if err != nil {
+			n.backlogFlush()
+		}
+	}()
+
+	return nil
+}
+
+func (n *NATS) Ready(timeout ...time.Duration) error {
+	var err error
+
+	if len(timeout) == 0 {
+		<-n.readyCtx.Done()
+	} else {
+		timer := time.After(timeout[0])
+
+		select {
+		case <-n.readyCtx.Done():
+		case <-timer:
+			err = fmt.Errorf("timeout waiting for JetStream to be ready")
+		}
+	}
+
+	if err != nil {
+		return err
+	}
+
+	cause := context.Cause(n.readyCtx)
+
+	if cause == context.Canceled {
+		return nil
+	} else {
+		return cause
+	}
+}
+
+func (n *NATS) initJetStream() error {
+	n.clientMu.Lock()
+	defer n.clientMu.Unlock()
+
+	nc := n.conn
 	js, err := jetstream.New(nc)
 
 	if err != nil {
 		return errorx.Decorate(err, "Failed to connect to JetStream")
 	}
 
-	n.conn = nc
 	n.js = js
 
 	kv, err := n.fetchBucketWithTTL(kvBucket, time.Duration(n.conf.SessionsTTL*int64(time.Second)))
@@ -144,7 +205,7 @@ func (n *NATS) Start() error {
 	}
 
 	n.writeEpoch(epoch)
-	err = n.local.Start()
+	err = n.local.Start(nil)
 
 	if err != nil {
 		return errorx.Decorate(err, "Failed to start internal memory broker")
@@ -156,8 +217,7 @@ func (n *NATS) Start() error {
 		n.log.Warnf("failed to set up epoch watcher: %s", err)
 	}
 
-	n.log.Debugf("Current epoch: %s", epoch)
-
+	n.log.Infof("NATS broker is ready (epoch=%s)", epoch)
 	return nil
 }
 
@@ -223,6 +283,13 @@ func (n *NATS) writeEpoch(val string) {
 }
 
 func (n *NATS) HandleBroadcast(msg *common.StreamMessage) {
+	err := n.Ready(jetstreamReadyTimeout)
+	if err != nil {
+		n.log.Debugf("JetStream is not ready yet to publish messages, add to backlog")
+		n.backlogAdd(msg)
+		return
+	}
+
 	offset, err := n.add(msg.Stream, msg.Data)
 
 	if err != nil {
@@ -264,16 +331,31 @@ func (n *NATS) Unsubscribe(stream string) string {
 }
 
 func (n *NATS) HistoryFrom(stream string, epoch string, offset uint64) ([]common.StreamMessage, error) {
+	err := n.Ready(jetstreamReadyTimeout)
+	if err != nil {
+		return nil, err
+	}
+
 	n.streamSync.sync(stream)
 	return n.local.HistoryFrom(stream, epoch, offset)
 }
 
 func (n *NATS) HistorySince(stream string, since int64) ([]common.StreamMessage, error) {
+	err := n.Ready(jetstreamReadyTimeout)
+	if err != nil {
+		return nil, err
+	}
+
 	n.streamSync.sync(stream)
 	return n.local.HistorySince(stream, since)
 }
 
 func (n *NATS) CommitSession(sid string, session Cacheable) error {
+	err := n.Ready(jetstreamReadyTimeout)
+	if err != nil {
+		return err
+	}
+
 	ctx := context.Background()
 	key := sessionsPrefix + sid
 	data, err := session.ToCacheEntry()
@@ -292,6 +374,11 @@ func (n *NATS) CommitSession(sid string, session Cacheable) error {
 }
 
 func (n *NATS) RestoreSession(sid string) ([]byte, error) {
+	err := n.Ready(jetstreamReadyTimeout)
+	if err != nil {
+		return nil, err
+	}
+
 	key := sessionsPrefix + sid
 	ctx := context.Background()
 
@@ -309,6 +396,11 @@ func (n *NATS) RestoreSession(sid string) ([]byte, error) {
 }
 
 func (n *NATS) FinishSession(sid string) error {
+	err := n.Ready(jetstreamReadyTimeout)
+	if err != nil {
+		return err
+	}
+
 	ctx := context.Background()
 	key := sessionsPrefix + sid
 
@@ -328,6 +420,11 @@ func (n *NATS) FinishSession(sid string) error {
 }
 
 func (n *NATS) Reset() error {
+	err := n.Ready(jetstreamReadyTimeout)
+	if err != nil {
+		return err
+	}
+
 	n.clientMu.Lock()
 	defer n.clientMu.Unlock()
 
@@ -363,6 +460,8 @@ func (n *NATS) add(stream string, data string) (uint64, error) {
 	ctx := context.Background()
 	key := streamPrefix + stream
 
+	// Touch on publish to make sure that the subsequent history fetch will return the latest messages
+	n.streamSync.touch(stream)
 	ack, err := n.js.Publish(ctx, key, []byte(data))
 
 	if err != nil {
@@ -820,4 +919,22 @@ func (n *NATS) shouldRetryOnError(err error, attempts *int, cooldown time.Durati
 	}
 
 	return false
+}
+
+func (n *NATS) backlogAdd(msg *common.StreamMessage) {
+	n.backlogMu.Lock()
+	defer n.backlogMu.Unlock()
+
+	n.broadcastBacklog = append(n.broadcastBacklog, msg)
+}
+
+func (n *NATS) backlogFlush() {
+	n.backlogMu.Lock()
+	defer n.backlogMu.Unlock()
+
+	for _, msg := range n.broadcastBacklog {
+		n.HandleBroadcast(msg)
+	}
+
+	n.broadcastBacklog = []*common.StreamMessage{}
 }

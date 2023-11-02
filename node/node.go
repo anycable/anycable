@@ -101,10 +101,6 @@ func (n *Node) Start() error {
 	go n.hub.Run()
 	go n.collectStats()
 
-	if err := n.broker.Start(); err != nil {
-		return err
-	}
-
 	return nil
 }
 

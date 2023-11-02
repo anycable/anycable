@@ -45,6 +45,18 @@ import (
 // - Make sure it is not restored (uses controller.Authenticate)
 func TestIntegrationRestore_Memory(t *testing.T) {
 	node, controller := setupIntegrationNode()
+
+	bconf := broker.NewConfig()
+	bconf.SessionsTTL = 2
+
+	subscriber := pubsub.NewLegacySubscriber(node)
+
+	br := broker.NewMemoryBroker(subscriber, &bconf)
+	br.SetEpoch("2022")
+	node.SetBroker(br)
+
+	require.NoError(t, br.Start(nil))
+
 	go node.Start()                           // nolint:errcheck
 	defer node.Shutdown(context.Background()) // nolint:errcheck
 
@@ -55,8 +67,7 @@ func TestIntegrationRestore_NATS(t *testing.T) {
 	port := 32
 	addr := fmt.Sprintf("nats://127.0.0.1:45%d", port)
 
-	server := buildNATSServer(t, addr)
-	err := server.Start()
+	server, err := startNATSServer(t, addr)
 	require.NoError(t, err)
 	defer server.Shutdown(context.Background()) // nolint:errcheck
 
@@ -72,7 +83,8 @@ func TestIntegrationRestore_NATS(t *testing.T) {
 	broker := broker.NewNATSBroker(broadcaster, &bconf, &nconfig)
 	node.SetBroker(broker)
 
-	require.NoError(t, node.Start())          // nolint:errcheck
+	require.NoError(t, node.Start())
+	require.NoError(t, broker.Start(nil))
 	defer node.Shutdown(context.Background()) // nolint:errcheck
 
 	require.NoError(t, broker.Reset())
@@ -242,6 +254,17 @@ func sharedIntegrationRestore(t *testing.T, node *Node, controller *mocks.Contro
 // - The session MUST receive the messages broadcasted during the unsubsciprtion period.
 func TestIntegrationHistory_Memory(t *testing.T) {
 	node, controller := setupIntegrationNode()
+
+	bconf := broker.NewConfig()
+
+	subscriber := pubsub.NewLegacySubscriber(node)
+
+	br := broker.NewMemoryBroker(subscriber, &bconf)
+	br.SetEpoch("2022")
+	node.SetBroker(br)
+
+	require.NoError(t, br.Start(nil))
+
 	go node.Start()                           // nolint:errcheck
 	defer node.Shutdown(context.Background()) // nolint:errcheck
 
@@ -252,8 +275,7 @@ func TestIntegrationHistory_NATS(t *testing.T) {
 	port := 33
 	addr := fmt.Sprintf("nats://127.0.0.1:45%d", port)
 
-	server := buildNATSServer(t, addr)
-	err := server.Start()
+	server, err := startNATSServer(t, addr)
 	require.NoError(t, err)
 	defer server.Shutdown(context.Background()) // nolint:errcheck
 
@@ -268,7 +290,8 @@ func TestIntegrationHistory_NATS(t *testing.T) {
 	broker := broker.NewNATSBroker(broadcaster, &bconf, &nconfig)
 	node.SetBroker(broker)
 
-	require.NoError(t, node.Start())          // nolint:errcheck
+	require.NoError(t, node.Start())
+	require.NoError(t, broker.Start(nil))
 	defer node.Shutdown(context.Background()) // nolint:errcheck
 
 	require.NoError(t, broker.Reset())
@@ -378,15 +401,6 @@ func setupIntegrationNode() (*Node, *mocks.Controller) {
 	node := NewNode(controller, metrics.NewMetrics(nil, 10), &config)
 	node.SetDisconnector(NewNoopDisconnector())
 
-	bconf := broker.NewConfig()
-	bconf.SessionsTTL = 2
-
-	subscriber := pubsub.NewLegacySubscriber(node)
-
-	br := broker.NewMemoryBroker(subscriber, &bconf)
-	br.SetEpoch("2022")
-	node.SetBroker(br)
-
 	return node, controller
 }
 
@@ -437,12 +451,22 @@ func requireAuthenticatedSession(t *testing.T, node *Node, sid string) *Session 
 	return session
 }
 
-func buildNATSServer(t *testing.T, addr string) *enats.Service {
+func startNATSServer(t *testing.T, addr string) (*enats.Service, error) {
 	conf := enats.NewConfig()
 	conf.JetStream = true
 	conf.ServiceAddr = addr
 	conf.StoreDir = t.TempDir()
 	service := enats.NewService(&conf)
 
-	return service
+	err := service.Start()
+	if err != nil {
+		return nil, err
+	}
+
+	err = service.WaitJetStreamReady(5)
+	if err != nil {
+		return nil, err
+	}
+
+	return service, nil
 }

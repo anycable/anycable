@@ -8,22 +8,38 @@ FileUtils.rm_rf(store_path) if File.directory?(store_path)
 launch :anycable_1,
   "./dist/anycable-go --port 8080 --broker=nats --pubsub=nats --broadcast_adapter=http --embed_nats --enats_addr=nats://localhost:4242 --enats_cluster=nats://localhost:4342 --enats_gateway=nats://localhost:4442 --enats_cluster_routes=nats://localhost:4342 --enats_store_dir=#{store_path}/one"
 
-sleep 2
+sleep 1
 
 launch :anycable_2,
   "./dist/anycable-go --port 8081 --broker=nats --pubsub=nats --broadcast_adapter=nats --embed_nats --enats_addr=nats://localhost:4243 --enats_cluster=nats://localhost:4343 --enats_cluster_routes=nats://localhost:4342 --enats_store_dir=#{store_path}/two"
 
-sleep 2
+sleep 1
 
 launch :anycable_3,
   "./dist/anycable-go --port 8082 --broker=nats --pubsub=nats --broadcast_adapter=nats --embed_nats --enats_addr=nats://localhost:4244 --enats_cluster=nats://localhost:4344 --enats_cluster_routes=nats://localhost:4342 --enats_store_dir=#{store_path}/three"
 
-wait_tcp 8080, timeout: 20
-wait_tcp 8081, timeout: 20
-wait_tcp 8082, timeout: 20
+wait_tcp 8080
+wait_tcp 8081
+wait_tcp 8082
+
+# Wait for JetStream to be ready; we can do this by checking that the epoch data has been written on disk
+timeout = 20
+log(:info) { "Waiting for JetStream to be ready" }
+loop do
+  break if Dir["#{store_path}/**/*"].any? { |f| f =~ /KV__anycable_epoch_/ }
+
+  Kernel.sleep 0.5
+  timeout -= 0.5
+
+  if timeout < 0
+    fail "JetStream is not ready"
+  end
+end
+
+# Let's wait for epoch to be propagated to all nodes
+sleep 2
 
 # We need to obtain epoch first
-
 epoch_scenario = [
   {
     client: {
@@ -59,12 +75,16 @@ epoch_scenario = [
   }
 ]
 
-run :wsdirector, "bundle exec wsdirector ws://localhost:8080/cable -i #{epoch_scenario.to_json}"
+result = nil
 
-result = stdout(:wsdirector)
+retrying(delay: 2) do
+  run :wsdirector, "bundle exec wsdirector ws://localhost:8080/cable -i #{epoch_scenario.to_json}"
 
-if result !~ /1 clients, 0 failures/
-  fail "Unexpected scenario result:\n#{result}"
+  result = stdout(:wsdirector)
+
+  if result !~ /1 clients, 0 failures/
+    fail "Unexpected scenario result:\n#{result}"
+  end
 end
 
 epoch = result.match(/"epoch":"([^"]+)"/)[1]

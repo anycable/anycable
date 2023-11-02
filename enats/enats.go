@@ -132,7 +132,12 @@ func (s *Service) Start() error {
 // WaitReady waits while NATS server is starting
 func (s *Service) WaitReady() error {
 	if s.server.ReadyForConnections(serverStartTimeout) {
-		return s.WaitJetStreamReady(s.config.JetStreamReadyTimeout)
+		// We don't want to block the bootstrap process while waiting for JetStream.
+		// JetStream requires a cluster to be formed before it can be enabled, but when we
+		// perform a rolling update, the newly created instance may have no network connectivity,
+		// thus, it won't be able to join the cluster and enable JetStream.
+		go s.WaitJetStreamReady(s.config.JetStreamReadyTimeout) // nolint:errcheck
+		return nil
 	}
 
 	return errorx.TimeoutElapsed.New(
