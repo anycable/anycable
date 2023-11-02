@@ -328,9 +328,7 @@ func (n *NATS) HandleBroadcast(msg *common.StreamMessage) {
 	msg.Epoch = n.Epoch()
 	msg.Offset = offset
 
-	if n.tracker.Has(msg.Stream) {
-		n.broadcaster.Broadcast(msg)
-	}
+	n.broadcaster.Broadcast(msg)
 }
 
 func (n *NATS) HandleCommand(msg *common.RemoteCommandMessage) {

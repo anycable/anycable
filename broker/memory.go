@@ -239,9 +239,7 @@ func (b *Memory) HandleBroadcast(msg *common.StreamMessage) {
 	msg.Epoch = b.GetEpoch()
 	msg.Offset = offset
 
-	if b.tracker.Has(msg.Stream) {
-		b.broadcaster.Broadcast(msg)
-	}
+	b.broadcaster.Broadcast(msg)
 }
 
 func (b *Memory) HandleCommand(msg *common.RemoteCommandMessage) {
