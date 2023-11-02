@@ -29,23 +29,18 @@ require (
 	github.com/urfave/cli/v2 v2.11.1
 	go.uber.org/automaxprocs v1.5.3
 	golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df
-	golang.org/x/net v0.15.0
+	golang.org/x/net v0.12.0
 	google.golang.org/grpc v1.53.0
 )
 
-require (
-	github.com/miekg/dns v1.1.56
-	github.com/sony/gobreaker v0.5.0
-)
+require github.com/sony/gobreaker v0.5.0
 
 require (
 	github.com/klauspost/compress v1.17.2 // indirect
 	github.com/minio/highwayhash v1.0.2 // indirect
 	github.com/nats-io/jwt/v2 v2.5.2 // indirect
 	github.com/xtgo/uuid v0.0.0-20140804021211-a0b114877d4c // indirect
-	golang.org/x/mod v0.12.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
-	golang.org/x/tools v0.13.0 // indirect
 )
 
 require (
