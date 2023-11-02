@@ -7,6 +7,8 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -108,6 +110,8 @@ func (s *Service) Start() error {
 
 	if s.config.StoreDir != "" {
 		opts.StoreDir = s.config.StoreDir
+	} else {
+		opts.StoreDir = filepath.Join(os.TempDir(), "nats-data", s.serverName())
 	}
 
 	s.server, err = server.NewServer(opts)

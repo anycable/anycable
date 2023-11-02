@@ -352,6 +352,8 @@ func (n *NATS) add(stream string, data string) (uint64, error) {
 }
 
 func (n *NATS) addStreamConsumer(stream string) {
+	attempts := 5
+
 	err := n.ensureStreamExists(stream)
 
 	if err != nil {
@@ -359,9 +361,10 @@ func (n *NATS) addStreamConsumer(stream string) {
 		return
 	}
 
+createConsumer:
 	prefixedStream := streamPrefix + stream
 
-	n.jconsumers.fetch(stream, func() (jetstream.Consumer, error) { // nolint:errcheck
+	_, err = n.jconsumers.fetch(stream, func() (jetstream.Consumer, error) { // nolint:errcheck
 		cons, err := n.js.CreateConsumer(context.Background(), prefixedStream, jetstream.ConsumerConfig{
 			AckPolicy: jetstream.AckNonePolicy,
 		})
@@ -407,6 +410,17 @@ func (n *NATS) addStreamConsumer(stream string) {
 		n.streamSync.remove(stream)
 		n.js.DeleteConsumer(context.Background(), prefixedStream, name) // nolint:errcheck
 	})
+
+	if err != nil {
+		if context.DeadlineExceeded == err {
+			if attempts > 0 {
+				attempts--
+				n.log.Warnf("failed to create consumer for stream %s, retrying in 500ms...", stream)
+				time.Sleep(500 * time.Millisecond)
+				goto createConsumer
+			}
+		}
+	}
 }
 
 func (n *NATS) consumeMessage(stream string, msg jetstream.Msg) {
@@ -430,7 +444,9 @@ func (n *NATS) consumeMessage(stream string, msg jetstream.Msg) {
 
 func (n *NATS) ensureStreamExists(stream string) error {
 	prefixedStream := streamPrefix + stream
+	attempts := 5
 
+createStream:
 	_, err := n.jstreams.fetch(stream, func() (string, error) {
 		ctx := context.Background()
 
@@ -451,16 +467,29 @@ func (n *NATS) ensureStreamExists(stream string) error {
 		return stream, nil
 	}, func(stream string) {})
 
+	if err != nil {
+		if context.DeadlineExceeded == err {
+			if attempts > 0 {
+				attempts--
+				n.log.Warnf("failed to create stream %s, retrying in 500ms...", stream)
+				time.Sleep(500 * time.Millisecond)
+				goto createStream
+			}
+		}
+	}
+
 	return err
 }
 
 func (n *NATS) calculateEpoch() (string, error) {
+	attempts := 5
 	maybeNewEpoch, _ := nanoid.Nanoid(4)
 
 	ttl := time.Duration(10 * int64(math.Max(float64(n.conf.HistoryTTL), float64(n.conf.SessionsTTL))*float64(time.Second)))
 	// We must use a separate bucket due to a different TTL
 	bucketKey := epochBucket
 
+fetchEpoch:
 	kv, err := n.fetchBucketWithTTL(bucketKey, ttl)
 
 	if err != nil {
@@ -478,6 +507,14 @@ func (n *NATS) calculateEpoch() (string, error) {
 
 		return maybeNewEpoch, nil
 	} else if err != nil {
+		if context.DeadlineExceeded == err {
+			if attempts > 0 {
+				attempts--
+				n.log.Warnf("failed to retrieve epoch, retrying in 1s...")
+				time.Sleep(1 * time.Second)
+				goto fetchEpoch
+			}
+		}
 		return "", errorx.Decorate(err, "Failed to retrieve JetStream KV epoch")
 	}
 
@@ -487,6 +524,7 @@ func (n *NATS) calculateEpoch() (string, error) {
 func (n *NATS) fetchBucketWithTTL(key string, ttl time.Duration) (jetstream.KeyValue, error) {
 	var bucket jetstream.KeyValue
 	newBucket := false
+	attempts := 5
 
 bucketSetup:
 	bucket, err := n.js.KeyValue(context.Background(), key)
@@ -506,6 +544,15 @@ bucketSetup:
 
 		newBucket = true
 	} else if err != nil {
+		if context.DeadlineExceeded == err {
+			if attempts > 0 {
+				attempts--
+				n.log.Warnf("failed to retrieve bucket %s, retrying in 500ms...", key)
+				time.Sleep(500 * time.Millisecond)
+				goto bucketSetup
+			}
+		}
+
 		return nil, errorx.Decorate(err, "Failed to retrieve JetStream KV bucket: %s", key)
 	}
 

@@ -6,22 +6,28 @@ store_path = File.expand_path("../tmp/nats-data", __dir__)
 FileUtils.rm_rf(store_path) if File.directory?(store_path)
 
 launch :anycable_1,
-  "./dist/anycable-go --broker=nats --pubsub=nats --broadcast_adapter=http --embed_nats --enats_addr=nats://localhost:4242 --enats_cluster=nats://localhost:4342 --enats_gateway=nats://localhost:4442 --enats_cluster_routes=nats://localhost:4342 --enats_store_dir=#{store_path}/one"
+  "./dist/anycable-go --port 8080 --broker=nats --pubsub=nats --broadcast_adapter=http --embed_nats --enats_addr=nats://localhost:4242 --enats_cluster=nats://localhost:4342 --enats_gateway=nats://localhost:4442 --enats_cluster_routes=nats://localhost:4342 --enats_store_dir=#{store_path}/one"
+
+sleep 2
 
 launch :anycable_2,
   "./dist/anycable-go --port 8081 --broker=nats --pubsub=nats --broadcast_adapter=nats --embed_nats --enats_addr=nats://localhost:4243 --enats_cluster=nats://localhost:4343 --enats_cluster_routes=nats://localhost:4342 --enats_store_dir=#{store_path}/two"
 
-wait_tcp 8080
-wait_tcp 8081
-
-# We need to wait a bit for the NATS servers to find each other
 sleep 2
 
-scenario = [
+launch :anycable_3,
+  "./dist/anycable-go --port 8082 --broker=nats --pubsub=nats --broadcast_adapter=nats --embed_nats --enats_addr=nats://localhost:4244 --enats_cluster=nats://localhost:4344 --enats_cluster_routes=nats://localhost:4342 --enats_store_dir=#{store_path}/three"
+
+wait_tcp 8080, timeout: 20
+wait_tcp 8081, timeout: 20
+wait_tcp 8082, timeout: 20
+
+# We need to obtain epoch first
+
+epoch_scenario = [
   {
     client: {
       protocol: "action_cable",
-      name: "publisher",
       actions: [
         {
           subscribe: {
@@ -44,7 +50,59 @@ scenario = [
               message: "hello",
               action: "broadcast",
             },
-            stream_id: "all"
+            stream_id: "all",
+            print: true
+          }
+        }
+      ]
+    }
+  }
+]
+
+run :wsdirector, "bundle exec wsdirector ws://localhost:8080/cable -i #{epoch_scenario.to_json}"
+
+result = stdout(:wsdirector)
+
+if result !~ /1 clients, 0 failures/
+  fail "Unexpected scenario result:\n#{result}"
+end
+
+epoch = result.match(/"epoch":"([^"]+)"/)[1]
+
+if epoch.nil? || epoch.empty?
+  fail "Epoch is missing"
+end
+
+scenario = [
+  {
+    client: {
+      protocol: "action_cable",
+      name: "publisher",
+      actions: [
+        {
+          subscribe: {
+            channel: "BenchmarkChannel"
+          }
+        },
+        "wait_all",
+        {
+          perform: {
+            channel: "BenchmarkChannel",
+            action: "broadcast",
+            data: {
+              message: "hello"
+            }
+          }
+        },
+        {
+          receive: {
+            channel: "BenchmarkChannel",
+            "data>": {
+              message: "hello",
+              action: "broadcast",
+            },
+            stream_id: "all",
+            epoch: epoch
           }
         },
         {
@@ -63,32 +121,7 @@ scenario = [
     client: {
       protocol: "action_cable",
       name: "subscriber",
-      connection_options: {
-        url: "http://localhost:8080/cable"
-      },
-      actions: [
-        {
-          subscribe: {
-            channel: "BenchmarkChannel"
-          }
-        },
-        {
-          receive: {
-            channel: "BenchmarkChannel",
-            "data>": {
-              message: "hello",
-              action: "broadcast"
-            },
-            stream_id: "all"
-          }
-        }
-      ]
-    }
-  },
-  {
-    client: {
-      protocol: "action_cable",
-      name: "another_subscriber",
+      multiplier: ":scale",
       connection_options: {
         url: "http://localhost:8081/cable"
       },
@@ -98,6 +131,7 @@ scenario = [
             channel: "BenchmarkChannel"
           }
         },
+        "wait_all",
         {
           receive: {
             channel: "BenchmarkChannel",
@@ -105,7 +139,37 @@ scenario = [
               message: "hello",
               action: "broadcast"
             },
-            stream_id: "all"
+            stream_id: "all",
+            epoch: epoch
+          }
+        }
+      ]
+    }
+  },
+  {
+    client: {
+      protocol: "action_cable",
+      name: "another_subscriber",
+      multiplier: ":scale",
+      connection_options: {
+        url: "http://localhost:8082/cable"
+      },
+      actions: [
+        {
+          subscribe: {
+            channel: "BenchmarkChannel"
+          }
+        },
+        "wait_all",
+        {
+          receive: {
+            channel: "BenchmarkChannel",
+            "data>": {
+              message: "hello",
+              action: "broadcast"
+            },
+            stream_id: "all",
+            epoch: epoch
           }
         }
       ]
@@ -114,18 +178,17 @@ scenario = [
 ]
 
 TEST_COMMAND = <<~CMD
-  bundle exec wsdirector ws://localhost:8080/cable -i #{scenario.to_json}
+  bundle exec wsdirector ws://localhost:8080/cable -i #{scenario.to_json} -s 4
 CMD
 
-# NATS super-cluster may take longer to fully connect
 retrying(delay: 2) do
   run :wsdirector, TEST_COMMAND
 
   result = stdout(:wsdirector)
 
   unless result.include?("Group publisher: 1 clients, 0 failures") &&
-    result.include?("Group subscriber: 1 clients, 0 failures") &&
-    result.include?("Group another_subscriber: 1 clients, 0 failures")
+    result.include?("Group subscriber: 4 clients, 0 failures") &&
+    result.include?("Group another_subscriber: 4 clients, 0 failures")
     fail "Unexpected scenario result:\n#{result}"
   end
 end
