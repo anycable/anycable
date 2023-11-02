@@ -43,6 +43,7 @@ func TestFlyPresets(t *testing.T) {
 	assert.Equal(t, true, config.EmbedNats)
 	assert.Equal(t, "nats", config.PubSubAdapter)
 	assert.Equal(t, "", config.BrokerAdapter)
+	assert.Contains(t, config.EmbeddedNats.Name, "fly-mag-1234-")
 	assert.Equal(t, "nats://0.0.0.0:4222", config.EmbeddedNats.ServiceAddr)
 	assert.Equal(t, "nats://0.0.0.0:5222", config.EmbeddedNats.ClusterAddr)
 	assert.Equal(t, "any-test-mag-cluster", config.EmbeddedNats.ClusterName)

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/apex/log"
+	gonanoid "github.com/matoous/go-nanoid"
 )
 
 func (c *Config) Presets() []string {
@@ -66,11 +67,19 @@ func (c *Config) loadFlyPreset(defaults *Config) error {
 		return errors.New("FLY_APP_NAME env is missing")
 	}
 
+	appId, _ := os.LookupEnv("FLY_ALLOC_ID")
+
 	redisEnabled := (c.Redis.URL != defaults.Redis.URL)
 
 	// Use the same port for HTTP broadcasts by default
 	if c.HTTPBroadcast.Port == defaults.HTTPBroadcast.Port {
 		c.HTTPBroadcast.Port = c.Port
+	}
+
+	if c.EmbeddedNats.Name == defaults.EmbeddedNats.Name && appId != "" {
+		// We need to be unique to avoid having duplicates during deployments
+		suf, _ := gonanoid.Nanoid(3) // nolint: errcheck
+		c.EmbeddedNats.Name = fmt.Sprintf("fly-%s-%s-%s", region, appId, suf)
 	}
 
 	if c.EmbeddedNats.ServiceAddr == defaults.EmbeddedNats.ServiceAddr {
