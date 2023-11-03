@@ -2,6 +2,8 @@
 
 ## master
 
+## 1.4.7
+
 - Add NATS-based broker. ([@palkan][])
 
 ## 1.4.6 (2023-10-25)
