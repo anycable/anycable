@@ -118,7 +118,7 @@ _🧪 This adapter is currently in the experimental stage. Please, report any is
 
 This adapter uses [NATS JetStream](https://nats.io/) as a shared distributed storage for sessions and streams cache and also keeps a local snapshot in memory (using the in-memory adapter described above).
 
-It can be used with both external NATS and [embedded NATS](./embedded_nats.md):
+Usage:
 
 ```sh
 $ anycable-go --broker=nats --nats_servers=nats://localhost:4222
@@ -128,7 +128,11 @@ $ anycable-go --broker=nats --nats_servers=nats://localhost:4222
   ...
 ```
 
-Or with embedded NATS:
+**NOTE:** You MUST have JetStream enabled in your NATS server. See [NATS JetStream documentation](https://docs.nats.io/nats-concepts/jetstream) for more information.
+
+### Using with embedded NATS
+
+[Embedded NATS](./embedded_nats.md) automatically enables JetStream if the NATS broker is being used:
 
 ```sh
 $ anycable-go --embed_nats --broker=nats
