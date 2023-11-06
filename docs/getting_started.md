@@ -25,7 +25,7 @@ go get -u -f github.com/anycable/anycable-go/cmd/anycable-go
 
 ### Via NPM
 
-For Node.js projects, there is also an option to install AnyCable-Go via NPM:
+For JavaScript projects, there is also an option to install AnyCable-Go via NPM:
 
 ```sh
 npm install --save-dev @anycable/anycable-go
