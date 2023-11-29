@@ -2,6 +2,12 @@
 
 ## master
 
+- Return support for an scheme omitted IP address in RPC_HOST. ([@ardecvz][])
+
+For example, `127.0.0.1:50051/anycable`.
+
+It's missing from 1.4.6 which introduced auto RPC implementation inferring from the RPC host.
+
 ## 1.4.7
 
 - Add NATS-based broker. ([@palkan][])
