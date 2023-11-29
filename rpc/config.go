@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strings"
 
 	pb "github.com/anycable/anycable-go/protos"
 )
@@ -73,10 +74,10 @@ func (c *Config) Impl() string {
 		return c.Implementation
 	}
 
-	uri, err := url.Parse(c.Host)
+	uri, err := url.Parse(ensureGrpcScheme(c.Host))
 
 	if err != nil {
-		return "<invalid rpc host>"
+		return fmt.Sprintf("<invalid RPC host: %s>", c.Host)
 	}
 
 	if uri.Scheme == "http" || uri.Scheme == "https" {
@@ -125,4 +126,12 @@ func (c *Config) TLSConfig() (*tls.Config, error) {
 	}
 
 	return tlsConfig, nil
+}
+
+func ensureGrpcScheme(url string) string {
+	if strings.Contains(url, "://") {
+		return url
+	}
+
+	return "grpc://" + url
 }
