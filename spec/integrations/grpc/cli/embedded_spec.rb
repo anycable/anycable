@@ -16,7 +16,7 @@ describe "CLI embedded", :cli do
 
       expect(subject).to be_failure
       expect(subject.transmissions).to eq(
-        [JSON.dump("type" => "disconnect", "reason" => "unauthorized")]
+        [JSON.dump({"type" => "disconnect", "reason" => "unauthorized"})]
       )
     end
   end

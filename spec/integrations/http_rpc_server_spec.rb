@@ -90,7 +90,7 @@ describe "HTTP RPC" do
         "path" => "/cable",
         "token" => "123"
       )
-      expect(subject.transmissions.first).to eq JSON.dump("type" => "welcome")
+      expect(subject.transmissions.first).to eq JSON.dump({"type" => "welcome"})
     end
 
     it "invokes Connect handler" do

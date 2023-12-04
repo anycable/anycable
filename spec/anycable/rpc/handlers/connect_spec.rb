@@ -19,7 +19,7 @@ describe AnyCable::RPC::Handlers::Connect do
     it "returns disconnect message" do
       expect(subject).to be_failure
       expect(subject.transmissions).to eq(
-        [JSON.dump("type" => "disconnect", "reason" => "unauthorized")]
+        [JSON.dump({"type" => "disconnect", "reason" => "unauthorized"})]
       )
     end
   end
@@ -48,7 +48,7 @@ describe AnyCable::RPC::Handlers::Connect do
         "path" => "/cable",
         "token" => "123"
       )
-      expect(subject.transmissions.first).to eq JSON.dump("type" => "welcome")
+      expect(subject.transmissions.first).to eq JSON.dump({"type" => "welcome"})
     end
   end
 
@@ -67,7 +67,7 @@ describe AnyCable::RPC::Handlers::Connect do
       expect(identifiers).to include(
         "token" => "abc123"
       )
-      expect(subject.transmissions.first).to eq JSON.dump("type" => "welcome")
+      expect(subject.transmissions.first).to eq JSON.dump({"type" => "welcome"})
     end
   end
 
