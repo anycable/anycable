@@ -46,3 +46,9 @@ gems:
     ignore: true
   - name: nats-pure
     ignore: true
+  - name: parser
+    ignore: true
+  - name: rubocop
+    ignore: true
+  - name: rubocop-ast
+    ignore: true
