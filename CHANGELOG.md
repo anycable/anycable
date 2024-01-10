@@ -2,6 +2,8 @@
 
 ## master
 
+- Add `--redis_disable_cache` option to disable client-side caching (not supported by some Redis providers). ([@palkan][])
+
 - Return support for an scheme omitted IP address in RPC_HOST. ([@ardecvz][])
 
 For example, `127.0.0.1:50051/anycable`.

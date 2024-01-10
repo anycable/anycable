@@ -31,6 +31,8 @@ type RedisConfig struct {
 	TLSVerify bool
 	// Max number of reconnect attempts
 	MaxReconnectAttempts int
+	// Disable client-side caching
+	DisableCache bool
 
 	// List of hosts to connect
 	hosts []string
@@ -50,6 +52,7 @@ func NewRedisConfig() RedisConfig {
 		SentinelDiscoveryInterval:   30,
 		TLSVerify:                   false,
 		MaxReconnectAttempts:        5,
+		DisableCache:                false,
 	}
 }
 
@@ -94,6 +97,8 @@ func (config *RedisConfig) ToRueidisOptions() (options *rueidis.ClientOption, er
 	if options.TLSConfig != nil {
 		options.TLSConfig.InsecureSkipVerify = !config.TLSVerify
 	}
+
+	options.DisableCache = config.DisableCache
 
 	return options, nil
 }

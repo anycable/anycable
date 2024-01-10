@@ -391,6 +391,13 @@ func redisCLIFlags(c *config.Config) []cli.Flag {
 			Value:       c.Redis.TLSVerify,
 			Destination: &c.Redis.TLSVerify,
 		},
+
+		&cli.BoolFlag{
+			Name:        "redis_disable_cache",
+			Usage:       "Disable client-side caching",
+			Value:       c.Redis.DisableCache,
+			Destination: &c.Redis.DisableCache,
+		},
 	})
 }
 
