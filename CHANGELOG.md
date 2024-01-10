@@ -2,6 +2,8 @@
 
 ## master
 
+## 1.4.8 (2024-01-10)
+
 - Add `--redis_disable_cache` option to disable client-side caching (not supported by some Redis providers). ([@palkan][])
 
 - Return support for an scheme omitted IP address in RPC_HOST. ([@ardecvz][])
@@ -10,7 +12,7 @@ For example, `127.0.0.1:50051/anycable`.
 
 It's missing from 1.4.6 which introduced auto RPC implementation inferring from the RPC host.
 
-## 1.4.7
+## 1.4.7 (2023-11-03)
 
 - Add NATS-based broker. ([@palkan][])
 
