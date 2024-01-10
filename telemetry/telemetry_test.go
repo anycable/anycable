@@ -80,7 +80,6 @@ func TestTracking(t *testing.T) {
 
 	assert.Equal(t, "boot", event.Event)
 	assert.Equal(t, version.Version(), event.Properties["version"])
-	assert.Equal(t, "ecs-fargate", event.Properties["deploy"])
 
 	time.Sleep(100 * time.Millisecond)
 
@@ -95,6 +94,7 @@ func TestTracking(t *testing.T) {
 	event = client.captured[1]
 
 	assert.Equal(t, "usage", event.Event)
+	assert.Equal(t, "ecs-fargate", event.Properties["deploy"])
 	assert.Equal(t, 14, int(event.Properties["clients_max"].(uint64)))
 	assert.Equal(t, 100, int(event.Properties["mem_sys_max"].(uint64)))
 

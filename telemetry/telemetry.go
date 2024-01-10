@@ -2,6 +2,7 @@ package telemetry
 
 import (
 	"context"
+	"maps"
 	"os"
 	"runtime"
 	"sync"
@@ -137,10 +138,22 @@ func (t *Tracker) collectUsage() {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	t.Send("usage", t.observations)
+	props := t.appProperties()
+	maps.Copy(props, t.observations)
+
+	t.Send("usage", props)
 }
 
 func (t *Tracker) bootProperties() map[string]interface{} {
+	props := posthog.NewProperties()
+
+	props.Set("version", version.Version())
+	props.Set("os", runtime.GOOS)
+
+	return props
+}
+
+func (t *Tracker) appProperties() map[string]interface{} {
 	props := posthog.NewProperties()
 
 	// Basic info
@@ -172,6 +185,10 @@ func (t *Tracker) bootProperties() map[string]interface{} {
 	props.Set("statsd", t.config.Metrics.Statsd.Enabled())
 	props.Set("prom", t.config.Metrics.HTTPEnabled())
 	props.Set("rpc-impl", t.config.RPC.Impl())
+
+	// AnyCable+
+	_, ok := os.LookupEnv("ANYCABLEPLUS_APP_NAME")
+	props.Set("plus", ok)
 
 	return props
 }
