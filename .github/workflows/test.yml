@@ -9,9 +9,6 @@ on:
 jobs:
   test:
     if: "!contains(github.event.head_commit.message, '[ci skip tests]')"
-    strategy:
-      matrix:
-        go-version: [1.20.x]
     runs-on: ubuntu-20.04
     env:
       GO111MODULE: on
@@ -24,7 +21,7 @@ jobs:
         ports: ["6379:6379"]
         options: --health-cmd="redis-cli ping" --health-interval 1s --health-timeout 3s --health-retries 30
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Install system deps
       run: |
         sudo apt-get update
@@ -38,9 +35,9 @@ jobs:
     - run: go mod vendor
     - name: Build mruby
       run: bash -c '(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)'
-    - uses: actions/setup-go@v3
+    - uses: actions/setup-go@v4
       with:
-        go-version: ${{ matrix.go-version }}
+        go-version-file: go.mod
     - name: Run tests
       run: make test
     - name: Report coverage
@@ -50,11 +47,10 @@ jobs:
         parallel: true
         flag-name: ${{ matrix.go-version }}-ubuntu
     - name: Build
-      if: matrix['go-version'] == '1.20.x'
       run: |
         make build
     - name: Upload linux build
-      if: matrix['go-version'] == '1.20.x' && (github.ref == 'refs/head/master' || contains(github.event.pull_request.body, '[Build]'))
+      if: (github.ref == 'refs/head/master' || contains(github.event.pull_request.body, '[Build]'))
       uses: actions/upload-artifact@v1
       with:
         name: anycable-go-Linux-x86_64
@@ -62,19 +58,16 @@ jobs:
 
   test-macos:
     if: "!contains(github.event.head_commit.message, '[ci skip tests]')"
-    strategy:
-      matrix:
-        go-version: [1.20.x]
-    runs-on: macos-11
+    runs-on: macos-latest
     env:
       GO111MODULE: on
       GOFLAGS: "-mod=vendor"
       COVERAGE: "true"
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-go@v2
+    - uses: actions/checkout@v4
+    - uses: actions/setup-go@v4
       with:
-        go-version: ${{ matrix.go-version }}
+        go-version-file: go.mod
     - name: Install system deps
       run: |
         brew install bison
@@ -84,6 +77,11 @@ jobs:
         key: vendor-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           vendor-
+    - uses: ruby/setup-ruby@v1
+      with:
+        # Use <3.0 since go-mruby's Rakefile has some problems with keyword arguments compatibility
+        ruby-version: 2.7
+        bundler-cache: true
     - run: go mod vendor
     - name: Build mruby
       run: bash -c '(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)'
@@ -96,11 +94,10 @@ jobs:
         parallel: true
         flag-name: ${{ matrix.go-version }}-macos
     - name: Build
-      if: matrix['go-version'] == '1.20.x'
       run: |
         make build
     - name: Upload MacOS build
-      if: matrix['go-version'] == '1.20.x' && (github.ref == 'refs/head/master' || contains(github.event.pull_request.body, '[Build]'))
+      if: (github.ref == 'refs/head/master' || contains(github.event.pull_request.body, '[Build]'))
       uses: actions/upload-artifact@v1
       with:
         name: anycable-go-Darwin-x86_64
@@ -143,10 +140,10 @@ jobs:
         image: nats:alpine
         ports: ["4222:4222"]
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-go@v3
+    - uses: actions/checkout@v4
+    - uses: actions/setup-go@v4
       with:
-        go-version: 1.20.x
+        go-version-file: go.mod
     - name: Install system deps
       run: |
         sudo apt-get update
