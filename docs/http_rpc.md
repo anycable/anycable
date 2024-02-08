@@ -2,6 +2,8 @@
 
 AnyCable supports RPC communication between a WebSocket server and your web application over HTTP (JSON). Although the default gRPC communication is more performant and, thus, preferred, it comes with a price of additional infrastructure complexity—you have to manage a separate process/service.
 
+> The OpenAPI spec and the documentation is available here: [anycable.spotlight.io](https://anycable.stoplight.io).
+
 HTTP RPC is a good alternative if you don't want to deal with gRPC or you are using a platform that doesn't support gRPC (e.g., Heroku, Google Cloud Run).
 
 You can embed AnyCable HTTP RPC _server_ (a Rack application) into your Ruby or Rails application's web server (e.g., Puma) and serve AnyCable RPC requests from the same process.

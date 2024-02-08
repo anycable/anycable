@@ -1,0 +1,358 @@
+openapi: 3.0.0
+info:
+  version: 1.0.0
+  title: AnyCable RPC
+  description: |-
+    AnyCable RPC over HTTP.
+
+    Read more in the [documentation](https://docs.anycable.io/ruby/http_rpc).
+  termsOfService: ''
+  license:
+    '0': M
+    '1': I
+    '2': T
+    name: ''
+paths:
+  /connect:
+    post:
+      summary: Handle client connection
+      description: Authenticate a newly connected client. Called right after the WebSocket connection has been initiated at the AnyCable server
+      operationId: connect
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConnectionRequest'
+            examples:
+              Client connection information:
+                value:
+                  env:
+                    url: 'ws://cable.myapp.dev/cable'
+                    headers:
+                      Origin: 'http://myapp.dev'
+                      Cookie: user_session=abc123
+      responses:
+        '200':
+          description: Command processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectionResponse'
+              examples:
+                Successul authentication:
+                  value:
+                    status: SUCCESS
+                    identifiers: '{"user_id":42}'
+                    transmissions:
+                      - '{"type":"welcome"}'
+                    env:
+                      cstate:
+                        feature_flags: '[1, 2]'
+                Authentication failed:
+                  value:
+                    status: FAILURE
+                    transmissions:
+                      - '{"type":"disconnect","reason":"unauthorized","reconnect":false}'
+                Bad request:
+                  value:
+                    status: ERROR
+                    error_msg: Internal server error
+  /command:
+    post:
+      summary: Handle client message
+      description: Process an incoming message from a WebSocket client
+      operationId: command
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommandMessage'
+            examples:
+              Subscribe command:
+                value:
+                  command: subscribe
+                  identifier: '{"channel":"ChatChannel"}'
+                  connection_identifiers: '{"user_id":42}'
+                  env:
+                    url: 'ws://cable.myapp.dev/cable'
+                    headers:
+                      Origin: 'http://myapp.dev'
+                      Cookie: user_session=abc123
+              Perform command:
+                value:
+                  command: message
+                  identifier: '{"channel":"ChatChannel"}'
+                  connection_identifiers: '{"user_id":42}'
+                  env:
+                    url: 'ws://cable.myapp.dev/cable'
+                    headers:
+                      Origin: 'http://myapp.dev'
+                      Cookie: user_session=abc123
+              Unsubscribe command:
+                value:
+                  command: unsubscribe
+                  identifier: '{"channel":"ChatChannel"}'
+                  connection_identifiers: '{"user_id":42}'
+                  env:
+                    url: 'ws://cable.myapp.dev/cable'
+                    headers:
+                      Origin: 'http://myapp.dev'
+                      Cookie: user_session=abc123
+                    istate:
+                      room_id: '42'
+      responses:
+        '200':
+          description: Command processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandResponse'
+              examples:
+                Successful subscription:
+                  value:
+                    status: SUCCESS
+                    streams:
+                      - chat/42
+                    transmissions:
+                      - '{"type":"confirm_subscription","identifier":"{\"channel\":\"ChatChannel\"}"}'
+                    env:
+                      istate:
+                        room_id: '42'
+                Rejected subscription:
+                  value:
+                    status: FAILURE
+                    transmissions:
+                      - '{"type":"reject_subscription","identifier":"{\"channel\":\"ChatChannel\"}"}'
+                Perform with stopped streams:
+                  value:
+                    status: SUCCESS
+                    stop_streams: true
+                Command failed:
+                  value:
+                    status: ERROR
+                    error_msg: Internal server error
+  /disconnect:
+    post:
+      summary: Handle client disconnection
+      description: Perform any cleanup required when a WebSocket disconnects from the AnyCable server
+      operationId: disconnect
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DisconnectRequest'
+            examples:
+              Disconnect with multiple subscriptions:
+                value:
+                  identifiers: '{"user_id":12}'
+                  subscriptions:
+                    - '{"channel":"ChatChannel"}'
+                    - '{"channel":"NotificationChannel"}'
+                  env:
+                    url: 'ws://cable.myapp.dev/cable'
+                    headers:
+                      Origin: 'http://myapp.dev'
+                    cstate:
+                      feature_flags: '[15,42]'
+                    istate:
+                      '{"channel":"ChatChannel"}': '{"room_id":42}'
+                      '{"channel":"NotificationsChannel"}': '{"user_name":"John"}'
+      responses:
+        '200':
+          description: Command processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DisconnectResponse'
+              examples:
+                Successful response:
+                  value:
+                    status: SUCCESS
+components:
+  schemas:
+    ConnectionRequest:
+      type: object
+      description: Request payload for initiating a connection.
+      properties:
+        env:
+          $ref: '#/components/schemas/Env'
+    Env:
+      type: object
+      description: Client state and metadata
+      properties:
+        url:
+          type: string
+          description: The URL of the WebSocket connection.
+        headers:
+          type: object
+          description: |
+            HTTP headers of the underlying WebSocket connection. NOTE: Only the headers specified in the AnyCable configuration are sent over RPC.
+          additionalProperties:
+            type: string
+        cstate:
+          type: object
+          description: |
+            User-defined connection state as JSON-encoded string. Used to carry some client-wide information and attached to all requests, so you can restore it.
+          additionalProperties:
+            type: string
+        istate:
+          type: object
+          description: |
+            User-defined state of the subscribed channels as JSON-encoded string. Contains only the current channel state for Command requests and contains the map of all channels for Disconnect requests.
+          additionalProperties:
+            type: string
+      x-examples:
+        Initial state:
+          url: 'ws://cable.myapp.dev/cable'
+          headers:
+            Origin: 'http://myapp.dev'
+            Cookie: user_session=abc123
+        Channel-specific state (Command requests):
+          url: 'ws://cable.myapp.dev/cable'
+          headers:
+            Origin: 'http://myapp.dev'
+            Cookie: user_session=abc123
+          cstate:
+            feature_flags: '[13,32]'
+          istate:
+            room_id: '42'
+        Disconnect command state:
+          url: 'ws://cable.myapp.dev/cable'
+          headers:
+            Origin: 'http://myapp.dev'
+            Cookie: user_session=abc123
+          cstate:
+            feature_flags: '[13,32]'
+          istate:
+            chat_1: '{"room_id":42}'
+    ConnectionResponse:
+      type: object
+      description: Initial client connection state
+      properties:
+        status:
+          $ref: '#/components/schemas/Status'
+        identifiers:
+          type: string
+          description: |
+            Unique identifiers for the connection as a single string. It's up to the application on how to serialize/deserialize this inforation (e.g., JSON). The identifiers are passe with every subsequent request so you can identify the client.
+        transmissions:
+          type: array
+          description: Messages to be transmitted to the client upon successful connection
+          items:
+            type: string
+        error_msg:
+          type: string
+          description: Error message in case of failure.
+        env:
+          $ref: '#/components/schemas/EnvResponse'
+    Status:
+      type: string
+      enum:
+        - ERROR
+        - SUCCESS
+        - FAILURE
+      description: |
+        The status of the command result:
+
+        - SUCCESS indicates the positive result (successful authentication or subscription)
+        - FAILURE indicates that the API server was able to process the command but the result is negative (not authenticated or subscription rejected)
+        - ERROR MUST be used when the API server failed to process the command (aka Bad request).
+    EnvResponse:
+      type: object
+      description: Client state changes
+      properties:
+        cstate:
+          type: object
+          description: |
+            The object representing the changes in the connection state.
+          additionalProperties:
+            type: string
+        istate:
+          type: object
+          description: |
+            The object representing the changes in the current channel state.
+          additionalProperties:
+            type: string
+      x-examples:
+        Connection state update:
+          cstate:
+            feature_flags: '[1, 2]'
+        Channel state update:
+          istate:
+            room_id: '42'
+    CommandMessage:
+      type: object
+      description: An incoming command from the client
+      properties:
+        command:
+          type: string
+          description: 'Command to execute (subscribe, unsubsribe, perform).'
+        identifier:
+          type: string
+          description: Channel identifier
+        connection_identifiers:
+          type: string
+          description: Connection identifiers obtained during the Connect request.
+        data:
+          type: string
+          description: Command payload
+        env:
+          $ref: '#/components/schemas/Env'
+    CommandResponse:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/Status'
+        disconnect:
+          type: boolean
+          description: Whether to disconnect after the command execution
+        stop_streams:
+          type: boolean
+          description: Whether to stop all pub/sub streams for the current channel after the command execution
+        streams:
+          type: array
+          description: List of the pub/sub streams to subscribe the client to
+          items:
+            type: string
+        stopped_streams:
+          type: array
+          description: List of the pub/sub streams to unsubscribe the client from
+          items:
+            type: string
+        transmissions:
+          type: array
+          description: Messages to be transmitted to the client in response to the command.
+          items:
+            type: string
+        error_msg:
+          type: string
+          description: Error message in case of command failure.
+        env:
+          $ref: '#/components/schemas/EnvResponse'
+    DisconnectRequest:
+      type: object
+      description: A disconnection notice request.
+      properties:
+        identifiers:
+          type: string
+          description: Connection identifiers obtained during the Connect request.
+        subscriptions:
+          type: array
+          description: List of the client channel identifiers.
+          items:
+            type: string
+        env:
+          $ref: '#/components/schemas/Env'
+    DisconnectResponse:
+      type: object
+      description: Response payload after processing a disconnect event
+      properties:
+        status:
+          $ref: '#/components/schemas/Status'
+        error_msg:
+          type: string
+          description: Error message in case of disconnection failure.
+x-internal: false
