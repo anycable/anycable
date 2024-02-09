@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"strings"
 	"time"
@@ -12,7 +13,6 @@ import (
 	rconfig "github.com/anycable/anycable-go/redis"
 	"github.com/anycable/anycable-go/utils"
 
-	"github.com/apex/log"
 	"github.com/gomodule/redigo/redis"
 )
 
@@ -28,7 +28,7 @@ type LegacyRedisBroadcaster struct {
 	reconnectAttempt          int
 	maxReconnectAttempts      int
 	uri                       *url.URL
-	log                       *log.Entry
+	log                       *slog.Logger
 	tlsVerify                 bool
 }
 
@@ -43,7 +43,7 @@ func NewLegacyRedisBroadcaster(node Handler, config *rconfig.RedisConfig) *Legac
 		pingInterval:              time.Duration(config.KeepalivePingInterval),
 		reconnectAttempt:          0,
 		maxReconnectAttempts:      config.MaxReconnectAttempts,
-		log:                       log.WithFields(log.Fields{"context": "broadcast", "provider": "redis"}),
+		log:                       slog.With("context", "broadcast").With("provider", "redis"),
 		tlsVerify:                 config.TLSVerify,
 	}
 }
@@ -67,8 +67,7 @@ func (s *LegacyRedisBroadcaster) Start(done chan (error)) error {
 	if s.sentinels != "" {
 		masterName := redisURL.Hostname()
 
-		s.log.Debug("Redis sentinel enabled")
-		s.log.Debugf("Redis sentinel parameters:  sentinels: %s,  masterName: %s", s.sentinels, masterName)
+		s.log.Debug("Redis sentinel enabled", "sentinels", s.sentinels, "master", masterName)
 		sentinels := strings.Split(s.sentinels, ",")
 		s.sentinelClient = &sentinel.Sentinel{
 			Addrs:      sentinels,
@@ -100,10 +99,10 @@ func (s *LegacyRedisBroadcaster) Start(done chan (error)) error {
 					dialOptions...,
 				)
 				if err != nil {
-					s.log.Debugf("Failed to connect to sentinel %s", addr)
+					s.log.Debug("failed to connect to sentinel", "addr", addr)
 					return nil, err
 				}
-				s.log.Debugf("Successfully connected to sentinel %s", addr)
+				s.log.Debug("successfully connected to sentinel", "addr", addr)
 				return c, nil
 			},
 		}
@@ -149,18 +148,18 @@ func (s *LegacyRedisBroadcaster) keepalive(done chan (error)) {
 			masterAddress, err := s.sentinelClient.MasterAddr()
 
 			if err != nil {
-				s.log.Warn("Failed to get master address from sentinel.")
+				s.log.Warn("failed to get master address from sentinel")
 				done <- err
 				return
 			}
-			s.log.Debugf("Got master address from sentinel: %s", masterAddress)
+			s.log.Debug("obtained master address from sentinel", "addr", masterAddress)
 
 			s.uri.Host = masterAddress
 			s.url = s.uri.String()
 		}
 
 		if err := s.listen(); err != nil {
-			s.log.Warnf("Redis connection failed: %v", err)
+			s.log.Warn("Redis connection failed", "error", err.Error())
 		}
 
 		s.reconnectAttempt++
@@ -172,10 +171,10 @@ func (s *LegacyRedisBroadcaster) keepalive(done chan (error)) {
 
 		delay := utils.NextRetry(s.reconnectAttempt)
 
-		s.log.Infof("Next Redis reconnect attempt in %s", delay)
+		s.log.Info(fmt.Sprintf("next Redis reconnect attempt in %s", delay))
 		time.Sleep(delay)
 
-		s.log.Infof("Reconnecting to Redis...")
+		s.log.Info("reconnecting to Redis...")
 	}
 }
 
@@ -198,13 +197,13 @@ func (s *LegacyRedisBroadcaster) listen() error {
 
 	if s.sentinels != "" {
 		if !sentinel.TestRole(c, "master") {
-			return errors.New("Failed master role check")
+			return errors.New("failed master role check")
 		}
 	}
 
 	psc := redis.PubSubConn{Conn: c}
 	if err = psc.Subscribe(s.channel); err != nil {
-		s.log.Errorf("Failed to subscribe to Redis channel: %v", err)
+		s.log.Error("failed to subscribe to Redis channel", "error", err.Error())
 		return err
 	}
 
@@ -216,12 +215,12 @@ func (s *LegacyRedisBroadcaster) listen() error {
 		for {
 			switch v := psc.Receive().(type) {
 			case redis.Message:
-				s.log.Debugf("Incoming pubsub message from Redis: %s", v.Data)
+				s.log.Debug("incoming pubsub message", "data", v.Data)
 				s.node.HandlePubSub(v.Data)
 			case redis.Subscription:
-				s.log.Infof("Subscribed to Redis channel: %s\n", v.Channel)
+				s.log.Info("subscribed to Redis channel", "channel", v.Channel)
 			case error:
-				s.log.Errorf("Redis subscription error: %v", v)
+				s.log.Error("Redis subscription error", "error", v.Error())
 				done <- v
 			}
 		}

@@ -2,8 +2,7 @@ package node
 
 import (
 	"context"
-
-	"github.com/apex/log"
+	"log/slog"
 )
 
 // Disconnector is an interface for disconnect queue implementation
@@ -19,7 +18,7 @@ type NoopDisconnectQueue struct{}
 
 // Run does nothing
 func (d *NoopDisconnectQueue) Run() error {
-	log.WithField("context", "disconnector").Info("Disconnect events are turned off")
+	slog.With("context", "disconnector").Info("disconnect events are turned off")
 	return nil
 }
 

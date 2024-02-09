@@ -1,13 +1,13 @@
 package cli
 
 import (
+	"log/slog"
 	"strconv"
 	"time"
 
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/server"
-	"github.com/apex/log"
 )
 
 const (
@@ -38,7 +38,7 @@ func (r *Runner) sessionOptionsFromParams(info *server.RequestInfo) []node.Sessi
 	if rawVal := info.Param(pingIntervalParameter); rawVal != "" {
 		val, err := strconv.Atoi(rawVal)
 		if err != nil {
-			log.Warnf("Invalid ping interval value, must be integer: %s", rawVal)
+			slog.Warn("invalid ping interval value, must be integer", "val", rawVal)
 		} else {
 			opts = append(opts, node.WithPingInterval(time.Duration(val)*time.Second))
 		}

@@ -3,11 +3,11 @@ package config
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"strconv"
 	"strings"
 
-	"github.com/apex/log"
 	gonanoid "github.com/matoous/go-nanoid"
 )
 
@@ -26,7 +26,7 @@ func (c *Config) LoadPresets() error {
 		return nil
 	}
 
-	log.WithField("context", "config").Infof("Load presets: %s", strings.Join(presets, ","))
+	slog.With("context", "config").Info("load presets", "presets", strings.Join(presets, ","))
 
 	defaults := NewConfig()
 

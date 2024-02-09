@@ -3,6 +3,7 @@ package broker
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"math"
 	"strings"
 	"sync"
@@ -11,7 +12,6 @@ import (
 	"github.com/anycable/anycable-go/common"
 	natsconfig "github.com/anycable/anycable-go/nats"
 	"github.com/anycable/anycable-go/utils"
-	"github.com/apex/log"
 	"github.com/joomcode/errorx"
 	nanoid "github.com/matoous/go-nanoid"
 	"github.com/nats-io/nats.go"
@@ -49,7 +49,7 @@ type NATS struct {
 	broadcastBacklog []*common.StreamMessage
 	backlogMu        sync.Mutex
 
-	log *log.Entry
+	log *slog.Logger
 }
 
 const (
@@ -86,7 +86,7 @@ func NewNATSBroker(broadcaster Broadcaster, c *Config, nc *natsconfig.NATSConfig
 		streamSync:       newStreamsSynchronizer(),
 		jstreams:         newLRU[string](time.Duration(c.HistoryTTL * int64(time.Second))),
 		jconsumers:       newLRU[jetstream.Consumer](time.Duration(c.HistoryTTL * int64(time.Second))),
-		log:              log.WithField("context", "broker").WithField("provider", "nats"),
+		log:              slog.With("context", "broker").With("provider", "nats"),
 	}
 
 	for _, opt := range opts {
@@ -110,11 +110,11 @@ func (n *NATS) Start(done chan (error)) error {
 		nats.MaxReconnects(n.nconf.MaxReconnectAttempts),
 		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
 			if err != nil {
-				n.log.Warnf("Connection failed: %v", err)
+				n.log.Warn("connection failed", "error", err.Error())
 			}
 		}),
 		nats.ReconnectHandler(func(nc *nats.Conn) {
-			n.log.Infof("Connection restored: %s", nc.ConnectedUrl())
+			n.log.Info("connection restored", "url", nc.ConnectedUrl())
 		}),
 	}
 
@@ -196,12 +196,12 @@ func (n *NATS) initJetStreamWithRetry() error {
 			return errorx.Decorate(err, "JetStream is unavailable")
 		}
 
-		n.log.Warnf("JetStream initialization failed: %v", err)
+		n.log.Warn("JetStream initialization failed", "error", err.Error())
 
-		n.log.Infof("Next JetStream initialization attempt in %s", delay)
+		n.log.Info(fmt.Sprintf("next JetStream initialization attempt in %s", delay))
 		time.Sleep(delay)
 
-		n.log.Infof("Re-initializing JetStream...")
+		n.log.Info("re-initializing JetStream...")
 	}
 }
 
@@ -213,7 +213,7 @@ func (n *NATS) initJetStream() error {
 	js, err := jetstream.New(nc)
 
 	if err != nil {
-		return errorx.Decorate(err, "Failed to connect to JetStream")
+		return errorx.Decorate(err, "failed to connect to JetStream")
 	}
 
 	n.js = js
@@ -221,7 +221,7 @@ func (n *NATS) initJetStream() error {
 	kv, err := n.fetchBucketWithTTL(kvBucket, time.Duration(n.conf.SessionsTTL*int64(time.Second)))
 
 	if err != nil {
-		return errorx.Decorate(err, "Failed to connect to JetStream KV")
+		return errorx.Decorate(err, "failed to connect to JetStream KV")
 	}
 
 	n.kv = kv
@@ -229,23 +229,23 @@ func (n *NATS) initJetStream() error {
 	epoch, err := n.calculateEpoch()
 
 	if err != nil {
-		return errorx.Decorate(err, "Failed to calculate epoch")
+		return errorx.Decorate(err, "failed to calculate epoch")
 	}
 
 	n.writeEpoch(epoch)
 	err = n.local.Start(nil)
 
 	if err != nil {
-		return errorx.Decorate(err, "Failed to start internal memory broker")
+		return errorx.Decorate(err, "failed to start internal memory broker")
 	}
 
 	err = n.watchEpoch(n.shutdownCtx)
 
 	if err != nil {
-		n.log.Warnf("failed to set up epoch watcher: %s", err)
+		n.log.Warn("failed to set up epoch watcher", "error", err.Error())
 	}
 
-	n.log.Infof("NATS broker is ready (epoch=%s)", epoch)
+	n.log.Info("NATS broker is ready", "epoch", epoch)
 	return nil
 }
 
@@ -313,7 +313,7 @@ func (n *NATS) writeEpoch(val string) {
 func (n *NATS) HandleBroadcast(msg *common.StreamMessage) {
 	err := n.Ready(jetstreamReadyTimeout)
 	if err != nil {
-		n.log.Debugf("JetStream is not ready yet to publish messages, add to backlog")
+		n.log.Debug("JetStream is not ready yet to publish messages, add to backlog")
 		n.backlogAdd(msg)
 		return
 	}
@@ -321,7 +321,7 @@ func (n *NATS) HandleBroadcast(msg *common.StreamMessage) {
 	offset, err := n.add(msg.Stream, msg.Data)
 
 	if err != nil {
-		n.log.WithError(err).Errorf("failed to add message to JetStream Stream %s", msg.Stream)
+		n.log.Error("failed to add message to JetStream Stream", "stream", msg.Stream, "error", err.Error())
 		return
 	}
 
@@ -503,7 +503,7 @@ func (n *NATS) addStreamConsumer(stream string) {
 	err := n.ensureStreamExists(stream)
 
 	if err != nil {
-		n.log.Errorf("Failed to create JetStream stream %s: %s", stream, err)
+		n.log.Error("failed to create JetStream stream", "stream", stream, "error", err.Error())
 		return
 	}
 
@@ -516,11 +516,11 @@ createConsumer:
 		})
 
 		if err != nil {
-			n.log.Errorf("Failed to create JetStream stream consumer %s: %s", stream, err)
+			n.log.Error("failed to create JetStream stream consumer", "stream", stream, "error", err.Error())
 			return nil, err
 		}
 
-		n.log.Debugf("Created JetStream consumer %s for stream: %s", cons.CachedInfo().Name, stream)
+		n.log.Debug("created JetStream consumer", "consumer", cons.CachedInfo().Name, "stream", stream)
 
 		n.streamSync.touch(stream)
 
@@ -533,7 +533,7 @@ createConsumer:
 
 		batch, err := cons.FetchNoWait(batchSize)
 		if err != nil {
-			n.log.Errorf("Failed to fetch initial messages from JetStream: %s", err)
+			n.log.Error("failed to fetch initial messages from JetStream", "error", err.Error())
 			return nil, err
 		}
 
@@ -552,7 +552,7 @@ createConsumer:
 		return cons, nil
 	}, func(cons jetstream.Consumer) {
 		name := cons.CachedInfo().Name
-		n.log.Debugf("Deleting JetStream consumer %s for stream: %s", name, stream)
+		n.log.Debug("deleting JetStream consumer", "consumer", name, "stream", stream)
 		n.streamSync.remove(stream)
 		n.js.DeleteConsumer(context.Background(), prefixedStream, name) // nolint:errcheck
 	})
@@ -569,7 +569,7 @@ func (n *NATS) consumeMessage(stream string, msg jetstream.Msg) {
 
 	meta, err := msg.Metadata()
 	if err != nil {
-		n.log.Errorf("Failed to get JetStream message metadata: %s", err)
+		n.log.Error("failed to get JetStream message metadata", "error", err.Error())
 		return
 	}
 
@@ -578,7 +578,7 @@ func (n *NATS) consumeMessage(stream string, msg jetstream.Msg) {
 
 	_, err = n.local.Store(stream, msg.Data(), seq, ts)
 	if err != nil {
-		n.log.Errorf("Failed to store message in local broker: %s", err)
+		n.log.Error("failed to store message in local broker", "error", err.Error())
 		return
 	}
 }
@@ -673,7 +673,7 @@ func (n *NATS) watchEpoch(ctx context.Context) error {
 					newEpoch := string(entry.Value())
 
 					if n.Epoch() != newEpoch {
-						n.log.Warnf("epoch updated: %s", newEpoch)
+						n.log.Warn("epoch updated", "epoch", newEpoch)
 						n.writeEpoch(newEpoch)
 					}
 				}
@@ -700,7 +700,7 @@ bucketSetup:
 		if context.DeadlineExceeded == err {
 			if attempts > 0 {
 				attempts--
-				n.log.Warnf("failed to retrieve bucket %s, retrying in 500ms...", key)
+				n.log.Warn("failed to retrieve bucket, retrying in 500ms...", "bucket", key)
 				time.Sleep(500 * time.Millisecond)
 				goto bucketSetup
 			}
@@ -714,13 +714,13 @@ bucketSetup:
 			bucket, err = n.js.KeyValue(context.Background(), key)
 
 			if err != nil {
-				return nil, errorx.Decorate(err, "Failed to retrieve bucket: %s", key)
+				return nil, errorx.Decorate(err, "failed to retrieve bucket: %s", key)
 			}
 		}
 	}
 
 	if err != nil {
-		return nil, errorx.Decorate(err, "Failed to create bucket: %s", key)
+		return nil, errorx.Decorate(err, "failed to create bucket: %s", key)
 	}
 
 	// Invalidate TTL settings if the bucket is the new one.
@@ -729,14 +729,14 @@ bucketSetup:
 		status, serr := bucket.Status(context.Background())
 
 		if serr != nil {
-			return nil, errorx.Decorate(serr, "Failed to retrieve bucket status: %s", key)
+			return nil, errorx.Decorate(serr, "failed to retrieve bucket status: %s", key)
 		}
 
 		if status.TTL() != ttl {
-			n.log.Warnf("bucket TTL has been changed, recreating the bucket: key=%s, old=%s, new=%s", key, status.TTL().String(), ttl.String())
+			n.log.Warn("bucket TTL has been changed, recreating the bucket", "bucket", key, "old_ttl", status.TTL().String(), "ttl", ttl.String())
 			derr := n.js.DeleteKeyValue(context.Background(), key)
 			if derr != nil {
-				return nil, errorx.Decorate(derr, "Failed to delete bucket: %s", key)
+				return nil, errorx.Decorate(derr, "failed to delete bucket: %s", key)
 			}
 
 			goto bucketSetup
@@ -938,7 +938,7 @@ func (n *NATS) shouldRetryOnError(err error, attempts *int, cooldown time.Durati
 	if context.DeadlineExceeded == err || jetstream.ErrNoStreamResponse == err {
 		if *attempts > 0 {
 			(*attempts)--
-			n.log.Warnf("operation failed with %s, retrying in %s...", err.Error(), cooldown.String())
+			n.log.Warn(fmt.Sprintf("operation failed, retrying in %s...", cooldown.String()), "error", err.Error())
 			time.Sleep(cooldown)
 			return true
 		}

@@ -2,13 +2,14 @@ package pubsub
 
 import (
 	"context"
+	"fmt"
+	"log/slog"
 	"sync"
 
 	"github.com/anycable/anycable-go/common"
 	nconfig "github.com/anycable/anycable-go/nats"
 	"github.com/anycable/anycable-go/utils"
 
-	"github.com/apex/log"
 	"github.com/nats-io/nats.go"
 )
 
@@ -21,7 +22,7 @@ type NATSSubscriber struct {
 	subscriptions map[string]*nats.Subscription
 	subMu         sync.RWMutex
 
-	log *log.Entry
+	log *slog.Logger
 }
 
 var _ Subscriber = (*NATSSubscriber)(nil)
@@ -32,7 +33,7 @@ func NewNATSSubscriber(node Handler, config *nconfig.NATSConfig) (*NATSSubscribe
 		node:          node,
 		config:        config,
 		subscriptions: make(map[string]*nats.Subscription),
-		log:           log.WithField("context", "pubsub"),
+		log:           slog.With("context", "pubsub"),
 	}, nil
 }
 
@@ -42,11 +43,11 @@ func (s *NATSSubscriber) Start(done chan (error)) error {
 		nats.MaxReconnects(s.config.MaxReconnectAttempts),
 		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
 			if err != nil {
-				s.log.Warnf("Connection failed: %v", err)
+				s.log.Warn("connection failed", "error", err)
 			}
 		}),
 		nats.ReconnectHandler(func(nc *nats.Conn) {
-			s.log.Infof("Connection restored: %s", nc.ConnectedUrl())
+			s.log.Info("connection restored", "url", nc.ConnectedUrl())
 		}),
 	}
 
@@ -60,7 +61,7 @@ func (s *NATSSubscriber) Start(done chan (error)) error {
 		return err
 	}
 
-	s.log.Infof("Starting NATS pub/sub: %s", s.config.Servers)
+	s.log.Info(fmt.Sprintf("Starting NATS pub/sub: %s", s.config.Servers))
 
 	s.conn = nc
 
@@ -96,7 +97,7 @@ func (s *NATSSubscriber) Subscribe(stream string) {
 	sub, err := s.conn.Subscribe(stream, s.handleMessage)
 
 	if err != nil {
-		s.log.Errorf("Failed to subscribe to %s: %v", stream, err)
+		s.log.Error("failed to subscribe", "stream", stream, "error", err.Error())
 		return
 	}
 
@@ -122,20 +123,20 @@ func (s *NATSSubscriber) BroadcastCommand(cmd *common.RemoteCommandMessage) {
 }
 
 func (s *NATSSubscriber) Publish(stream string, msg interface{}) {
-	s.log.WithField("channel", stream).Debugf("Publish message: %v", msg)
+	s.log.With("channel", stream).Debug("publish message", "data", msg)
 
 	if err := s.conn.Publish(stream, utils.ToJSON(msg)); err != nil {
-		s.log.Errorf("Failed to publish message: %v", err)
+		s.log.Error("failed to publish message", "error", err.Error())
 	}
 }
 
 func (s *NATSSubscriber) handleMessage(m *nats.Msg) {
-	s.log.WithField("channel", m.Subject).Debugf("Received message: %v", m.Data)
+	s.log.With("channel", m.Subject).Debug("received message", "data", m.Data)
 
 	msg, err := common.PubSubMessageFromJSON(m.Data)
 
 	if err != nil {
-		s.log.Warnf("Failed to parse pubsub message '%s' with error: %v", m.Data, err)
+		s.log.Warn("failed to parse pubsub message", "data", m.Data, "error", err)
 		return
 	}
 

@@ -2,6 +2,7 @@ package telemetry
 
 import (
 	"context"
+	"log/slog"
 	"maps"
 	"os"
 	"runtime"
@@ -12,7 +13,6 @@ import (
 	"github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/mrb"
 	"github.com/anycable/anycable-go/version"
-	"github.com/apex/log"
 	"github.com/hofstadter-io/cinful"
 	"github.com/posthog/posthog-go"
 
@@ -62,7 +62,7 @@ func NewTracker(instrumenter *metrics.Metrics, c *config.Config, tc *Config) *Tr
 }
 
 func (t *Tracker) Announce() {
-	log.WithField("context", "main").Info("Anonymized telemetry is on. Learn more: https://docs.anycable.io/anycable-go/telemetry")
+	slog.With("context", "main").Info("Anonymized telemetry is on. Learn more: https://docs.anycable.io/anycable-go/telemetry")
 }
 
 func (t *Tracker) Collect() {

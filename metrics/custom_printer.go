@@ -4,8 +4,10 @@
 package metrics
 
 import (
+	"fmt"
+	"log/slog"
+
 	"github.com/anycable/anycable-go/mrb"
-	"github.com/apex/log"
 	"github.com/mitchellh/go-mruby"
 )
 
@@ -34,7 +36,7 @@ func (p *RubyPrinter) Run(interval int) error {
 
 	p.mrbModule = mod.MrbValue(p.engine.VM)
 
-	log.WithField("context", "metrics").Infof("Log metrics every %ds using a custom Ruby formatter from %s", interval, p.path)
+	slog.With("context", "metrics").Info(fmt.Sprintf("Log metrics every %ds using a custom Ruby formatter from %s", interval, p.path))
 
 	return nil
 }
@@ -62,9 +64,9 @@ func (printer *RubyPrinter) Print(snapshot map[string]uint64) {
 	result, err := printer.mrbModule.Call("call", rhash)
 
 	if err != nil {
-		log.WithField("context", "metrics").Error(err.Error())
+		slog.With("context", "metrics").Error("mruby call failed", "error", err.Error())
 		return
 	}
 
-	log.Info(result.String())
+	slog.Info(result.String())
 }

@@ -669,7 +669,7 @@ func logCLIFlags(c *config.Config) []cli.Flag {
 	return withDefaults(logCategoryDescription, []cli.Flag{
 		&cli.StringFlag{
 			Name:        "log_level",
-			Usage:       "Set logging level (debug/info/warn/error/fatal)",
+			Usage:       "Set logging level (debug/info/warn/error)",
 			Value:       c.LogLevel,
 			Destination: &c.LogLevel,
 		},

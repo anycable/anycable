@@ -3,10 +3,9 @@ package node
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
-
-	"github.com/apex/log"
 )
 
 // DisconnectQueueConfig contains DisconnectQueue configuration
@@ -32,7 +31,7 @@ type DisconnectQueue struct {
 	// Call RPC Disconnect for connections
 	disconnect chan *Session
 	// Logger with context
-	log *log.Entry
+	log *slog.Logger
 	// Control channel to shutdown the executer
 	shutdown chan struct{}
 	// Executer stopped status
@@ -45,9 +44,9 @@ type DisconnectQueue struct {
 func NewDisconnectQueue(node *Node, config *DisconnectQueueConfig) *DisconnectQueue {
 	rateDuration := time.Millisecond * time.Duration(1000/config.Rate)
 
-	ctx := log.WithField("context", "disconnector")
+	ctx := slog.With("context", "disconnector")
 
-	ctx.Debugf("Calls rate: %v", rateDuration)
+	ctx.Debug("calls rate", "rate", rateDuration)
 
 	return &DisconnectQueue{
 		node:       node,
@@ -94,7 +93,7 @@ func (d *DisconnectQueue) Shutdown(ctx context.Context) error {
 	}
 
 	defer func() {
-		d.log.Infof("Disconnected %d sessions", actual)
+		d.log.Info("disconnected sessions", "num", actual)
 	}()
 
 	deadline, ok := ctx.Deadline()
@@ -102,9 +101,9 @@ func (d *DisconnectQueue) Shutdown(ctx context.Context) error {
 	if ok {
 		timeLeft := time.Until(deadline)
 
-		d.log.Infof("Invoking remaining disconnects for %2fs: ~%d", timeLeft.Seconds(), left)
+		d.log.Info("invoking remaining disconnects", "interval", timeLeft.Seconds(), "num", left)
 	} else {
-		d.log.Infof("Invoking remaining disconnects: ~%d", left)
+		d.log.Info("invoking remaining disconnects", "num", left)
 	}
 
 	for {
@@ -114,7 +113,7 @@ func (d *DisconnectQueue) Shutdown(ctx context.Context) error {
 
 			actual++
 		case <-ctx.Done():
-			return fmt.Errorf("Had no time to invoke Disconnect calls: ~%d", len(d.disconnect))
+			return fmt.Errorf("had no time to invoke Disconnect calls: ~%d", len(d.disconnect))
 		default:
 			return nil
 		}

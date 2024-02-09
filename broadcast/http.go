@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"strconv"
 
 	"github.com/anycable/anycable-go/server"
-	"github.com/apex/log"
 )
 
 const (
@@ -41,7 +41,7 @@ type HTTPBroadcaster struct {
 	authHeader string
 	server     *server.HTTPServer
 	node       Handler
-	log        *log.Entry
+	log        *slog.Logger
 }
 
 var _ Broadcaster = (*HTTPBroadcaster)(nil)
@@ -56,7 +56,7 @@ func NewHTTPBroadcaster(node Handler, config *HTTPConfig) *HTTPBroadcaster {
 
 	return &HTTPBroadcaster{
 		node:       node,
-		log:        log.WithFields(log.Fields{"context": "broadcast", "provider": "http"}),
+		log:        slog.With("context", "broadcast").With("provider", "http"),
 		port:       config.Port,
 		path:       config.Path,
 		authHeader: authHeader,
@@ -78,7 +78,7 @@ func (s *HTTPBroadcaster) Start(done chan (error)) error {
 	s.server = server
 	s.server.SetupHandler(s.path, http.HandlerFunc(s.Handler))
 
-	s.log.Infof("Accept broadcast requests at %s%s", s.server.Address(), s.path)
+	s.log.Info(fmt.Sprintf("Accept broadcast requests at %s%s", s.server.Address(), s.path))
 
 	go func() {
 		if err := s.server.StartAndAnnounce("broadcasting HTTP server"); err != nil {
@@ -103,7 +103,7 @@ func (s *HTTPBroadcaster) Shutdown(ctx context.Context) error {
 // Handler processes HTTP requests
 func (s *HTTPBroadcaster) Handler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
-		s.log.Debugf("Invalid request method: %s", r.Method)
+		s.log.Debug("invalid request method", "method", r.Method)
 		w.WriteHeader(422)
 		return
 	}
@@ -118,7 +118,7 @@ func (s *HTTPBroadcaster) Handler(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 
 	if err != nil {
-		s.log.Error("Failed to read request body")
+		s.log.Error("failed to read request body")
 		w.WriteHeader(422)
 		return
 	}

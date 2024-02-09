@@ -11,7 +11,8 @@ import (
 	"runtime"
 	"strconv"
 
-	log "github.com/apex/log"
+	"log"
+
 	"github.com/google/gops/agent"
 )
 

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math/rand"
 	"sync"
 	"time"
@@ -12,7 +13,6 @@ import (
 	"github.com/anycable/anycable-go/encoders"
 	"github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/ws"
-	"github.com/apex/log"
 )
 
 const (
@@ -62,7 +62,7 @@ type Session struct {
 	Connected bool
 	// Could be used to store arbitrary data within a session
 	InternalState map[string]interface{}
-	Log           *log.Entry
+	Log           *slog.Logger
 }
 
 type SessionOption = func(*Session)
@@ -152,9 +152,7 @@ func NewSession(node *Node, conn Connection, url string, headers *map[string]str
 
 	session.uid = uid
 
-	ctx := node.log.WithFields(log.Fields{
-		"sid": session.uid,
-	})
+	ctx := node.log.With("sid", session.uid)
 
 	session.Log = ctx
 
@@ -213,7 +211,7 @@ func (s *Session) maybeDisconnectIdle() {
 
 	s.mu.Unlock()
 
-	s.Log.Warnf("Disconnecting idle session")
+	s.Log.Warn("disconnecting idle session")
 
 	s.Send(common.NewDisconnectMessage(common.IDLE_TIMEOUT_REASON, false))
 	s.Disconnect("Idle Timeout", ws.CloseNormalClosure)
@@ -307,10 +305,10 @@ func (s *Session) Serve(callback func()) error {
 
 			if err != nil {
 				if ws.IsCloseError(err) {
-					s.Log.Debugf("WebSocket closed: %v", err)
+					s.Log.Debug("WebSocket closed", "error", err.Error())
 					s.disconnectNow("Read closed", ws.CloseNormalClosure)
 				} else {
-					s.Log.Debugf("WebSocket close error: %v", err)
+					s.Log.Debug("WebSocket close error", "error", err.Error())
 					s.disconnectNow("Read failed", ws.CloseAbnormalClosure)
 				}
 				return
@@ -319,7 +317,7 @@ func (s *Session) Serve(callback func()) error {
 			err = s.ReadMessage(message)
 
 			if err != nil {
-				s.Log.Debugf("WebSocket read failed: %v", err)
+				s.Log.Debug("WebSocket read failed", "error", err.Error())
 				return
 			}
 		}
@@ -367,7 +365,7 @@ func (s *Session) ReadMessage(message []byte) error {
 
 	if err := s.executor.HandleCommand(s, command); err != nil {
 		s.metrics.CounterIncrement(metricsFailedCommandReceived)
-		s.Log.Warnf("Failed to handle incoming message '%s' with error: %v", message, err)
+		s.Log.Warn("failed to handle incoming message", "data", message, "error", err.Error())
 	}
 
 	return nil
@@ -380,7 +378,7 @@ func (s *Session) Send(msg encoders.EncodedMessage) {
 			s.sendFrame(b)
 		}
 	} else {
-		s.Log.Warnf("Failed to encode message %v. Error: %v", msg, err)
+		s.Log.Warn("failed to encode message", "data", msg, "error", err.Error())
 	}
 }
 
@@ -392,7 +390,7 @@ func (s *Session) SendJSONTransmission(msg string) {
 			s.sendFrame(b)
 		}
 	} else {
-		s.Log.Warnf("Failed to encode transmission %v. Error: %v", msg, err)
+		s.Log.Warn("failed to encode transmission", "data", msg, "error", err.Error())
 	}
 }
 
@@ -602,10 +600,10 @@ func (s *Session) writeFrameWithDeadline(message *ws.SentFrame, deadline time.Ti
 		return err
 	case ws.CloseFrame:
 		s.conn.Close(message.CloseCode, message.CloseReason)
-		return errors.New("Closed")
+		return errors.New("closed")
 	default:
-		s.Log.Errorf("Unknown frame type: %v", message)
-		return errors.New("Unknown frame type")
+		s.Log.Error("unknown frame type", "msg", message)
+		return errors.New("unknown frame type")
 	}
 }
 
@@ -622,7 +620,7 @@ func (s *Session) sendPing() {
 	b, err := s.encodeMessage(newPingMessage(s.pingTimestampPrecision))
 
 	if err != nil {
-		s.Log.Errorf("Failed to encode ping message: %v", err)
+		s.Log.Error("failed to encode ping message", "error", err.Error())
 	} else if b != nil {
 		err = s.writeFrameWithDeadline(b, deadline)
 	}
@@ -679,7 +677,7 @@ func (s *Session) handlePong(msg *common.Message) {
 	defer s.mu.Unlock()
 
 	if s.pongTimer == nil {
-		s.Log.Debugf("Unexpected PONG received")
+		s.Log.Debug("unexpected PONG received")
 		return
 	}
 
@@ -696,7 +694,7 @@ func (s *Session) handleNoPong() {
 
 	s.mu.Unlock()
 
-	s.Log.Warnf("Disconnecting session due to no pongs")
+	s.Log.Warn("disconnecting session due to no pongs")
 
 	s.Send(common.NewDisconnectMessage(common.NO_PONG_REASON, true)) // nolint:errcheck
 	s.Disconnect("No Pong", ws.CloseNormalClosure)

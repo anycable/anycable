@@ -2,11 +2,11 @@ package identity
 
 import (
 	"fmt"
+	"log/slog"
 	"net/url"
 	"strings"
 
 	"github.com/anycable/anycable-go/common"
-	"github.com/apex/log"
 	"github.com/golang-jwt/jwt"
 )
 
@@ -38,7 +38,7 @@ type JWTIdentifier struct {
 	paramName  string
 	headerName string
 	required   bool
-	log        *log.Entry
+	log        *slog.Logger
 }
 
 var _ Identifier = (*JWTIdentifier)(nil)
@@ -49,7 +49,7 @@ func NewJWTIdentifier(config *JWTConfig) *JWTIdentifier {
 		paramName:  config.Param,
 		headerName: strings.ToLower(fmt.Sprintf("x-%s", config.Param)),
 		required:   config.Force,
-		log:        log.WithField("context", "jwt"),
+		log:        slog.With("context", "jwt"),
 	}
 }
 
@@ -81,7 +81,7 @@ func (i *JWTIdentifier) Identify(sid string, env *common.SessionEnv) (*common.Co
 	}
 
 	if rawToken == "" {
-		i.log.Debugf("No token is found (url=%s, headers=%v)", env.URL, env.Headers)
+		i.log.Debug("no token is found", "url", env.URL, "headers", env.Headers)
 
 		if i.required {
 			return unauthorizedResponse(), nil
@@ -92,7 +92,7 @@ func (i *JWTIdentifier) Identify(sid string, env *common.SessionEnv) (*common.Co
 
 	token, err := jwt.Parse(rawToken, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 
 		return i.secret, nil
@@ -101,13 +101,13 @@ func (i *JWTIdentifier) Identify(sid string, env *common.SessionEnv) (*common.Co
 	if err != nil {
 		if ve, ok := err.(*jwt.ValidationError); ok {
 			if ve.Errors&(jwt.ValidationErrorExpired) != 0 {
-				i.log.Debugf("Token has expired")
+				i.log.Debug("token has expired")
 
 				return expiredResponse(), nil
 			}
 		}
 
-		i.log.Debugf("Invalid token: %v", err)
+		i.log.Debug("invalid token", "error", err)
 		return unauthorizedResponse(), nil
 	}
 

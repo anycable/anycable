@@ -3,13 +3,13 @@ package metrics
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/anycable/anycable-go/server"
-	"github.com/apex/log"
 )
 
 const DefaultRotateInterval = 15
@@ -44,7 +44,7 @@ type Metrics struct {
 	gauges         map[string]*Gauge
 	shutdownCh     chan struct{}
 	closed         bool
-	log            *log.Entry
+	log            *slog.Logger
 }
 
 var _ Instrumenter = (*Metrics)(nil)
@@ -109,7 +109,7 @@ func NewMetrics(writers []IntervalWriter, rotateIntervalSeconds int) *Metrics {
 		counters:       make(map[string]*Counter),
 		gauges:         make(map[string]*Gauge),
 		shutdownCh:     make(chan struct{}),
-		log:            log.WithField("context", "metrics"),
+		log:            slog.With("context", "metrics"),
 	}
 }
 
@@ -124,17 +124,17 @@ func (m *Metrics) RegisterWriter(w IntervalWriter) {
 // Run periodically updates counters delta (and logs metrics if necessary)
 func (m *Metrics) Run() error {
 	if m.server != nil {
-		m.log.Infof("Serve metrics at %s%s", m.server.Address(), m.httpPath)
+		m.log.Info(fmt.Sprintf("Serve metrics at %s%s", m.server.Address(), m.httpPath))
 
 		if err := m.server.StartAndAnnounce("Metrics server"); err != nil {
 			if !m.server.Stopped() {
-				return fmt.Errorf("Metrics HTTP server at %s stopped: %v", m.server.Address(), err)
+				return fmt.Errorf("metrics HTTP server at %s stopped: %v", m.server.Address(), err)
 			}
 		}
 	}
 
 	if len(m.writers) == 0 {
-		m.log.Debug("No metrics writers. Disable metrics rotation")
+		m.log.Debug("no metrics writers, disabling metrics rotation")
 		return nil
 	}
 
@@ -153,12 +153,12 @@ func (m *Metrics) Run() error {
 		case <-m.shutdownCh:
 			return nil
 		case <-time.After(m.rotateInterval):
-			m.log.Debugf("Rotate metrics (interval %v)", m.rotateInterval)
+			m.log.Debug("rotate metrics", "interval", m.rotateInterval)
 			m.rotate()
 
 			for _, writer := range m.writers {
 				if err := writer.Write(m); err != nil {
-					m.log.Errorf("Metrics writer failed to write: %v", err)
+					m.log.Error("metrics writer failed to write", "error", err.Error())
 				}
 			}
 		}

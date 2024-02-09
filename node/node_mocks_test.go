@@ -1,6 +1,8 @@
 package node
 
 import (
+	"log/slog"
+
 	"github.com/anycable/anycable-go/broker"
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/encoders"
@@ -8,8 +10,6 @@ import (
 	"github.com/anycable/anycable-go/mocks"
 	"github.com/anycable/anycable-go/pubsub"
 	"github.com/anycable/anycable-go/ws"
-
-	"github.com/apex/log"
 )
 
 // NewMockNode build new node with mock controller
@@ -31,7 +31,7 @@ func NewMockSession(uid string, node *Node, opts ...SessionOption) *Session {
 		executor:      node,
 		closed:        true,
 		uid:           uid,
-		Log:           log.WithField("sid", uid),
+		Log:           slog.With("sid", uid),
 		subscriptions: NewSubscriptionState(),
 		env:           common.NewSessionEnv("/cable-test", &map[string]string{}),
 		sendCh:        make(chan *ws.SentFrame, 256),

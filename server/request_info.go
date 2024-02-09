@@ -43,7 +43,7 @@ func NewRequestInfo(r *http.Request, extractor HeadersExtractor) (*RequestInfo, 
 	uid, err := FetchUID(r)
 
 	if err != nil {
-		return nil, errors.New("Failed to retrieve connection uid")
+		return nil, errors.New("failed to retrieve connection uid")
 	}
 
 	url := r.URL.String()

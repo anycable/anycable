@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"runtime"
@@ -16,6 +17,7 @@ import (
 	"github.com/anycable/anycable-go/config"
 	"github.com/anycable/anycable-go/enats"
 	"github.com/anycable/anycable-go/identity"
+	"github.com/anycable/anycable-go/logger"
 	metricspkg "github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/mrb"
 	"github.com/anycable/anycable-go/node"
@@ -28,7 +30,6 @@ import (
 	"github.com/anycable/anycable-go/utils"
 	"github.com/anycable/anycable-go/version"
 	"github.com/anycable/anycable-go/ws"
-	"github.com/apex/log"
 	"github.com/gorilla/websocket"
 	"github.com/joomcode/errorx"
 
@@ -51,7 +52,7 @@ type Runner struct {
 
 	name   string
 	config *config.Config
-	log    *log.Entry
+	log    *slog.Logger
 
 	controllerFactory       controllerFactory
 	disconnectorFactory     disconnectorFactory
@@ -97,12 +98,12 @@ func (r *Runner) checkAndSetDefaults() error {
 		}
 	}
 
-	err := utils.InitLogger(r.config.LogFormat, r.config.LogLevel)
+	_, err := logger.InitLogger(r.config.LogFormat, r.config.LogLevel)
 	if err != nil {
 		return errorx.Decorate(err, "!!! Failed to initialize logger !!!")
 	}
 
-	r.log = log.WithFields(log.Fields{"context": "main"})
+	r.log = slog.With("context", "main")
 
 	err = r.config.LoadPresets()
 
@@ -156,7 +157,7 @@ func (r *Runner) Run() error {
 
 	mrubySupport := r.initMRuby()
 
-	r.log.Infof("Starting %s %s%s (pid: %d, open file limit: %s, gomaxprocs: %d)", r.name, version.Version(), mrubySupport, os.Getpid(), utils.OpenFileLimit(), numProcs)
+	r.log.Info(fmt.Sprintf("Starting %s %s%s (pid: %d, open file limit: %s, gomaxprocs: %d)", r.name, version.Version(), mrubySupport, os.Getpid(), utils.OpenFileLimit(), numProcs))
 
 	metrics := r.metrics
 
@@ -191,7 +192,7 @@ func (r *Runner) Run() error {
 	}
 
 	if appBroker != nil {
-		r.log.Infof(appBroker.Announce())
+		r.log.Info(appBroker.Announce())
 		appNode.SetBroker(appBroker)
 	}
 
@@ -216,7 +217,7 @@ func (r *Runner) Run() error {
 			desc = fmt.Sprintf(" (%s)", desc)
 		}
 
-		r.log.Infof("Embedded NATS server started: %s%s", r.config.EmbeddedNats.ServiceAddr, desc)
+		r.log.Info(fmt.Sprintf("Embedded NATS server started: %s%s", r.config.EmbeddedNats.ServiceAddr, desc))
 
 		r.shutdownables = append(r.shutdownables, service)
 	}
@@ -250,11 +251,11 @@ func (r *Runner) Run() error {
 
 		for _, broadcaster := range broadcasters {
 			if broadcaster.IsFanout() && subscriber.IsMultiNode() {
-				r.log.Warnf("Using pub/sub with a distributed broadcaster has no effect")
+				r.log.Warn("Using pub/sub with a distributed broadcaster has no effect")
 			}
 
 			if !broadcaster.IsFanout() && !subscriber.IsMultiNode() {
-				r.log.Warnf("Using a non-distributed broadcaster without a pub/sub enabled; each broadcasted message is only processed by a single node")
+				r.log.Warn("Using a non-distributed broadcaster without a pub/sub enabled; each broadcasted message is only processed by a single node")
 			}
 
 			err = broadcaster.Start(r.errChan)
@@ -283,7 +284,7 @@ func (r *Runner) Run() error {
 
 	for _, path := range r.config.Path {
 		wsServer.SetupHandler(path, wsHandler)
-		r.log.Infof("Handle WebSocket connections at %s%s", wsServer.Address(), path)
+		r.log.Info(fmt.Sprintf("Handle WebSocket connections at %s%s", wsServer.Address(), path))
 	}
 
 	for path, handlerFactory := range r.websocketEndpoints {
@@ -295,12 +296,12 @@ func (r *Runner) Run() error {
 	}
 
 	wsServer.SetupHandler(r.config.HealthPath, http.HandlerFunc(server.HealthHandler))
-	r.log.Infof("Handle health requests at %s%s", wsServer.Address(), r.config.HealthPath)
+	r.log.Info(fmt.Sprintf("Handle health requests at %s%s", wsServer.Address(), r.config.HealthPath))
 
 	if r.config.SSE.Enabled {
-		r.log.Infof(
-			"Handle SSE requests at %s%s",
-			wsServer.Address(), r.config.SSE.Path,
+		r.log.Info(
+			fmt.Sprintf("Handle SSE requests at %s%s",
+				wsServer.Address(), r.config.SSE.Path),
 		)
 
 		sseHandler, err := r.defaultSSEHandler(appNode, wsServer.ShutdownCtx(), r.config)
@@ -363,13 +364,13 @@ func (r *Runner) newController(metrics *metricspkg.Metrics) (node.Controller, er
 	if r.config.JWT.Enabled() {
 		identifier := identity.NewJWTIdentifier(&r.config.JWT)
 		controller = identity.NewIdentifiableController(controller, identifier)
-		r.log.Infof("JWT identification is enabled (param: %s, enforced: %v)", r.config.JWT.Param, r.config.JWT.Force)
+		r.log.Info(fmt.Sprintf("JWT identification is enabled (param: %s, enforced: %v)", r.config.JWT.Param, r.config.JWT.Force))
 	}
 
 	if !r.Router().Empty() {
 		r.Router().SetDefault(controller)
 		controller = r.Router()
-		r.log.Infof("Using channels router: %s", strings.Join(r.Router().Routes(), ", "))
+		r.log.Info(fmt.Sprintf("Using channels router: %s", strings.Join(r.Router().Routes(), ", ")))
 	}
 
 	return controller, nil
@@ -435,7 +436,7 @@ func (r *Runner) initMRuby() string {
 		var mrbv string
 		mrbv, err := mrb.Version()
 		if err != nil {
-			log.Errorf("mruby failed to initialize: %v", err)
+			slog.Error(fmt.Sprintf("mruby failed to initialize: %v", err))
 		} else {
 			return " (with " + mrbv + ")"
 		}
@@ -484,19 +485,19 @@ func (r *Runner) announceGoPools() {
 		configs = append(configs, fmt.Sprintf("%s: %d", pool.Name(), pool.Size()))
 	}
 
-	log.WithField("context", "main").Debugf("Go pools initialized (%s)", strings.Join(configs, ", "))
+	r.log.Debug(fmt.Sprintf("Go pools initialized (%s)", strings.Join(configs, ", ")))
 }
 
 func (r *Runner) setupSignalHandlers() {
 	s := utils.NewGracefulSignals(time.Duration(r.config.App.ShutdownTimeout) * time.Second)
 
 	s.HandleForceTerminate(func() {
-		log.Warnf("Immediate termination requested. Stopped")
+		r.log.Warn("Immediate termination requested. Stopped")
 		r.errChan <- nil
 	})
 
 	s.Handle(func(ctx context.Context) error {
-		log.Infof("Shutting down... (hit Ctrl-C to stop immediately or wait for up to %ds for graceful shutdown)", r.config.App.ShutdownTimeout)
+		r.log.Info(fmt.Sprintf("Shutting down... (hit Ctrl-C to stop immediately or wait for up to %ds for graceful shutdown)", r.config.App.ShutdownTimeout))
 		return nil
 	})
 

@@ -59,7 +59,7 @@ func (ms *memstream) insert(data string, offset uint64, t time.Time) (uint64, er
 	ts := t.Unix()
 
 	if ms.offset >= offset {
-		return 0, fmt.Errorf("Offset %d is already taken", offset)
+		return 0, fmt.Errorf("offset %d is already taken", offset)
 	}
 
 	ms.offset = offset
@@ -128,17 +128,17 @@ func (ms *memstream) filterByOffset(offset uint64, callback func(e *entry)) erro
 	defer ms.mu.RUnlock()
 
 	if ms.low > offset {
-		return fmt.Errorf("Requested offset couldn't be found: %d, lowest: %d", offset, ms.low)
+		return fmt.Errorf("requested offset couldn't be found: %d, lowest: %d", offset, ms.low)
 	}
 
 	if ms.low == 0 {
-		return fmt.Errorf("Stream is empty")
+		return fmt.Errorf("stream is empty")
 	}
 
 	start := (offset - ms.low) + 1
 
 	if start > uint64(len(ms.data)) {
-		return fmt.Errorf("Requested offset couldn't be found: %d, latest: %d", offset, ms.data[len(ms.data)-1].offset)
+		return fmt.Errorf("requested offset couldn't be found: %d, latest: %d", offset, ms.data[len(ms.data)-1].offset)
 	}
 
 	for _, v := range ms.data[start:] {
@@ -272,13 +272,13 @@ func (b *Memory) HistoryFrom(name string, epoch string, offset uint64) ([]common
 	bepoch := b.GetEpoch()
 
 	if bepoch != epoch {
-		return nil, fmt.Errorf("Unknown epoch: %s, current: %s", epoch, bepoch)
+		return nil, fmt.Errorf("unknown epoch: %s, current: %s", epoch, bepoch)
 	}
 
 	stream := b.get(name)
 
 	if stream == nil {
-		return nil, errors.New("Stream not found")
+		return nil, errors.New("stream not found")
 	}
 
 	history := []common.StreamMessage{}

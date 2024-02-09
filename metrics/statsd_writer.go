@@ -2,10 +2,10 @@ package metrics
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 	"sync"
 
-	"github.com/apex/log"
 	"github.com/smira/go-statsd"
 )
 
@@ -17,16 +17,16 @@ type StatsdConfig struct {
 }
 
 type StatsdLogger struct {
-	log *log.Entry
+	log *slog.Logger
 }
 
 func (lg *StatsdLogger) Printf(msg string, args ...interface{}) {
 	msg = strings.TrimPrefix(msg, "[STATSD] ")
 	// Statsd only prints errors and warnings
 	if strings.Contains(msg, "Error") {
-		lg.log.Errorf(msg, args...)
+		lg.log.Error(fmt.Sprintf(msg, args...))
 	} else {
-		lg.log.Warnf(msg, args...)
+		lg.log.Warn(fmt.Sprintf(msg, args...))
 	}
 }
 
@@ -53,7 +53,7 @@ func NewStatsdWriter(c StatsdConfig, tags map[string]string) *StatsdWriter {
 }
 
 func (sw *StatsdWriter) Run(interval int) error {
-	sl := StatsdLogger{log.WithField("context", "statsd")}
+	sl := StatsdLogger{slog.With("context", "statsd")}
 	opts := []statsd.Option{
 		statsd.MaxPacketSize(sw.config.MaxPacketSize),
 		statsd.MetricPrefix(sw.config.Prefix),
@@ -63,7 +63,11 @@ func (sw *StatsdWriter) Run(interval int) error {
 	var tagsInfo string
 
 	if sw.tags != nil {
-		tagsStyle := resolveTagsStyle(sw.config.TagFormat)
+		tagsStyle, err := resolveTagsStyle(sw.config.TagFormat)
+		if err != nil {
+			return err
+		}
+
 		tags := convertTags(sw.tags)
 		opts = append(opts,
 			statsd.TagStyle(tagsStyle),
@@ -78,10 +82,12 @@ func (sw *StatsdWriter) Run(interval int) error {
 		opts...,
 	)
 
-	log.WithField("context", "metrics").
-		Infof(
-			"Send statsd metrics to %s with every %vs (prefix=%s%s)",
-			sw.config.Host, interval, sw.config.Prefix, tagsInfo,
+	slog.With("context", "metrics").
+		Info(
+			fmt.Sprintf(
+				"Send statsd metrics to %s with every %vs (prefix=%s%s)",
+				sw.config.Host, interval, sw.config.Prefix, tagsInfo,
+			),
 		)
 
 	return nil
@@ -114,17 +120,17 @@ func (sw *StatsdWriter) Write(m *Metrics) error {
 	return nil
 }
 
-func resolveTagsStyle(name string) *statsd.TagFormat {
+func resolveTagsStyle(name string) (*statsd.TagFormat, error) {
 	switch name {
 	case "datadog":
-		return statsd.TagFormatDatadog
+		return statsd.TagFormatDatadog, nil
 	case "influxdb":
-		return statsd.TagFormatInfluxDB
+		return statsd.TagFormatInfluxDB, nil
 	case "graphite":
-		return statsd.TagFormatGraphite
+		return statsd.TagFormatGraphite, nil
 	}
 
-	panic(fmt.Errorf("Unknown StatsD tags format: %s", name))
+	return nil, fmt.Errorf("unknown StatsD tags format: %s", name)
 }
 
 func convertTags(tags map[string]string) []statsd.Tag {

@@ -2,8 +2,8 @@ package broadcast
 
 import (
 	"context"
+	"log/slog"
 
-	"github.com/apex/log"
 	"github.com/nats-io/nats.go"
 
 	nconfig "github.com/anycable/anycable-go/nats"
@@ -14,7 +14,7 @@ type LegacyNATSBroadcaster struct {
 	handler Handler
 	config  *nconfig.NATSConfig
 
-	log *log.Entry
+	log *slog.Logger
 }
 
 var _ Broadcaster = (*LegacyNATSBroadcaster)(nil)
@@ -23,7 +23,7 @@ func NewLegacyNATSBroadcaster(node Handler, c *nconfig.NATSConfig) *LegacyNATSBr
 	return &LegacyNATSBroadcaster{
 		config:  c,
 		handler: node,
-		log:     log.WithFields(log.Fields{"context": "broadcast", "provider": "nats"}),
+		log:     slog.With("context", "broadcast").With("provider", "nats"),
 	}
 }
 
@@ -37,11 +37,11 @@ func (s *LegacyNATSBroadcaster) Start(done chan (error)) error {
 		nats.MaxReconnects(s.config.MaxReconnectAttempts),
 		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
 			if err != nil {
-				log.Warnf("Connection failed: %v", err)
+				slog.Warn("connection failed", "error", err.Error())
 			}
 		}),
 		nats.ReconnectHandler(func(nc *nats.Conn) {
-			log.Infof("Connection restored: %s", nc.ConnectedUrl())
+			slog.Info("connection restored", "url", nc.ConnectedUrl())
 		}),
 	}
 
@@ -56,7 +56,7 @@ func (s *LegacyNATSBroadcaster) Start(done chan (error)) error {
 	}
 
 	_, err = nc.Subscribe(s.config.Channel, func(m *nats.Msg) {
-		s.log.Debugf("Incoming pubsub message: %s", m.Data)
+		s.log.Debug("incoming pubsub message", "data", m.Data)
 		s.handler.HandlePubSub(m.Data)
 	})
 
@@ -65,7 +65,7 @@ func (s *LegacyNATSBroadcaster) Start(done chan (error)) error {
 		return err
 	}
 
-	s.log.Infof("Subscribing for broadcasts to channel: %s", s.config.Channel)
+	s.log.Info("subscribing for broadcasts", "channel", s.config.Channel)
 
 	s.conn = nc
 

@@ -2,12 +2,12 @@ package utils
 
 import (
 	"encoding/json"
+	"fmt"
 	"math"
 	"math/rand"
 	"os"
 	"time"
 
-	"github.com/apex/log"
 	"github.com/mattn/go-isatty"
 )
 
@@ -19,7 +19,7 @@ func IsTTY() bool {
 func ToJSON[T any](val T) []byte {
 	jsonStr, err := json.Marshal(&val)
 	if err != nil {
-		log.Fatalf("😲 Failed to build JSON for %v: %v", val, err)
+		panic(fmt.Sprintf("😲 Failed to build JSON for %v: %v", val, err))
 	}
 	return jsonStr
 }

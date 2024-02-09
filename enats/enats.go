@@ -6,6 +6,8 @@ package enats
 import (
 	"context"
 	"fmt"
+	"log"
+	"log/slog"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -14,7 +16,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/apex/log"
 	"github.com/joomcode/errorx"
 	gonanoid "github.com/matoous/go-nanoid"
 	"github.com/nats-io/nats-server/v2/server"
@@ -45,17 +46,42 @@ type Service struct {
 
 // LogEntry represents LoggerV2 decorator for nats server logger
 type LogEntry struct {
-	*log.Entry
+	*slog.Logger
+}
+
+// Debugf is an alias for Debug
+func (e *LogEntry) Debugf(format string, v ...interface{}) {
+	e.Debug(fmt.Sprintf(format, v...))
+}
+
+// Warnf is an alias for Warn
+func (e *LogEntry) Warnf(format string, v ...interface{}) {
+	e.Warn(fmt.Sprintf(format, v...))
+}
+
+// Errorf is an alias for Error
+func (e *LogEntry) Errorf(format string, v ...interface{}) {
+	e.Error(fmt.Sprintf(format, v...))
+}
+
+// Infof is an alias for Info
+func (e *LogEntry) Infof(format string, v ...interface{}) {
+	e.Info(fmt.Sprintf(format, v...))
+}
+
+// Fatalf is an alias for Fatal
+func (e *LogEntry) Fatalf(format string, v ...interface{}) {
+	log.Fatalf(format, v...)
 }
 
 // Noticef is an alias for Infof
 func (e *LogEntry) Noticef(format string, v ...interface{}) {
-	e.Infof(format, v...)
+	e.Info(fmt.Sprintf(format, v...))
 }
 
 // Tracef is an alias for Debugf
 func (e *LogEntry) Tracef(format string, v ...interface{}) {
-	e.Debugf(format, v...)
+	e.Debug(fmt.Sprintf(format, v...))
 }
 
 // NewService returns an instance of NATS service
@@ -69,30 +95,30 @@ func (s *Service) Start() error {
 
 	u, err := url.Parse(s.config.ServiceAddr)
 	if err != nil {
-		return errorx.Decorate(err, "Error parsing NATS service addr")
+		return errorx.Decorate(err, "error parsing NATS service addr")
 	}
 	if u.Port() == "" {
-		return errorx.IllegalArgument.New("Failed to parse NATS server URL, can not fetch port")
+		return errorx.IllegalArgument.New("failed to parse NATS server URL, can not fetch port")
 	}
 
 	port, err := strconv.ParseInt(u.Port(), 10, 32)
 	if err != nil {
-		return errorx.Decorate(err, "Failed to parse NATS service port")
+		return errorx.Decorate(err, "failed to parse NATS service port")
 	}
 
 	clusterOpts, err := s.getCluster(s.config.ClusterAddr, s.config.ClusterName)
 	if err != nil {
-		return errorx.Decorate(err, "Failed to configure NATS cluster")
+		return errorx.Decorate(err, "failed to configure NATS cluster")
 	}
 
 	routes, err := s.getRoutes()
 	if err != nil {
-		return errorx.Decorate(err, "Failed to parse routes")
+		return errorx.Decorate(err, "failed to parse routes")
 	}
 
 	gatewayOpts, err := s.getGateway(s.config.GatewayAddr, s.config.GatewayAdvertise, s.config.ClusterName, s.config.Gateways)
 	if err != nil {
-		return errorx.Decorate(err, "Failed to configure NATS gateway")
+		return errorx.Decorate(err, "failed to configure NATS gateway")
 	}
 
 	opts := &server.Options{
@@ -116,11 +142,11 @@ func (s *Service) Start() error {
 
 	s.server, err = server.NewServer(opts)
 	if err != nil {
-		return errorx.Decorate(err, "Failed to start NATS server")
+		return errorx.Decorate(err, "failed to start NATS server")
 	}
 
 	if s.config.Debug {
-		e := &LogEntry{log.WithField("service", "nats")}
+		e := &LogEntry{slog.With("service", "nats")}
 		s.server.SetLogger(e, s.config.Debug, s.config.Trace)
 	}
 
@@ -141,7 +167,7 @@ func (s *Service) WaitReady() error {
 	}
 
 	return errorx.TimeoutElapsed.New(
-		"Failed to start NATS server within %d seconds", serverStartTimeout,
+		"failed to start NATS server within %d seconds", serverStartTimeout,
 	)
 }
 
@@ -187,7 +213,7 @@ func (s *Service) getRoutes() ([]*url.URL, error) {
 	for i, r := range s.config.Routes {
 		u, err := url.Parse(r)
 		if err != nil {
-			return nil, errorx.Decorate(err, "Error parsing route URL")
+			return nil, errorx.Decorate(err, "error parsing route URL")
 		}
 		routes[i] = u
 	}
@@ -202,7 +228,7 @@ func (s *Service) getCluster(addr string, name string) (opts server.ClusterOpts,
 	host, port, err := parseAddress(addr)
 
 	if err != nil {
-		err = errorx.Decorate(err, "Failed to parse cluster URL")
+		err = errorx.Decorate(err, "failed to parse cluster URL")
 		return
 	}
 
@@ -223,7 +249,7 @@ func (s *Service) getGateway(addr string, advertise string, name string, gateway
 	host, port, err := parseAddress(addr)
 
 	if err != nil {
-		err = errorx.Decorate(err, "Failed to parse gateway URL")
+		err = errorx.Decorate(err, "failed to parse gateway URL")
 		return
 	}
 
@@ -240,7 +266,7 @@ func (s *Service) getGateway(addr string, advertise string, name string, gateway
 			parts := strings.SplitN(g, ":", 2)
 
 			if len(parts) != 2 {
-				err = errorx.Decorate(err, "Gateway has unknown format: %s", g)
+				err = errorx.Decorate(err, "gateway has unknown format: %s", g)
 				return
 			}
 
@@ -252,7 +278,7 @@ func (s *Service) getGateway(addr string, advertise string, name string, gateway
 			for j, addr := range addrs {
 				u, gateErr := url.Parse(addr)
 				if gateErr != nil {
-					err = errorx.Decorate(gateErr, "Error parsing gateway URL")
+					err = errorx.Decorate(gateErr, "error parsing gateway URL")
 					return
 				}
 
@@ -273,16 +299,16 @@ func parseAddress(addr string) (string, int, error) {
 
 	uri, err := url.Parse(addr)
 	if err != nil {
-		return "", 0, errorx.Decorate(err, "Failed to parse URL")
+		return "", 0, errorx.Decorate(err, "failed to parse URL")
 	}
 
 	if uri.Port() == "" {
-		return "", 0, errorx.IllegalArgument.New("Port cannot be empty")
+		return "", 0, errorx.IllegalArgument.New("port cannot be empty")
 	}
 
 	port, err := strconv.ParseInt(uri.Port(), 10, 32)
 	if err != nil {
-		return "", 0, errorx.Decorate(err, "Port is not valid")
+		return "", 0, errorx.Decorate(err, "port is not valid")
 	}
 
 	return uri.Hostname(), int(port), nil
@@ -320,7 +346,7 @@ func (s *Service) WaitJetStreamReady(maxSeconds int) error {
 
 		c, err := nats.Connect("", nats.InProcessServer(s.server))
 		if err != nil {
-			log.Debugf("NATS server not accepting connections: %v", err)
+			slog.With("context", "enats").Debug("NATS server not accepting connections", "error", err.Error())
 			continue
 		}
 
@@ -332,13 +358,13 @@ func (s *Service) WaitJetStreamReady(maxSeconds int) error {
 		st, err := j.StreamInfo("__anycable__ready__", nats.MaxWait(1*time.Second))
 		if err == nats.ErrStreamNotFound || st != nil {
 			leader := s.server.JetStreamIsLeader()
-			log.Debugf("JetStream cluster is ready: leader=%v", leader)
+			slog.With("context", "enats").Debug("JetStream cluster is ready", "leader", leader)
 			return nil
 		}
 
 		c.Close()
 
-		log.Debugf("JetStream cluster is not ready yet, waiting for 1 second...")
+		slog.With("context", "enats").Debug("JetStream cluster is not ready yet, waiting for 1 second...")
 
 		time.Sleep(1 * time.Second)
 	}

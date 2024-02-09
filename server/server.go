@@ -3,15 +3,15 @@ package server
 import (
 	"context"
 	"crypto/tls"
-	"errors"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"sync"
 	"time"
 
-	"github.com/apex/log"
 	"github.com/go-chi/chi/v5"
+	"github.com/joomcode/errorx"
 	"golang.org/x/net/netutil"
 )
 
@@ -24,7 +24,7 @@ type HTTPServer struct {
 	started  bool
 	maxConn  int
 	mu       sync.Mutex
-	log      *log.Entry
+	log      *slog.Logger
 
 	shutdownCtx context.Context
 	shutdownFn  context.CancelFunc
@@ -71,8 +71,7 @@ func NewServer(host string, port string, ssl *SSLConfig, maxConn int) (*HTTPServ
 	if secured {
 		cer, err := tls.LoadX509KeyPair(ssl.CertPath, ssl.KeyPath)
 		if err != nil {
-			msg := fmt.Sprintf("Failed to load SSL certificate: %s.", err)
-			return nil, errors.New(msg)
+			return nil, errorx.Decorate(err, "failed to load SSL certificate")
 		}
 
 		server.TLSConfig = &tls.Config{Certificates: []tls.Certificate{cer}, MinVersion: tls.VersionTLS12}
@@ -90,7 +89,7 @@ func NewServer(host string, port string, ssl *SSLConfig, maxConn int) (*HTTPServ
 		shutdownCtx: shutdownCtx,
 		shutdownFn:  shutdownFn,
 		maxConn:     maxConn,
-		log:         log.WithField("context", "http"),
+		log:         slog.With("context", "http"),
 	}, nil
 }
 
@@ -127,11 +126,11 @@ func (s *HTTPServer) StartAndAnnounce(name string) error {
 	s.mu.Lock()
 	if s.Running() {
 		s.mu.Unlock()
-		s.log.Debugf("%s is mounted at %s", name, s.Address())
+		s.log.Debug("HTTP server has been already started", "name", name, "addr", s.Address())
 		return nil
 	}
 
-	s.log.Debugf("Starting %s at %s", name, s.Address())
+	s.log.Debug("starting HTTP server", "name", name, "addr", s.Address())
 	s.mu.Unlock()
 
 	return s.Start()

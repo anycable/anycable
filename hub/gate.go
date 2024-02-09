@@ -2,11 +2,11 @@ package hub
 
 import (
 	"context"
+	"log/slog"
 	"sync"
 
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/encoders"
-	"github.com/apex/log"
 )
 
 // Gate plays the role of a shard for the hub.
@@ -25,7 +25,7 @@ type Gate struct {
 	sender chan *common.StreamMessage
 
 	mu  sync.RWMutex
-	log *log.Entry
+	log *slog.Logger
 }
 
 // NewGate creates a new gate.
@@ -35,7 +35,7 @@ func NewGate(ctx context.Context) *Gate {
 		sessionsStreams: make(map[HubSession]map[string][]string),
 		// Use a buffered channel to avoid blocking
 		sender: make(chan *common.StreamMessage, 256),
-		log:    log.WithField("component", "hub"),
+		log:    slog.With("component", "hub"),
 	}
 
 	go g.broadcastLoop(ctx)
@@ -47,13 +47,13 @@ func NewGate(ctx context.Context) *Gate {
 func (g *Gate) Broadcast(streamMsg *common.StreamMessage) {
 	stream := streamMsg.Stream
 
-	ctx := g.log.WithField("stream", stream)
+	ctx := g.log.With("stream", stream)
 
-	ctx.Debugf("Broadcast message: %v", streamMsg)
+	ctx.Debug("broadcast message", "stream", streamMsg, "data", streamMsg.Data, "offset", streamMsg.Offset, "epoch", streamMsg.Epoch, "meta", streamMsg.Meta)
 
 	g.mu.RLock()
 	if _, ok := g.streams[stream]; !ok {
-		ctx.Debug("No sessions")
+		ctx.Debug("no sessions")
 		g.mu.RUnlock()
 		return
 	}

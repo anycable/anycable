@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math"
 	"sync"
 	"sync/atomic"
@@ -12,7 +13,6 @@ import (
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/protocol"
-	"github.com/apex/log"
 
 	pb "github.com/anycable/anycable-go/protos"
 	"google.golang.org/grpc"
@@ -98,12 +98,12 @@ func (st *grpcClientHelper) HandleConn(ctx context.Context, stat stats.ConnStats
 	}
 
 	if _, ok := stat.(*stats.ConnBegin); ok {
-		log.WithField("context", "grpc").Debugf("connected to %s", addr)
+		slog.With("context", "grpc").Debug("connected", "addr", addr)
 		atomic.AddInt64(&st.active, 1)
 	}
 
 	if _, ok := stat.(*stats.ConnEnd); ok {
-		log.WithField("context", "grpc").Debugf("disconnected from %s", addr)
+		slog.With("context", "grpc").Debug("disconnected", "addr", addr)
 		atomic.AddInt64(&st.active, -1)
 	}
 }
@@ -131,7 +131,7 @@ func (st *grpcClientHelper) tryRecover() error {
 	st.recovering = true
 	st.conn.ResetConnectBackoff()
 
-	log.WithField("context", "rpc").Warn("Connection is lost. Trying to reconnect immediately")
+	slog.With("context", "rpc").Warn("connection is lost, trying to reconnect immediately")
 
 	return nil
 }
@@ -142,7 +142,7 @@ func (st *grpcClientHelper) reset() {
 
 	if st.recovering {
 		st.recovering = false
-		log.WithField("context", "rpc").Info("Connection is restored")
+		slog.With("context", "rpc").Info("connection is restored")
 	}
 }
 
@@ -152,7 +152,7 @@ type Controller struct {
 	barrier     Barrier
 	client      pb.RPCClient
 	metrics     metrics.Instrumenter
-	log         *log.Entry
+	log         *slog.Logger
 	clientState ClientHelper
 
 	timerMu      sync.Mutex
@@ -182,7 +182,7 @@ func NewController(metrics metrics.Instrumenter, config *Config) (*Controller, e
 		metrics.RegisterGauge(metricsGRPCActiveConns, "The number of active HTTP connections used by gRPC")
 	}
 
-	return &Controller{log: log.WithField("context", "rpc"), metrics: metrics, config: config, barrier: barrier}, nil
+	return &Controller{log: slog.With("context", "rpc"), metrics: metrics, config: config, barrier: barrier}, nil
 }
 
 // Start initializes RPC connection pool
@@ -211,7 +211,7 @@ func (c *Controller) Start() error {
 	client, state, err := dialer(c.config)
 
 	if err == nil {
-		c.log.Infof("RPC controller initialized: %s (concurrency: %s, impl: %s, enable_tls: %t, proto_versions: %s)", host, c.barrier.CapacityInfo(), impl, enableTLS, ProtoVersions)
+		c.log.Info(fmt.Sprintf("RPC controller initialized: %s (concurrency: %s, impl: %s, enable_tls: %t, proto_versions: %s)", host, c.barrier.CapacityInfo(), impl, enableTLS, ProtoVersions))
 	} else {
 		return err
 	}
@@ -245,7 +245,7 @@ func (c *Controller) Shutdown() error {
 	busy := c.busy()
 
 	if busy > 0 {
-		c.log.Infof("Waiting for active RPC calls to finish: %d", busy)
+		c.log.Info("waiting for active RPC calls to finish", "num", busy)
 	}
 
 	// Wait for active connections
@@ -253,10 +253,10 @@ func (c *Controller) Shutdown() error {
 		busy := c.busy()
 
 		if busy > 0 {
-			return false, fmt.Errorf("Terminated while completing active RPC calls: %d", busy)
+			return false, fmt.Errorf("terminated while completing active RPC calls: %d", busy)
 		}
 
-		c.log.Info("All active RPC calls finished")
+		c.log.Info("all active RPC calls finished")
 		return true, nil
 	})
 
@@ -292,7 +292,7 @@ func (c *Controller) Authenticate(sid string, env *common.SessionEnv) (*common.C
 
 	if r, ok := response.(*pb.ConnectionResponse); ok {
 
-		c.log.WithField("sid", sid).Debugf("Authenticate response: %v", r)
+		c.log.With("sid", sid).Debug("authenticate response", "data", r)
 
 		reply, err := protocol.ParseConnectResponse(r)
 
@@ -389,7 +389,7 @@ func (c *Controller) Disconnect(sid string, env *common.SessionEnv, id string, s
 	}
 
 	if r, ok := response.(*pb.DisconnectResponse); ok {
-		c.log.WithField("sid", sid).Debugf("Disconnect response: %v", r)
+		c.log.With("sid", sid).Debug("Disconnect response", "data", r)
 
 		err = protocol.ParseDisconnectResponse(r)
 
@@ -413,7 +413,7 @@ func (c *Controller) parseCommandResponse(sid string, response interface{}, err 
 	}
 
 	if r, ok := response.(*pb.CommandResponse); ok {
-		c.log.WithField("sid", sid).Debugf("Command response: %v", r)
+		c.log.With("sid", sid).Debug("command response", "data", r)
 
 		res, err := protocol.ParseCommandResponse(r)
 
@@ -460,7 +460,7 @@ func (c *Controller) retry(sid string, callback func() (interface{}, error)) (re
 			return nil, err
 		}
 
-		c.log.WithFields(log.Fields{"sid": sid, "code": st.Code()}).Debugf("RPC failure: %v", st.Message())
+		c.log.With("sid", sid).Debug("RPC failed", "code", st.Code(), "error", st.Message())
 
 		interval := retryUnavailableInterval
 

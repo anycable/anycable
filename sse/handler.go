@@ -2,6 +2,7 @@ package sse
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -10,7 +11,6 @@ import (
 	"github.com/anycable/anycable-go/server"
 	"github.com/anycable/anycable-go/version"
 	"github.com/anycable/anycable-go/ws"
-	"github.com/apex/log"
 )
 
 // SSEHandler generates a new http handler for SSE connections
@@ -65,12 +65,12 @@ func SSEHandler(n *node.Node, shutdownCtx context.Context, headersExtractor serv
 			return
 		}
 
-		sessionCtx := log.WithField("sid", info.UID).WithField("transport", "sse")
+		sessionCtx := slog.With("sid", info.UID).With("transport", "sse")
 
 		subscribeCmds, err := subscribeCommandsFromRequest(r)
 
 		if err != nil {
-			sessionCtx.Errorf("failed to build subscribe command: %v", err)
+			sessionCtx.Error("failed to build subscribe command", "error", err.Error())
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -79,7 +79,7 @@ func SSEHandler(n *node.Node, shutdownCtx context.Context, headersExtractor serv
 		session, err := NewSSESession(n, w, r, info)
 
 		if err != nil {
-			sessionCtx.Errorf("failed to establish sesssion: %v", err)
+			sessionCtx.Error("failed to establish sesssion", "error", err.Error())
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -100,14 +100,14 @@ func SSEHandler(n *node.Node, shutdownCtx context.Context, headersExtractor serv
 			res, err := n.Subscribe(session, subscribeCmd)
 
 			if err != nil || res == nil {
-				sessionCtx.Errorf("failed to subscribe: %v", err)
+				sessionCtx.Error("failed to subscribe", "error", err.Error())
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
 
 			// Subscription rejected
 			if res.Status != common.SUCCESS {
-				sessionCtx.Debugf("rejected: %v", err)
+				sessionCtx.Debug("subscription rejected")
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
@@ -117,7 +117,7 @@ func SSEHandler(n *node.Node, shutdownCtx context.Context, headersExtractor serv
 		flusher.Flush()
 
 		conn.Established()
-		sessionCtx.Debugf("session established")
+		sessionCtx.Debug("session established")
 
 		shutdownReceived := false
 
@@ -126,18 +126,18 @@ func SSEHandler(n *node.Node, shutdownCtx context.Context, headersExtractor serv
 			case <-shutdownCtx.Done():
 				if !shutdownReceived {
 					shutdownReceived = true
-					sessionCtx.Debugf("server shutdown")
+					sessionCtx.Debug("server shutdown")
 					session.DisconnectWithMessage(
 						&common.DisconnectMessage{Type: "disconnect", Reason: common.SERVER_RESTART_REASON, Reconnect: true},
 						common.SERVER_RESTART_REASON,
 					)
 				}
 			case <-r.Context().Done():
-				sessionCtx.Debugf("request terminated")
+				sessionCtx.Debug("request terminated")
 				session.DisconnectNow("Closed", ws.CloseNormalClosure)
 				return
 			case <-conn.Context().Done():
-				sessionCtx.Debugf("session completed")
+				sessionCtx.Debug("session completed")
 				return
 			}
 		}

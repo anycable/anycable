@@ -54,6 +54,6 @@ stop :anycable
 
 logs = stdout(:anycable)
 # We disabled disconnector, so there should be just 2 RPC calls (Connect)
-if logs !~ /failed_auths_total=0 rpc_call_total=2/
+unless logs =~ /failed_auths_total=0/ && logs =~ /rpc_call_total=2/
   fail "Metrics logs not found:\n#{logs}"
 end

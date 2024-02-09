@@ -5,10 +5,10 @@ package gobench
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/metrics"
-	"github.com/apex/log"
 
 	nanoid "github.com/matoous/go-nanoid"
 )
@@ -31,14 +31,14 @@ type BroadcastMessage struct {
 // Controller implements node.Controller interface for gRPC
 type Controller struct {
 	metrics *metrics.Metrics
-	log     *log.Entry
+	log     *slog.Logger
 }
 
 // NewController builds new Controller from config
 func NewController(metrics *metrics.Metrics) *Controller {
 	metrics.RegisterCounter(metricsCalls, "The total number of Go channels calls")
 
-	return &Controller{log: log.WithField("context", "gobench"), metrics: metrics}
+	return &Controller{log: slog.With("context", "gobench"), metrics: metrics}
 }
 
 // Start is no-op

@@ -2,8 +2,7 @@ package rails
 
 import (
 	"encoding/json"
-
-	"github.com/apex/log"
+	"log/slog"
 
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/node"
@@ -12,7 +11,7 @@ import (
 
 type TurboController struct {
 	verifier *utils.MessageVerifier
-	log      *log.Entry
+	log      *slog.Logger
 }
 
 var _ node.Controller = (*TurboController)(nil)
@@ -24,7 +23,7 @@ func NewTurboController(key string) *TurboController {
 		verifier = utils.NewMessageVerifier(key)
 	}
 
-	return &TurboController{verifier, log.WithField("context", "turbo")}
+	return &TurboController{verifier, slog.With("context", "turbo")}
 }
 
 func (c *TurboController) Start() error {
@@ -47,7 +46,7 @@ func (c *TurboController) Subscribe(sid string, env *common.SessionEnv, id strin
 	err := json.Unmarshal([]byte(channel), &params)
 
 	if err != nil {
-		c.log.WithField("identifier", channel).Warnf("invalid identifier: %v", err)
+		c.log.With("identifier", channel).Warn("invalid identifier", "error", err)
 		return nil, err
 	}
 
@@ -56,12 +55,12 @@ func (c *TurboController) Subscribe(sid string, env *common.SessionEnv, id strin
 	if c.IsCleartext() {
 		stream = params.SignedStreamID
 
-		c.log.WithField("identifier", channel).Debugf("unsigned stream: %s", stream)
+		c.log.With("identifier", channel).Debug("unsigned", "stream", stream)
 	} else {
 		verified, err := c.verifier.Verified(params.SignedStreamID)
 
 		if err != nil {
-			c.log.WithField("identifier", channel).Debugf("verification failed for %s: %v", params.SignedStreamID, err)
+			c.log.With("identifier", channel).Debug("verification failed", "stream", params.SignedStreamID, "error", err)
 
 			return &common.CommandResult{
 					Status:        common.FAILURE,
@@ -75,7 +74,7 @@ func (c *TurboController) Subscribe(sid string, env *common.SessionEnv, id strin
 		stream, ok = verified.(string)
 
 		if !ok {
-			c.log.WithField("identifier", channel).Debugf("verification failed: stream name is not a string: %v", verified)
+			c.log.With("identifier", channel).Debug("verification failed: stream name is not a string", "stream", verified)
 
 			return &common.CommandResult{
 					Status:        common.FAILURE,
@@ -84,7 +83,7 @@ func (c *TurboController) Subscribe(sid string, env *common.SessionEnv, id strin
 				nil
 		}
 
-		c.log.WithField("identifier", channel).Debugf("verified stream: %s", stream)
+		c.log.With("identifier", channel).Debug("verified", "stream", stream)
 	}
 
 	return &common.CommandResult{

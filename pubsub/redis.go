@@ -3,13 +3,14 @@ package pubsub
 import (
 	"context"
 	"errors"
+	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
 	"github.com/anycable/anycable-go/common"
 	rconfig "github.com/anycable/anycable-go/redis"
 	"github.com/anycable/anycable-go/utils"
-	"github.com/apex/log"
 	"github.com/redis/rueidis"
 )
 
@@ -41,7 +42,7 @@ type RedisSubscriber struct {
 	streamsCh  chan (*subscriptionEntry)
 	shutdownCh chan struct{}
 
-	log *log.Entry
+	log *slog.Logger
 }
 
 var _ Subscriber = (*RedisSubscriber)(nil)
@@ -59,7 +60,7 @@ func NewRedisSubscriber(node Handler, config *rconfig.RedisConfig) (*RedisSubscr
 		config:        config,
 		clientOptions: options,
 		subscriptions: make(map[string]*subscriptionEntry),
-		log:           log.WithField("context", "pubsub"),
+		log:           slog.With("context", "pubsub"),
 		streamsCh:     make(chan *subscriptionEntry, 1024),
 		shutdownCh:    make(chan struct{}),
 	}, nil
@@ -67,11 +68,11 @@ func NewRedisSubscriber(node Handler, config *rconfig.RedisConfig) (*RedisSubscr
 
 func (s *RedisSubscriber) Start(done chan (error)) error {
 	if s.config.IsSentinel() { //nolint:gocritic
-		s.log.Infof("Starting Redis pub/sub (sentinels): %v", s.config.Hostnames())
+		s.log.Info(fmt.Sprintf("Starting Redis pub/sub (sentinels): %v", s.config.Hostnames()))
 	} else if s.config.IsCluster() {
-		s.log.Infof("Starting Redis pub/sub (cluster): %v", s.config.Hostnames())
+		s.log.Info(fmt.Sprintf("Starting Redis pub/sub (cluster): %v", s.config.Hostnames()))
 	} else {
-		s.log.Infof("Starting Redis pub/sub: %s", s.config.Hostname())
+		s.log.Info(fmt.Sprintf("Starting Redis pub/sub: %s", s.config.Hostname()))
 	}
 
 	go s.runPubSub(done)
@@ -89,7 +90,7 @@ func (s *RedisSubscriber) Shutdown(ctx context.Context) error {
 		return nil
 	}
 
-	s.log.Debugf("Shutting down Redis pub/sub")
+	s.log.Debug("shutting down Redis pub/sub")
 
 	// First, shutdown the pub/sub routine
 	close(s.shutdownCh)
@@ -146,7 +147,7 @@ func (s *RedisSubscriber) Publish(stream string, msg interface{}) {
 
 	s.clientMu.RUnlock()
 
-	s.log.WithField("channel", stream).Debugf("Publish message: %v", msg)
+	s.log.With("channel", stream).Debug("publish message", "data", msg)
 
 	client.Do(ctx, client.B().Publish().Channel(stream).Message(string(utils.ToJSON(msg))).Build())
 }
@@ -174,7 +175,7 @@ func (s *RedisSubscriber) runPubSub(done chan (error)) {
 	err := s.initClient()
 
 	if err != nil {
-		s.log.Errorf("Failed to connect to Redis: %v", err)
+		s.log.Error("failed to connect to Redis", "error", err.Error())
 		s.maybeReconnect(done)
 		return
 	}
@@ -187,34 +188,34 @@ func (s *RedisSubscriber) runPubSub(done chan (error)) {
 			s.subMu.Lock()
 			defer s.subMu.Unlock()
 
-			s.log.Debugf("Subscription message: %v", m)
+			s.log.Debug("subscription message", "data", m)
 
 			if m.Kind == "subscribe" && m.Channel == s.config.InternalChannel {
 				if s.reconnectAttempt > 0 {
-					s.log.Info("Reconnected to Redis")
+					s.log.Info("reconnected to Redis")
 				}
 				s.reconnectAttempt = 0
 			}
 
 			if entry, ok := s.subscriptions[m.Channel]; ok {
 				if entry.state == subscriptionPending && m.Kind == "subscribe" {
-					s.log.WithField("channel", m.Channel).Debugf("Subscribed")
+					s.log.With("channel", m.Channel).Debug("subscribed")
 					entry.state = subscriptionCreated
 				}
 
 				if entry.state == subscriptionPendingUnsubscribe && m.Kind == "unsubscribe" {
-					s.log.WithField("channel", m.Channel).Debugf("Unsubscribed")
+					s.log.With("channel", m.Channel).Debug("unsubscribed")
 					delete(s.subscriptions, entry.id)
 				}
 			}
 		},
 		OnMessage: func(m rueidis.PubSubMessage) {
-			s.log.WithField("channel", m.Channel).Debugf("Received message: %v", m.Message)
+			s.log.With("channel", m.Channel).Debug("received message", "data", m.Message)
 
 			msg, err := common.PubSubMessageFromJSON([]byte(m.Message))
 
 			if err != nil {
-				s.log.Warnf("Failed to parse pubsub message '%s' with error: %v", m.Message, err)
+				s.log.Warn("failed to parse pubsub message", "data", m.Message, "error", err.Error())
 				return
 			}
 
@@ -231,24 +232,24 @@ func (s *RedisSubscriber) runPubSub(done chan (error)) {
 		select {
 		case err := <-wait:
 			if err != nil {
-				s.log.Errorf("Redis pub/sub disconnected: %v", err)
+				s.log.Error("Redis pub/sub disconnected", "error", err.Error())
 			}
 
 			s.maybeReconnect(done)
 
 			return
 		case <-s.shutdownCh:
-			s.log.Debugf("Close pub/sub channel")
+			s.log.Debug("close pub/sub channel")
 			return
 		case entry := <-s.streamsCh:
 			ctx := context.Background()
 
 			switch entry.state {
 			case subscriptionPending:
-				s.log.WithField("channel", entry.id).Debugf("Subscribing")
+				s.log.With("channel", entry.id).Debug("subscribing")
 				client.Do(ctx, client.B().Subscribe().Channel(entry.id).Build())
 			case subscriptionPendingUnsubscribe:
-				s.log.WithField("channel", entry.id).Debugf("Unsubscribing")
+				s.log.With("channel", entry.id).Debug("unsubscribing")
 				client.Do(ctx, client.B().Unsubscribe().Channel(entry.id).Build())
 			}
 		}
@@ -302,10 +303,10 @@ func (s *RedisSubscriber) maybeReconnect(done chan (error)) {
 
 	delay := utils.NextRetry(s.reconnectAttempt - 1)
 
-	s.log.Infof("Next Redis reconnect attempt in %s", delay)
+	s.log.Info(fmt.Sprintf("next Redis reconnect attempt in %s", delay))
 	time.Sleep(delay)
 
-	s.log.Infof("Reconnecting to Redis...")
+	s.log.Info("reconnecting to Redis...")
 
 	go s.runPubSub(done)
 
@@ -314,7 +315,7 @@ func (s *RedisSubscriber) maybeReconnect(done chan (error)) {
 
 	for _, sub := range s.subscriptions {
 		if sub.state == subscriptionPending {
-			s.log.Debugf("Resubscribing to stream: %s", sub.id)
+			s.log.Debug("resubscribing to stream", "stream", sub.id)
 			s.streamsCh <- sub
 		}
 	}

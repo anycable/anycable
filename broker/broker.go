@@ -175,11 +175,11 @@ func (b *LegacyBroker) Unsubscribe(stream string) string {
 }
 
 func (LegacyBroker) HistoryFrom(stream string, epoch string, offset uint64) ([]common.StreamMessage, error) {
-	return nil, errors.New("History not supported")
+	return nil, errors.New("history not supported")
 }
 
 func (LegacyBroker) HistorySince(stream string, ts int64) ([]common.StreamMessage, error) {
-	return nil, errors.New("History not supported")
+	return nil, errors.New("history not supported")
 }
 
 func (LegacyBroker) CommitSession(sid string, session Cacheable) error {

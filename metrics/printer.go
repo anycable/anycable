@@ -1,10 +1,10 @@
 package metrics
 
 import (
+	"log/slog"
 	"strings"
 
 	"github.com/anycable/anycable-go/utils"
-	"github.com/apex/log"
 )
 
 // Printer describes metrics logging interface
@@ -34,12 +34,9 @@ func NewBasePrinter(filterList []string) *BasePrinter {
 // Run prints a message to the log with metrics logging details
 func (p *BasePrinter) Run(interval int) error {
 	if p.filter != nil {
-		log.WithField("context", "metrics").Infof(
-			"Log metrics every %ds (only selected fields: %s)",
-			interval, strings.Join(utils.Keys(p.filter), ", "),
-		)
+		slog.With("context", "metrics").Info("log metrics", "interval", interval, "fields", strings.Join(utils.Keys(p.filter), ","))
 	} else {
-		log.WithField("context", "metrics").Infof("Log metrics every %ds", interval)
+		slog.With("context", "metrics").Info("log metrics", "interval", interval)
 	}
 	return nil
 }
@@ -56,17 +53,15 @@ func (p *BasePrinter) Write(m *Metrics) error {
 
 // Print logs stats data using global logger with info level
 func (p *BasePrinter) Print(snapshot map[string]uint64) {
-	fields := make(log.Fields, len(snapshot)+1)
-
-	fields["context"] = "metrics"
+	fields := make([]interface{}, 0)
 
 	for k, v := range snapshot {
 		if p.filter == nil {
-			fields[k] = v
+			fields = append(fields, k, v)
 		} else if _, ok := p.filter[k]; ok {
-			fields[k] = v
+			fields = append(fields, k, v)
 		}
 	}
 
-	log.WithFields(fields).Info("")
+	slog.With("context", "metrics").Info("", fields...)
 }

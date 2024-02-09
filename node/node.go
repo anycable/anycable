@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"runtime"
 	"sync"
 	"time"
@@ -14,7 +15,6 @@ import (
 	"github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/utils"
 	"github.com/anycable/anycable-go/ws"
-	"github.com/apex/log"
 )
 
 const (
@@ -72,7 +72,7 @@ type Node struct {
 	shutdownCh   chan struct{}
 	shutdownMu   sync.Mutex
 	closed       bool
-	log          *log.Entry
+	log          *slog.Logger
 }
 
 var _ AppNode = (*Node)(nil)
@@ -84,7 +84,7 @@ func NewNode(controller Controller, metrics *metrics.Metrics, config *Config) *N
 		config:     config,
 		controller: controller,
 		shutdownCh: make(chan struct{}),
-		log:        log.WithFields(log.Fields{"context": "node"}),
+		log:        slog.With("context", "node"),
 	}
 
 	node.hub = hub.NewHub(config.HubGopoolSize)
@@ -121,7 +121,7 @@ func (n *Node) Instrumenter() metrics.Instrumenter {
 // HandleCommand parses incoming message from client and
 // execute the command (if recognized)
 func (n *Node) HandleCommand(s *Session, msg *common.Message) (err error) {
-	s.Log.Debugf("Incoming message: %v", msg)
+	s.Log.Debug("incoming message", "data", msg)
 	switch msg.Command {
 	case "pong":
 		s.handlePong(msg)
@@ -134,7 +134,7 @@ func (n *Node) HandleCommand(s *Session, msg *common.Message) (err error) {
 	case "history":
 		err = n.History(s, msg)
 	default:
-		err = fmt.Errorf("Unknown command: %s", msg.Command)
+		err = fmt.Errorf("unknown command: %s", msg.Command)
 	}
 
 	return
@@ -146,7 +146,7 @@ func (n *Node) HandleBroadcast(raw []byte) {
 
 	if err != nil {
 		n.metrics.CounterIncrement(metricsUnknownBroadcast)
-		n.log.Warnf("Failed to parse pubsub message '%s' with error: %v", raw, err)
+		n.log.Warn("failed to parse pubsub message", "data", raw, "error", err.Error())
 		return
 	}
 
@@ -168,7 +168,7 @@ func (n *Node) HandlePubSub(raw []byte) {
 
 	if err != nil {
 		n.metrics.CounterIncrement(metricsUnknownBroadcast)
-		n.log.Warnf("Failed to parse pubsub message '%s' with error: %v", raw, err)
+		n.log.Warn("failed to parse pubsub message", "data", raw, "error", err.Error())
 		return
 	}
 
@@ -195,7 +195,7 @@ func (n *Node) Shutdown(ctx context.Context) (err error) {
 	n.shutdownMu.Lock()
 	if n.closed {
 		n.shutdownMu.Unlock()
-		return errors.New("Already shut down")
+		return errors.New("already shut down")
 	}
 
 	close(n.shutdownCh)
@@ -207,7 +207,7 @@ func (n *Node) Shutdown(ctx context.Context) (err error) {
 		active := n.hub.Size()
 
 		if active > 0 {
-			n.log.Infof("Closing active connections: %d", active)
+			n.log.Info("closing active connections", "num", active)
 			n.disconnectAll(ctx)
 		}
 
@@ -218,7 +218,7 @@ func (n *Node) Shutdown(ctx context.Context) (err error) {
 		err := n.disconnector.Shutdown(ctx)
 
 		if err != nil {
-			n.log.Warnf("%v", err)
+			n.log.Warn("failed to shutdown disconnector gracefully", "error", err.Error())
 		}
 	}
 
@@ -226,7 +226,7 @@ func (n *Node) Shutdown(ctx context.Context) (err error) {
 		err := n.controller.Shutdown()
 
 		if err != nil {
-			n.log.Warnf("%v", err)
+			n.log.Warn("failed to shutdown controller gracefully", "error", err.Error())
 		}
 	}
 
@@ -301,7 +301,7 @@ func (n *Node) Authenticate(s *Session, options ...AuthOption) (res *common.Conn
 
 	if s.IsResumeable() {
 		if berr := n.broker.CommitSession(s.GetID(), s); berr != nil {
-			s.Log.Errorf("Failed to persist session in cache: %v", berr)
+			s.Log.Error("failed to persist session in cache", "error", berr.Error())
 		}
 	}
 
@@ -327,23 +327,23 @@ func (n *Node) TryRestoreSession(s *Session) (restored bool) {
 	cached_session, err := n.broker.RestoreSession(prev_sid)
 
 	if err != nil {
-		s.Log.Errorf("Failed to fetch session cache %s: %s", prev_sid, err.Error())
+		s.Log.Error("failed to fetch session cache", "old_sid", prev_sid, "error", err.Error())
 		return false
 	}
 
 	if cached_session == nil {
-		s.Log.Debugf("Couldn't find session to restore from: %s", prev_sid)
+		s.Log.Debug("session not found in cache", "old_sid", prev_sid)
 		return false
 	}
 
 	err = s.RestoreFromCache(cached_session)
 
 	if err != nil {
-		s.Log.Errorf("Failed to restore session from cache %s: %s", prev_sid, err.Error())
+		s.Log.Error("failed to restore session from cache", "old_sid", prev_sid, "error", err.Error())
 		return false
 	}
 
-	s.Log.Debugf("Session restored from: %s", prev_sid)
+	s.Log.Debug("session restored", "old_sid", prev_sid)
 
 	s.Connected = true
 	n.hub.AddSession(s)
@@ -366,7 +366,7 @@ func (n *Node) TryRestoreSession(s *Session) (restored bool) {
 
 	if s.IsResumeable() {
 		if berr := n.broker.CommitSession(s.GetID(), s); berr != nil {
-			s.Log.Errorf("Failed to persist session in cache: %v", berr)
+			s.Log.Error("failed to persist session in cache", "error", berr.Error())
 		}
 	}
 
@@ -379,7 +379,7 @@ func (n *Node) Subscribe(s *Session, msg *common.Message) (res *common.CommandRe
 
 	if ok := s.subscriptions.HasChannel(msg.Identifier); ok {
 		s.smu.Unlock()
-		err = fmt.Errorf("Already subscribed to %s", msg.Identifier)
+		err = fmt.Errorf("already subscribed to %s", msg.Identifier)
 		return
 	}
 
@@ -389,14 +389,14 @@ func (n *Node) Subscribe(s *Session, msg *common.Message) (res *common.CommandRe
 
 	if err != nil { // nolint: gocritic
 		if res == nil || res.Status == common.ERROR {
-			s.Log.Errorf("Subscribe error: %v", err)
+			s.Log.Error("subscribe failed", "error", err.Error())
 		}
 	} else if res.Status == common.SUCCESS {
 		confirmed = true
 		s.subscriptions.AddChannel(msg.Identifier)
-		s.Log.Debugf("Subscribed to channel: %s", msg.Identifier)
+		s.Log.Debug("subscribed", "channel", msg.Identifier)
 	} else {
-		s.Log.Debugf("Subscription rejected: %s", msg.Identifier)
+		s.Log.Debug("subscription rejected", "channel", msg.Identifier)
 	}
 
 	s.smu.Unlock()
@@ -409,7 +409,7 @@ func (n *Node) Subscribe(s *Session, msg *common.Message) (res *common.CommandRe
 	if confirmed {
 		if s.IsResumeable() {
 			if berr := n.broker.CommitSession(s.GetID(), s); berr != nil {
-				s.Log.Errorf("Failed to persist session in cache: %v", berr)
+				s.Log.Error("failed to persist session in cache", "error", berr.Error())
 			}
 		}
 
@@ -427,7 +427,7 @@ func (n *Node) Unsubscribe(s *Session, msg *common.Message) (res *common.Command
 
 	if ok := s.subscriptions.HasChannel(msg.Identifier); !ok {
 		s.smu.Unlock()
-		err = fmt.Errorf("Unknown subscription %s", msg.Identifier)
+		err = fmt.Errorf("unknown subscription %s", msg.Identifier)
 		return
 	}
 
@@ -435,7 +435,7 @@ func (n *Node) Unsubscribe(s *Session, msg *common.Message) (res *common.Command
 
 	if err != nil {
 		if res == nil || res.Status == common.ERROR {
-			s.Log.Errorf("Unsubscribe error: %v", err)
+			s.Log.Error("failed to unsubscribe", "error", err.Error())
 		}
 	} else {
 		// Make sure to remove all streams subscriptions
@@ -443,7 +443,7 @@ func (n *Node) Unsubscribe(s *Session, msg *common.Message) (res *common.Command
 
 		s.subscriptions.RemoveChannel(msg.Identifier)
 
-		s.Log.Debugf("Unsubscribed from channel: %s", msg.Identifier)
+		s.Log.Debug("unsubscribed", "channel", msg.Identifier)
 	}
 
 	s.smu.Unlock()
@@ -454,7 +454,7 @@ func (n *Node) Unsubscribe(s *Session, msg *common.Message) (res *common.Command
 
 	if s.IsResumeable() {
 		if berr := n.broker.CommitSession(s.GetID(), s); berr != nil {
-			s.Log.Errorf("Failed to persist session in cache: %v", berr)
+			s.Log.Error("failed to persist session in cache", "error", berr.Error())
 		}
 	}
 
@@ -467,7 +467,7 @@ func (n *Node) Perform(s *Session, msg *common.Message) (res *common.CommandResu
 
 	if ok := s.subscriptions.HasChannel(msg.Identifier); !ok {
 		s.smu.Unlock()
-		err = fmt.Errorf("Unknown subscription %s", msg.Identifier)
+		err = fmt.Errorf("unknown subscription %s", msg.Identifier)
 		return
 	}
 
@@ -476,7 +476,7 @@ func (n *Node) Perform(s *Session, msg *common.Message) (res *common.CommandResu
 	data, ok := msg.Data.(string)
 
 	if !ok {
-		err = fmt.Errorf("Perform data must be a string, got %v", msg.Data)
+		err = fmt.Errorf("perform data must be a string, got %v", msg.Data)
 		return
 	}
 
@@ -484,17 +484,17 @@ func (n *Node) Perform(s *Session, msg *common.Message) (res *common.CommandResu
 
 	if err != nil {
 		if res == nil || res.Status == common.ERROR {
-			s.Log.Errorf("Perform error: %v", err)
+			s.Log.Error("perform failed", "error", err.Error())
 		}
 	} else {
-		s.Log.Debugf("Perform result: %v", res)
+		s.Log.Debug("perform result", "data", res)
 	}
 
 	if res != nil {
 		if n.handleCommandReply(s, msg, res) {
 			if s.IsResumeable() {
 				if berr := n.broker.CommitSession(s.GetID(), s); berr != nil {
-					s.Log.Errorf("Failed to persist session in cache: %v", berr)
+					s.Log.Error("failed to persist session in cache", "error", berr.Error())
 				}
 			}
 		}
@@ -509,7 +509,7 @@ func (n *Node) History(s *Session, msg *common.Message) (err error) {
 
 	if ok := s.subscriptions.HasChannel(msg.Identifier); !ok {
 		s.smu.Unlock()
-		err = fmt.Errorf("Unknown subscription %s", msg.Identifier)
+		err = fmt.Errorf("unknown subscription %s", msg.Identifier)
 		return
 	}
 
@@ -520,7 +520,7 @@ func (n *Node) History(s *Session, msg *common.Message) (err error) {
 	history := msg.History
 
 	if history.Since == 0 && history.Streams == nil {
-		err = fmt.Errorf("History request is missing, got %v", msg)
+		err = fmt.Errorf("history request is missing, got %v", msg)
 		return
 	}
 
@@ -584,7 +584,7 @@ func (n *Node) retreiveHistory(history *common.HistoryRequest, streams []string)
 // Broadcast message to stream (locally)
 func (n *Node) Broadcast(msg *common.StreamMessage) {
 	n.metrics.CounterIncrement(metricsBroadcastMsg)
-	n.log.Debugf("Incoming broadcast message: %v", msg)
+	n.log.Debug("incoming broadcast message", "data", msg)
 	n.hub.BroadcastMessage(msg)
 }
 
@@ -592,13 +592,13 @@ func (n *Node) Broadcast(msg *common.StreamMessage) {
 func (n *Node) ExecuteRemoteCommand(msg *common.RemoteCommandMessage) {
 	// TODO: Add remote commands metrics
 	// n.metrics.CounterIncrement(metricsRemoteCommandsMsg)
-	n.log.Debugf("Incoming remote command: %v", msg)
+	n.log.Debug("incoming remote command", "data", msg)
 
 	switch msg.Command { // nolint:gocritic
 	case "disconnect":
 		dmsg, err := msg.ToRemoteDisconnectMessage()
 		if err != nil {
-			n.log.Warnf("Failed to parse remote disconnect command: %v", err)
+			n.log.Warn("failed to parse remote disconnect command", "error", err.Error())
 			return
 		}
 
@@ -633,7 +633,7 @@ func (n *Node) DisconnectNow(s *Session) error {
 
 	ids := s.GetIdentifiers()
 
-	s.Log.Debugf("Disconnect %s %s %v %v", ids, s.env.URL, s.env.Headers, sessionSubscriptions)
+	s.Log.Debug("disconnect", "ids", ids, "url", s.env.URL, "hedears", s.env.Headers, "subscriptions", sessionSubscriptions)
 
 	err := n.controller.Disconnect(
 		s.GetID(),
@@ -643,7 +643,7 @@ func (n *Node) DisconnectNow(s *Session) error {
 	)
 
 	if err != nil {
-		s.Log.Errorf("Disconnect error: %v", err)
+		s.Log.Error("disconnect failed", "error", err.Error())
 	}
 
 	return err
@@ -652,7 +652,7 @@ func (n *Node) DisconnectNow(s *Session) error {
 // RemoteDisconnect find a session by identifier and closes it
 func (n *Node) RemoteDisconnect(msg *common.RemoteDisconnectMessage) {
 	n.metrics.CounterIncrement(metricsBroadcastMsg)
-	n.log.Debugf("Incoming pubsub command: %v", msg)
+	n.log.Debug("incoming pubsub command", "data", msg)
 	n.hub.RemoteDisconnect(msg)
 }
 
@@ -804,9 +804,9 @@ func (n *Node) disconnectAll(ctx context.Context) {
 
 	select {
 	case <-ctx.Done():
-		n.log.Warnf("Terminated while disconnecting active sessions: %d", n.hub.Size())
+		n.log.Warn("terminated while disconnecting active sessions", "num", n.hub.Size())
 	case <-done:
-		n.log.Info("All active connections closed")
+		n.log.Info("all active connections closed")
 	}
 }
 

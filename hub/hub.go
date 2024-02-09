@@ -3,12 +3,12 @@ package hub
 import (
 	"context"
 	"hash/fnv"
+	"log/slog"
 	"sync"
 
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/encoders"
 	"github.com/anycable/anycable-go/utils"
-	"github.com/apex/log"
 )
 
 type HubSession interface {
@@ -81,7 +81,7 @@ type Hub struct {
 	doneFn context.CancelFunc
 
 	// Log context
-	log *log.Entry
+	log *slog.Logger
 
 	// go pool
 	pool *utils.GoPool
@@ -105,7 +105,7 @@ func NewHub(poolSize int) *Hub {
 		pool:        utils.NewGoPool("remote commands", 256),
 		doneFn:      doneFn,
 		shutdown:    make(chan struct{}),
-		log:         log.WithFields(log.Fields{"context": "hub"}),
+		log:         slog.With("context", "hub"),
 	}
 }
 
@@ -202,9 +202,8 @@ func (h *Hub) AddSession(session HubSession) {
 
 	h.identifiers[identifiers][uid] = true
 
-	h.log.WithField("sid", uid).Debugf(
-		"Registered with identifiers: %s",
-		identifiers,
+	h.log.With("sid", uid).Debug(
+		"registered", "ids", identifiers,
 	)
 }
 
@@ -214,7 +213,7 @@ func (h *Hub) RemoveSession(session HubSession) {
 
 	if _, ok := h.sessions[uid]; !ok {
 		h.mu.RUnlock()
-		h.log.WithField("sid", uid).Warn("Session hasn't been registered")
+		h.log.With("sid", uid).Warn("session hasn't been registered")
 		return
 	}
 	h.mu.RUnlock()
@@ -233,7 +232,7 @@ func (h *Hub) RemoveSession(session HubSession) {
 
 	h.mu.Unlock()
 
-	h.log.WithField("sid", uid).Debug("Unregistered")
+	h.log.With("sid", uid).Debug("unregistered")
 }
 
 func (h *Hub) unsubscribeSessionFromAllChannels(session HubSession) {
@@ -268,10 +267,7 @@ func (h *Hub) UnsubscribeSessionFromChannel(session HubSession, targetIdentifier
 		}
 	}
 
-	h.log.WithFields(log.Fields{
-		"sid":     sid,
-		"channel": targetIdentifier,
-	}).Debug("Unsubscribed")
+	h.log.With("sid", sid).Debug("unsubscribed", "channel", targetIdentifier)
 }
 
 func (h *Hub) SubscribeSession(session HubSession, stream string, identifier string) {
@@ -288,11 +284,7 @@ func (h *Hub) SubscribeSession(session HubSession, stream string, identifier str
 
 	h.sessions[sid].AddStream(stream, identifier)
 
-	h.log.WithFields(log.Fields{
-		"sid":     sid,
-		"channel": identifier,
-		"stream":  stream,
-	}).Debug("Subscribed")
+	h.log.With("sid", sid).Debug("subscribed", "channel", identifier, "stream", stream)
 }
 
 func (h *Hub) UnsubscribeSession(session HubSession, stream string, identifier string) {
@@ -307,11 +299,7 @@ func (h *Hub) UnsubscribeSession(session HubSession, stream string, identifier s
 		info.RemoveStream(stream, identifier)
 	}
 
-	h.log.WithFields(log.Fields{
-		"sid":     sid,
-		"channel": identifier,
-		"stream":  stream,
-	}).Debug("Unsubscribed")
+	h.log.With("sid", sid).Debug("unsubscribed", "channel", identifier, "stream", stream)
 }
 
 func (h *Hub) broadcastToStream(streamMsg *common.StreamMessage) {
@@ -324,7 +312,7 @@ func (h *Hub) disconnectSessions(identifier string, reconnect bool) {
 	h.mu.RUnlock()
 
 	if !ok {
-		h.log.Debugf("Can not disconnect sessions: unknown identifier %s", identifier)
+		h.log.Debug("cannot disconnect session", "identifier", identifier, "reason", "not found")
 		return
 	}
 

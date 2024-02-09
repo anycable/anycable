@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"sync"
 	"time"
@@ -11,7 +12,6 @@ import (
 	rconfig "github.com/anycable/anycable-go/redis"
 	"github.com/anycable/anycable-go/utils"
 
-	"github.com/apex/log"
 	nanoid "github.com/matoous/go-nanoid"
 	"github.com/redis/rueidis"
 )
@@ -33,7 +33,7 @@ type RedisBroadcaster struct {
 	shutdownCh chan struct{}
 	finishedCh chan struct{}
 
-	log *log.Entry
+	log *slog.Logger
 }
 
 var _ Broadcaster = (*RedisBroadcaster)(nil)
@@ -46,7 +46,7 @@ func NewRedisBroadcaster(node Handler, config *rconfig.RedisConfig) *RedisBroadc
 		node:         node,
 		config:       config,
 		consumerName: name,
-		log:          log.WithFields(log.Fields{"context": "broadcast", "provider": "redisx", "id": name}),
+		log:          slog.With("context", "broadcast").With("provider", "redisx").With("id", name),
 		shutdownCh:   make(chan struct{}),
 		finishedCh:   make(chan struct{}),
 	}
@@ -64,11 +64,11 @@ func (s *RedisBroadcaster) Start(done chan error) error {
 	}
 
 	if s.config.IsSentinel() { //nolint:gocritic
-		s.log.WithField("stream", s.config.Channel).WithField("consumer", s.consumerName).Infof("Starting Redis broadcaster at %v (sentinels)", s.config.Hostnames())
+		s.log.With("stream", s.config.Channel).With("consumer", s.consumerName).Info(fmt.Sprintf("Starting Redis broadcaster at %v (sentinels)", s.config.Hostnames()))
 	} else if s.config.IsCluster() {
-		s.log.WithField("stream", s.config.Channel).WithField("consumer", s.consumerName).Infof("Starting Redis broadcaster at %v (cluster)", s.config.Hostnames())
+		s.log.With("stream", s.config.Channel).With("consumer", s.consumerName).Info(fmt.Sprintf("Starting Redis broadcaster at %v (cluster)", s.config.Hostnames()))
 	} else {
-		s.log.WithField("stream", s.config.Channel).WithField("consumer", s.consumerName).Infof("Starting Redis broadcaster at %s", s.config.Hostname())
+		s.log.With("stream", s.config.Channel).With("consumer", s.consumerName).Info(fmt.Sprintf("Starting Redis broadcaster at %s", s.config.Hostname()))
 	}
 
 	s.clientOptions = options
@@ -86,7 +86,7 @@ func (s *RedisBroadcaster) Shutdown(ctx context.Context) error {
 		return nil
 	}
 
-	s.log.Debugf("Shutting down Redis broadcaster")
+	s.log.Debug("shutting down Redis broadcaster")
 
 	close(s.shutdownCh)
 
@@ -100,7 +100,7 @@ func (s *RedisBroadcaster) Shutdown(ctx context.Context) error {
 	err := res.Error()
 
 	if err != nil {
-		s.log.Errorf("Failed to remove Redis stream consumer: %v", err)
+		s.log.Error("failed to remove Redis stream consumer", "error", err.Error())
 	}
 
 	s.client.Close()
@@ -131,7 +131,7 @@ func (s *RedisBroadcaster) runReader(done chan (error)) {
 	err := s.initClient()
 
 	if err != nil {
-		s.log.Errorf("Failed to connect to Redis: %v", err)
+		s.log.Error("failed to connect to Redis", "error", err)
 		s.maybeReconnect(done)
 		return
 	}
@@ -144,9 +144,9 @@ func (s *RedisBroadcaster) runReader(done chan (error)) {
 	if err != nil {
 		if redisErr, ok := rueidis.IsRedisErr(err); ok {
 			if strings.HasPrefix(redisErr.Error(), "BUSYGROUP") {
-				s.log.Debugf("Redis consumer group already exists")
+				s.log.Debug("Redis consumer group already exists")
 			} else {
-				s.log.Errorf("Failed to create consumer group: %v", err)
+				s.log.Error("failed to create consumer group", "error", err.Error())
 				s.maybeReconnect(done)
 				return
 			}
@@ -161,7 +161,7 @@ func (s *RedisBroadcaster) runReader(done chan (error)) {
 	for {
 		select {
 		case <-s.shutdownCh:
-			s.log.Debugf("Stop consuming stream")
+			s.log.Debug("stop consuming stream")
 			close(s.finishedCh)
 			return
 		default:
@@ -169,7 +169,7 @@ func (s *RedisBroadcaster) runReader(done chan (error)) {
 				reclaimed, err := s.autoclaimMessages(readBlockMilliseconds)
 
 				if err != nil {
-					s.log.Errorf("Failed to claim from Redis stream: %v", err)
+					s.log.Error("failed to claim from Redis stream", "error", err)
 					s.maybeReconnect(done)
 					return
 				}
@@ -177,7 +177,7 @@ func (s *RedisBroadcaster) runReader(done chan (error)) {
 				lastClaimedAt = time.Now().UnixMilli()
 
 				if len(reclaimed) > 0 {
-					s.log.Debugf("Reclaimed messages: %d", len(reclaimed))
+					s.log.Debug("reclaimed messages", "size", len(reclaimed))
 
 					s.broadcastXrange(reclaimed)
 				}
@@ -186,7 +186,7 @@ func (s *RedisBroadcaster) runReader(done chan (error)) {
 			messages, err := s.readFromStream(readBlockMilliseconds)
 
 			if err != nil {
-				s.log.Errorf("Failed to read from Redis stream: %v", err)
+				s.log.Error("failed to read from Redis stream", "error", err)
 				s.maybeReconnect(done)
 				return
 			}
@@ -252,7 +252,7 @@ func (s *RedisBroadcaster) autoclaimMessages(blockTime int64) ([]rueidis.XRangeE
 func (s *RedisBroadcaster) broadcastXrange(messages []rueidis.XRangeEntry) {
 	for _, message := range messages {
 		if payload, pok := message.FieldValues["payload"]; pok {
-			s.log.Debugf("Incoming broadcast: %v", payload)
+			s.log.Debug("incoming broadcast", "data", payload)
 
 			s.node.HandleBroadcast([]byte(payload))
 
@@ -264,7 +264,7 @@ func (s *RedisBroadcaster) broadcastXrange(messages []rueidis.XRangeEntry) {
 			err := ackRes[0].Error()
 
 			if err != nil {
-				s.log.Errorf("Failed to ack message: %v", err)
+				s.log.Error("failed to ack message", "error", err)
 			}
 		}
 	}
@@ -281,10 +281,10 @@ func (s *RedisBroadcaster) maybeReconnect(done chan (error)) {
 
 	delay := utils.NextRetry(s.reconnectAttempt - 1)
 
-	s.log.Infof("Next Redis reconnect attempt in %s", delay)
+	s.log.Info(fmt.Sprintf("next Redis reconnect attempt in %s", delay))
 	time.Sleep(delay)
 
-	s.log.Infof("Reconnecting to Redis...")
+	s.log.Info("reconnecting to Redis...")
 
 	s.clientMu.Lock()
 
