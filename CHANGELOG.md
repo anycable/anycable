@@ -2,6 +2,10 @@
 
 ## master
 
+- Log format has changed. ([@palkan][])
+
+We've migrated to Go `slog` package and its default text handler format.
+
 ## 1.4.8 (2024-01-10)
 
 - Add `--redis_disable_cache` option to disable client-side caching (not supported by some Redis providers). ([@palkan][])
