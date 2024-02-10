@@ -24,7 +24,7 @@ require (
 	github.com/smira/go-statsd v1.3.3
 	github.com/stretchr/testify v1.8.4
 	github.com/urfave/cli/v2 v2.27.1
-	github.com/vmihailenco/msgpack/v5 v5.3.2
+	github.com/vmihailenco/msgpack/v5 v5.3.5
 	go.uber.org/automaxprocs v1.5.3
 	golang.org/x/exp v0.0.0-20240110193028-0dcbfd608b1e
 	golang.org/x/net v0.20.0
@@ -32,6 +32,7 @@ require (
 )
 
 require (
+	github.com/getsentry/sentry-go v0.27.0
 	github.com/gobwas/ws v1.3.2
 	github.com/sony/gobreaker v0.5.0
 )
@@ -62,6 +63,6 @@ require (
 	golang.org/x/crypto v0.18.0 // indirect
 	golang.org/x/sys v0.16.0
 	golang.org/x/text v0.14.0 // indirect
-	google.golang.org/protobuf v1.32.0 // indirect
+	google.golang.org/protobuf v1.32.0
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

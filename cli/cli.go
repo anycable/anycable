@@ -17,6 +17,7 @@ import (
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/config"
 	"github.com/anycable/anycable-go/enats"
+	"github.com/anycable/anycable-go/erreport"
 	"github.com/anycable/anycable-go/graphql"
 	"github.com/anycable/anycable-go/identity"
 	"github.com/anycable/anycable-go/logger"
@@ -106,9 +107,15 @@ func (r *Runner) checkAndSetDefaults() error {
 	}
 
 	if r.log == nil {
-		_, err := logger.InitLogger(r.config.LogFormat, r.config.LogLevel)
+		handler, err := logger.InitLogger(r.config.LogFormat, r.config.LogLevel)
 		if err != nil {
 			return errorx.Decorate(err, "failed to initialize default logger")
+		}
+
+		// Configure exception reporting
+		exHandler := erreport.ConfigureLogHandler(handler)
+		if exHandler != nil {
+			slog.SetDefault(slog.New(exHandler))
 		}
 
 		r.log = slog.With("nodeid", r.config.ID)

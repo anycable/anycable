@@ -2,7 +2,8 @@ launch :rpc, "bundle exec anyt --only-rpc"
 wait_tcp 50051
 
 launch :anycable, "./dist/anycable-go --poll --poll_interval=1 --poll_keepalive_timeout=2 --broadcast_adapter=http " \
-                  "--metrics_rotate_interval=2 --metrics_log --metrics_log_filter=longpoll_clients_num,longpoll_stale_requests_total"
+                  "--metrics_rotate_interval=2 --metrics_log --metrics_log_filter=longpoll_clients_num,longpoll_stale_requests_total",
+                  env: {"SENTRY_DSN" => "https://user@dont.ingest.sentry.io/42"}
 wait_tcp 8080
 
 require "net/http"
