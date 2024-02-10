@@ -11,6 +11,7 @@ require (
 	github.com/BurntSushi/toml v1.6.0
 	github.com/durable-streams/durable-streams/packages/client-go v0.1.0
 	github.com/fullstorydev/grpchan v1.1.2
+	github.com/getsentry/sentry-go v0.30.0
 	github.com/go-chi/chi/v5 v5.5.0
 	github.com/gobwas/ws v1.4.0
 	github.com/golang-jwt/jwt/v5 v5.3.1

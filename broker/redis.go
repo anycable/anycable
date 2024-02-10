@@ -144,27 +144,28 @@ func (b *RedisBroker) Announce() string {
 	}
 }
 
-func (b *RedisBroker) HandleBroadcast(msg *common.StreamMessage) {
+func (b *RedisBroker) HandleBroadcast(msg *common.StreamMessage) error {
 	if msg.Meta != nil && msg.Meta.Transient {
 		b.broadcaster.Broadcast(msg)
-		return
+		return nil
 	}
 
 	offset, err := b.add(msg.Stream, msg.Data)
 
 	if err != nil {
-		b.log.Error("failed to add message to Redis stream", "stream", msg.Stream, "error", err)
-		return
+		return errorx.Decorate(err, "failed to add message to Redis stream: stream=%s", msg.Stream)
 	}
 
 	msg.Epoch = b.epoch
 	msg.Offset = offset
 
 	b.broadcaster.Broadcast(msg)
+	return nil
 }
 
-func (b *RedisBroker) HandleCommand(msg *common.RemoteCommandMessage) {
+func (b *RedisBroker) HandleCommand(msg *common.RemoteCommandMessage) error {
 	b.broadcaster.BroadcastCommand(msg)
+	return nil
 }
 
 // Registring streams (for granular pub/sub)
@@ -284,6 +285,45 @@ func (b *RedisBroker) HistorySince(stream string, ts int64) ([]common.StreamMess
 	return b.HistoryFrom(stream, b.epoch, offset-1)
 }
 
+func (b *RedisBroker) Peak(stream string) (*common.StreamMessage, error) {
+	b.clientMu.RLock()
+
+	if b.client == nil {
+		b.clientMu.RUnlock()
+		return nil, errors.New("no Redis client initialized")
+	}
+
+	b.clientMu.RUnlock()
+
+	ctx := context.Background()
+	key := redisStreamPrefix + stream
+
+	res := b.client.Do(ctx, b.client.B().Xrevrange().Key(key).End("+").Start("-").Count(1).Build())
+
+	if res.Error() != nil {
+		return nil, errorx.Decorate(res.Error(), "failed to get stream tail from Redis")
+	}
+
+	messages, err := res.AsXRange()
+	if err != nil {
+		return nil, errorx.Decorate(err, "failed to parse stream tail from Redis")
+	}
+
+	// unknown stream or empty
+	if len(messages) == 0 {
+		return nil, nil
+	}
+
+	parts := strings.SplitN(messages[0].ID, "-", 2)
+	offset, err := strconv.ParseUint(parts[0], 10, 64)
+
+	if err != nil {
+		return nil, errorx.Decorate(err, "failed to parse offset from Redis response")
+	}
+
+	return &common.StreamMessage{Stream: stream, Offset: offset, Epoch: b.epoch}, nil
+}
+
 func (b *RedisBroker) CommitSession(sid string, session Cacheable) error {
 	b.clientMu.RLock()
 
@@ -384,6 +424,10 @@ func (b *RedisBroker) SetEpoch(val string) error {
 	b.epoch = val
 
 	return nil
+}
+
+func (b *RedisBroker) SupportsPresence() bool {
+	return false
 }
 
 func (b *RedisBroker) PresenceAdd(stream string, sid string, pid string, info interface{}) (*common.PresenceEvent, error) {
