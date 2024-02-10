@@ -70,6 +70,9 @@ func (t *Tracker) Collect() {
 
 	go t.monitorUsage()
 
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
 	t.timer = time.AfterFunc(usageMeasurementDelayMinutes*time.Minute, t.collectUsage)
 }
 
@@ -93,6 +96,7 @@ func (t *Tracker) Shutdown(ctx context.Context) error {
 func (t *Tracker) Send(event string, props map[string]interface{}) {
 	// Avoid storing IP address
 	props["$ip"] = nil
+	props["distinct_id"] = t.id
 
 	_ = t.client.Enqueue(posthog.Capture{
 		DistinctId: t.id,
@@ -142,6 +146,10 @@ func (t *Tracker) collectUsage() {
 	maps.Copy(props, t.observations)
 
 	t.Send("usage", props)
+
+	// Reset observations
+	t.observations = make(map[string]interface{})
+	t.timer = time.AfterFunc(usageMeasurementDelayMinutes*time.Minute, t.collectUsage)
 }
 
 func (t *Tracker) bootProperties() map[string]interface{} {
@@ -187,8 +195,11 @@ func (t *Tracker) appProperties() map[string]interface{} {
 	props.Set("rpc-impl", t.config.RPC.Impl())
 
 	// AnyCable+
-	_, ok := os.LookupEnv("ANYCABLEPLUS_APP_NAME")
+	name, ok := os.LookupEnv("ANYCABLEPLUS_APP_NAME")
 	props.Set("plus", ok)
+	if ok {
+		props.Set("plus-name", name)
+	}
 
 	return props
 }
