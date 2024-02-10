@@ -175,7 +175,7 @@ func (s *RedisSubscriber) runPubSub(done chan (error)) {
 	err := s.initClient()
 
 	if err != nil {
-		s.log.Error("failed to connect to Redis", "error", err.Error())
+		s.log.Error("failed to connect to Redis", "error", err)
 		s.maybeReconnect(done)
 		return
 	}
@@ -215,7 +215,7 @@ func (s *RedisSubscriber) runPubSub(done chan (error)) {
 			msg, err := common.PubSubMessageFromJSON([]byte(m.Message))
 
 			if err != nil {
-				s.log.Warn("failed to parse pubsub message", "data", m.Message, "error", err.Error())
+				s.log.Warn("failed to parse pubsub message", "data", m.Message, "error", err)
 				return
 			}
 
@@ -232,7 +232,7 @@ func (s *RedisSubscriber) runPubSub(done chan (error)) {
 		select {
 		case err := <-wait:
 			if err != nil {
-				s.log.Error("Redis pub/sub disconnected", "error", err.Error())
+				s.log.Error("Redis pub/sub disconnected", "error", err)
 			}
 
 			s.maybeReconnect(done)

@@ -158,7 +158,7 @@ func (m *Metrics) Run() error {
 
 			for _, writer := range m.writers {
 				if err := writer.Write(m); err != nil {
-					m.log.Error("metrics writer failed to write", "error", err.Error())
+					m.log.Error("metrics writer failed to write", "error", err)
 				}
 			}
 		}

@@ -100,7 +100,7 @@ func (s *RedisBroadcaster) Shutdown(ctx context.Context) error {
 	err := res.Error()
 
 	if err != nil {
-		s.log.Error("failed to remove Redis stream consumer", "error", err.Error())
+		s.log.Error("failed to remove Redis stream consumer", "error", err)
 	}
 
 	s.client.Close()
@@ -146,7 +146,7 @@ func (s *RedisBroadcaster) runReader(done chan (error)) {
 			if strings.HasPrefix(redisErr.Error(), "BUSYGROUP") {
 				s.log.Debug("Redis consumer group already exists")
 			} else {
-				s.log.Error("failed to create consumer group", "error", err.Error())
+				s.log.Error("failed to create consumer group", "error", err)
 				s.maybeReconnect(done)
 				return
 			}

@@ -97,7 +97,7 @@ func (s *NATSSubscriber) Subscribe(stream string) {
 	sub, err := s.conn.Subscribe(stream, s.handleMessage)
 
 	if err != nil {
-		s.log.Error("failed to subscribe", "stream", stream, "error", err.Error())
+		s.log.Error("failed to subscribe", "stream", stream, "error", err)
 		return
 	}
 
@@ -126,7 +126,7 @@ func (s *NATSSubscriber) Publish(stream string, msg interface{}) {
 	s.log.With("channel", stream).Debug("publish message", "data", msg)
 
 	if err := s.conn.Publish(stream, utils.ToJSON(msg)); err != nil {
-		s.log.Error("failed to publish message", "error", err.Error())
+		s.log.Error("failed to publish message", "error", err)
 	}
 }
 

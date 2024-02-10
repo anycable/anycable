@@ -346,7 +346,7 @@ func (s *Service) WaitJetStreamReady(maxSeconds int) error {
 
 		c, err := nats.Connect("", nats.InProcessServer(s.server))
 		if err != nil {
-			slog.With("context", "enats").Debug("NATS server not accepting connections", "error", err.Error())
+			slog.With("context", "enats").Debug("NATS server not accepting connections", "error", err)
 			continue
 		}
 

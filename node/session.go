@@ -305,10 +305,10 @@ func (s *Session) Serve(callback func()) error {
 
 			if err != nil {
 				if ws.IsCloseError(err) {
-					s.Log.Debug("WebSocket closed", "error", err.Error())
+					s.Log.Debug("WebSocket closed", "error", err)
 					s.disconnectNow("Read closed", ws.CloseNormalClosure)
 				} else {
-					s.Log.Debug("WebSocket close error", "error", err.Error())
+					s.Log.Debug("WebSocket close error", "error", err)
 					s.disconnectNow("Read failed", ws.CloseAbnormalClosure)
 				}
 				return
@@ -317,7 +317,7 @@ func (s *Session) Serve(callback func()) error {
 			err = s.ReadMessage(message)
 
 			if err != nil {
-				s.Log.Debug("WebSocket read failed", "error", err.Error())
+				s.Log.Debug("WebSocket read failed", "error", err)
 				return
 			}
 		}
@@ -365,7 +365,7 @@ func (s *Session) ReadMessage(message []byte) error {
 
 	if err := s.executor.HandleCommand(s, command); err != nil {
 		s.metrics.CounterIncrement(metricsFailedCommandReceived)
-		s.Log.Warn("failed to handle incoming message", "data", message, "error", err.Error())
+		s.Log.Warn("failed to handle incoming message", "data", message, "error", err)
 	}
 
 	return nil
@@ -378,7 +378,7 @@ func (s *Session) Send(msg encoders.EncodedMessage) {
 			s.sendFrame(b)
 		}
 	} else {
-		s.Log.Warn("failed to encode message", "data", msg, "error", err.Error())
+		s.Log.Warn("failed to encode message", "data", msg, "error", err)
 	}
 }
 
@@ -390,7 +390,7 @@ func (s *Session) SendJSONTransmission(msg string) {
 			s.sendFrame(b)
 		}
 	} else {
-		s.Log.Warn("failed to encode transmission", "data", msg, "error", err.Error())
+		s.Log.Warn("failed to encode transmission", "data", msg, "error", err)
 	}
 }
 
@@ -620,7 +620,7 @@ func (s *Session) sendPing() {
 	b, err := s.encodeMessage(newPingMessage(s.pingTimestampPrecision))
 
 	if err != nil {
-		s.Log.Error("failed to encode ping message", "error", err.Error())
+		s.Log.Error("failed to encode ping message", "error", err)
 	} else if b != nil {
 		err = s.writeFrameWithDeadline(b, deadline)
 	}

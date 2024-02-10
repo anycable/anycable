@@ -110,7 +110,7 @@ func (n *NATS) Start(done chan (error)) error {
 		nats.MaxReconnects(n.nconf.MaxReconnectAttempts),
 		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
 			if err != nil {
-				n.log.Warn("connection failed", "error", err.Error())
+				n.log.Warn("connection failed", "error", err)
 			}
 		}),
 		nats.ReconnectHandler(func(nc *nats.Conn) {
@@ -196,7 +196,7 @@ func (n *NATS) initJetStreamWithRetry() error {
 			return errorx.Decorate(err, "JetStream is unavailable")
 		}
 
-		n.log.Warn("JetStream initialization failed", "error", err.Error())
+		n.log.Warn("JetStream initialization failed", "error", err)
 
 		n.log.Info(fmt.Sprintf("next JetStream initialization attempt in %s", delay))
 		time.Sleep(delay)
@@ -242,7 +242,7 @@ func (n *NATS) initJetStream() error {
 	err = n.watchEpoch(n.shutdownCtx)
 
 	if err != nil {
-		n.log.Warn("failed to set up epoch watcher", "error", err.Error())
+		n.log.Warn("failed to set up epoch watcher", "error", err)
 	}
 
 	n.log.Info("NATS broker is ready", "epoch", epoch)
@@ -321,7 +321,7 @@ func (n *NATS) HandleBroadcast(msg *common.StreamMessage) {
 	offset, err := n.add(msg.Stream, msg.Data)
 
 	if err != nil {
-		n.log.Error("failed to add message to JetStream Stream", "stream", msg.Stream, "error", err.Error())
+		n.log.Error("failed to add message to JetStream Stream", "stream", msg.Stream, "error", err)
 		return
 	}
 
@@ -503,7 +503,7 @@ func (n *NATS) addStreamConsumer(stream string) {
 	err := n.ensureStreamExists(stream)
 
 	if err != nil {
-		n.log.Error("failed to create JetStream stream", "stream", stream, "error", err.Error())
+		n.log.Error("failed to create JetStream stream", "stream", stream, "error", err)
 		return
 	}
 
@@ -516,7 +516,7 @@ createConsumer:
 		})
 
 		if err != nil {
-			n.log.Error("failed to create JetStream stream consumer", "stream", stream, "error", err.Error())
+			n.log.Error("failed to create JetStream stream consumer", "stream", stream, "error", err)
 			return nil, err
 		}
 
@@ -533,7 +533,7 @@ createConsumer:
 
 		batch, err := cons.FetchNoWait(batchSize)
 		if err != nil {
-			n.log.Error("failed to fetch initial messages from JetStream", "error", err.Error())
+			n.log.Error("failed to fetch initial messages from JetStream", "error", err)
 			return nil, err
 		}
 
@@ -569,7 +569,7 @@ func (n *NATS) consumeMessage(stream string, msg jetstream.Msg) {
 
 	meta, err := msg.Metadata()
 	if err != nil {
-		n.log.Error("failed to get JetStream message metadata", "error", err.Error())
+		n.log.Error("failed to get JetStream message metadata", "error", err)
 		return
 	}
 
@@ -578,7 +578,7 @@ func (n *NATS) consumeMessage(stream string, msg jetstream.Msg) {
 
 	_, err = n.local.Store(stream, msg.Data(), seq, ts)
 	if err != nil {
-		n.log.Error("failed to store message in local broker", "error", err.Error())
+		n.log.Error("failed to store message in local broker", "error", err)
 		return
 	}
 }
@@ -938,7 +938,7 @@ func (n *NATS) shouldRetryOnError(err error, attempts *int, cooldown time.Durati
 	if context.DeadlineExceeded == err || jetstream.ErrNoStreamResponse == err {
 		if *attempts > 0 {
 			(*attempts)--
-			n.log.Warn(fmt.Sprintf("operation failed, retrying in %s...", cooldown.String()), "error", err.Error())
+			n.log.Warn(fmt.Sprintf("operation failed, retrying in %s...", cooldown.String()), "error", err)
 			time.Sleep(cooldown)
 			return true
 		}

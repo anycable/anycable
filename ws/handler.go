@@ -29,7 +29,7 @@ func WebsocketHandler(subprotocols []string, headersExtractor server.HeadersExtr
 		rheader := map[string][]string{"X-AnyCable-Version": {version.Version()}}
 		wsc, err := upgrader.Upgrade(w, r, rheader)
 		if err != nil {
-			ctx.Debug("WebSocket connection upgrade failed", "error", err.Error())
+			ctx.Debug("WebSocket connection upgrade failed", "error", err)
 			return
 		}
 

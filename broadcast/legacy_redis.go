@@ -159,7 +159,7 @@ func (s *LegacyRedisBroadcaster) keepalive(done chan (error)) {
 		}
 
 		if err := s.listen(); err != nil {
-			s.log.Warn("Redis connection failed", "error", err.Error())
+			s.log.Warn("Redis connection failed", "error", err)
 		}
 
 		s.reconnectAttempt++
@@ -203,7 +203,7 @@ func (s *LegacyRedisBroadcaster) listen() error {
 
 	psc := redis.PubSubConn{Conn: c}
 	if err = psc.Subscribe(s.channel); err != nil {
-		s.log.Error("failed to subscribe to Redis channel", "error", err.Error())
+		s.log.Error("failed to subscribe to Redis channel", "error", err)
 		return err
 	}
 
@@ -220,7 +220,7 @@ func (s *LegacyRedisBroadcaster) listen() error {
 			case redis.Subscription:
 				s.log.Info("subscribed to Redis channel", "channel", v.Channel)
 			case error:
-				s.log.Error("Redis subscription error", "error", v.Error())
+				s.log.Error("Redis subscription error", "error", v)
 				done <- v
 			}
 		}

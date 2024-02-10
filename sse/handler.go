@@ -70,7 +70,7 @@ func SSEHandler(n *node.Node, shutdownCtx context.Context, headersExtractor serv
 		subscribeCmds, err := subscribeCommandsFromRequest(r)
 
 		if err != nil {
-			sessionCtx.Error("failed to build subscribe command", "error", err.Error())
+			sessionCtx.Error("failed to build subscribe command", "error", err)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -79,7 +79,7 @@ func SSEHandler(n *node.Node, shutdownCtx context.Context, headersExtractor serv
 		session, err := NewSSESession(n, w, r, info)
 
 		if err != nil {
-			sessionCtx.Error("failed to establish sesssion", "error", err.Error())
+			sessionCtx.Error("failed to establish sesssion", "error", err)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -100,7 +100,7 @@ func SSEHandler(n *node.Node, shutdownCtx context.Context, headersExtractor serv
 			res, err := n.Subscribe(session, subscribeCmd)
 
 			if err != nil || res == nil {
-				sessionCtx.Error("failed to subscribe", "error", err.Error())
+				sessionCtx.Error("failed to subscribe", "error", err)
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}

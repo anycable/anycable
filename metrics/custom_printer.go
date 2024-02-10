@@ -64,7 +64,7 @@ func (printer *RubyPrinter) Print(snapshot map[string]uint64) {
 	result, err := printer.mrbModule.Call("call", rhash)
 
 	if err != nil {
-		slog.With("context", "metrics").Error("mruby call failed", "error", err.Error())
+		slog.With("context", "metrics").Error("mruby call failed", "error", err)
 		return
 	}
 

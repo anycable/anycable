@@ -146,7 +146,7 @@ func (n *Node) HandleBroadcast(raw []byte) {
 
 	if err != nil {
 		n.metrics.CounterIncrement(metricsUnknownBroadcast)
-		n.log.Warn("failed to parse pubsub message", "data", raw, "error", err.Error())
+		n.log.Warn("failed to parse pubsub message", "data", raw, "error", err)
 		return
 	}
 
@@ -168,7 +168,7 @@ func (n *Node) HandlePubSub(raw []byte) {
 
 	if err != nil {
 		n.metrics.CounterIncrement(metricsUnknownBroadcast)
-		n.log.Warn("failed to parse pubsub message", "data", raw, "error", err.Error())
+		n.log.Warn("failed to parse pubsub message", "data", raw, "error", err)
 		return
 	}
 
@@ -218,7 +218,7 @@ func (n *Node) Shutdown(ctx context.Context) (err error) {
 		err := n.disconnector.Shutdown(ctx)
 
 		if err != nil {
-			n.log.Warn("failed to shutdown disconnector gracefully", "error", err.Error())
+			n.log.Warn("failed to shutdown disconnector gracefully", "error", err)
 		}
 	}
 
@@ -226,7 +226,7 @@ func (n *Node) Shutdown(ctx context.Context) (err error) {
 		err := n.controller.Shutdown()
 
 		if err != nil {
-			n.log.Warn("failed to shutdown controller gracefully", "error", err.Error())
+			n.log.Warn("failed to shutdown controller gracefully", "error", err)
 		}
 	}
 
@@ -301,7 +301,7 @@ func (n *Node) Authenticate(s *Session, options ...AuthOption) (res *common.Conn
 
 	if s.IsResumeable() {
 		if berr := n.broker.CommitSession(s.GetID(), s); berr != nil {
-			s.Log.Error("failed to persist session in cache", "error", berr.Error())
+			s.Log.Error("failed to persist session in cache", "error", berr)
 		}
 	}
 
@@ -327,7 +327,7 @@ func (n *Node) TryRestoreSession(s *Session) (restored bool) {
 	cached_session, err := n.broker.RestoreSession(prev_sid)
 
 	if err != nil {
-		s.Log.Error("failed to fetch session cache", "old_sid", prev_sid, "error", err.Error())
+		s.Log.Error("failed to fetch session cache", "old_sid", prev_sid, "error", err)
 		return false
 	}
 
@@ -339,7 +339,7 @@ func (n *Node) TryRestoreSession(s *Session) (restored bool) {
 	err = s.RestoreFromCache(cached_session)
 
 	if err != nil {
-		s.Log.Error("failed to restore session from cache", "old_sid", prev_sid, "error", err.Error())
+		s.Log.Error("failed to restore session from cache", "old_sid", prev_sid, "error", err)
 		return false
 	}
 
@@ -366,7 +366,7 @@ func (n *Node) TryRestoreSession(s *Session) (restored bool) {
 
 	if s.IsResumeable() {
 		if berr := n.broker.CommitSession(s.GetID(), s); berr != nil {
-			s.Log.Error("failed to persist session in cache", "error", berr.Error())
+			s.Log.Error("failed to persist session in cache", "error", berr)
 		}
 	}
 
@@ -389,7 +389,7 @@ func (n *Node) Subscribe(s *Session, msg *common.Message) (res *common.CommandRe
 
 	if err != nil { // nolint: gocritic
 		if res == nil || res.Status == common.ERROR {
-			s.Log.Error("subscribe failed", "error", err.Error())
+			s.Log.Error("subscribe failed", "error", err)
 		}
 	} else if res.Status == common.SUCCESS {
 		confirmed = true
@@ -409,7 +409,7 @@ func (n *Node) Subscribe(s *Session, msg *common.Message) (res *common.CommandRe
 	if confirmed {
 		if s.IsResumeable() {
 			if berr := n.broker.CommitSession(s.GetID(), s); berr != nil {
-				s.Log.Error("failed to persist session in cache", "error", berr.Error())
+				s.Log.Error("failed to persist session in cache", "error", berr)
 			}
 		}
 
@@ -435,7 +435,7 @@ func (n *Node) Unsubscribe(s *Session, msg *common.Message) (res *common.Command
 
 	if err != nil {
 		if res == nil || res.Status == common.ERROR {
-			s.Log.Error("failed to unsubscribe", "error", err.Error())
+			s.Log.Error("failed to unsubscribe", "error", err)
 		}
 	} else {
 		// Make sure to remove all streams subscriptions
@@ -454,7 +454,7 @@ func (n *Node) Unsubscribe(s *Session, msg *common.Message) (res *common.Command
 
 	if s.IsResumeable() {
 		if berr := n.broker.CommitSession(s.GetID(), s); berr != nil {
-			s.Log.Error("failed to persist session in cache", "error", berr.Error())
+			s.Log.Error("failed to persist session in cache", "error", berr)
 		}
 	}
 
@@ -484,7 +484,7 @@ func (n *Node) Perform(s *Session, msg *common.Message) (res *common.CommandResu
 
 	if err != nil {
 		if res == nil || res.Status == common.ERROR {
-			s.Log.Error("perform failed", "error", err.Error())
+			s.Log.Error("perform failed", "error", err)
 		}
 	} else {
 		s.Log.Debug("perform result", "data", res)
@@ -494,7 +494,7 @@ func (n *Node) Perform(s *Session, msg *common.Message) (res *common.CommandResu
 		if n.handleCommandReply(s, msg, res) {
 			if s.IsResumeable() {
 				if berr := n.broker.CommitSession(s.GetID(), s); berr != nil {
-					s.Log.Error("failed to persist session in cache", "error", berr.Error())
+					s.Log.Error("failed to persist session in cache", "error", berr)
 				}
 			}
 		}
@@ -598,7 +598,7 @@ func (n *Node) ExecuteRemoteCommand(msg *common.RemoteCommandMessage) {
 	case "disconnect":
 		dmsg, err := msg.ToRemoteDisconnectMessage()
 		if err != nil {
-			n.log.Warn("failed to parse remote disconnect command", "error", err.Error())
+			n.log.Warn("failed to parse remote disconnect command", "error", err)
 			return
 		}
 
@@ -643,7 +643,7 @@ func (n *Node) DisconnectNow(s *Session) error {
 	)
 
 	if err != nil {
-		s.Log.Error("disconnect failed", "error", err.Error())
+		s.Log.Error("disconnect failed", "error", err)
 	}
 
 	return err

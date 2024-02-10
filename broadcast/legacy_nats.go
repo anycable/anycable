@@ -37,7 +37,7 @@ func (s *LegacyNATSBroadcaster) Start(done chan (error)) error {
 		nats.MaxReconnects(s.config.MaxReconnectAttempts),
 		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
 			if err != nil {
-				slog.Warn("connection failed", "error", err.Error())
+				slog.Warn("connection failed", "error", err)
 			}
 		}),
 		nats.ReconnectHandler(func(nc *nats.Conn) {
