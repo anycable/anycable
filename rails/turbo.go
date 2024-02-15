@@ -16,14 +16,14 @@ type TurboController struct {
 
 var _ node.Controller = (*TurboController)(nil)
 
-func NewTurboController(key string) *TurboController {
+func NewTurboController(key string, l *slog.Logger) *TurboController {
 	var verifier *utils.MessageVerifier
 
 	if key != "" {
 		verifier = utils.NewMessageVerifier(key)
 	}
 
-	return &TurboController{verifier, slog.With("context", "turbo")}
+	return &TurboController{verifier, l.With("context", "turbo")}
 }
 
 func (c *TurboController) Start() error {

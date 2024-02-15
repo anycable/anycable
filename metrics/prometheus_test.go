@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
@@ -12,7 +13,7 @@ import (
 )
 
 func TestPrometheus(t *testing.T) {
-	m := NewMetrics(nil, 10)
+	m := NewMetrics(nil, 10, slog.Default())
 
 	m.RegisterCounter("test_total", "Total number of smth")
 	m.RegisterCounter("any_total", "Total number of anything")
@@ -58,7 +59,7 @@ anycable_go_any_tests 0
 }
 
 func TestPrometheusWithTags(t *testing.T) {
-	m := NewMetrics(nil, 10)
+	m := NewMetrics(nil, 10, slog.Default())
 	m.DefaultTags(map[string]string{"env": "dev", "instance": "R2D2"})
 
 	m.RegisterCounter("test_total", "Total number of smth")
@@ -86,7 +87,7 @@ func TestPrometheusWithTags(t *testing.T) {
 }
 
 func TestPrometheusHandler(t *testing.T) {
-	m := NewMetrics(nil, 10)
+	m := NewMetrics(nil, 10, slog.Default())
 
 	m.RegisterCounter("test_total", "Total number of smth")
 	m.RegisterCounter("any_total", "Total number of anything")

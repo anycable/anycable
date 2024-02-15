@@ -51,6 +51,7 @@ type grpcClientHelper struct {
 	recovering bool
 	mu         sync.Mutex
 
+	log    *slog.Logger
 	active int64
 }
 
@@ -98,12 +99,12 @@ func (st *grpcClientHelper) HandleConn(ctx context.Context, stat stats.ConnStats
 	}
 
 	if _, ok := stat.(*stats.ConnBegin); ok {
-		slog.With("context", "grpc").Debug("connected", "addr", addr)
+		st.log.Debug("connected", "addr", addr)
 		atomic.AddInt64(&st.active, 1)
 	}
 
 	if _, ok := stat.(*stats.ConnEnd); ok {
-		slog.With("context", "grpc").Debug("disconnected", "addr", addr)
+		st.log.Debug("disconnected", "addr", addr)
 		atomic.AddInt64(&st.active, -1)
 	}
 }
@@ -131,7 +132,7 @@ func (st *grpcClientHelper) tryRecover() error {
 	st.recovering = true
 	st.conn.ResetConnectBackoff()
 
-	slog.With("context", "rpc").Warn("connection is lost, trying to reconnect immediately")
+	st.log.Warn("connection is lost, trying to reconnect immediately")
 
 	return nil
 }
@@ -142,7 +143,7 @@ func (st *grpcClientHelper) reset() {
 
 	if st.recovering {
 		st.recovering = false
-		slog.With("context", "rpc").Info("connection is restored")
+		st.log.Info("connection is restored")
 	}
 }
 
@@ -160,7 +161,7 @@ type Controller struct {
 }
 
 // NewController builds new Controller
-func NewController(metrics metrics.Instrumenter, config *Config) (*Controller, error) {
+func NewController(metrics metrics.Instrumenter, config *Config, l *slog.Logger) (*Controller, error) {
 	metrics.RegisterCounter(metricsRPCCalls, "The total number of RPC calls")
 	metrics.RegisterCounter(metricsRPCRetries, "The total number of RPC call retries")
 	metrics.RegisterCounter(metricsRPCFailures, "The total number of failed RPC calls")
@@ -182,7 +183,7 @@ func NewController(metrics metrics.Instrumenter, config *Config) (*Controller, e
 		metrics.RegisterGauge(metricsGRPCActiveConns, "The number of active HTTP connections used by gRPC")
 	}
 
-	return &Controller{log: slog.With("context", "rpc"), metrics: metrics, config: config, barrier: barrier}, nil
+	return &Controller{log: l.With("context", "rpc"), metrics: metrics, config: config, barrier: barrier}, nil
 }
 
 // Start initializes RPC connection pool
@@ -208,7 +209,7 @@ func (c *Controller) Start() error {
 		}
 	}
 
-	client, state, err := dialer(c.config)
+	client, state, err := dialer(c.config, c.log)
 
 	if err == nil {
 		c.log.Info(fmt.Sprintf("RPC controller initialized: %s (concurrency: %s, impl: %s, enable_tls: %t, proto_versions: %s)", host, c.barrier.CapacityInfo(), impl, enableTLS, ProtoVersions))
@@ -494,7 +495,7 @@ func newContext(sessionID string) context.Context {
 	return metadata.NewOutgoingContext(context.Background(), md)
 }
 
-func defaultDialer(conf *Config) (pb.RPCClient, ClientHelper, error) {
+func defaultDialer(conf *Config, l *slog.Logger) (pb.RPCClient, ClientHelper, error) {
 	host := conf.Host
 	enableTLS := conf.TLSEnabled()
 
@@ -505,7 +506,7 @@ func defaultDialer(conf *Config) (pb.RPCClient, ClientHelper, error) {
 
 	const grpcServiceConfig = `{"loadBalancingPolicy":"round_robin"}`
 
-	state := &grpcClientHelper{}
+	state := &grpcClientHelper{log: l.With("context", "grpc")}
 
 	dialOptions := []grpc.DialOption{
 		grpc.WithKeepaliveParams(kacp),

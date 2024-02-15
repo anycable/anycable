@@ -48,7 +48,7 @@ type RedisSubscriber struct {
 var _ Subscriber = (*RedisSubscriber)(nil)
 
 // NewRedisSubscriber creates a Redis subscriber using pub/sub
-func NewRedisSubscriber(node Handler, config *rconfig.RedisConfig) (*RedisSubscriber, error) {
+func NewRedisSubscriber(node Handler, config *rconfig.RedisConfig, l *slog.Logger) (*RedisSubscriber, error) {
 	options, err := config.ToRueidisOptions()
 
 	if err != nil {
@@ -60,7 +60,7 @@ func NewRedisSubscriber(node Handler, config *rconfig.RedisConfig) (*RedisSubscr
 		config:        config,
 		clientOptions: options,
 		subscriptions: make(map[string]*subscriptionEntry),
-		log:           slog.With("context", "pubsub"),
+		log:           l.With("context", "pubsub"),
 		streamsCh:     make(chan *subscriptionEntry, 1024),
 		shutdownCh:    make(chan struct{}),
 	}, nil

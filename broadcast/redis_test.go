@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 	"testing"
@@ -89,7 +90,7 @@ func TestRedisBroadcaster(t *testing.T) {
 	})
 
 	t.Run("Handles broadcasts", func(t *testing.T) {
-		broadcaster := NewRedisBroadcaster(handler, &config)
+		broadcaster := NewRedisBroadcaster(handler, &config, slog.Default())
 
 		err := broadcaster.Start(errchan)
 		require.NoError(t, err)
@@ -112,7 +113,7 @@ func TestRedisBroadcaster(t *testing.T) {
 	})
 
 	t.Run("With multiple subscribers", func(t *testing.T) {
-		broadcaster := NewRedisBroadcaster(handler, &config)
+		broadcaster := NewRedisBroadcaster(handler, &config, slog.Default())
 
 		err := broadcaster.Start(errchan)
 		require.NoError(t, err)
@@ -121,7 +122,7 @@ func TestRedisBroadcaster(t *testing.T) {
 
 		require.NoError(t, broadcaster.initClient())
 
-		broadcaster2 := NewRedisBroadcaster(handler, &config)
+		broadcaster2 := NewRedisBroadcaster(handler, &config, slog.Default())
 		err = broadcaster2.Start(errchan)
 		require.NoError(t, err)
 
@@ -162,7 +163,7 @@ func TestRedisBroadcasterAcksClaims(t *testing.T) {
 	}
 
 	handler := &mocks.Handler{}
-	broadcaster := NewRedisBroadcaster(handler, &config)
+	broadcaster := NewRedisBroadcaster(handler, &config, slog.Default())
 
 	errchan := make(chan error)
 	broadcasts := make(chan string, 10)
@@ -194,7 +195,7 @@ func TestRedisBroadcasterAcksClaims(t *testing.T) {
 	require.NoError(t, publishToRedisStream(broadcaster.client, "__anycable__", "1"))
 	require.NoError(t, publishToRedisStream(broadcaster.client, "__anycable__", "2"))
 
-	broadcaster2 := NewRedisBroadcaster(handler, &config)
+	broadcaster2 := NewRedisBroadcaster(handler, &config, slog.Default())
 	err = broadcaster2.Start(errchan)
 	require.NoError(t, err)
 	defer broadcaster2.Shutdown(context.Background()) // nolint:errcheck

@@ -72,7 +72,7 @@ func WithNATSLocalBroker(b LocalBroker) NATSOption {
 	}
 }
 
-func NewNATSBroker(broadcaster Broadcaster, c *Config, nc *natsconfig.NATSConfig, opts ...NATSOption) *NATS {
+func NewNATSBroker(broadcaster Broadcaster, c *Config, nc *natsconfig.NATSConfig, l *slog.Logger, opts ...NATSOption) *NATS {
 	shutdownCtx, shutdownFn := context.WithCancel(context.Background())
 
 	n := NATS{
@@ -86,7 +86,7 @@ func NewNATSBroker(broadcaster Broadcaster, c *Config, nc *natsconfig.NATSConfig
 		streamSync:       newStreamsSynchronizer(),
 		jstreams:         newLRU[string](time.Duration(c.HistoryTTL * int64(time.Second))),
 		jconsumers:       newLRU[jetstream.Consumer](time.Duration(c.HistoryTTL * int64(time.Second))),
-		log:              slog.With("context", "broker").With("provider", "nats"),
+		log:              l.With("context", "broker").With("provider", "nats"),
 	}
 
 	for _, opt := range opts {

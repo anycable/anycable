@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"log/slog"
 	"os"
 	"strings"
 
@@ -38,8 +39,8 @@ func WithController(fn controllerFactory) Option {
 
 // WithDefaultRPCController is an Option to set Runner controller to default rpc.Controller
 func WithDefaultRPCController() Option {
-	return WithController(func(m *metrics.Metrics, c *config.Config) (node.Controller, error) {
-		return rpc.NewController(m, &c.RPC)
+	return WithController(func(m *metrics.Metrics, c *config.Config, l *slog.Logger) (node.Controller, error) {
+		return rpc.NewController(m, &c.RPC, l)
 	})
 }
 
@@ -61,23 +62,23 @@ func WithBroadcasters(fn broadcastersFactory) Option {
 
 // WithDefaultBroadcaster is an Option to set Runner subscriber to default broadcaster from config
 func WithDefaultBroadcaster() Option {
-	return WithBroadcasters(func(h broadcast.Handler, c *config.Config) ([]broadcast.Broadcaster, error) {
+	return WithBroadcasters(func(h broadcast.Handler, c *config.Config, l *slog.Logger) ([]broadcast.Broadcaster, error) {
 		broadcasters := []broadcast.Broadcaster{}
 		adapters := strings.Split(c.BroadcastAdapter, ",")
 
 		for _, adapter := range adapters {
 			switch adapter {
 			case "http":
-				hb := broadcast.NewHTTPBroadcaster(h, &c.HTTPBroadcast)
+				hb := broadcast.NewHTTPBroadcaster(h, &c.HTTPBroadcast, l)
 				broadcasters = append(broadcasters, hb)
 			case "redis":
-				rb := broadcast.NewLegacyRedisBroadcaster(h, &c.Redis)
+				rb := broadcast.NewLegacyRedisBroadcaster(h, &c.Redis, l)
 				broadcasters = append(broadcasters, rb)
 			case "redisx":
-				rb := broadcast.NewRedisBroadcaster(h, &c.Redis)
+				rb := broadcast.NewRedisBroadcaster(h, &c.Redis, l)
 				broadcasters = append(broadcasters, rb)
 			case "nats":
-				nb := broadcast.NewLegacyNATSBroadcaster(h, &c.NATS)
+				nb := broadcast.NewLegacyNATSBroadcaster(h, &c.NATS, l)
 				broadcasters = append(broadcasters, nb)
 			default:
 				return broadcasters, errorx.IllegalArgument.New("Unsupported broadcast adapter: %s", adapter)
@@ -101,14 +102,14 @@ func WithSubscriber(fn subscriberFactory) Option {
 
 // WithDefaultSubscriber is an Option to set Runner subscriber to pubsub.NewSubscriber
 func WithDefaultSubscriber() Option {
-	return WithSubscriber(func(h pubsub.Handler, c *config.Config) (pubsub.Subscriber, error) {
+	return WithSubscriber(func(h pubsub.Handler, c *config.Config, l *slog.Logger) (pubsub.Subscriber, error) {
 		switch c.PubSubAdapter {
 		case "":
 			return pubsub.NewLegacySubscriber(h), nil
 		case "redis":
-			return pubsub.NewRedisSubscriber(h, &c.Redis)
+			return pubsub.NewRedisSubscriber(h, &c.Redis, l)
 		case "nats":
-			return pubsub.NewNATSSubscriber(h, &c.NATS)
+			return pubsub.NewNATSSubscriber(h, &c.NATS, l)
 		}
 
 		return nil, errorx.IllegalArgument.New("Unsupported subscriber adapter: %s", c.PubSubAdapter)
@@ -153,7 +154,7 @@ func WithWebSocketEndpoint(path string, fn websocketHandler) Option {
 
 // WithDefaultBroker is an Option to set Runner broker to default broker from config
 func WithDefaultBroker() Option {
-	return WithBroker(func(br broker.Broadcaster, c *config.Config) (broker.Broker, error) {
+	return WithBroker(func(br broker.Broadcaster, c *config.Config, l *slog.Logger) (broker.Broker, error) {
 		if c.BrokerAdapter == "" {
 			return broker.NewLegacyBroker(br), nil
 		}
@@ -167,7 +168,7 @@ func WithDefaultBroker() Option {
 			// We don't want to enable JetStream by default (if NATS is used only for pub/sub),
 			// currently, we only need it when NATS is used as a broker.
 			c.EmbeddedNats.JetStream = true
-			b := broker.NewNATSBroker(br, &c.Broker, &c.NATS)
+			b := broker.NewNATSBroker(br, &c.Broker, &c.NATS, l)
 			return b, nil
 		default:
 			return nil, errorx.IllegalArgument.New("Unsupported broker adapter: %s", c.BrokerAdapter)

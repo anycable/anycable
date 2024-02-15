@@ -36,12 +36,12 @@ import (
 	"go.uber.org/automaxprocs/maxprocs"
 )
 
-type controllerFactory = func(*metricspkg.Metrics, *config.Config) (node.Controller, error)
-type disconnectorFactory = func(*node.Node, *config.Config) (node.Disconnector, error)
-type broadcastersFactory = func(broadcast.Handler, *config.Config) ([]broadcast.Broadcaster, error)
-type brokerFactory = func(broker.Broadcaster, *config.Config) (broker.Broker, error)
-type subscriberFactory = func(pubsub.Handler, *config.Config) (pubsub.Subscriber, error)
-type websocketHandler = func(*node.Node, *config.Config) (http.Handler, error)
+type controllerFactory = func(*metricspkg.Metrics, *config.Config, *slog.Logger) (node.Controller, error)
+type disconnectorFactory = func(*node.Node, *config.Config, *slog.Logger) (node.Disconnector, error)
+type broadcastersFactory = func(broadcast.Handler, *config.Config, *slog.Logger) ([]broadcast.Broadcaster, error)
+type brokerFactory = func(broker.Broadcaster, *config.Config, *slog.Logger) (broker.Broker, error)
+type subscriberFactory = func(pubsub.Handler, *config.Config, *slog.Logger) (pubsub.Subscriber, error)
+type websocketHandler = func(*node.Node, *config.Config, *slog.Logger) (http.Handler, error)
 
 type Shutdownable interface {
 	Shutdown(ctx context.Context) error
@@ -103,9 +103,9 @@ func (r *Runner) checkAndSetDefaults() error {
 		return errorx.Decorate(err, "!!! Failed to initialize logger !!!")
 	}
 
-	r.log = slog.With("context", "main")
+	r.log = slog.With("context", "main").With("nodeid", r.config.ID)
 
-	err = r.config.LoadPresets()
+	err = r.config.LoadPresets(r.log)
 
 	if err != nil {
 		return errorx.Decorate(err, "!!! Failed to load configuration presets !!!")
@@ -114,6 +114,7 @@ func (r *Runner) checkAndSetDefaults() error {
 	server.SSL = &r.config.SSL
 	server.Host = r.config.Host
 	server.MaxConn = r.config.MaxConn
+	server.Logger = r.log
 
 	if r.name == "" {
 		return errorx.AssertionFailed.New("Name is blank, specify WithName()")
@@ -168,25 +169,31 @@ func (r *Runner) Run() error {
 		return err
 	}
 
-	appNode := node.NewNode(controller, metrics, &r.config.App)
+	appNode := node.NewNode(
+		&r.config.App,
+		node.WithController(controller),
+		node.WithInstrumenter(metrics),
+		node.WithLogger(r.log),
+		node.WithID(r.config.ID),
+	)
 
 	if r.telemetryEnabled {
 		telemetryConfig := telemetry.NewConfig()
 		tracker := telemetry.NewTracker(metrics, r.config, telemetryConfig)
 
-		tracker.Announce()
+		r.log.With("context", "telemetry").Info(tracker.Announce())
 		go tracker.Collect()
 
 		r.shutdownables = append(r.shutdownables, tracker)
 	}
 
-	subscriber, err := r.subscriberFactory(appNode, r.config)
+	subscriber, err := r.subscriberFactory(appNode, r.config, r.log)
 
 	if err != nil {
 		return errorx.Decorate(err, "couldn't configure pub/sub")
 	}
 
-	appBroker, err := r.brokerFactory(subscriber, r.config)
+	appBroker, err := r.brokerFactory(subscriber, r.config, r.log)
 	if err != nil {
 		return errorx.Decorate(err, "!!! Failed to initialize broker !!!")
 	}
@@ -196,7 +203,7 @@ func (r *Runner) Run() error {
 		appNode.SetBroker(appBroker)
 	}
 
-	disconnector, err := r.disconnectorFactory(appNode, r.config)
+	disconnector, err := r.disconnectorFactory(appNode, r.config, r.log)
 	if err != nil {
 		return errorx.Decorate(err, "!!! Failed to initialize disconnector !!!")
 	}
@@ -243,7 +250,7 @@ func (r *Runner) Run() error {
 	r.shutdownables = append(r.shutdownables, subscriber)
 
 	if r.broadcastersFactory != nil {
-		broadcasters, berr := r.broadcastersFactory(appNode, r.config)
+		broadcasters, berr := r.broadcastersFactory(appNode, r.config, r.log)
 
 		if berr != nil {
 			return errorx.Decorate(err, "couldn't configure broadcasters")
@@ -277,7 +284,7 @@ func (r *Runner) Run() error {
 		return errorx.Decorate(err, "!!! Failed to initialize WebSocket server at %s:%d !!!", r.config.Host, r.config.Port)
 	}
 
-	wsHandler, err := r.websocketHandlerFactory(appNode, r.config)
+	wsHandler, err := r.websocketHandlerFactory(appNode, r.config, r.log)
 	if err != nil {
 		return errorx.Decorate(err, "!!! Failed to initialize WebSocket handler !!!")
 	}
@@ -288,7 +295,7 @@ func (r *Runner) Run() error {
 	}
 
 	for path, handlerFactory := range r.websocketEndpoints {
-		handler, err := handlerFactory(appNode, r.config)
+		handler, err := handlerFactory(appNode, r.config, r.log)
 		if err != nil {
 			return errorx.Decorate(err, "!!! Failed to initialize WebSocket handler for %s !!!", path)
 		}
@@ -341,14 +348,14 @@ func (r *Runner) announceDebugMode() {
 }
 
 func (r *Runner) initMetrics(c *metricspkg.Config) (*metricspkg.Metrics, error) {
-	m, err := metricspkg.NewFromConfig(c)
+	m, err := metricspkg.NewFromConfig(c, r.log)
 
 	if err != nil {
 		return nil, err
 	}
 
 	if c.Statsd.Enabled() {
-		sw := metricspkg.NewStatsdWriter(c.Statsd, c.Tags)
+		sw := metricspkg.NewStatsdWriter(c.Statsd, c.Tags, r.log)
 		m.RegisterWriter(sw)
 	}
 
@@ -356,13 +363,13 @@ func (r *Runner) initMetrics(c *metricspkg.Config) (*metricspkg.Metrics, error) 
 }
 
 func (r *Runner) newController(metrics *metricspkg.Metrics) (node.Controller, error) {
-	controller, err := r.controllerFactory(metrics, r.config)
+	controller, err := r.controllerFactory(metrics, r.config, r.log)
 	if err != nil {
 		return nil, errorx.Decorate(err, "!!! Failed to initialize controller !!!")
 	}
 
 	if r.config.JWT.Enabled() {
-		identifier := identity.NewJWTIdentifier(&r.config.JWT)
+		identifier := identity.NewJWTIdentifier(&r.config.JWT, r.log)
 		controller = identity.NewIdentifiableController(controller, identifier)
 		r.log.Info(fmt.Sprintf("JWT identification is enabled (param: %s, enforced: %v)", r.config.JWT.Param, r.config.JWT.Force))
 	}
@@ -394,16 +401,16 @@ func (r *Runner) startMetrics(metrics *metricspkg.Metrics) {
 	}
 }
 
-func (r *Runner) defaultDisconnector(n *node.Node, c *config.Config) (node.Disconnector, error) {
+func (r *Runner) defaultDisconnector(n *node.Node, c *config.Config, l *slog.Logger) (node.Disconnector, error) {
 	if c.DisconnectorDisabled {
 		return node.NewNoopDisconnector(), nil
 	}
-	return node.NewDisconnectQueue(n, &c.DisconnectQueue), nil
+	return node.NewDisconnectQueue(n, &c.DisconnectQueue, l), nil
 }
 
-func (r *Runner) defaultWebSocketHandler(n *node.Node, c *config.Config) (http.Handler, error) {
+func (r *Runner) defaultWebSocketHandler(n *node.Node, c *config.Config, l *slog.Logger) (http.Handler, error) {
 	extractor := server.DefaultHeadersExtractor{Headers: c.Headers, Cookies: c.Cookies}
-	return ws.WebsocketHandler(common.ActionCableProtocols(), &extractor, &c.WS, func(wsc *websocket.Conn, info *server.RequestInfo, callback func()) error {
+	return ws.WebsocketHandler(common.ActionCableProtocols(), &extractor, &c.WS, r.log, func(wsc *websocket.Conn, info *server.RequestInfo, callback func()) error {
 		wrappedConn := ws.NewConnection(wsc)
 
 		opts := []node.SessionOption{}
@@ -426,7 +433,7 @@ func (r *Runner) defaultWebSocketHandler(n *node.Node, c *config.Config) (http.H
 
 func (r *Runner) defaultSSEHandler(n *node.Node, ctx context.Context, c *config.Config) (http.Handler, error) {
 	extractor := server.DefaultHeadersExtractor{Headers: c.Headers, Cookies: c.Cookies}
-	handler := sse.SSEHandler(n, ctx, &extractor, &c.SSE)
+	handler := sse.SSEHandler(n, ctx, &extractor, &c.SSE, r.log)
 
 	return handler, nil
 }
@@ -436,7 +443,7 @@ func (r *Runner) initMRuby() string {
 		var mrbv string
 		mrbv, err := mrb.Version()
 		if err != nil {
-			slog.Error(fmt.Sprintf("mruby failed to initialize: %v", err))
+			r.log.Error(fmt.Sprintf("mruby failed to initialize: %v", err))
 		} else {
 			return " (with " + mrbv + ")"
 		}
@@ -465,12 +472,12 @@ func (r *Runner) defaultRouter() *router.RouterController {
 	router := router.NewRouterController(nil)
 
 	if r.config.Rails.TurboRailsKey != "" || r.config.Rails.TurboRailsClearText {
-		turboController := rails.NewTurboController(r.config.Rails.TurboRailsKey)
+		turboController := rails.NewTurboController(r.config.Rails.TurboRailsKey, r.log)
 		router.Route("Turbo::StreamsChannel", turboController) // nolint:errcheck
 	}
 
 	if r.config.Rails.CableReadyKey != "" || r.config.Rails.CableReadyClearText {
-		crController := rails.NewCableReadyController(r.config.Rails.CableReadyKey)
+		crController := rails.NewCableReadyController(r.config.Rails.CableReadyKey, r.log)
 		router.Route("CableReady::Stream", crController) // nolint:errcheck
 	}
 
@@ -514,7 +521,7 @@ func (r *Runner) setupSignalHandlers() {
 }
 
 func (r *Runner) embedNATS(c *enats.Config) (*enats.Service, error) {
-	service := enats.NewService(c)
+	service := enats.NewService(c, r.log)
 
 	err := service.Start()
 

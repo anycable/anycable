@@ -3,10 +3,13 @@
 
 package metrics
 
-import "errors"
+import (
+	"errors"
+	"log/slog"
+)
 
 // NewCustomPrinter generates log formatter from the provided (as path)
 // Ruby script
-func NewCustomPrinter(path string) (*BasePrinter, error) {
+func NewCustomPrinter(path string, l *slog.Logger) (*BasePrinter, error) {
 	return nil, errors.New("unsupported")
 }

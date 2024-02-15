@@ -16,14 +16,14 @@ type CableReadyController struct {
 
 var _ node.Controller = (*CableReadyController)(nil)
 
-func NewCableReadyController(key string) *CableReadyController {
+func NewCableReadyController(key string, l *slog.Logger) *CableReadyController {
 	var verifier *utils.MessageVerifier
 
 	if key != "" {
 		verifier = utils.NewMessageVerifier(key)
 	}
 
-	return &CableReadyController{verifier, slog.With("context", "cable_ready")}
+	return &CableReadyController{verifier, l.With("context", "cable_ready")}
 }
 
 func (c *CableReadyController) Start() error {

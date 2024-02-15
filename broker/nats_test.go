@@ -3,6 +3,7 @@ package broker
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"testing"
 	"time"
 
@@ -42,7 +43,7 @@ func TestNATSBroker_HistorySince_expiration(t *testing.T) {
 
 	broadcastHandler := FakeBroadastHandler{}
 	broadcaster := pubsub.NewLegacySubscriber(broadcastHandler)
-	broker := NewNATSBroker(broadcaster, &config, &nconfig)
+	broker := NewNATSBroker(broadcaster, &config, &nconfig, slog.Default())
 
 	err = broker.Start(nil)
 	require.NoError(t, err)
@@ -98,7 +99,7 @@ func TestNATSBroker_HistorySince_with_limit(t *testing.T) {
 
 	broadcastHandler := FakeBroadastHandler{}
 	broadcaster := pubsub.NewLegacySubscriber(broadcastHandler)
-	broker := NewNATSBroker(broadcaster, &config, &nconfig)
+	broker := NewNATSBroker(broadcaster, &config, &nconfig, slog.Default())
 
 	err = broker.Start(nil)
 	require.NoError(t, err)
@@ -139,7 +140,7 @@ func TestNATSBroker_HistoryFrom(t *testing.T) {
 
 	broadcastHandler := FakeBroadastHandler{}
 	broadcaster := pubsub.NewLegacySubscriber(broadcastHandler)
-	broker := NewNATSBroker(broadcaster, &config, &nconfig)
+	broker := NewNATSBroker(broadcaster, &config, &nconfig, slog.Default())
 
 	err = broker.Start(nil)
 	require.NoError(t, err)
@@ -223,7 +224,7 @@ func TestNATSBroker_Sessions(t *testing.T) {
 	nconfig := natsconfig.NewNATSConfig()
 	nconfig.Servers = addr
 
-	broker := NewNATSBroker(nil, &config, &nconfig)
+	broker := NewNATSBroker(nil, &config, &nconfig, slog.Default())
 
 	err = broker.Start(nil)
 	require.NoError(t, err)
@@ -233,7 +234,7 @@ func TestNATSBroker_Sessions(t *testing.T) {
 	err = broker.CommitSession("test123", &TestCacheable{"cache-me"})
 	require.NoError(t, err)
 
-	anotherBroker := NewNATSBroker(nil, &config, &nconfig)
+	anotherBroker := NewNATSBroker(nil, &config, &nconfig, slog.Default())
 	require.NoError(t, anotherBroker.Start(nil))
 	defer anotherBroker.Shutdown(context.Background()) // nolint: errcheck
 
@@ -284,7 +285,7 @@ func TestNATSBroker_SessionsTTLChange(t *testing.T) {
 	nconfig := natsconfig.NewNATSConfig()
 	nconfig.Servers = addr
 
-	broker := NewNATSBroker(nil, &config, &nconfig)
+	broker := NewNATSBroker(nil, &config, &nconfig, slog.Default())
 
 	err = broker.Start(nil)
 	require.NoError(t, err)
@@ -299,7 +300,7 @@ func TestNATSBroker_SessionsTTLChange(t *testing.T) {
 	aConfig := NewConfig()
 	aConfig.SessionsTTL = 3
 
-	anotherBroker := NewNATSBroker(nil, &aConfig, &nconfig)
+	anotherBroker := NewNATSBroker(nil, &aConfig, &nconfig, slog.Default())
 	require.NoError(t, anotherBroker.Start(nil))
 	defer anotherBroker.Shutdown(context.Background()) // nolint: errcheck
 
@@ -351,7 +352,7 @@ func TestNATSBroker_Epoch(t *testing.T) {
 	nconfig := natsconfig.NewNATSConfig()
 	nconfig.Servers = addr
 
-	broker := NewNATSBroker(nil, &config, &nconfig)
+	broker := NewNATSBroker(nil, &config, &nconfig, slog.Default())
 
 	err = broker.Start(nil)
 	require.NoError(t, err)
@@ -362,7 +363,7 @@ func TestNATSBroker_Epoch(t *testing.T) {
 
 	epoch := broker.Epoch()
 
-	anotherBroker := NewNATSBroker(nil, &config, &nconfig)
+	anotherBroker := NewNATSBroker(nil, &config, &nconfig, slog.Default())
 	require.NoError(t, anotherBroker.Start(nil))
 	defer anotherBroker.Shutdown(context.Background()) // nolint: errcheck
 
@@ -399,7 +400,7 @@ func startNATSServer(t *testing.T, addr string) (*enats.Service, error) {
 	conf.JetStream = true
 	conf.ServiceAddr = addr
 	conf.StoreDir = t.TempDir()
-	service := enats.NewService(&conf)
+	service := enats.NewService(&conf, slog.Default())
 
 	err := service.Start()
 	if err != nil {

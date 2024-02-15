@@ -2,6 +2,7 @@ package rails
 
 import (
 	"fmt"
+	"log/slog"
 	"testing"
 
 	"github.com/anycable/anycable-go/common"
@@ -16,7 +17,7 @@ func TestCableReadyController(t *testing.T) {
 	stream := "InN0cmVhbToyMDIxIg==--44f6315dd9faefe713ef5685e114413c1afe8759197a0fc39b15cee75769417e"
 
 	env := common.NewSessionEnv("ws://demo.anycable.io/cable", &map[string]string{"cookie": "val=1;"})
-	subject := NewCableReadyController(key)
+	subject := NewCableReadyController(key, slog.Default())
 
 	t.Run("Subscribe (success)", func(t *testing.T) {
 		channel := fmt.Sprintf("{\"channel\":\"CableReady::Stream\",\"identifier\":\"%s\"}", stream)
@@ -70,7 +71,7 @@ func TestCableReadyController(t *testing.T) {
 
 func TestCableReadyControllerWithClearText(t *testing.T) {
 	env := common.NewSessionEnv("ws://demo.anycable.io/cable", &map[string]string{"cookie": "val=1;"})
-	subject := NewCableReadyController("")
+	subject := NewCableReadyController("", slog.Default())
 
 	t.Run("Subscribe (success)", func(t *testing.T) {
 		channel := "{\"channel\":\"CableReady::Stream\",\"identifier\":\"stream:2023\"}"

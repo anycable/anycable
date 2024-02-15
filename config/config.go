@@ -14,10 +14,13 @@ import (
 	"github.com/anycable/anycable-go/server"
 	"github.com/anycable/anycable-go/sse"
 	"github.com/anycable/anycable-go/ws"
+
+	nanoid "github.com/matoous/go-nanoid"
 )
 
 // Config contains main application configuration
 type Config struct {
+	ID                   string
 	App                  node.Config
 	RPC                  rpc.Config
 	BrokerAdapter        string
@@ -53,7 +56,10 @@ type Config struct {
 
 // NewConfig returns a new empty config
 func NewConfig() Config {
+	id, _ := nanoid.Nanoid(6)
+
 	config := Config{
+		ID:               id,
 		Host:             "localhost",
 		Port:             8080,
 		Path:             []string{"/cable"},

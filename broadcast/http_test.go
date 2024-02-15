@@ -2,6 +2,7 @@ package broadcast
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -15,8 +16,8 @@ func TestHttpHandler(t *testing.T) {
 	handler := &mocks.Handler{}
 	config := HTTPConfig{}
 	secretConfig := HTTPConfig{Secret: "secret"}
-	broadcaster := NewHTTPBroadcaster(handler, &config)
-	protectedBroadcaster := NewHTTPBroadcaster(handler, &secretConfig)
+	broadcaster := NewHTTPBroadcaster(handler, &config, slog.Default())
+	protectedBroadcaster := NewHTTPBroadcaster(handler, &secretConfig, slog.Default())
 
 	payload, err := json.Marshal(map[string]string{"stream": "any_test", "data": "123_test"})
 	if err != nil {

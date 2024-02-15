@@ -19,11 +19,11 @@ type LegacyNATSBroadcaster struct {
 
 var _ Broadcaster = (*LegacyNATSBroadcaster)(nil)
 
-func NewLegacyNATSBroadcaster(node Handler, c *nconfig.NATSConfig) *LegacyNATSBroadcaster {
+func NewLegacyNATSBroadcaster(node Handler, c *nconfig.NATSConfig, l *slog.Logger) *LegacyNATSBroadcaster {
 	return &LegacyNATSBroadcaster{
 		config:  c,
 		handler: node,
-		log:     slog.With("context", "broadcast").With("provider", "nats"),
+		log:     l.With("context", "broadcast").With("provider", "nats"),
 	}
 }
 
@@ -37,11 +37,11 @@ func (s *LegacyNATSBroadcaster) Start(done chan (error)) error {
 		nats.MaxReconnects(s.config.MaxReconnectAttempts),
 		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
 			if err != nil {
-				slog.Warn("connection failed", "error", err)
+				s.log.Warn("connection failed", "error", err)
 			}
 		}),
 		nats.ReconnectHandler(func(nc *nats.Conn) {
-			slog.Info("connection restored", "url", nc.ConnectedUrl())
+			s.log.Info("connection restored", "url", nc.ConnectedUrl())
 		}),
 	}
 

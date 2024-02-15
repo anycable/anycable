@@ -19,14 +19,14 @@ func (c *Config) Presets() []string {
 	return detectPresetsFromEnv()
 }
 
-func (c *Config) LoadPresets() error {
+func (c *Config) LoadPresets(logger *slog.Logger) error {
 	presets := c.Presets()
 
 	if len(presets) == 0 {
 		return nil
 	}
 
-	slog.With("context", "config").Info("load presets", "presets", strings.Join(presets, ","))
+	logger.With("context", "config").Info("load presets", "presets", strings.Join(presets, ","))
 
 	defaults := NewConfig()
 

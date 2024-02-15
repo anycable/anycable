@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"testing"
 	"time"
@@ -26,7 +27,7 @@ func TestNATSCommon(t *testing.T) {
 	config := nats.NewNATSConfig()
 
 	SharedSubscriberTests(t, func(handler *TestHandler) Subscriber {
-		sub, err := NewNATSSubscriber(handler, &config)
+		sub, err := NewNATSSubscriber(handler, &config, slog.Default())
 
 		if err != nil {
 			panic(err)
@@ -45,7 +46,7 @@ func TestNATSReconnect(t *testing.T) {
 	handler := NewTestHandler()
 	config := nats.NewNATSConfig()
 
-	subscriber, err := NewNATSSubscriber(handler, &config)
+	subscriber, err := NewNATSSubscriber(handler, &config, slog.Default())
 	require.NoError(t, err)
 
 	done := make(chan error)
@@ -156,7 +157,7 @@ func waitNATSConnectionActive(s *NATSSubscriber) error {
 
 func buildNATSServer() *enats.Service {
 	conf := enats.NewConfig()
-	service := enats.NewService(&conf)
+	service := enats.NewService(&conf, slog.Default())
 
 	return service
 }

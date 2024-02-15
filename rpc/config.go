@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"os"
 	"strings"
@@ -25,7 +26,7 @@ type ClientHelper interface {
 }
 
 // Dialer is factory function to build a new client with its helper
-type Dialer = func(c *Config) (pb.RPCClient, ClientHelper, error)
+type Dialer = func(c *Config, l *slog.Logger) (pb.RPCClient, ClientHelper, error)
 
 // Config contains RPC controller configuration
 type Config struct {

@@ -29,13 +29,13 @@ type Gate struct {
 }
 
 // NewGate creates a new gate.
-func NewGate(ctx context.Context) *Gate {
+func NewGate(ctx context.Context, l *slog.Logger) *Gate {
 	g := Gate{
 		streams:         make(map[string]map[HubSession]map[string]bool),
 		sessionsStreams: make(map[HubSession]map[string][]string),
 		// Use a buffered channel to avoid blocking
 		sender: make(chan *common.StreamMessage, 256),
-		log:    slog.With("component", "hub"),
+		log:    l,
 	}
 
 	go g.broadcastLoop(ctx)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"testing"
 	"time"
 
@@ -80,7 +81,7 @@ func TestIntegrationRestore_NATS(t *testing.T) {
 	nconfig.Servers = addr
 
 	broadcaster := pubsub.NewLegacySubscriber(node)
-	broker := broker.NewNATSBroker(broadcaster, &bconf, &nconfig)
+	broker := broker.NewNATSBroker(broadcaster, &bconf, &nconfig, slog.Default())
 	node.SetBroker(broker)
 
 	require.NoError(t, node.Start())
@@ -287,7 +288,7 @@ func TestIntegrationHistory_NATS(t *testing.T) {
 	nconfig.Servers = addr
 
 	broadcaster := pubsub.NewLegacySubscriber(node)
-	broker := broker.NewNATSBroker(broadcaster, &bconf, &nconfig)
+	broker := broker.NewNATSBroker(broadcaster, &bconf, &nconfig, slog.Default())
 	node.SetBroker(broker)
 
 	require.NoError(t, node.Start())
@@ -398,7 +399,7 @@ func setupIntegrationNode() (*Node, *mocks.Controller) {
 	controller := &mocks.Controller{}
 	controller.On("Shutdown").Return(nil)
 
-	node := NewNode(controller, metrics.NewMetrics(nil, 10), &config)
+	node := NewNode(&config, WithController(controller), WithInstrumenter(metrics.NewMetrics(nil, 10, slog.Default())))
 	node.SetDisconnector(NewNoopDisconnector())
 
 	return node, controller
@@ -456,7 +457,7 @@ func startNATSServer(t *testing.T, addr string) (*enats.Service, error) {
 	conf.JetStream = true
 	conf.ServiceAddr = addr
 	conf.StoreDir = t.TempDir()
-	service := enats.NewService(&conf)
+	service := enats.NewService(&conf, slog.Default())
 
 	err := service.Start()
 	if err != nil {

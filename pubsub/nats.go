@@ -28,12 +28,12 @@ type NATSSubscriber struct {
 var _ Subscriber = (*NATSSubscriber)(nil)
 
 // NewNATSSubscriber creates a NATS subscriber using pub/sub
-func NewNATSSubscriber(node Handler, config *nconfig.NATSConfig) (*NATSSubscriber, error) {
+func NewNATSSubscriber(node Handler, config *nconfig.NATSConfig, l *slog.Logger) (*NATSSubscriber, error) {
 	return &NATSSubscriber{
 		node:          node,
 		config:        config,
 		subscriptions: make(map[string]*nats.Subscription),
-		log:           slog.With("context", "pubsub"),
+		log:           l.With("context", "pubsub"),
 	}, nil
 }
 

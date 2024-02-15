@@ -2,6 +2,7 @@ package identity
 
 import (
 	"fmt"
+	"log/slog"
 	"testing"
 	"time"
 
@@ -17,7 +18,7 @@ func TestJWTIdentifierIdentify(t *testing.T) {
 	ids := "{\"user_id\":\"15\"}"
 
 	config := NewJWTConfig(secret)
-	subject := NewJWTIdentifier(&config)
+	subject := NewJWTIdentifier(&config, slog.Default())
 
 	t.Run("with valid token passed as query param", func(t *testing.T) {
 		token := jwt.NewWithClaims(algo, jwt.MapClaims{
@@ -150,7 +151,7 @@ func TestJWTIdentifierIdentify(t *testing.T) {
 		config := NewJWTConfig(secret)
 		config.Force = true
 
-		enforced := NewJWTIdentifier(&config)
+		enforced := NewJWTIdentifier(&config, slog.Default())
 
 		env := common.NewSessionEnv("ws://demo.anycable.io/cable", nil)
 

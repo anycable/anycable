@@ -41,10 +41,10 @@ type DisconnectQueue struct {
 }
 
 // NewDisconnectQueue builds new queue with a specified rate (max calls per second)
-func NewDisconnectQueue(node *Node, config *DisconnectQueueConfig) *DisconnectQueue {
+func NewDisconnectQueue(node *Node, config *DisconnectQueueConfig, l *slog.Logger) *DisconnectQueue {
 	rateDuration := time.Millisecond * time.Duration(1000/config.Rate)
 
-	ctx := slog.With("context", "disconnector")
+	ctx := l.With("context", "disconnector")
 
 	ctx.Debug("calls rate", "rate", rateDuration)
 

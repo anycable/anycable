@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"testing"
 
 	"github.com/anycable/anycable-go/common"
@@ -41,8 +42,8 @@ func (st MockState) ActiveConns() int {
 
 func NewTestController() *Controller {
 	config := NewConfig()
-	metrics := metrics.NewMetrics(nil, 0)
-	controller, _ := NewController(metrics, &config)
+	metrics := metrics.NewMetrics(nil, 0, slog.Default())
+	controller, _ := NewController(metrics, &config, slog.Default())
 	barrier, _ := NewFixedSizeBarrier(5)
 	controller.barrier = barrier
 	controller.clientState = MockState{true, false}
@@ -455,7 +456,7 @@ func TestCustomDialFun(t *testing.T) {
 
 	config.DialFun = NewInprocessServiceDialer(&service, stateHandler)
 
-	controller, err := NewController(metrics.NewMetrics(nil, 0), &config)
+	controller, err := NewController(metrics.NewMetrics(nil, 0, slog.Default()), &config, slog.Default())
 	require.NoError(t, err)
 	require.NoError(t, controller.Start())
 

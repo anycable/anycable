@@ -1,6 +1,8 @@
 package rpc
 
 import (
+	"log/slog"
+
 	"github.com/fullstorydev/grpchan"
 	"github.com/fullstorydev/grpchan/inprocgrpc"
 
@@ -14,7 +16,7 @@ func NewInprocessServiceDialer(service pb.RPCServer, stateHandler ClientHelper) 
 	pb.RegisterHandlerRPC(handlers, service)
 	handlers.ForEach(inproc.RegisterService)
 
-	return func(c *Config) (pb.RPCClient, ClientHelper, error) {
+	return func(c *Config, l *slog.Logger) (pb.RPCClient, ClientHelper, error) {
 		inprocClient := pb.NewRPCChannelClient(inproc)
 		return inprocClient, stateHandler, nil
 	}

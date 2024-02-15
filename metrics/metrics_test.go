@@ -1,13 +1,14 @@
 package metrics
 
 import (
+	"log/slog"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestMetricsSnapshot(t *testing.T) {
-	m := NewMetrics(nil, 10)
+	m := NewMetrics(nil, 10, slog.Default())
 
 	m.RegisterCounter("test_count", "")
 	m.RegisterGauge("test_gauge", "")
@@ -32,7 +33,7 @@ func TestMetricsSnapshot(t *testing.T) {
 }
 
 func TestMetrics_EachGauge(t *testing.T) {
-	m := NewMetrics(nil, 10)
+	m := NewMetrics(nil, 10, slog.Default())
 
 	m.RegisterGauge("test_gauge", "First")
 	m.RegisterGauge("test_gauge_2", "Second")
@@ -59,7 +60,7 @@ func TestMetrics_EachGauge(t *testing.T) {
 }
 
 func TestMetrics_EachCounter(t *testing.T) {
-	m := NewMetrics(nil, 10)
+	m := NewMetrics(nil, 10, slog.Default())
 
 	m.RegisterCounter("test_counter", "First")
 	m.RegisterCounter("test_counter_2", "Second")

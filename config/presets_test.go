@@ -1,6 +1,7 @@
 package config
 
 import (
+	"log/slog"
 	"os"
 	"testing"
 
@@ -11,7 +12,7 @@ import (
 func TestNoPresets(t *testing.T) {
 	config := NewConfig()
 
-	err := config.LoadPresets()
+	err := config.LoadPresets(slog.Default())
 
 	require.NoError(t, err)
 
@@ -33,7 +34,7 @@ func TestFlyPresets(t *testing.T) {
 
 	require.Equal(t, []string{"fly"}, config.Presets())
 
-	err := config.LoadPresets()
+	err := config.LoadPresets(slog.Default())
 
 	require.NoError(t, err)
 
@@ -64,7 +65,7 @@ func TestFlyPresets_When_RedisConfigured(t *testing.T) {
 
 	require.Equal(t, []string{"fly"}, config.Presets())
 
-	err := config.LoadPresets()
+	err := config.LoadPresets(slog.Default())
 
 	require.NoError(t, err)
 
@@ -92,7 +93,7 @@ func TestHerokuPresets(t *testing.T) {
 
 	require.Equal(t, []string{"heroku"}, config.Presets())
 
-	err := config.LoadPresets()
+	err := config.LoadPresets(slog.Default())
 
 	require.NoError(t, err)
 
@@ -107,7 +108,7 @@ func TestBroker(t *testing.T) {
 
 	require.Equal(t, []string{"broker"}, config.Presets())
 
-	err := config.LoadPresets()
+	err := config.LoadPresets(slog.Default())
 
 	require.NoError(t, err)
 
@@ -123,7 +124,7 @@ func TestBrokerWhenRedisConfigured(t *testing.T) {
 
 	require.Equal(t, []string{"broker"}, config.Presets())
 
-	err := config.LoadPresets()
+	err := config.LoadPresets(slog.Default())
 
 	require.NoError(t, err)
 
@@ -139,7 +140,7 @@ func TestBrokerWhenENATSConfigured(t *testing.T) {
 
 	require.Equal(t, []string{"broker"}, config.Presets())
 
-	err := config.LoadPresets()
+	err := config.LoadPresets(slog.Default())
 
 	require.NoError(t, err)
 
@@ -162,7 +163,7 @@ func TestFlyWithBrokerPresets(t *testing.T) {
 
 	require.Equal(t, []string{"fly", "broker"}, config.Presets())
 
-	err := config.LoadPresets()
+	err := config.LoadPresets(slog.Default())
 
 	require.NoError(t, err)
 
@@ -194,7 +195,7 @@ func TestOverrideSomePresetSettings(t *testing.T) {
 
 	config.EmbeddedNats.ServiceAddr = "nats://0.0.0.0:1234"
 
-	err := config.LoadPresets()
+	err := config.LoadPresets(slog.Default())
 
 	require.NoError(t, err)
 

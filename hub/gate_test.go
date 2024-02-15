@@ -2,6 +2,7 @@ package hub
 
 import (
 	"context"
+	"log/slog"
 	"testing"
 	"time"
 
@@ -14,7 +15,7 @@ func TestUnsubscribe(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	gate := NewGate(ctx)
+	gate := NewGate(ctx, slog.Default())
 
 	session := NewMockSession("123")
 
@@ -34,7 +35,7 @@ func TestShutdown(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
-	gate := NewGate(ctx)
+	gate := NewGate(ctx, slog.Default())
 
 	session := NewMockSession("123")
 

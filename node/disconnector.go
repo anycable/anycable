@@ -2,7 +2,6 @@ package node
 
 import (
 	"context"
-	"log/slog"
 )
 
 // Disconnector is an interface for disconnect queue implementation
@@ -18,7 +17,6 @@ type NoopDisconnectQueue struct{}
 
 // Run does nothing
 func (d *NoopDisconnectQueue) Run() error {
-	slog.With("context", "disconnector").Info("disconnect events are turned off")
 	return nil
 }
 

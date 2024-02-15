@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math/rand"
 	"sync"
 	"testing"
@@ -73,7 +74,7 @@ func NewMockSession(sid string) *MockSession {
 }
 
 func TestUnsubscribeRaceConditions(t *testing.T) {
-	hub := NewHub(2)
+	hub := NewHub(2, slog.Default())
 
 	go hub.Run()
 	defer hub.Shutdown()
@@ -128,7 +129,7 @@ func TestUnsubscribeRaceConditions(t *testing.T) {
 }
 
 func TestUnsubscribeSession(t *testing.T) {
-	hub := NewHub(2)
+	hub := NewHub(2, slog.Default())
 
 	go hub.Run()
 	defer hub.Shutdown()
@@ -167,7 +168,7 @@ func TestUnsubscribeSession(t *testing.T) {
 }
 
 func TestSubscribeSession(t *testing.T) {
-	hub := NewHub(2)
+	hub := NewHub(2, slog.Default())
 
 	go hub.Run()
 	defer hub.Shutdown()
@@ -207,7 +208,7 @@ func TestSubscribeSession(t *testing.T) {
 }
 
 func TestRemoteDisconnect(t *testing.T) {
-	hub := NewHub(2)
+	hub := NewHub(2, slog.Default())
 
 	go hub.Run()
 	defer hub.Shutdown()
@@ -227,7 +228,7 @@ func TestRemoteDisconnect(t *testing.T) {
 }
 
 func TestBroadcastMessage(t *testing.T) {
-	hub := NewHub(2)
+	hub := NewHub(2, slog.Default())
 
 	go hub.Run()
 	defer hub.Shutdown()
@@ -287,7 +288,7 @@ func TestBroadcastMessage(t *testing.T) {
 }
 
 func TestBroadcastOrder(t *testing.T) {
-	hub := NewHub(10)
+	hub := NewHub(10, slog.Default())
 
 	go hub.Run()
 	defer hub.Shutdown()
@@ -376,7 +377,7 @@ func BenchmarkBroadcast(b *testing.B) {
 			broadcastsPerStream := b.N / config.totalStreams
 			messagesPerSession := config.streamsPerSession * broadcastsPerStream
 
-			hub := NewHub(config.hubPoolSize)
+			hub := NewHub(config.hubPoolSize, slog.Default())
 
 			go hub.Run()
 			defer hub.Shutdown()

@@ -62,6 +62,7 @@ type Connection interface {
 
 // Node represents the whole application
 type Node struct {
+	id      string
 	metrics metrics.Instrumenter
 
 	config       *Config
@@ -77,23 +78,60 @@ type Node struct {
 
 var _ AppNode = (*Node)(nil)
 
+type NodeOption = func(*Node)
+
+func WithController(c Controller) NodeOption {
+	return func(n *Node) {
+		n.controller = c
+	}
+}
+
+func WithInstrumenter(i metrics.Instrumenter) NodeOption {
+	return func(n *Node) {
+		n.metrics = i
+	}
+}
+
+func WithLogger(l *slog.Logger) NodeOption {
+	return func(n *Node) {
+		n.log = l.With("context", "node")
+	}
+}
+
+func WithID(id string) NodeOption {
+	return func(n *Node) {
+		n.id = id
+	}
+}
+
 // NewNode builds new node struct
-func NewNode(controller Controller, metrics *metrics.Metrics, config *Config) *Node {
-	node := &Node{
-		metrics:    metrics,
+func NewNode(config *Config, opts ...NodeOption) *Node {
+	n := &Node{
 		config:     config,
-		controller: controller,
 		shutdownCh: make(chan struct{}),
-		log:        slog.With("context", "node"),
 	}
 
-	node.hub = hub.NewHub(config.HubGopoolSize)
-
-	if metrics != nil {
-		node.registerMetrics()
+	for _, opt := range opts {
+		opt(n)
 	}
 
-	return node
+	// Setup default logger
+	if n.log == nil {
+		n.log = slog.With("context", "node")
+	}
+
+	// Ensure nodeid in logs
+	if n.id != "" {
+		n.log = n.log.With("nodeid", n.id)
+	}
+
+	n.hub = hub.NewHub(config.HubGopoolSize, n.log)
+
+	if n.metrics != nil {
+		n.registerMetrics()
+	}
+
+	return n
 }
 
 // Start runs all the required goroutines
@@ -102,6 +140,11 @@ func (n *Node) Start() error {
 	go n.collectStats()
 
 	return nil
+}
+
+// ID returns node identifier
+func (n *Node) ID() string {
+	return n.id
 }
 
 // SetDisconnector set disconnector for the node

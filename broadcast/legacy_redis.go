@@ -33,7 +33,7 @@ type LegacyRedisBroadcaster struct {
 }
 
 // NewLegacyRedisBroadcaster returns new RedisSubscriber struct
-func NewLegacyRedisBroadcaster(node Handler, config *rconfig.RedisConfig) *LegacyRedisBroadcaster {
+func NewLegacyRedisBroadcaster(node Handler, config *rconfig.RedisConfig, l *slog.Logger) *LegacyRedisBroadcaster {
 	return &LegacyRedisBroadcaster{
 		node:                      node,
 		url:                       config.URL,
@@ -43,7 +43,7 @@ func NewLegacyRedisBroadcaster(node Handler, config *rconfig.RedisConfig) *Legac
 		pingInterval:              time.Duration(config.KeepalivePingInterval),
 		reconnectAttempt:          0,
 		maxReconnectAttempts:      config.MaxReconnectAttempts,
-		log:                       slog.With("context", "broadcast").With("provider", "redis"),
+		log:                       l.With("context", "broadcast").With("provider", "redis"),
 		tlsVerify:                 config.TLSVerify,
 	}
 }

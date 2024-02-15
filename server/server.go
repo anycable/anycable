@@ -41,6 +41,8 @@ var (
 	SSL *SSLConfig
 	// MaxConn is a default configuration for maximum connections
 	MaxConn int
+	// Default logger
+	Logger *slog.Logger
 )
 
 // ForPort creates new or returns the existing server for the specified port
@@ -89,7 +91,7 @@ func NewServer(host string, port string, ssl *SSLConfig, maxConn int) (*HTTPServ
 		shutdownCtx: shutdownCtx,
 		shutdownFn:  shutdownFn,
 		maxConn:     maxConn,
-		log:         slog.With("context", "http"),
+		log:         Logger.With("context", "http"),
 	}, nil
 }
 

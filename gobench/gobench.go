@@ -35,10 +35,10 @@ type Controller struct {
 }
 
 // NewController builds new Controller from config
-func NewController(metrics *metrics.Metrics) *Controller {
+func NewController(metrics *metrics.Metrics, logger *slog.Logger) *Controller {
 	metrics.RegisterCounter(metricsCalls, "The total number of Go channels calls")
 
-	return &Controller{log: slog.With("context", "gobench"), metrics: metrics}
+	return &Controller{log: logger.With("context", "gobench"), metrics: metrics}
 }
 
 // Start is no-op

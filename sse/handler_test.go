@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -66,7 +67,7 @@ func TestSSEHandler(t *testing.T) {
 
 	dconfig := node.NewDisconnectQueueConfig()
 	dconfig.Rate = 1
-	disconnector := node.NewDisconnectQueue(appNode, &dconfig)
+	disconnector := node.NewDisconnectQueue(appNode, &dconfig, slog.Default())
 	appNode.SetDisconnector(disconnector)
 
 	go appNode.Start()                           // nolint: errcheck
@@ -74,7 +75,7 @@ func TestSSEHandler(t *testing.T) {
 
 	headersExtractor := &server.DefaultHeadersExtractor{}
 
-	handler := SSEHandler(appNode, context.Background(), headersExtractor, &conf)
+	handler := SSEHandler(appNode, context.Background(), headersExtractor, &conf, slog.Default())
 
 	controller.
 		On("Shutdown").
@@ -104,7 +105,7 @@ func TestSSEHandler(t *testing.T) {
 		corsConf := NewConfig()
 		corsConf.AllowedOrigins = "*.example.com"
 
-		corsHandler := SSEHandler(appNode, context.Background(), headersExtractor, &corsConf)
+		corsHandler := SSEHandler(appNode, context.Background(), headersExtractor, &corsConf, slog.Default())
 
 		corsHandler.ServeHTTP(w, req)
 
@@ -330,7 +331,7 @@ func TestSSEHandler(t *testing.T) {
 
 		shutdownCtx, shutdownFn := context.WithCancel(context.Background())
 
-		shutdownHandler := SSEHandler(appNode, shutdownCtx, headersExtractor, &conf)
+		shutdownHandler := SSEHandler(appNode, shutdownCtx, headersExtractor, &conf, slog.Default())
 
 		go shutdownHandler.ServeHTTP(sw, req)
 
@@ -463,7 +464,7 @@ func buildNode() (*node.Node, *mocks.Controller) {
 	controller := &mocks.Controller{}
 	config := node.NewConfig()
 	config.HubGopoolSize = 2
-	n := node.NewNode(controller, metrics.NewMetrics(nil, 10), &config)
+	n := node.NewNode(&config, node.WithController(controller), node.WithInstrumenter(metrics.NewMetrics(nil, 10, slog.Default())))
 	n.SetBroker(broker.NewLegacyBroker(pubsub.NewLegacySubscriber(n)))
 	n.SetDisconnector(&immediateDisconnector{n})
 	return n, controller

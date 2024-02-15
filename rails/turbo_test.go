@@ -2,6 +2,7 @@ package rails
 
 import (
 	"fmt"
+	"log/slog"
 	"testing"
 
 	"github.com/anycable/anycable-go/common"
@@ -16,7 +17,7 @@ func TestTurboController(t *testing.T) {
 	stream := "ImNoYXQ6MjAyMSI=--f9ee45dbccb1da04d8ceb99cc820207804370ba0d06b46fc3b8b373af1315628"
 
 	env := common.NewSessionEnv("ws://demo.anycable.io/cable", &map[string]string{"cookie": "val=1;"})
-	subject := NewTurboController(key)
+	subject := NewTurboController(key, slog.Default())
 
 	t.Run("Subscribe (success)", func(t *testing.T) {
 		channel := fmt.Sprintf("{\"channel\":\"Turbo::StreamsChannel\",\"signed_stream_name\":\"%s\"}", stream)
@@ -70,7 +71,7 @@ func TestTurboController(t *testing.T) {
 
 func TestTurboControllerClearText(t *testing.T) {
 	env := common.NewSessionEnv("ws://demo.anycable.io/cable", &map[string]string{"cookie": "val=1;"})
-	subject := NewTurboController("")
+	subject := NewTurboController("", slog.Default())
 
 	t.Run("Subscribe (success)", func(t *testing.T) {
 		channel := "{\"channel\":\"Turbo::StreamsChannel\",\"signed_stream_name\":\"chat:2023\"}"

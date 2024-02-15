@@ -5,7 +5,9 @@
 // NOTE: There could be multiple broadcast handlers running at the same time.
 package broadcast
 
-import "context"
+import (
+	"context"
+)
 
 //go:generate mockery --name Broadcaster --output "../mocks" --outpkg mocks
 type Broadcaster interface {

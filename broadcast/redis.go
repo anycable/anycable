@@ -39,14 +39,14 @@ type RedisBroadcaster struct {
 var _ Broadcaster = (*RedisBroadcaster)(nil)
 
 // NewRedisBroadcaster builds a new RedisSubscriber struct
-func NewRedisBroadcaster(node Handler, config *rconfig.RedisConfig) *RedisBroadcaster {
+func NewRedisBroadcaster(node Handler, config *rconfig.RedisConfig, l *slog.Logger) *RedisBroadcaster {
 	name, _ := nanoid.Nanoid(6)
 
 	return &RedisBroadcaster{
 		node:         node,
 		config:       config,
 		consumerName: name,
-		log:          slog.With("context", "broadcast").With("provider", "redisx").With("id", name),
+		log:          l.With("context", "broadcast").With("provider", "redisx").With("id", name),
 		shutdownCh:   make(chan struct{}),
 		finishedCh:   make(chan struct{}),
 	}

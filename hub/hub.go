@@ -91,7 +91,7 @@ type Hub struct {
 }
 
 // NewHub builds new hub instance
-func NewHub(poolSize int) *Hub {
+func NewHub(poolSize int, l *slog.Logger) *Hub {
 	ctx, doneFn := context.WithCancel(context.Background())
 
 	return &Hub{
@@ -100,12 +100,12 @@ func NewHub(poolSize int) *Hub {
 		register:    make(chan HubRegistration, 2048),
 		sessions:    make(map[string]*HubSessionInfo),
 		identifiers: make(map[string]map[string]bool),
-		gates:       buildGates(ctx, poolSize),
+		gates:       buildGates(ctx, poolSize, l.With("context", "hub")),
 		gatesNum:    poolSize,
 		pool:        utils.NewGoPool("remote commands", 256),
 		doneFn:      doneFn,
 		shutdown:    make(chan struct{}),
-		log:         slog.With("context", "hub"),
+		log:         l.With("context", "hub"),
 	}
 }
 
@@ -362,10 +362,10 @@ func (h *Hub) Sessions() []HubSession {
 	return sessions
 }
 
-func buildGates(ctx context.Context, num int) []*Gate {
+func buildGates(ctx context.Context, num int, l *slog.Logger) []*Gate {
 	gates := make([]*Gate, 0, num)
 	for i := 0; i < num; i++ {
-		gates = append(gates, NewGate(ctx))
+		gates = append(gates, NewGate(ctx, l))
 	}
 
 	return gates

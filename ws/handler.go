@@ -14,9 +14,9 @@ import (
 type sessionHandler = func(conn *websocket.Conn, info *server.RequestInfo, callback func()) error
 
 // WebsocketHandler generate a new http handler for WebSocket connections
-func WebsocketHandler(subprotocols []string, headersExtractor server.HeadersExtractor, config *Config, sessionHandler sessionHandler) http.Handler {
+func WebsocketHandler(subprotocols []string, headersExtractor server.HeadersExtractor, config *Config, l *slog.Logger, sessionHandler sessionHandler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := slog.With("context", "ws")
+		ctx := l.With("context", "ws")
 
 		upgrader := websocket.Upgrader{
 			CheckOrigin:       CheckOrigin(config.AllowedOrigins),
@@ -45,7 +45,7 @@ func WebsocketHandler(subprotocols []string, headersExtractor server.HeadersExtr
 			wsc.EnableWriteCompression(true)
 		}
 
-		sessionCtx := slog.With("sid", info.UID)
+		sessionCtx := l.With("sid", info.UID)
 
 		clientSubprotocol := r.Header.Get("Sec-Websocket-Protocol")
 

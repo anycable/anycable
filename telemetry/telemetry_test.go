@@ -2,6 +2,7 @@ package telemetry
 
 import (
 	"context"
+	"log/slog"
 	"testing"
 	"time"
 
@@ -56,7 +57,7 @@ func (c *MockClient) ReloadFeatureFlags() error {
 
 func TestTracking(t *testing.T) {
 	mconfig := metrics.NewConfig()
-	metrics, _ := metrics.NewFromConfig(&mconfig)
+	metrics, _ := metrics.NewFromConfig(&mconfig, slog.Default())
 
 	metrics.RegisterGauge("clients_num", "")
 	metrics.RegisterGauge("mem_sys_bytes", "")

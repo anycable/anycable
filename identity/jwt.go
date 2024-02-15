@@ -43,13 +43,13 @@ type JWTIdentifier struct {
 
 var _ Identifier = (*JWTIdentifier)(nil)
 
-func NewJWTIdentifier(config *JWTConfig) *JWTIdentifier {
+func NewJWTIdentifier(config *JWTConfig, l *slog.Logger) *JWTIdentifier {
 	return &JWTIdentifier{
 		secret:     []byte(config.Secret),
 		paramName:  config.Param,
 		headerName: strings.ToLower(fmt.Sprintf("x-%s", config.Param)),
 		required:   config.Force,
-		log:        slog.With("context", "jwt"),
+		log:        l.With("context", "jwt"),
 	}
 }
 

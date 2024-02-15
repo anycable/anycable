@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 
 	"github.com/anycable/anycable-go/cli"
@@ -24,8 +25,8 @@ func main() {
 
 	opts := []cli.Option{
 		cli.WithName("GoBenchCable"),
-		cli.WithController(func(m *metrics.Metrics, c *config.Config) (node.Controller, error) {
-			return gobench.NewController(m), nil
+		cli.WithController(func(m *metrics.Metrics, c *config.Config, l *slog.Logger) (node.Controller, error) {
+			return gobench.NewController(m, l), nil
 		}),
 		cli.WithDefaultBroker(),
 		cli.WithDefaultSubscriber(),

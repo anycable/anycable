@@ -41,7 +41,8 @@ type Service struct {
 	server *server.Server
 	name   string
 
-	mu sync.Mutex
+	log *slog.Logger
+	mu  sync.Mutex
 }
 
 // LogEntry represents LoggerV2 decorator for nats server logger
@@ -85,8 +86,8 @@ func (e *LogEntry) Tracef(format string, v ...interface{}) {
 }
 
 // NewService returns an instance of NATS service
-func NewService(c *Config) *Service {
-	return &Service{config: c}
+func NewService(c *Config, l *slog.Logger) *Service {
+	return &Service{config: c, log: l.With("context", "enats")}
 }
 
 // Start starts the service
@@ -146,7 +147,7 @@ func (s *Service) Start() error {
 	}
 
 	if s.config.Debug {
-		e := &LogEntry{slog.With("service", "nats")}
+		e := &LogEntry{s.log.With("service", "nats")}
 		s.server.SetLogger(e, s.config.Debug, s.config.Trace)
 	}
 
@@ -346,7 +347,7 @@ func (s *Service) WaitJetStreamReady(maxSeconds int) error {
 
 		c, err := nats.Connect("", nats.InProcessServer(s.server))
 		if err != nil {
-			slog.With("context", "enats").Debug("NATS server not accepting connections", "error", err)
+			s.log.Debug("NATS server not accepting connections", "error", err)
 			continue
 		}
 
@@ -358,13 +359,13 @@ func (s *Service) WaitJetStreamReady(maxSeconds int) error {
 		st, err := j.StreamInfo("__anycable__ready__", nats.MaxWait(1*time.Second))
 		if err == nats.ErrStreamNotFound || st != nil {
 			leader := s.server.JetStreamIsLeader()
-			slog.With("context", "enats").Debug("JetStream cluster is ready", "leader", leader)
+			s.log.Debug("JetStream cluster is ready", "leader", leader)
 			return nil
 		}
 
 		c.Close()
 
-		slog.With("context", "enats").Debug("JetStream cluster is not ready yet, waiting for 1 second...")
+		s.log.Debug("JetStream cluster is not ready yet, waiting for 1 second...")
 
 		time.Sleep(1 * time.Second)
 	}

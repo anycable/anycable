@@ -15,10 +15,12 @@ type Printer interface {
 // BasePrinter simply logs stats as structured log
 type BasePrinter struct {
 	filter map[string]struct{}
+
+	log *slog.Logger
 }
 
 // NewBasePrinter returns new base printer struct
-func NewBasePrinter(filterList []string) *BasePrinter {
+func NewBasePrinter(filterList []string, l *slog.Logger) *BasePrinter {
 	var filter map[string]struct{}
 
 	if filterList != nil {
@@ -28,15 +30,15 @@ func NewBasePrinter(filterList []string) *BasePrinter {
 		}
 	}
 
-	return &BasePrinter{filter: filter}
+	return &BasePrinter{filter: filter, log: l}
 }
 
 // Run prints a message to the log with metrics logging details
 func (p *BasePrinter) Run(interval int) error {
 	if p.filter != nil {
-		slog.With("context", "metrics").Info("log metrics", "interval", interval, "fields", strings.Join(utils.Keys(p.filter), ","))
+		p.log.Info("log metrics", "interval", interval, "fields", strings.Join(utils.Keys(p.filter), ","))
 	} else {
-		slog.With("context", "metrics").Info("log metrics", "interval", interval)
+		p.log.Info("log metrics", "interval", interval)
 	}
 	return nil
 }
@@ -63,5 +65,5 @@ func (p *BasePrinter) Print(snapshot map[string]uint64) {
 		}
 	}
 
-	slog.With("context", "metrics").Info("", fields...)
+	p.log.Info("", fields...)
 }

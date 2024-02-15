@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"log/slog"
 	"net"
 	"testing"
 	"time"
@@ -9,7 +10,7 @@ import (
 )
 
 func TestStatsdWriter(t *testing.T) {
-	m := NewMetrics(nil, 0)
+	m := NewMetrics(nil, 0, slog.Default())
 
 	m.RegisterCounter("test_count", "")
 	m.RegisterGauge("test_gauge", "")
@@ -26,7 +27,7 @@ func TestStatsdWriter(t *testing.T) {
 	t.Run("Write send UDP with metrics", func(t *testing.T) {
 		c := NewStatsdConfig()
 		c.Host = socket.LocalAddr().String()
-		w := NewStatsdWriter(c, nil)
+		w := NewStatsdWriter(c, nil, slog.Default())
 		_ = w.Run(0)
 		defer w.Stop()
 
@@ -52,7 +53,7 @@ func TestStatsdWriter(t *testing.T) {
 		c := NewStatsdConfig()
 		c.Host = socket.LocalAddr().String()
 		c.Prefix = "ws."
-		w := NewStatsdWriter(c, nil)
+		w := NewStatsdWriter(c, nil, slog.Default())
 		_ = w.Run(0)
 		defer w.Stop()
 
@@ -78,7 +79,7 @@ func TestStatsdWriter(t *testing.T) {
 		c := NewStatsdConfig()
 		c.TagFormat = "datadog"
 		c.Host = socket.LocalAddr().String()
-		w := NewStatsdWriter(c, map[string]string{"env": "dev"})
+		w := NewStatsdWriter(c, map[string]string{"env": "dev"}, slog.Default())
 		_ = w.Run(0)
 		defer w.Stop()
 
@@ -104,7 +105,7 @@ func TestStatsdWriter(t *testing.T) {
 		c := NewStatsdConfig()
 		c.TagFormat = "datadog"
 		c.Host = socket.LocalAddr().String()
-		w := NewStatsdWriter(c, map[string]string{"env": "dev", "rev": "1.1"})
+		w := NewStatsdWriter(c, map[string]string{"env": "dev", "rev": "1.1"}, slog.Default())
 		_ = w.Run(0)
 		defer w.Stop()
 
@@ -132,7 +133,7 @@ func TestStatsdWriter(t *testing.T) {
 		c := NewStatsdConfig()
 		c.TagFormat = "influxdb"
 		c.Host = socket.LocalAddr().String()
-		w := NewStatsdWriter(c, map[string]string{"env": "dev"})
+		w := NewStatsdWriter(c, map[string]string{"env": "dev"}, slog.Default())
 		_ = w.Run(0)
 		defer w.Stop()
 
@@ -158,7 +159,7 @@ func TestStatsdWriter(t *testing.T) {
 		c := NewStatsdConfig()
 		c.TagFormat = "graphite"
 		c.Host = socket.LocalAddr().String()
-		w := NewStatsdWriter(c, map[string]string{"env": "dev"})
+		w := NewStatsdWriter(c, map[string]string{"env": "dev"}, slog.Default())
 		_ = w.Run(0)
 		defer w.Stop()
 

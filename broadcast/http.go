@@ -47,7 +47,7 @@ type HTTPBroadcaster struct {
 var _ Broadcaster = (*HTTPBroadcaster)(nil)
 
 // NewHTTPBroadcaster builds a new HTTPSubscriber struct
-func NewHTTPBroadcaster(node Handler, config *HTTPConfig) *HTTPBroadcaster {
+func NewHTTPBroadcaster(node Handler, config *HTTPConfig, l *slog.Logger) *HTTPBroadcaster {
 	authHeader := ""
 
 	if config.Secret != "" {
@@ -56,7 +56,7 @@ func NewHTTPBroadcaster(node Handler, config *HTTPConfig) *HTTPBroadcaster {
 
 	return &HTTPBroadcaster{
 		node:       node,
-		log:        slog.With("context", "broadcast").With("provider", "http"),
+		log:        l.With("context", "broadcast").With("provider", "http"),
 		port:       config.Port,
 		path:       config.Path,
 		authHeader: authHeader,

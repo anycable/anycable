@@ -43,17 +43,18 @@ type StatsdWriter struct {
 	config StatsdConfig
 	tags   map[string]string
 
-	mu sync.Mutex
+	log *slog.Logger
+	mu  sync.Mutex
 }
 
 var _ IntervalWriter = (*StatsdWriter)(nil)
 
-func NewStatsdWriter(c StatsdConfig, tags map[string]string) *StatsdWriter {
-	return &StatsdWriter{config: c, tags: tags}
+func NewStatsdWriter(c StatsdConfig, tags map[string]string, l *slog.Logger) *StatsdWriter {
+	return &StatsdWriter{config: c, tags: tags, log: l}
 }
 
 func (sw *StatsdWriter) Run(interval int) error {
-	sl := StatsdLogger{slog.With("context", "statsd")}
+	sl := StatsdLogger{sw.log.With("service", "statsd")}
 	opts := []statsd.Option{
 		statsd.MaxPacketSize(sw.config.MaxPacketSize),
 		statsd.MetricPrefix(sw.config.Prefix),
@@ -82,13 +83,12 @@ func (sw *StatsdWriter) Run(interval int) error {
 		opts...,
 	)
 
-	slog.With("context", "metrics").
-		Info(
-			fmt.Sprintf(
-				"Send statsd metrics to %s with every %vs (prefix=%s%s)",
-				sw.config.Host, interval, sw.config.Prefix, tagsInfo,
-			),
-		)
+	sw.log.Info(
+		fmt.Sprintf(
+			"Send statsd metrics to %s with every %vs (prefix=%s%s)",
+			sw.config.Host, interval, sw.config.Prefix, tagsInfo,
+		),
+	)
 
 	return nil
 }

@@ -14,7 +14,7 @@ import (
 )
 
 // SSEHandler generates a new http handler for SSE connections
-func SSEHandler(n *node.Node, shutdownCtx context.Context, headersExtractor server.HeadersExtractor, config *Config) http.Handler {
+func SSEHandler(n *node.Node, shutdownCtx context.Context, headersExtractor server.HeadersExtractor, config *Config, l *slog.Logger) http.Handler {
 	var allowedHosts []string
 
 	if config.AllowedOrigins == "" {
@@ -65,7 +65,7 @@ func SSEHandler(n *node.Node, shutdownCtx context.Context, headersExtractor serv
 			return
 		}
 
-		sessionCtx := slog.With("sid", info.UID).With("transport", "sse")
+		sessionCtx := l.With("sid", info.UID).With("transport", "sse")
 
 		subscribeCmds, err := subscribeCommandsFromRequest(r)
 

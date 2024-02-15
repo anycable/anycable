@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 	"testing"
@@ -29,7 +30,7 @@ func init() {
 		config.URL = redisURL
 	}
 
-	subscriber, err := NewRedisSubscriber(nil, &config)
+	subscriber, err := NewRedisSubscriber(nil, &config, slog.Default())
 	if err != nil {
 		fmt.Printf("Failed to create redis subscriber: %v", err)
 		return
@@ -70,7 +71,7 @@ func TestRedisCommon(t *testing.T) {
 	}
 
 	SharedSubscriberTests(t, func(handler *TestHandler) Subscriber {
-		sub, err := NewRedisSubscriber(handler, &config)
+		sub, err := NewRedisSubscriber(handler, &config, slog.Default())
 
 		if err != nil {
 			panic(err)
@@ -93,7 +94,7 @@ func TestRedisReconnect(t *testing.T) {
 		config.URL = redisURL
 	}
 
-	subscriber, err := NewRedisSubscriber(handler, &config)
+	subscriber, err := NewRedisSubscriber(handler, &config, slog.Default())
 	require.NoError(t, err)
 
 	done := make(chan error)

@@ -17,11 +17,11 @@ func NewMockNode() *Node {
 	controller := mocks.NewMockController()
 	config := NewConfig()
 	config.HubGopoolSize = 2
-	node := NewNode(&controller, metrics.NewMetrics(nil, 10), &config)
+	node := NewNode(&config, WithInstrumenter(metrics.NewMetrics(nil, 10, slog.Default())), WithController(&controller))
 	node.SetBroker(broker.NewLegacyBroker(pubsub.NewLegacySubscriber(node)))
 	dconfig := NewDisconnectQueueConfig()
 	dconfig.Rate = 1
-	node.SetDisconnector(NewDisconnectQueue(node, &dconfig))
+	node.SetDisconnector(NewDisconnectQueue(node, &dconfig, slog.Default()))
 	return node
 }
 

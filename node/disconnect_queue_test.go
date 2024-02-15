@@ -2,6 +2,7 @@ package node
 
 import (
 	"context"
+	"log/slog"
 	"runtime"
 	"testing"
 
@@ -79,7 +80,7 @@ func newQueue() *DisconnectQueue {
 	node := NewMockNode()
 	config := NewDisconnectQueueConfig()
 	config.Rate = 1
-	q := NewDisconnectQueue(node, &config)
+	q := NewDisconnectQueue(node, &config, slog.Default())
 
 	return q
 }

@@ -50,14 +50,14 @@ type Metrics struct {
 var _ Instrumenter = (*Metrics)(nil)
 
 // NewFromConfig creates a new metrics instance from the prodived configuration
-func NewFromConfig(config *Config) (*Metrics, error) {
+func NewFromConfig(config *Config, l *slog.Logger) (*Metrics, error) {
 	var metricsPrinter IntervalWriter
 
 	writers := []IntervalWriter{}
 
 	if config.LogEnabled() {
 		if config.LogFormatterEnabled() {
-			customPrinter, err := NewCustomPrinter(config.LogFormatter)
+			customPrinter, err := NewCustomPrinter(config.LogFormatter, l)
 
 			if err == nil {
 				metricsPrinter = customPrinter
@@ -65,13 +65,13 @@ func NewFromConfig(config *Config) (*Metrics, error) {
 				return nil, err
 			}
 		} else {
-			metricsPrinter = NewBasePrinter(config.LogFilter)
+			metricsPrinter = NewBasePrinter(config.LogFilter, l)
 		}
 
 		writers = append(writers, metricsPrinter)
 	}
 
-	instance := NewMetrics(writers, config.RotateInterval)
+	instance := NewMetrics(writers, config.RotateInterval, l)
 
 	if config.Tags != nil {
 		instance.tags = config.Tags
@@ -100,7 +100,7 @@ func NewFromConfig(config *Config) (*Metrics, error) {
 }
 
 // NewMetrics build new metrics struct
-func NewMetrics(writers []IntervalWriter, rotateIntervalSeconds int) *Metrics {
+func NewMetrics(writers []IntervalWriter, rotateIntervalSeconds int, l *slog.Logger) *Metrics {
 	rotateInterval := time.Duration(rotateIntervalSeconds) * time.Second
 
 	return &Metrics{
@@ -109,7 +109,7 @@ func NewMetrics(writers []IntervalWriter, rotateIntervalSeconds int) *Metrics {
 		counters:       make(map[string]*Counter),
 		gauges:         make(map[string]*Gauge),
 		shutdownCh:     make(chan struct{}),
-		log:            slog.With("context", "metrics"),
+		log:            l.With("context", "metrics"),
 	}
 }
 
