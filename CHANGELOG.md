@@ -2,6 +2,10 @@
 
 ## master
 
+- Allowing embedding AnyCable into existing web applications. ([@palkan][])
+
+You can now set up an AnyCable instance without an HTTP server and mount AnyCable WebSocket/SSE handlers wherever you like.
+
 - Log format has changed. ([@palkan][])
 
 We've migrated to Go `slog` package and its default text handler format.

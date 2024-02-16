@@ -2,7 +2,6 @@ package telemetry
 
 import (
 	"context"
-	"fmt"
 	"maps"
 	"os"
 	"runtime"
@@ -62,7 +61,7 @@ func NewTracker(instrumenter *metrics.Metrics, c *config.Config, tc *Config) *Tr
 }
 
 func (t *Tracker) Announce() string {
-	return fmt.Sprintf("Anonymized telemetry is on. Learn more: https://docs.anycable.io/anycable-go/telemetry")
+	return "Anonymized telemetry is on. Learn more: https://docs.anycable.io/anycable-go/telemetry"
 }
 
 func (t *Tracker) Collect() {

@@ -1,5 +1,6 @@
 OUTPUT ?= dist/anycable-go
 GOBENCHDIST ?= dist/gobench
+EMBEDDEDDIST ?= dist/embedded-cable
 
 export GO111MODULE=on
 
@@ -66,6 +67,9 @@ build:
 build-gobench:
 	go build -tags "mrb gops" -ldflags $(LD_FLAGS) -o $(GOBENCHDIST) cmd/gobench-cable/main.go
 
+build-embedded:
+	go build -tags "mrb gops" -ldflags $(LD_FLAGS) -o $(EMBEDDEDDIST) cmd/embedded-cable/main.go
+
 download-mruby:
 	go mod download github.com/mitchellh/go-mruby
 
@@ -114,6 +118,9 @@ run:
 run-gobench:
 	go run -ldflags $(LD_FLAGS) -tags "mrb gops" ./cmd/gobench-cable/main.go
 
+run-embedded:
+	go run -ldflags $(LD_FLAGS) -tags "mrb gops" ./cmd/embedded-cable/main.go
+
 build-protos:
 	protoc --proto_path=./etc --go_out=plugins=grpc:./protos --grpchan_out=./protos ./etc/rpc.proto
 
@@ -128,6 +135,9 @@ benchmarks: build
 
 tmp/anycable-go-test:
 	go build $(TEST_BUILD_FLAGS) -tags mrb -race -o tmp/anycable-go-test cmd/anycable-go/main.go
+
+tmp/anycable-embedded-test:
+	go build $(TEST_BUILD_FLAGS) -tags mrb -race -o tmp/anycable-embedded-test cmd/embedded-cable/main.go
 
 test-conformance: tmp/anycable-go-test
 	bundle exec anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable"
@@ -160,7 +170,15 @@ test-conformance-broker-redis: tmp/anycable-go-test
 test-conformance-broker-nats: tmp/anycable-go-test
 	ANYCABLE_BROKER=nats ANYCABLE_EMBED_NATS=true ANYCABLE_ENATS_ADDR=nats://127.0.0.1:4343 ANYCABLE_PUBSUB=nats ANYCABLE_BROADCAST_ADAPTER=http ANYCABLE_HTTP_BROADCAST_SECRET=any_secret bundle exec anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable" --require=etc/anyt/**/*.rb
 
-test-conformance-all: test-conformance test-conformance-ssl test-conformance-http
+test-conformance-embedded: tmp/anycable-embedded-test
+	\
+	ANYCABLE_BROADCAST_ADAPTER=http ANYCABLE_HTTP_BROADCAST_SECRET=any_secret \
+	ANYCABLE_HTTP_RPC_SECRET=rpc_secret ANYCABLE_HTTP_RPC_MOUNT_PATH=/_anycable \
+	ANYCABLE_RPC_HOST=http://localhost:9292/_anycable \
+	ANYCABLE_HEADERS=cookie,x-api-token \
+	bundle exec anyt -c "tmp/anycable-embedded-test" --target-url="ws://localhost:8080/cable" --require=etc/anyt/broadcast_tests/*.rb
+
+test-conformance-all: test-conformance test-conformance-ssl test-conformance-http test-conformance-embedded
 
 TESTFILE ?= features/*.testfile
 test-features: build
@@ -194,4 +212,4 @@ licenses: bin/go-licenses
 	@env GOFLAGS="-tags=mrb" $$(go env GOPATH)/bin/go-licenses csv github.com/anycable/anycable-go/cli 2>/dev/null | awk -F',' '{ print $$3 }' | sort | uniq | grep -v "Unknown"
 	@env GOFLAGS="-tags=mrb" $$(go env GOPATH)/bin/go-licenses csv github.com/anycable/anycable-go/cli 2>/dev/null | grep "Unknown" | grep -v "anycable-go" || echo "No unknown licenses 👌"
 
-.PHONY: tmp/anycable-go-test vendor
+.PHONY: tmp/anycable-go-test tmp/anycable-embedded-test vendor

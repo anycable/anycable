@@ -192,6 +192,17 @@ Use shutdown_timeout instead.`)
 	return &c, nil, false
 }
 
+// NewConfig returns a new AnyCable configuration combining default values and values from the environment.
+func NewConfig() *config.Config {
+	c, err, _ := NewConfigFromCLI([]string{})
+
+	if err != nil {
+		panic(err)
+	}
+
+	return c
+}
+
 // Flags ordering issue: https://github.com/urfave/cli/pull/1430
 
 const (

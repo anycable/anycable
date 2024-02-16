@@ -98,17 +98,19 @@ func (r *Runner) checkAndSetDefaults() error {
 		}
 	}
 
-	_, err := logger.InitLogger(r.config.LogFormat, r.config.LogLevel)
-	if err != nil {
-		return errorx.Decorate(err, "!!! Failed to initialize logger !!!")
+	if r.log == nil {
+		_, err := logger.InitLogger(r.config.LogFormat, r.config.LogLevel)
+		if err != nil {
+			return errorx.Decorate(err, "failed to initialize default logger")
+		}
+
+		r.log = slog.With("context", "main").With("nodeid", r.config.ID)
 	}
 
-	r.log = slog.With("context", "main").With("nodeid", r.config.ID)
-
-	err = r.config.LoadPresets(r.log)
+	err := r.config.LoadPresets(r.log)
 
 	if err != nil {
-		return errorx.Decorate(err, "!!! Failed to load configuration presets !!!")
+		return errorx.Decorate(err, "failed to load configuration presets")
 	}
 
 	server.SSL = &r.config.SSL
@@ -143,7 +145,7 @@ func (r *Runner) checkAndSetDefaults() error {
 	metrics, err := r.initMetrics(&r.config.Metrics)
 
 	if err != nil {
-		return errorx.Decorate(err, "!!! Failed to initialize metrics writer !!!")
+		return errorx.Decorate(err, "failed to initialize metrics writer")
 	}
 
 	r.metrics = metrics
@@ -160,13 +162,72 @@ func (r *Runner) Run() error {
 
 	r.log.Info(fmt.Sprintf("Starting %s %s%s (pid: %d, open file limit: %s, gomaxprocs: %d)", r.name, version.Version(), mrubySupport, os.Getpid(), utils.OpenFileLimit(), numProcs))
 
+	appNode, err := r.runNode()
+
+	if err != nil {
+		return err
+	}
+
+	wsServer, err := server.ForPort(strconv.Itoa(r.config.Port))
+	if err != nil {
+		return errorx.Decorate(err, "failed to initialize WebSocket server at %s:%d", r.config.Host, r.config.Port)
+	}
+
+	wsHandler, err := r.websocketHandlerFactory(appNode, r.config, r.log)
+	if err != nil {
+		return errorx.Decorate(err, "failed to initialize WebSocket handler")
+	}
+
+	for _, path := range r.config.Path {
+		wsServer.SetupHandler(path, wsHandler)
+		r.log.Info(fmt.Sprintf("Handle WebSocket connections at %s%s", wsServer.Address(), path))
+	}
+
+	for path, handlerFactory := range r.websocketEndpoints {
+		handler, err := handlerFactory(appNode, r.config, r.log)
+		if err != nil {
+			return errorx.Decorate(err, "failed to initialize WebSocket handler for %s", path)
+		}
+		wsServer.SetupHandler(path, handler)
+	}
+
+	wsServer.SetupHandler(r.config.HealthPath, http.HandlerFunc(server.HealthHandler))
+	r.log.Info(fmt.Sprintf("Handle health requests at %s%s", wsServer.Address(), r.config.HealthPath))
+
+	if r.config.SSE.Enabled {
+		r.log.Info(
+			fmt.Sprintf("Handle SSE requests at %s%s",
+				wsServer.Address(), r.config.SSE.Path),
+		)
+
+		sseHandler, err := r.defaultSSEHandler(appNode, wsServer.ShutdownCtx(), r.config)
+
+		if err != nil {
+			return errorx.Decorate(err, "failed to initialize SSE handler")
+		}
+
+		wsServer.SetupHandler(r.config.SSE.Path, sseHandler)
+	}
+
+	go r.startWSServer(wsServer)
+	go r.metrics.Run() // nolint:errcheck
+
+	// We MUST first stop the server (=stop accepting new connections), then gracefully disconnect active clients
+	r.shutdownables = append([]Shutdownable{wsServer}, r.shutdownables...)
+	r.setupSignalHandlers()
+
+	// Wait for an error (or none)
+	return <-r.errChan
+}
+
+func (r *Runner) runNode() (*node.Node, error) {
 	metrics := r.metrics
 
 	r.shutdownables = append(r.shutdownables, metrics)
 
 	controller, err := r.newController(metrics)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	appNode := node.NewNode(
@@ -190,12 +251,12 @@ func (r *Runner) Run() error {
 	subscriber, err := r.subscriberFactory(appNode, r.config, r.log)
 
 	if err != nil {
-		return errorx.Decorate(err, "couldn't configure pub/sub")
+		return nil, errorx.Decorate(err, "couldn't configure pub/sub")
 	}
 
 	appBroker, err := r.brokerFactory(subscriber, r.config, r.log)
 	if err != nil {
-		return errorx.Decorate(err, "!!! Failed to initialize broker !!!")
+		return nil, errorx.Decorate(err, "failed to initialize broker")
 	}
 
 	if appBroker != nil {
@@ -205,7 +266,7 @@ func (r *Runner) Run() error {
 
 	disconnector, err := r.disconnectorFactory(appNode, r.config, r.log)
 	if err != nil {
-		return errorx.Decorate(err, "!!! Failed to initialize disconnector !!!")
+		return nil, errorx.Decorate(err, "failed to initialize disconnector")
 	}
 
 	go disconnector.Run() // nolint:errcheck
@@ -215,7 +276,7 @@ func (r *Runner) Run() error {
 		service, enatsErr := r.embedNATS(&r.config.EmbeddedNats)
 
 		if enatsErr != nil {
-			return errorx.Decorate(enatsErr, "failed to start embedded NATS server")
+			return nil, errorx.Decorate(enatsErr, "failed to start embedded NATS server")
 		}
 
 		desc := service.Description()
@@ -232,18 +293,18 @@ func (r *Runner) Run() error {
 	err = appNode.Start()
 
 	if err != nil {
-		return errorx.Decorate(err, "!!! Failed to initialize application !!!")
+		return nil, errorx.Decorate(err, "failed to initialize application")
 	}
 
 	err = subscriber.Start(r.errChan)
 	if err != nil {
-		return errorx.Decorate(err, "!!! Subscriber failed !!!")
+		return nil, errorx.Decorate(err, "failed to start subscriber")
 	}
 
 	if appBroker != nil {
 		err = appBroker.Start(r.errChan)
 		if err != nil {
-			return errorx.Decorate(err, "!!! Broker failed !!!")
+			return nil, errorx.Decorate(err, "failed to start broker")
 		}
 	}
 
@@ -253,7 +314,7 @@ func (r *Runner) Run() error {
 		broadcasters, berr := r.broadcastersFactory(appNode, r.config, r.log)
 
 		if berr != nil {
-			return errorx.Decorate(err, "couldn't configure broadcasters")
+			return nil, errorx.Decorate(err, "couldn't configure broadcasters")
 		}
 
 		for _, broadcaster := range broadcasters {
@@ -267,7 +328,7 @@ func (r *Runner) Run() error {
 
 			err = broadcaster.Start(r.errChan)
 			if err != nil {
-				return errorx.Decorate(err, "!!! Broadcaster failed !!!")
+				return nil, errorx.Decorate(err, "failed to start broadcaster")
 			}
 
 			r.shutdownables = append(r.shutdownables, broadcaster)
@@ -276,61 +337,13 @@ func (r *Runner) Run() error {
 
 	err = controller.Start()
 	if err != nil {
-		return errorx.Decorate(err, "!!! RPC failed !!!")
+		return nil, errorx.Decorate(err, "failed to initialize RPC controller")
 	}
 
-	wsServer, err := server.ForPort(strconv.Itoa(r.config.Port))
-	if err != nil {
-		return errorx.Decorate(err, "!!! Failed to initialize WebSocket server at %s:%d !!!", r.config.Host, r.config.Port)
-	}
-
-	wsHandler, err := r.websocketHandlerFactory(appNode, r.config, r.log)
-	if err != nil {
-		return errorx.Decorate(err, "!!! Failed to initialize WebSocket handler !!!")
-	}
-
-	for _, path := range r.config.Path {
-		wsServer.SetupHandler(path, wsHandler)
-		r.log.Info(fmt.Sprintf("Handle WebSocket connections at %s%s", wsServer.Address(), path))
-	}
-
-	for path, handlerFactory := range r.websocketEndpoints {
-		handler, err := handlerFactory(appNode, r.config, r.log)
-		if err != nil {
-			return errorx.Decorate(err, "!!! Failed to initialize WebSocket handler for %s !!!", path)
-		}
-		wsServer.SetupHandler(path, handler)
-	}
-
-	wsServer.SetupHandler(r.config.HealthPath, http.HandlerFunc(server.HealthHandler))
-	r.log.Info(fmt.Sprintf("Handle health requests at %s%s", wsServer.Address(), r.config.HealthPath))
-
-	if r.config.SSE.Enabled {
-		r.log.Info(
-			fmt.Sprintf("Handle SSE requests at %s%s",
-				wsServer.Address(), r.config.SSE.Path),
-		)
-
-		sseHandler, err := r.defaultSSEHandler(appNode, wsServer.ShutdownCtx(), r.config)
-
-		if err != nil {
-			return errorx.Decorate(err, "!!! Failed to initialize SSE handler !!!")
-		}
-
-		wsServer.SetupHandler(r.config.SSE.Path, sseHandler)
-	}
-
-	go r.startWSServer(wsServer)
-	go r.startMetrics(metrics)
-
-	// We MUST first stop the server (=stop accepting new connections), then gracefully disconnect active clients
-	r.shutdownables = append([]Shutdownable{wsServer, appNode, appBroker}, r.shutdownables...)
+	r.shutdownables = append([]Shutdownable{appNode, appBroker}, r.shutdownables...)
 
 	r.announceGoPools()
-	r.setupSignalHandlers()
-
-	// Wait for an error (or none)
-	return <-r.errChan
+	return appNode, nil
 }
 
 func (r *Runner) setMaxProcs() int {

@@ -176,9 +176,18 @@ func WithDefaultBroker() Option {
 	})
 }
 
+// WithTelemetry enables AnyCable telemetry unless ANYCABLE_DISABLE_TELEMETRY is set
 func WithTelemetry() Option {
 	return func(r *Runner) error {
 		r.telemetryEnabled = os.Getenv("ANYCABLE_DISABLE_TELEMETRY") != "true"
+		return nil
+	}
+}
+
+// WithLogger set ups a logger for the AnyCable app
+func WithLogger(logger *slog.Logger) Option {
+	return func(r *Runner) error {
+		r.log = logger
 		return nil
 	}
 }

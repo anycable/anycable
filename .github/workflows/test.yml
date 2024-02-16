@@ -119,6 +119,7 @@ jobs:
           - test-conformance-broker-http
           - test-conformance-broker-redis
           - test-conformance-broker-nats
+          - test-conformance-embedded
     runs-on: ubuntu-latest
     env:
       GO111MODULE: on
