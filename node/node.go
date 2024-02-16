@@ -15,6 +15,7 @@ import (
 	"github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/utils"
 	"github.com/anycable/anycable-go/ws"
+	"github.com/joomcode/errorx"
 )
 
 const (
@@ -309,7 +310,7 @@ func WithDisconnectOnFailure(disconnect bool) AuthOption {
 
 // Authenticate calls controller to perform authentication.
 // If authentication is successful, session is registered with a hub.
-func (n *Node) Authenticate(s *Session, options ...AuthOption) (res *common.ConnectResult, err error) {
+func (n *Node) Authenticate(s *Session, options ...AuthOption) (*common.ConnectResult, error) {
 	opts := newAuthOptions(options)
 
 	if s.IsResumeable() {
@@ -320,11 +321,11 @@ func (n *Node) Authenticate(s *Session, options ...AuthOption) (res *common.Conn
 		}
 	}
 
-	res, err = n.controller.Authenticate(s.GetID(), s.env)
+	res, err := n.controller.Authenticate(s.GetID(), s.env)
 
 	if err != nil {
 		s.Disconnect("Auth Error", ws.CloseInternalServerErr)
-		return
+		return nil, errorx.Decorate(err, "failed to authenticate")
 	}
 
 	if res.Status == common.SUCCESS {
@@ -348,7 +349,7 @@ func (n *Node) Authenticate(s *Session, options ...AuthOption) (res *common.Conn
 		}
 	}
 
-	return
+	return res, nil
 }
 
 // Mark session as authenticated and register it with a hub.
@@ -417,22 +418,21 @@ func (n *Node) TryRestoreSession(s *Session) (restored bool) {
 }
 
 // Subscribe subscribes session to a channel
-func (n *Node) Subscribe(s *Session, msg *common.Message) (res *common.CommandResult, err error) {
+func (n *Node) Subscribe(s *Session, msg *common.Message) (*common.CommandResult, error) {
 	s.smu.Lock()
 
 	if ok := s.subscriptions.HasChannel(msg.Identifier); ok {
 		s.smu.Unlock()
-		err = fmt.Errorf("already subscribed to %s", msg.Identifier)
-		return
+		return nil, fmt.Errorf("already subscribed to %s", msg.Identifier)
 	}
 
-	res, err = n.controller.Subscribe(s.GetID(), s.env, s.GetIdentifiers(), msg.Identifier)
+	res, err := n.controller.Subscribe(s.GetID(), s.env, s.GetIdentifiers(), msg.Identifier)
 
 	var confirmed bool
 
 	if err != nil { // nolint: gocritic
 		if res == nil || res.Status == common.ERROR {
-			s.Log.Error("subscribe failed", "error", err)
+			return nil, errorx.Decorate(err, "subscribe failed for %s", msg.Identifier)
 		}
 	} else if res.Status == common.SUCCESS {
 		confirmed = true
@@ -457,28 +457,31 @@ func (n *Node) Subscribe(s *Session, msg *common.Message) (res *common.CommandRe
 		}
 
 		if msg.History.Since > 0 || msg.History.Streams != nil {
-			return res, n.History(s, msg)
+			if err := n.History(s, msg); err != nil {
+				s.Log.Warn("couldn't retrieve history", "identifier", msg.Identifier, "error", err)
+			}
+
+			return res, nil
 		}
 	}
 
-	return
+	return res, nil
 }
 
 // Unsubscribe unsubscribes session from a channel
-func (n *Node) Unsubscribe(s *Session, msg *common.Message) (res *common.CommandResult, err error) {
+func (n *Node) Unsubscribe(s *Session, msg *common.Message) (*common.CommandResult, error) {
 	s.smu.Lock()
 
 	if ok := s.subscriptions.HasChannel(msg.Identifier); !ok {
 		s.smu.Unlock()
-		err = fmt.Errorf("unknown subscription %s", msg.Identifier)
-		return
+		return nil, fmt.Errorf("unknown subscription: %s", msg.Identifier)
 	}
 
-	res, err = n.controller.Unsubscribe(s.GetID(), s.env, s.GetIdentifiers(), msg.Identifier)
+	res, err := n.controller.Unsubscribe(s.GetID(), s.env, s.GetIdentifiers(), msg.Identifier)
 
 	if err != nil {
 		if res == nil || res.Status == common.ERROR {
-			s.Log.Error("failed to unsubscribe", "error", err)
+			return nil, errorx.Decorate(err, "failed to unsubscribe from %s", msg.Identifier)
 		}
 	} else {
 		// Make sure to remove all streams subscriptions
@@ -501,17 +504,16 @@ func (n *Node) Unsubscribe(s *Session, msg *common.Message) (res *common.Command
 		}
 	}
 
-	return
+	return res, nil
 }
 
 // Perform executes client command
-func (n *Node) Perform(s *Session, msg *common.Message) (res *common.CommandResult, err error) {
+func (n *Node) Perform(s *Session, msg *common.Message) (*common.CommandResult, error) {
 	s.smu.Lock()
 
 	if ok := s.subscriptions.HasChannel(msg.Identifier); !ok {
 		s.smu.Unlock()
-		err = fmt.Errorf("unknown subscription %s", msg.Identifier)
-		return
+		return nil, fmt.Errorf("unknown subscription %s", msg.Identifier)
 	}
 
 	s.smu.Unlock()
@@ -519,15 +521,14 @@ func (n *Node) Perform(s *Session, msg *common.Message) (res *common.CommandResu
 	data, ok := msg.Data.(string)
 
 	if !ok {
-		err = fmt.Errorf("perform data must be a string, got %v", msg.Data)
-		return
+		return nil, fmt.Errorf("perform data must be a string, got %v", msg.Data)
 	}
 
-	res, err = n.controller.Perform(s.GetID(), s.env, s.GetIdentifiers(), msg.Identifier, data)
+	res, err := n.controller.Perform(s.GetID(), s.env, s.GetIdentifiers(), msg.Identifier, data)
 
 	if err != nil {
 		if res == nil || res.Status == common.ERROR {
-			s.Log.Error("perform failed", "error", err)
+			return nil, errorx.Decorate(err, "perform failed for %s", msg.Identifier)
 		}
 	} else {
 		s.Log.Debug("perform result", "data", res)
@@ -543,17 +544,16 @@ func (n *Node) Perform(s *Session, msg *common.Message) (res *common.CommandResu
 		}
 	}
 
-	return
+	return res, nil
 }
 
 // History fetches the stream history for the specified identifier
-func (n *Node) History(s *Session, msg *common.Message) (err error) {
+func (n *Node) History(s *Session, msg *common.Message) error {
 	s.smu.Lock()
 
 	if ok := s.subscriptions.HasChannel(msg.Identifier); !ok {
 		s.smu.Unlock()
-		err = fmt.Errorf("unknown subscription %s", msg.Identifier)
-		return
+		return fmt.Errorf("unknown subscription %s", msg.Identifier)
 	}
 
 	subscriptionStreams := s.subscriptions.StreamsFor(msg.Identifier)
@@ -563,8 +563,7 @@ func (n *Node) History(s *Session, msg *common.Message) (err error) {
 	history := msg.History
 
 	if history.Since == 0 && history.Streams == nil {
-		err = fmt.Errorf("history request is missing, got %v", msg)
-		return
+		return fmt.Errorf("history request is missing, got %v", msg)
 	}
 
 	backlog, err := n.retreiveHistory(&history, subscriptionStreams)
@@ -587,7 +586,7 @@ func (n *Node) History(s *Session, msg *common.Message) (err error) {
 		Identifier: msg.Identifier,
 	})
 
-	return
+	return nil
 }
 
 func (n *Node) retreiveHistory(history *common.HistoryRequest, streams []string) (backlog []common.StreamMessage, err error) {
