@@ -104,7 +104,7 @@ func (r *Runner) checkAndSetDefaults() error {
 			return errorx.Decorate(err, "failed to initialize default logger")
 		}
 
-		r.log = slog.With("context", "main").With("nodeid", r.config.ID)
+		r.log = slog.With("nodeid", r.config.ID)
 	}
 
 	err := r.config.LoadPresets(r.log)

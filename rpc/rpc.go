@@ -506,7 +506,7 @@ func defaultDialer(conf *Config, l *slog.Logger) (pb.RPCClient, ClientHelper, er
 
 	const grpcServiceConfig = `{"loadBalancingPolicy":"round_robin"}`
 
-	state := &grpcClientHelper{log: l.With("context", "grpc")}
+	state := &grpcClientHelper{log: l.With("impl", "grpc")}
 
 	dialOptions := []grpc.DialOption{
 		grpc.WithKeepaliveParams(kacp),
