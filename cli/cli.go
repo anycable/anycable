@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/anycable/anycable-go/admin"
 	"github.com/anycable/anycable-go/broadcast"
 	"github.com/anycable/anycable-go/broker"
 	"github.com/anycable/anycable-go/common"
@@ -59,6 +60,7 @@ type Runner struct {
 	name   string
 	config *config.Config
 	log    *slog.Logger
+	tracer *logger.Tracer
 
 	controllerFactory       controllerFactory
 	disconnectorFactory     disconnectorFactory
@@ -116,6 +118,13 @@ func (r *Runner) checkAndSetDefaults() error {
 		exHandler := erreport.ConfigureLogHandler(handler)
 		if exHandler != nil {
 			slog.SetDefault(slog.New(exHandler))
+		}
+
+		// We must set up tracer as early as possible to catch all logs
+		if r.config.Admin.Enabled {
+			tracer := logger.NewTracer(slog.Default().Handler())
+			slog.SetDefault(slog.New(tracer))
+			r.tracer = tracer
 		}
 
 		r.log = slog.With("nodeid", r.config.ID)
@@ -266,6 +275,29 @@ func (r *Runner) Run() error {
 		}
 
 		wsServer.SetupHandler(r.config.LongPolling.Path, lpHandler)
+	}
+
+	if r.config.Admin.Enabled {
+		adminLogger := slog.New(r.tracer.Handler())
+
+		adminApp, err := admin.NewApp(
+			appNode,
+			r.metrics,
+			&r.config.Admin,
+			admin.WithLogger(adminLogger),
+			admin.WithTracer(r.tracer),
+		)
+
+		if err != nil {
+			return errorx.Decorate(err, "failed to initialize admin console")
+		}
+
+		err = adminApp.Run()
+		if err != nil {
+			return errorx.Decorate(err, "failed to start admin console")
+		}
+
+		r.shutdownables = append(r.shutdownables, adminApp)
 	}
 
 	go r.startWSServer(wsServer)

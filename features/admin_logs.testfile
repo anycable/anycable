@@ -1,0 +1,121 @@
+launch :anycable,
+  "./dist/anycable-go --admin --sse --port 8081 --admin_secret=qwerty --broadcast_adapter=http"
+
+wait_tcp 8081
+
+require "uri"
+require "net/http"
+
+# First, check that we can't access admin without a secret
+http = Net::HTTP.new("localhost", 8081)
+req = Net::HTTP::Get.new("/_high_voltage_")
+res = http.request(req)
+
+fail "Expected 401, got: #{res.code}" unless res.code == "401"
+
+# Now, let's add basic auth
+req.basic_auth "anyadmin", "qwerty"
+res = http.request(req)
+
+fail "Expected 200, got: #{res.code}" unless res.code == "200"
+
+# Now, let's check SSE endpoint
+req = Net::HTTP::Get.new("/_high_voltage_/events?identifier=logs")
+res = http.request(req)
+
+fail "Expected 401, got: #{res.code}" unless res.code == "401"
+
+# Now, let's connect with JWT
+
+payload = {ext: {}.to_json, exp: (Time.now.to_i + 60)}
+
+token = ::JWT.encode(payload, "qwerty", "HS256")
+identifier = "logs"
+
+url = "http://localhost:8081/_high_voltage_/events?jid=#{token}&identifier=#{identifier}"
+
+Event = Struct.new(:type, :data, :id, :retry)
+
+def parse_sse_chunk(chunk)
+  event = Event.new
+  chunk.split("\n").each do |line|
+    field, value = line.split(":", 2).map(&:strip)
+
+    case field
+    when "data"
+      event.data = JSON.parse(value)
+    when "event"
+      event.type = value
+    when "id"
+      event.id = value
+    when "retry"
+      event.retry = value.to_i
+    end
+  end
+  event
+end
+
+require "fiber"
+
+def streaming_request(uri, headers: {})
+  begin
+    fiber = Fiber.new do
+      Net::HTTP.start(uri.host, uri.port, read_timeout: 2) do |http|
+        request = Net::HTTP::Get.new(uri)
+        headers.each do |key, value|
+          request[key] = value
+        end
+        catch :stop do
+          http.request(request) do |response|
+            response.read_body do |chunk|
+              chunk.split("\n\n").each do |raw_event|
+                event = parse_sse_chunk(raw_event)
+                # ignore pings
+                next if event.type == "ping"
+
+                cmd = Fiber.yield(event)
+                if cmd == :stop
+                  throw :stop
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+    yield fiber
+  rescue => e
+    fiber.resume(:stop)
+    raise
+  end
+end
+
+streaming_request(URI(url)) do |stream|
+  first_event = stream.resume
+
+  if first_event.type != "welcome"
+    fail "Expected welcome, got: #{first_event}"
+  end
+
+  second_event = stream.resume
+
+  if second_event.type != "confirm_subscription"
+    fail "Expected confirm_subscription, got: #{second_event}"
+  end
+
+  # Start a regular SSE sesssion
+  another_stream = nil
+  streaming_request(URI("http://localhost:8081/events?identifier=logs")) do |s|
+    another_stream = s
+    s.resume
+  end
+
+  broadcast_logs = stream.resume.data
+
+  fail "Expected to see debug logs, got: #{broadcast_logs}" unless broadcast_logs.any? { |log| log["level"] == "DEBUG" }
+
+  fail "Expected to see sid field in logs, got: #{broadcast_logs}" unless broadcast_logs.any? { |log| log.key?("sid") }
+
+  # Stop SSE session
+  stream.resume(:stop)
+end

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/anycable/anycable-go/admin"
 	"github.com/anycable/anycable-go/broadcast"
 	"github.com/anycable/anycable-go/broker"
 	"github.com/anycable/anycable-go/enats"
@@ -62,6 +63,7 @@ type Config struct {
 	LegacyGraphQL        graphql.Config
 	OCPP                 ocpp.Config
 	LongPolling          lp.Config
+	Admin                admin.Config
 }
 
 // NewConfig returns a new empty config
@@ -96,6 +98,7 @@ func NewConfig() Config {
 		LegacyGraphQL:    graphql.NewConfig(),
 		OCPP:             ocpp.NewConfig(),
 		LongPolling:      lp.NewConfig(),
+		Admin:            admin.NewConfig(),
 	}
 
 	return config
