@@ -363,6 +363,11 @@ func PubSubMessageFromJSON(raw []byte) (interface{}, error) {
 	return rmsg, nil
 }
 
+// WelcomeMessage for a session ID
+func WelcomeMessage(sid string) string {
+	return string(toJSON(Reply{Sid: sid, Type: WelcomeType}))
+}
+
 // ConfirmationMessage returns a subscription confirmation message for a specified identifier
 func ConfirmationMessage(identifier string) string {
 	return string(toJSON(Reply{Identifier: identifier, Type: ConfirmedType}))

@@ -675,7 +675,7 @@ func (n *Node) DisconnectNow(s *Session) error {
 
 	ids := s.GetIdentifiers()
 
-	s.Log.Debug("disconnect", "ids", ids, "url", s.env.URL, "hedears", s.env.Headers, "subscriptions", sessionSubscriptions)
+	s.Log.Debug("disconnect", "ids", ids, "url", s.env.URL, "headers", s.env.Headers, "subscriptions", sessionSubscriptions)
 
 	err := n.controller.Disconnect(
 		s.GetID(),
@@ -853,6 +853,10 @@ func (n *Node) disconnectAll(ctx context.Context) {
 }
 
 func (n *Node) collectStats() {
+	if n.config.StatsRefreshInterval == 0 {
+		return
+	}
+
 	statsCollectInterval := time.Duration(n.config.StatsRefreshInterval) * time.Second
 
 	for {
