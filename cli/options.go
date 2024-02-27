@@ -126,6 +126,7 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 	flags = append(flags, ocppCLIFlags(&c)...)
 	flags = append(flags, miscCLIFlags(&c, &presets)...)
 	flags = append(flags, longPollingCLIFlags(&c)...)
+	flags = append(flags, adminCLIFlags(&c)...)
 
 	app := &cli.App{
 		Name:            "anycable-go",
@@ -493,6 +494,10 @@ Use graphql_action instead.`)
 		c.GraphQL.JWTParam = c.JWT.Param
 	}
 
+	if c.Admin.Port == 0 {
+		c.Admin.Port = c.Port
+	}
+
 	return &c, nil, false
 }
 
@@ -536,6 +541,7 @@ const (
 	graphqlCategoryDescription       = "GRAPHQL:"
 	ocppCategoryDescription          = "OCCP:"
 	longPollingCategoryDescription   = "LONG POLLING:"
+	adminCategoryDescription         = "ADMIN:"
 
 	envPrefix = "ANYCABLE_"
 )
@@ -1794,6 +1800,36 @@ func longPollingCLIFlags(c *config.Config) []cli.Flag {
 			Usage:       "Long polling keepalive timeout (in seconds) defines for how long to wait between poll requests before marking client as disconnected.",
 			Value:       c.LongPolling.KeepaliveTimeout,
 			Destination: &c.LongPolling.KeepaliveTimeout,
+		},
+	})
+}
+
+// adminCLIFlags returns uncategorized flags
+func adminCLIFlags(c *config.Config) []cli.Flag {
+	return withDefaults(adminCategoryDescription, []cli.Flag{
+		&cli.StringFlag{
+			Name:        "admin_path",
+			Usage:       "Admin console HTTP root",
+			Value:       c.Admin.Path,
+			Destination: &c.Admin.Path,
+		},
+		&cli.IntFlag{
+			Name:        "admin_port",
+			Usage:       "Admin console server port (set to 0 to run on the same port as the main server)",
+			Value:       c.Admin.Port,
+			Destination: &c.Admin.Port,
+		},
+		&cli.StringFlag{
+			Name:        "admin_secret",
+			Usage:       "Authentication secret for admin actions",
+			Value:       c.Admin.Secret,
+			Destination: &c.Admin.Secret,
+		},
+		&cli.BoolFlag{
+			Name:        "admin",
+			Usage:       "Enable admin console",
+			Value:       c.Admin.Enabled,
+			Destination: &c.Admin.Enabled,
 		},
 	})
 }

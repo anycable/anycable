@@ -29,6 +29,11 @@ jobs:
       - uses: actions/setup-go@v4
         with:
           go-version-file: go.mod
+      - name: Build UI assets
+        run: |
+          curl -L https://github.com/tailwindlabs/tailwindcss/releases/download/v3.4.1/tailwindcss-linux-x64 > ./tailwindcss
+          chmod +x tailwindcss
+          ./tailwindcss -c admin/ui/tailwind.config.js -i admin/ui/app.css -o admin/ui/build/app.css
       - name: Set VERSION (if any)
         if: ${{ contains(github.ref, 'refs/tags/v') }}
         id: version

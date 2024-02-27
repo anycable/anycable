@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/anycable/anycable-go/admin"
 	"github.com/anycable/anycable-go/api"
 	"github.com/anycable/anycable-go/broadcast"
 	"github.com/anycable/anycable-go/broker"
@@ -71,6 +72,7 @@ type Config struct {
 	LegacyGraphQL        graphql.Config
 	OCPP                 ocpp.Config
 	LongPolling          lp.Config
+	Admin                admin.Config
 
 	ConfigFilePath string
 }
@@ -110,6 +112,7 @@ func NewConfig() Config {
 		LegacyGraphQL:        graphql.NewConfig(),
 		OCPP:                 ocpp.NewConfig(),
 		LongPolling:          lp.NewConfig(),
+		Admin:                admin.NewConfig(),
 	}
 
 	return config // nolint:govet
