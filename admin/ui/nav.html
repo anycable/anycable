@@ -1,0 +1,26 @@
+{{define "nav"}}
+<nav class="items-middle border-b-1 flex flex-shrink flex-row justify-between border-slate-300 shadow-md space-x-10">
+  <div class="ml-2 flex flex-row items-center justify-start">
+    <img class="mx-2 h-12 w-auto p-1" src="https://anycable.io/images/logos/anycable.png" alt="AnyCable" />
+    <h1 class="invisible text-2xl sm:visible">AnyCable</h1>
+    <span class="invisible ml-2 h-4 text-sm sm:visible">{{.Version}}</span>
+  </div>
+  <div class="flex flex-row items-center justify-start flex-grow self-center px-2 align-middle space-x-6">
+    <a href="{{.Root}}" class="flex cursor-pointer flex-row items-center space-x-1 hover:opacity-75">
+      <span>Home</span>
+    </a>
+    <a href={{.Root}}/logs" class="flex cursor-pointer flex-row items-center space-x-1 hover:opacity-75">
+      <span>Logs</span>
+    </a>
+  </div>
+  <div class="mr-4 flex flex-row items-center justify-center space-x-2 px-2">
+    <a href="https://docs.anycable.io" target="_blank" class="flex cursor-pointer flex-row items-center space-x-1 hover:opacity-75">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-6 w-6">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+      </svg>
+
+      <span>Docs</span>
+    </a>
+  </div>
+</nav>
+{{end}}

@@ -1,0 +1,11 @@
+{{define "head"}}
+<script type="module" src="{{.Root}}/static/assets/anycable-elements.js"></script>
+{{end}}
+
+{{define "body"}}
+<div class="flex flex-col justify-center min-h-screen max-h-screen p-6 sm:py-12 relative">
+  <div class="mx-auto w-2/3 h-[25rem]">
+    <anycable-logs url="{{.LogsURL}}"></anycable-logs>
+  </div>
+</div>
+{{end}}

@@ -10,6 +10,7 @@ import (
 
 	"github.com/anycable/anycable-go/server"
 	"github.com/anycable/anycable-go/sse"
+	"github.com/anycable/anycable-go/version"
 	"github.com/joomcode/errorx"
 )
 
@@ -21,28 +22,31 @@ const (
 
 //go:generate tailwindcss -c ui/tailwind.config.js -i ui/app.css -o ui/build/app.css
 func (app *App) MountHandlers(srv *server.HTTPServer) error {
-	staticHandler, err := app.StaticHandler()
-	if err != nil {
-		return errorx.Decorate(err, "failed to create static handler")
-	}
-
-	indexHandler, err := app.IndexHandler()
-	if err != nil {
-		return errorx.Decorate(err, "failed to create page handler")
-	}
-
-	sseHandler, err := app.SSEHandler()
-	if err != nil {
-		return errorx.Decorate(err, "failed to create sse handler")
-	}
-
 	// It's okay to not check auth for static files
-	srv.SetupHandler(app.conf.Path+"/static/*", http.StripPrefix(app.conf.Path+"/static", staticHandler))
+	srv.SetupHandler(app.conf.Path+"/static/*", http.StripPrefix(app.conf.Path+"/static", must(app.StaticHandler())))
 	// SSE is protected via JWT tokens
-	srv.SetupHandler(app.conf.Path+ssePath, sseHandler)
+	srv.SetupHandler(app.conf.Path+ssePath, must(app.SSEHandler()))
 
-	srv.SetupHandler(app.conf.Path+"/", http.StripPrefix(app.conf.Path, app.withAuthHandler(indexHandler)))
-	srv.SetupHandler(app.conf.Path, http.StripPrefix(app.conf.Path, app.withAuthHandler(indexHandler)))
+	// Pages
+	homeHandler := http.StripPrefix(
+		app.conf.Path,
+		app.withAuthHandler(
+			must(app.PageHandler("", "home")),
+		),
+	)
+	srv.SetupHandler(app.conf.Path+"/", homeHandler)
+	srv.SetupHandler(app.conf.Path, homeHandler)
+
+	srv.SetupHandler(
+		app.conf.Path+"/logs*",
+		http.StripPrefix(app.conf.Path,
+			app.withAuthHandler(
+				must(app.PageHandler("/logs", "logs", func(data *pageData) {
+					(*data)["LogsURL"] = app.NewEventsURL("logs")
+				})),
+			),
+		),
+	)
 
 	return nil
 }
@@ -59,28 +63,32 @@ func (app *App) StaticHandler() (http.Handler, error) {
 	return http.FileServer(http.FS(fsys)), nil
 }
 
-type indexPageData struct {
-	Root    string
-	LogsURL string
-}
+type pageData = map[string]interface{}
 
-func (app *App) IndexHandler() (http.Handler, error) {
-	t, err := template.ParseFS(static, "ui/index.html")
-	if err != nil {
-		return nil, errorx.Decorate(err, "failed to parse html templates")
-	}
-
+func (app *App) PageHandler(path string, name string, populate ...func(*pageData)) (http.Handler, error) {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var path = r.URL.Path
-		app.log.Debug("serving HTTP request", "path", path, "handler", "index")
-		w.Header().Add("Content-Type", "text/html")
+		app.log.Debug("serving HTTP request", "path", path)
 
-		pageData := indexPageData{
-			Root:    app.conf.Path,
-			LogsURL: app.NewEventsURL("logs"),
+		t, err := template.ParseFS(static, "ui/layout.html", "ui/nav.html", "ui/"+name+".html")
+		if err != nil {
+			app.log.Error("failed to parse HTML template", "error", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 
-		if err := t.Execute(w, pageData); err != nil {
+		w.Header().Add("Content-Type", "text/html")
+
+		pageData := map[string]interface{}{
+			"Root":    app.conf.Path,
+			"Version": version.Version(),
+		}
+
+		for _, p := range populate {
+			p(&pageData)
+		}
+
+		if err := t.ExecuteTemplate(w, "layout", pageData); err != nil {
 			app.log.Error("failed to render index page", "error", err)
 			w.WriteHeader(http.StatusInternalServerError)
 		}
@@ -120,4 +128,11 @@ func (app *App) withAuthHandler(next http.Handler) http.Handler {
 		w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 	})
+}
+
+func must[T any](h T, err error) T {
+	if err != nil {
+		panic(err)
+	}
+	return h
 }

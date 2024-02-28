@@ -1,0 +1,35 @@
+{{define "body"}}
+<div class="relative mx-auto flex min-h-screen w-2/3 flex-row items-center justify-center py-6 sm:py-12">
+  <img class="mx-2 h-24 w-auto" src="{{.Root}}/static/assets/logo.png" alt="AnyCable" />
+  <div class="flex flex-col items-start">
+    <h2 class="text-lg font-semibold">Welcome to AnyCable admin console!</h2>
+
+    <p class="flex flex-row items-center mt-2">
+      <span class="mr-1">We're still working on UI and features</span>
+      <i data-icon="loading"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 p-1" stroke="currentColor"
+          viewBox="0 0 24 24">
+          <path
+            d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z">
+            <animateTransform attributeName="transform" type="rotate" dur="0.75s" values="0 12 12;360 12 12"
+              repeatCount="indefinite" />
+          </path>
+        </svg></i>
+    </p>
+
+    <div class="mt-4">
+      <a href="{{.Root}}/logs" type="button"
+        class="whitespace-nowrap inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground px-4 py-2 h-9 text-sm cursor-pointer"
+        data-turbo-frame="_top">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+          class="w-6 h-6 mr-2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="m6.75 7.5 3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0 0 21 18V6a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 6v12a2.25 2.25 0 0 0 2.25 2.25Z">
+          </path>
+        </svg>
+
+        <span>Logs</span>
+      </a>
+    </div>
+  </div>
+</div>
+{{end}}

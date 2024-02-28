@@ -1,0 +1,20 @@
+{{ define "head"}} {{end}}
+{{ define "body"}} {{end}}
+{{define "layout"}}
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="initial-scale=1, maximum-scale=5" />
+    <title>AnyCable Console</title>
+    <link rel="stylesheet" type="text/css" href="{{.Root}}/static/build/app.css" />
+    {{template "head" .}}
+  </head>
+  <body class="min-h-full w-full">
+    <main class="h-full w-full bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-200">
+      {{template "nav" .}}
+      {{template "body" .}}
+    </main>
+  </body>
+</html>
+{{end}}
