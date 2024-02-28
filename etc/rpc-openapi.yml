@@ -1,23 +1,22 @@
 openapi: 3.0.0
+x-stoplight:
+  id: k3090vy220u6w
 info:
-  version: 1.0.0
+  license: MIT
   title: AnyCable RPC
   description: |-
     AnyCable RPC over HTTP.
 
     Read more in the [documentation](https://docs.anycable.io/ruby/http_rpc).
+  version: 1.0.0
   termsOfService: ''
-  license:
-    '0': M
-    '1': I
-    '2': T
-    name: ''
+servers: []
 paths:
   /connect:
     post:
+      operationId: connect
       summary: Handle client connection
       description: Authenticate a newly connected client. Called right after the WebSocket connection has been initiated at the AnyCable server
-      operationId: connect
       requestBody:
         required: true
         content:
@@ -42,7 +41,7 @@ paths:
               examples:
                 Successul authentication:
                   value:
-                    status: SUCCESS
+                    status: 1
                     identifiers: '{"user_id":42}'
                     transmissions:
                       - '{"type":"welcome"}'
@@ -51,18 +50,20 @@ paths:
                         feature_flags: '[1, 2]'
                 Authentication failed:
                   value:
-                    status: FAILURE
+                    status: 2
                     transmissions:
                       - '{"type":"disconnect","reason":"unauthorized","reconnect":false}'
                 Bad request:
                   value:
-                    status: ERROR
+                    status: 0
                     error_msg: Internal server error
+      x-stoplight:
+        id: i40gxfufhkzdr
   /command:
     post:
+      operationId: command
       summary: Handle client message
       description: Process an incoming message from a WebSocket client
-      operationId: command
       requestBody:
         required: true
         content:
@@ -84,6 +85,7 @@ paths:
                 value:
                   command: message
                   identifier: '{"channel":"ChatChannel"}'
+                  data: '{"action":"sendMessage","body":"Hi-Pi"}'
                   connection_identifiers: '{"user_id":42}'
                   env:
                     url: 'ws://cable.myapp.dev/cable'
@@ -112,7 +114,7 @@ paths:
               examples:
                 Successful subscription:
                   value:
-                    status: SUCCESS
+                    status: 1
                     streams:
                       - chat/42
                     transmissions:
@@ -122,22 +124,24 @@ paths:
                         room_id: '42'
                 Rejected subscription:
                   value:
-                    status: FAILURE
+                    status: 2
                     transmissions:
                       - '{"type":"reject_subscription","identifier":"{\"channel\":\"ChatChannel\"}"}'
                 Perform with stopped streams:
                   value:
-                    status: SUCCESS
+                    status: 1
                     stop_streams: true
                 Command failed:
                   value:
-                    status: ERROR
+                    status: 0
                     error_msg: Internal server error
+      x-stoplight:
+        id: r4ep4ww376oo7
   /disconnect:
     post:
+      operationId: disconnect
       summary: Handle client disconnection
       description: Perform any cleanup required when a WebSocket disconnects from the AnyCable server
-      operationId: disconnect
       requestBody:
         required: true
         content:
@@ -170,40 +174,52 @@ paths:
               examples:
                 Successful response:
                   value:
-                    status: SUCCESS
+                    status: 1
+      x-stoplight:
+        id: 1qs5igsnbbg68
 components:
   schemas:
-    ConnectionRequest:
-      type: object
-      description: Request payload for initiating a connection.
-      properties:
-        env:
-          $ref: '#/components/schemas/Env'
+    Status:
+      type: integer
+      enum:
+        - 0
+        - 1
+        - 2
+      description: |
+        The status of the command result:
+
+        - 1 (SUCCESS) indicates the positive result (successful authentication or subscription)
+        - 2 (FAILURE) indicates that the API server was able to process the command but the result is negative (not authenticated or subscription rejected)
+        - 0 (ERROR) MUST be used when the API server failed to process the command (aka Bad request).
+      x-stoplight:
+        id: mlkj1cb6oa6z8
     Env:
       type: object
-      description: Client state and metadata
       properties:
         url:
           type: string
           description: The URL of the WebSocket connection.
         headers:
           type: object
+          additionalProperties:
+            type: string
           description: |
             HTTP headers of the underlying WebSocket connection. NOTE: Only the headers specified in the AnyCable configuration are sent over RPC.
-          additionalProperties:
-            type: string
         cstate:
           type: object
+          additionalProperties:
+            type: string
           description: |
             User-defined connection state as JSON-encoded string. Used to carry some client-wide information and attached to all requests, so you can restore it.
-          additionalProperties:
-            type: string
         istate:
           type: object
-          description: |
-            User-defined state of the subscribed channels as JSON-encoded string. Contains only the current channel state for Command requests and contains the map of all channels for Disconnect requests.
           additionalProperties:
             type: string
+          description: |
+            User-defined state of the subscribed channels as JSON-encoded string. Contains only the current channel state for Command requests and contains the map of all channels for Disconnect requests.
+      description: Client state and metadata
+      x-stoplight:
+        id: d4qf7zdjvpreq
       x-examples:
         Initial state:
           url: 'ws://cable.myapp.dev/cable'
@@ -228,41 +244,8 @@ components:
             feature_flags: '[13,32]'
           istate:
             chat_1: '{"room_id":42}'
-    ConnectionResponse:
-      type: object
-      description: Initial client connection state
-      properties:
-        status:
-          $ref: '#/components/schemas/Status'
-        identifiers:
-          type: string
-          description: |
-            Unique identifiers for the connection as a single string. It's up to the application on how to serialize/deserialize this inforation (e.g., JSON). The identifiers are passe with every subsequent request so you can identify the client.
-        transmissions:
-          type: array
-          description: Messages to be transmitted to the client upon successful connection
-          items:
-            type: string
-        error_msg:
-          type: string
-          description: Error message in case of failure.
-        env:
-          $ref: '#/components/schemas/EnvResponse'
-    Status:
-      type: string
-      enum:
-        - ERROR
-        - SUCCESS
-        - FAILURE
-      description: |
-        The status of the command result:
-
-        - SUCCESS indicates the positive result (successful authentication or subscription)
-        - FAILURE indicates that the API server was able to process the command but the result is negative (not authenticated or subscription rejected)
-        - ERROR MUST be used when the API server failed to process the command (aka Bad request).
     EnvResponse:
       type: object
-      description: Client state changes
       properties:
         cstate:
           type: object
@@ -276,6 +259,9 @@ components:
             The object representing the changes in the current channel state.
           additionalProperties:
             type: string
+      description: Client state changes
+      x-stoplight:
+        id: m4ol03almi4um
       x-examples:
         Connection state update:
           cstate:
@@ -283,9 +269,38 @@ components:
         Channel state update:
           istate:
             room_id: '42'
+    ConnectionRequest:
+      type: object
+      properties:
+        env:
+          $ref: '#/components/schemas/Env'
+      description: Request payload for initiating a connection.
+      x-stoplight:
+        id: 5sjsofpoz63eu
+    ConnectionResponse:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/Status'
+        identifiers:
+          type: string
+          description: |
+            Unique identifiers for the connection as a single string. It's up to the application on how to serialize/deserialize this inforation (e.g., JSON). The identifiers are passe with every subsequent request so you can identify the client.
+        transmissions:
+          type: array
+          items:
+            type: string
+          description: Messages to be transmitted to the client upon successful connection
+        error_msg:
+          type: string
+          description: Error message in case of failure.
+        env:
+          $ref: '#/components/schemas/EnvResponse'
+      description: Initial client connection state
+      x-stoplight:
+        id: m6al8c5i2awbd
     CommandMessage:
       type: object
-      description: An incoming command from the client
       properties:
         command:
           type: string
@@ -301,8 +316,13 @@ components:
           description: Command payload
         env:
           $ref: '#/components/schemas/Env'
+      description: An incoming command from the client
+      x-stoplight:
+        id: bggyita98aoux
     CommandResponse:
       type: object
+      x-stoplight:
+        id: h4z7tnns9g8hc
       properties:
         status:
           $ref: '#/components/schemas/Status'
@@ -322,6 +342,8 @@ components:
           description: List of the pub/sub streams to unsubscribe the client from
           items:
             type: string
+            x-stoplight:
+              id: j6r2131c1s507
         transmissions:
           type: array
           description: Messages to be transmitted to the client in response to the command.
@@ -334,25 +356,30 @@ components:
           $ref: '#/components/schemas/EnvResponse'
     DisconnectRequest:
       type: object
-      description: A disconnection notice request.
       properties:
         identifiers:
           type: string
           description: Connection identifiers obtained during the Connect request.
         subscriptions:
           type: array
-          description: List of the client channel identifiers.
           items:
             type: string
+          description: List of the client channel identifiers.
         env:
           $ref: '#/components/schemas/Env'
+      description: A disconnection notice request.
+      x-stoplight:
+        id: 51wszvqngk2pf
     DisconnectResponse:
       type: object
-      description: Response payload after processing a disconnect event
       properties:
         status:
           $ref: '#/components/schemas/Status'
         error_msg:
           type: string
           description: Error message in case of disconnection failure.
+      description: Response payload after processing a disconnect event
+      x-stoplight:
+        id: idn0xut5w6i1g
+  securitySchemes: {}
 x-internal: false
