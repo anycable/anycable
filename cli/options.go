@@ -495,7 +495,7 @@ Use graphql_action instead.`)
 	}
 
 	if c.Admin.Port == 0 {
-		c.Admin.Port = c.Port
+		c.Admin.Port = c.Server.Port
 	}
 
 	return &c, nil, false

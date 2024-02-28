@@ -16,7 +16,7 @@ import (
 	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/pubsub"
 	"github.com/anycable/anycable-go/server"
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type App struct {
