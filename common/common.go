@@ -3,6 +3,10 @@ package common
 
 import (
 	"encoding/json"
+	"log/slog"
+
+	"github.com/anycable/anycable-go/logger"
+	"github.com/anycable/anycable-go/utils"
 )
 
 // Command result status
@@ -11,6 +15,19 @@ const (
 	FAILURE
 	ERROR
 )
+
+func StatusName(status int) string {
+	switch status {
+	case SUCCESS:
+		return "success"
+	case FAILURE:
+		return "failure"
+	case ERROR:
+		return "error"
+	default:
+		return "unknown"
+	}
+}
 
 const (
 	ActionCableV1JSON    = "actioncable-v1-json"
@@ -161,6 +178,18 @@ type ConnectResult struct {
 	Status             int
 }
 
+func (c *ConnectResult) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.String("status", StatusName(c.Status)),
+		slog.Any("transmissions", logger.CompactValues(c.Transmissions)),
+		slog.Any("broadcasts", c.Broadcasts),
+		slog.String("identifier", c.Identifier),
+		slog.Int("disconnect_interest", c.DisconnectInterest),
+		slog.Any("cstate", c.CState),
+		slog.Any("istate", c.IState),
+	)
+}
+
 // ToCallResult returns the corresponding CallResult
 func (c *ConnectResult) ToCallResult() *CallResult {
 	res := CallResult{Transmissions: c.Transmissions, Broadcasts: c.Broadcasts}
@@ -190,6 +219,21 @@ type CommandResult struct {
 	Status             int
 }
 
+func (c *CommandResult) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.String("status", StatusName(c.Status)),
+		slog.Any("streams", logger.CompactValues(c.Streams)),
+		slog.Any("transmissions", logger.CompactValues(c.Transmissions)),
+		slog.Any("stopped_streams", logger.CompactValues(c.StoppedStreams)),
+		slog.Bool("stop_all_streams", c.StopAllStreams),
+		slog.Any("broadcasts", c.Broadcasts),
+		slog.Bool("disconnect", c.Disconnect),
+		slog.Int("disconnect_interest", c.DisconnectInterest),
+		slog.Any("cstate", c.CState),
+		slog.Any("istate", c.IState),
+	)
+}
+
 // ToCallResult returns the corresponding CallResult
 func (c *CommandResult) ToCallResult() *CallResult {
 	res := CallResult{Transmissions: c.Transmissions, Broadcasts: c.Broadcasts}
@@ -207,6 +251,10 @@ type HistoryPosition struct {
 	Offset uint64 `json:"offset"`
 }
 
+func (hp *HistoryPosition) LogValue() slog.Value {
+	return slog.GroupValue(slog.String("epoch", hp.Epoch), slog.Uint64("offset", hp.Offset))
+}
+
 // HistoryRequest represents a client's streams state (offsets) or a timestamp since
 // which we should return the messages for the current streams
 type HistoryRequest struct {
@@ -214,6 +262,10 @@ type HistoryRequest struct {
 	Since int64 `json:"since,omitempty"`
 	// Streams contains the information of last offsets/epoch received for a particular stream
 	Streams map[string]HistoryPosition `json:"streams,omitempty"`
+}
+
+func (hr *HistoryRequest) LogValue() slog.Value {
+	return slog.GroupValue(slog.Int64("since", hr.Since), slog.Any("streams", hr.Streams))
 }
 
 // Message represents incoming client message
@@ -224,10 +276,23 @@ type Message struct {
 	History    HistoryRequest `json:"history,omitempty"`
 }
 
+func (m *Message) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.String("command", m.Command),
+		slog.String("identifier", m.Identifier),
+		slog.Any("data", logger.CompactAny(m.Data)),
+		slog.Any("history", m.History),
+	)
+}
+
 // StreamMessageMetadata describes additional information about a stream message
 // which can be used to modify delivery behavior
 type StreamMessageMetadata struct {
 	ExcludeSocket string `json:"exclude_socket,omitempty"`
+}
+
+func (smm *StreamMessageMetadata) LogValue() slog.Value {
+	return slog.GroupValue(slog.String("exclude_socket", smm.ExcludeSocket))
 }
 
 // StreamMessage represents a pub/sub message to be sent to stream
@@ -240,6 +305,23 @@ type StreamMessage struct {
 	Offset uint64
 	// Epoch is the uniq ID of the current storage state
 	Epoch string
+}
+
+func (sm *StreamMessage) LogValue() slog.Value {
+	attrs := []slog.Attr{
+		slog.String("stream", sm.Stream),
+		slog.Any("data", logger.CompactValue(sm.Data)),
+	}
+
+	if sm.Epoch != "" {
+		attrs = append(attrs, slog.Uint64("offset", sm.Offset), slog.String("epoch", sm.Epoch))
+	}
+
+	if sm.Meta != nil {
+		attrs = append(attrs, slog.Any("meta", sm.Meta))
+	}
+
+	return slog.GroupValue(attrs...)
 }
 
 func (sm *StreamMessage) ToReplyFor(identifier string) *Reply {
@@ -276,6 +358,10 @@ type RemoteCommandMessage struct {
 	Payload json.RawMessage `json:"payload,omitempty"`
 }
 
+func (m *RemoteCommandMessage) LogValue() slog.Value {
+	return slog.GroupValue(slog.String("command", m.Command), slog.Any("payload", m.Payload))
+}
+
 func (m *RemoteCommandMessage) ToRemoteDisconnectMessage() (*RemoteDisconnectMessage, error) {
 	dmsg := RemoteDisconnectMessage{}
 
@@ -292,10 +378,18 @@ type RemoteDisconnectMessage struct {
 	Reconnect  bool   `json:"reconnect"`
 }
 
+func (m *RemoteDisconnectMessage) LogValue() slog.Value {
+	return slog.GroupValue(slog.String("ids", m.Identifier), slog.Bool("reconnect", m.Reconnect))
+}
+
 // PingMessage represents a server ping
 type PingMessage struct {
 	Type    string      `json:"type"`
 	Message interface{} `json:"message,omitempty"`
+}
+
+func (p *PingMessage) LogValue() slog.Value {
+	return slog.GroupValue(slog.String("type", p.Type), slog.Any("message", p.Message))
 }
 
 func (p *PingMessage) GetType() string {
@@ -307,6 +401,10 @@ type DisconnectMessage struct {
 	Type      string `json:"type"`
 	Reason    string `json:"reason"`
 	Reconnect bool   `json:"reconnect"`
+}
+
+func (d *DisconnectMessage) LogValue() slog.Value {
+	return slog.GroupValue(slog.String("type", d.Type), slog.String("reason", d.Reason), slog.Bool("reconnect", d.Reconnect))
 }
 
 func (d *DisconnectMessage) GetType() string {
@@ -330,6 +428,36 @@ type Reply struct {
 	Sid         string      `json:"sid,omitempty"`
 	Restored    bool        `json:"restored,omitempty"`
 	RestoredIDs []string    `json:"restored_ids,omitempty"`
+}
+
+func (r *Reply) LogValue() slog.Value {
+	attrs := []slog.Attr{}
+
+	if r.Type != "" {
+		attrs = append(attrs, slog.String("type", r.Type))
+	}
+
+	if r.Identifier != "" {
+		attrs = append(attrs, slog.String("identifier", r.Identifier))
+	}
+
+	if r.Message != nil {
+		attrs = append(attrs, slog.Any("message", logger.CompactAny(r.Message)))
+	}
+
+	if r.Reason != "" {
+		attrs = append(attrs, slog.String("reason", r.Reason), slog.Bool("reconnect", r.Reconnect))
+	}
+
+	if r.StreamID != "" {
+		attrs = append(attrs, slog.String("stream_id", r.StreamID), slog.String("epoch", r.Epoch), slog.Uint64("offset", r.Offset))
+	}
+
+	if r.Sid != "" {
+		attrs = append(attrs, slog.String("sid", r.Sid), slog.Bool("restored", r.Restored), slog.Any("restored_ids", r.RestoredIDs))
+	}
+
+	return slog.GroupValue(attrs...)
 }
 
 func (r *Reply) GetType() string {
@@ -365,24 +493,15 @@ func PubSubMessageFromJSON(raw []byte) (interface{}, error) {
 
 // WelcomeMessage for a session ID
 func WelcomeMessage(sid string) string {
-	return string(toJSON(Reply{Sid: sid, Type: WelcomeType}))
+	return string(utils.ToJSON(Reply{Sid: sid, Type: WelcomeType}))
 }
 
 // ConfirmationMessage returns a subscription confirmation message for a specified identifier
 func ConfirmationMessage(identifier string) string {
-	return string(toJSON(Reply{Identifier: identifier, Type: ConfirmedType}))
+	return string(utils.ToJSON(Reply{Identifier: identifier, Type: ConfirmedType}))
 }
 
 // RejectionMessage returns a subscription rejection message for a specified identifier
 func RejectionMessage(identifier string) string {
-	return string(toJSON(Reply{Identifier: identifier, Type: RejectedType}))
-}
-
-func toJSON(msg Reply) []byte {
-	b, err := json.Marshal(&msg)
-	if err != nil {
-		panic("Failed to build JSON 😲")
-	}
-
-	return b
+	return string(utils.ToJSON(Reply{Identifier: identifier, Type: RejectedType}))
 }

@@ -49,7 +49,7 @@ func (g *Gate) Broadcast(streamMsg *common.StreamMessage) {
 
 	ctx := g.log.With("stream", stream)
 
-	ctx.Debug("broadcast message", "stream", streamMsg, "data", streamMsg.Data, "offset", streamMsg.Offset, "epoch", streamMsg.Epoch, "meta", streamMsg.Meta)
+	ctx.Debug("schedule broadcast", "message", streamMsg)
 
 	g.mu.RLock()
 	if _, ok := g.streams[stream]; !ok {

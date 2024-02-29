@@ -292,9 +292,6 @@ func (c *Controller) Authenticate(sid string, env *common.SessionEnv) (*common.C
 	}
 
 	if r, ok := response.(*pb.ConnectionResponse); ok {
-
-		c.log.With("sid", sid).Debug("authenticate response", "data", r)
-
 		reply, err := protocol.ParseConnectResponse(r)
 
 		return reply, err
@@ -390,8 +387,6 @@ func (c *Controller) Disconnect(sid string, env *common.SessionEnv, id string, s
 	}
 
 	if r, ok := response.(*pb.DisconnectResponse); ok {
-		c.log.With("sid", sid).Debug("Disconnect response", "data", r)
-
 		err = protocol.ParseDisconnectResponse(r)
 
 		if err != nil {
@@ -414,8 +409,6 @@ func (c *Controller) parseCommandResponse(sid string, response interface{}, err 
 	}
 
 	if r, ok := response.(*pb.CommandResponse); ok {
-		c.log.With("sid", sid).Debug("command response", "data", r)
-
 		res, err := protocol.ParseCommandResponse(r)
 
 		return res, err

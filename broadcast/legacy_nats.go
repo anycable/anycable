@@ -56,7 +56,7 @@ func (s *LegacyNATSBroadcaster) Start(done chan (error)) error {
 	}
 
 	_, err = nc.Subscribe(s.config.Channel, func(m *nats.Msg) {
-		s.log.Debug("incoming pubsub message", "data", m.Data)
+		s.log.Debug("received pubsub message")
 		s.handler.HandlePubSub(m.Data)
 	})
 

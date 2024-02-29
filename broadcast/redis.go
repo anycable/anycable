@@ -252,8 +252,7 @@ func (s *RedisBroadcaster) autoclaimMessages(blockTime int64) ([]rueidis.XRangeE
 func (s *RedisBroadcaster) broadcastXrange(messages []rueidis.XRangeEntry) {
 	for _, message := range messages {
 		if payload, pok := message.FieldValues["payload"]; pok {
-			s.log.Debug("incoming broadcast", "data", payload)
-
+			s.log.Debug("received broadcast")
 			s.node.HandleBroadcast([]byte(payload))
 
 			ackRes := s.client.DoMulti(context.Background(),

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/anycable/anycable-go/common"
+	"github.com/anycable/anycable-go/logger"
 	rconfig "github.com/anycable/anycable-go/redis"
 	"github.com/anycable/anycable-go/utils"
 	"github.com/redis/rueidis"
@@ -188,8 +189,6 @@ func (s *RedisSubscriber) runPubSub(done chan (error)) {
 			s.subMu.Lock()
 			defer s.subMu.Unlock()
 
-			s.log.Debug("subscription message", "data", m)
-
 			if m.Kind == "subscribe" && m.Channel == s.config.InternalChannel {
 				if s.reconnectAttempt > 0 {
 					s.log.Info("reconnected to Redis")
@@ -210,19 +209,19 @@ func (s *RedisSubscriber) runPubSub(done chan (error)) {
 			}
 		},
 		OnMessage: func(m rueidis.PubSubMessage) {
-			s.log.With("channel", m.Channel).Debug("received message", "data", m.Message)
-
 			msg, err := common.PubSubMessageFromJSON([]byte(m.Message))
 
 			if err != nil {
-				s.log.Warn("failed to parse pubsub message", "data", m.Message, "error", err)
+				s.log.Warn("failed to parse pubsub message", "data", logger.CompactValue(m.Message), "error", err)
 				return
 			}
 
 			switch v := msg.(type) {
 			case common.StreamMessage:
+				s.log.With("channel", m.Channel).Debug("received broadcast message")
 				s.node.Broadcast(&v)
 			case common.RemoteCommandMessage:
+				s.log.With("channel", m.Channel).Debug("received remote command")
 				s.node.ExecuteRemoteCommand(&v)
 			}
 		},

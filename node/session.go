@@ -11,6 +11,7 @@ import (
 
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/encoders"
+	"github.com/anycable/anycable-go/logger"
 	"github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/ws"
 )
@@ -365,7 +366,7 @@ func (s *Session) ReadMessage(message []byte) error {
 
 	if err := s.executor.HandleCommand(s, command); err != nil {
 		s.metrics.CounterIncrement(metricsFailedCommandReceived)
-		s.Log.Warn("failed to handle incoming message", "data", message, "error", err)
+		s.Log.Warn("failed to handle incoming message", "data", logger.CompactValue(message), "error", err)
 	}
 
 	return nil
@@ -390,7 +391,7 @@ func (s *Session) SendJSONTransmission(msg string) {
 			s.sendFrame(b)
 		}
 	} else {
-		s.Log.Warn("failed to encode transmission", "data", msg, "error", err)
+		s.Log.Warn("failed to encode transmission", "data", logger.CompactValue(msg), "error", err)
 	}
 }
 
@@ -677,7 +678,7 @@ func (s *Session) handlePong(msg *common.Message) {
 	defer s.mu.Unlock()
 
 	if s.pongTimer == nil {
-		s.Log.Debug("unexpected PONG received")
+		s.Log.Debug("unexpected pong received")
 		return
 	}
 

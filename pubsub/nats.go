@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/anycable/anycable-go/common"
+	"github.com/anycable/anycable-go/logger"
 	nconfig "github.com/anycable/anycable-go/nats"
 	"github.com/anycable/anycable-go/utils"
 
@@ -131,19 +132,21 @@ func (s *NATSSubscriber) Publish(stream string, msg interface{}) {
 }
 
 func (s *NATSSubscriber) handleMessage(m *nats.Msg) {
-	s.log.With("channel", m.Subject).Debug("received message", "data", m.Data)
-
 	msg, err := common.PubSubMessageFromJSON(m.Data)
 
 	if err != nil {
-		s.log.Warn("failed to parse pubsub message", "data", m.Data, "error", err)
+		s.log.Warn("failed to parse pubsub message", "data", logger.CompactValue(m.Data), "error", err)
 		return
 	}
 
 	switch v := msg.(type) {
 	case common.StreamMessage:
+		s.log.With("channel", m.Subject).Debug("received broadcast message")
 		s.node.Broadcast(&v)
 	case common.RemoteCommandMessage:
+		s.log.With("channel", m.Subject).Debug("received remote command")
 		s.node.ExecuteRemoteCommand(&v)
+	default:
+		s.log.With("channel", m.Subject).Warn("received unknown message", "data", logger.CompactValue(m.Data))
 	}
 }

@@ -131,7 +131,6 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 
 	if c.Debug {
 		c.LogLevel = "debug"
-		c.LogFormat = "text"
 	}
 
 	if c.Metrics.Port == 0 {

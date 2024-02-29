@@ -215,7 +215,7 @@ func (s *LegacyRedisBroadcaster) listen() error {
 		for {
 			switch v := psc.Receive().(type) {
 			case redis.Message:
-				s.log.Debug("incoming pubsub message", "data", v.Data)
+				s.log.Debug("received pubsub message")
 				s.node.HandlePubSub(v.Data)
 			case redis.Subscription:
 				s.log.Info("subscribed to Redis channel", "channel", v.Channel)

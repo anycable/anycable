@@ -100,12 +100,12 @@ func NewHub(poolSize int, l *slog.Logger) *Hub {
 		register:    make(chan HubRegistration, 2048),
 		sessions:    make(map[string]*HubSessionInfo),
 		identifiers: make(map[string]map[string]bool),
-		gates:       buildGates(ctx, poolSize, l.With("context", "hub")),
+		gates:       buildGates(ctx, poolSize, l),
 		gatesNum:    poolSize,
 		pool:        utils.NewGoPool("remote commands", 256),
 		doneFn:      doneFn,
 		shutdown:    make(chan struct{}),
-		log:         l.With("context", "hub"),
+		log:         l.With("component", "hub"),
 	}
 }
 
@@ -267,7 +267,7 @@ func (h *Hub) UnsubscribeSessionFromChannel(session HubSession, targetIdentifier
 		}
 	}
 
-	h.log.With("sid", sid).Debug("unsubscribed", "channel", targetIdentifier)
+	h.log.With("sid", sid).Debug("unsubscribed", "identifier", targetIdentifier)
 }
 
 func (h *Hub) SubscribeSession(session HubSession, stream string, identifier string) {
@@ -284,7 +284,7 @@ func (h *Hub) SubscribeSession(session HubSession, stream string, identifier str
 
 	h.sessions[sid].AddStream(stream, identifier)
 
-	h.log.With("sid", sid).Debug("subscribed", "channel", identifier, "stream", stream)
+	h.log.With("sid", sid).Debug("subscribed", "identifier", identifier, "stream", stream)
 }
 
 func (h *Hub) UnsubscribeSession(session HubSession, stream string, identifier string) {
@@ -299,7 +299,7 @@ func (h *Hub) UnsubscribeSession(session HubSession, stream string, identifier s
 		info.RemoveStream(stream, identifier)
 	}
 
-	h.log.With("sid", sid).Debug("unsubscribed", "channel", identifier, "stream", stream)
+	h.log.With("sid", sid).Debug("unsubscribed", "identifier", identifier, "stream", stream)
 }
 
 func (h *Hub) broadcastToStream(streamMsg *common.StreamMessage) {
@@ -365,7 +365,7 @@ func (h *Hub) Sessions() []HubSession {
 func buildGates(ctx context.Context, num int, l *slog.Logger) []*Gate {
 	gates := make([]*Gate, 0, num)
 	for i := 0; i < num; i++ {
-		gates = append(gates, NewGate(ctx, l))
+		gates = append(gates, NewGate(ctx, l.With("component", "hub", "gate", i)))
 	}
 
 	return gates

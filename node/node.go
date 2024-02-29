@@ -12,6 +12,7 @@ import (
 	"github.com/anycable/anycable-go/broker"
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/hub"
+	"github.com/anycable/anycable-go/logger"
 	"github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/utils"
 	"github.com/anycable/anycable-go/ws"
@@ -121,11 +122,6 @@ func NewNode(config *Config, opts ...NodeOption) *Node {
 		n.log = slog.With("context", "node")
 	}
 
-	// Ensure nodeid in logs
-	if n.id != "" {
-		n.log = n.log.With("nodeid", n.id)
-	}
-
 	n.hub = hub.NewHub(config.HubGopoolSize, n.log)
 
 	if n.metrics != nil {
@@ -190,18 +186,21 @@ func (n *Node) HandleBroadcast(raw []byte) {
 
 	if err != nil {
 		n.metrics.CounterIncrement(metricsUnknownBroadcast)
-		n.log.Warn("failed to parse pubsub message", "data", raw, "error", err)
+		n.log.Warn("failed to parse pubsub message", "data", logger.CompactValue(raw), "error", err)
 		return
 	}
 
 	switch v := msg.(type) {
 	case common.StreamMessage:
+		n.log.Debug("handle broadcast message", "payload", &v)
 		n.broker.HandleBroadcast(&v)
 	case []*common.StreamMessage:
+		n.log.Debug("handle batch-broadcast message", "payload", &v)
 		for _, el := range v {
 			n.broker.HandleBroadcast(el)
 		}
 	case common.RemoteCommandMessage:
+		n.log.Debug("handle remote command", "command", &v)
 		n.broker.HandleCommand(&v)
 	}
 }
@@ -212,7 +211,7 @@ func (n *Node) HandlePubSub(raw []byte) {
 
 	if err != nil {
 		n.metrics.CounterIncrement(metricsUnknownBroadcast)
-		n.log.Warn("failed to parse pubsub message", "data", raw, "error", err)
+		n.log.Warn("failed to parse pubsub message", "data", logger.CompactValue(raw), "error", err)
 		return
 	}
 
@@ -323,6 +322,8 @@ func (n *Node) Authenticate(s *Session, options ...AuthOption) (*common.ConnectR
 
 	res, err := n.controller.Authenticate(s.GetID(), s.env)
 
+	s.Log.Debug("controller authenticate", "response", res, "err", err)
+
 	if err != nil {
 		s.Disconnect("Auth Error", ws.CloseInternalServerErr)
 		return nil, errorx.Decorate(err, "failed to authenticate")
@@ -428,6 +429,8 @@ func (n *Node) Subscribe(s *Session, msg *common.Message) (*common.CommandResult
 
 	res, err := n.controller.Subscribe(s.GetID(), s.env, s.GetIdentifiers(), msg.Identifier)
 
+	s.Log.Debug("controller subscribe", "response", res, "err", err)
+
 	var confirmed bool
 
 	if err != nil { // nolint: gocritic
@@ -437,9 +440,9 @@ func (n *Node) Subscribe(s *Session, msg *common.Message) (*common.CommandResult
 	} else if res.Status == common.SUCCESS {
 		confirmed = true
 		s.subscriptions.AddChannel(msg.Identifier)
-		s.Log.Debug("subscribed", "channel", msg.Identifier)
+		s.Log.Debug("subscribed", "identifier", msg.Identifier)
 	} else {
-		s.Log.Debug("subscription rejected", "channel", msg.Identifier)
+		s.Log.Debug("subscription rejected", "identifier", msg.Identifier)
 	}
 
 	s.smu.Unlock()
@@ -479,6 +482,8 @@ func (n *Node) Unsubscribe(s *Session, msg *common.Message) (*common.CommandResu
 
 	res, err := n.controller.Unsubscribe(s.GetID(), s.env, s.GetIdentifiers(), msg.Identifier)
 
+	s.Log.Debug("controller unsubscribe", "response", res, "err", err)
+
 	if err != nil {
 		if res == nil || res.Status == common.ERROR {
 			return nil, errorx.Decorate(err, "failed to unsubscribe from %s", msg.Identifier)
@@ -489,7 +494,7 @@ func (n *Node) Unsubscribe(s *Session, msg *common.Message) (*common.CommandResu
 
 		s.subscriptions.RemoveChannel(msg.Identifier)
 
-		s.Log.Debug("unsubscribed", "channel", msg.Identifier)
+		s.Log.Debug("unsubscribed", "identifier", msg.Identifier)
 	}
 
 	s.smu.Unlock()
@@ -526,12 +531,12 @@ func (n *Node) Perform(s *Session, msg *common.Message) (*common.CommandResult, 
 
 	res, err := n.controller.Perform(s.GetID(), s.env, s.GetIdentifiers(), msg.Identifier, data)
 
+	s.Log.Debug("controller perform", "response", res, "err", err)
+
 	if err != nil {
 		if res == nil || res.Status == common.ERROR {
 			return nil, errorx.Decorate(err, "perform failed for %s", msg.Identifier)
 		}
-	} else {
-		s.Log.Debug("perform result", "data", res)
 	}
 
 	if res != nil {
@@ -626,7 +631,7 @@ func (n *Node) retreiveHistory(history *common.HistoryRequest, streams []string)
 // Broadcast message to stream (locally)
 func (n *Node) Broadcast(msg *common.StreamMessage) {
 	n.metrics.CounterIncrement(metricsBroadcastMsg)
-	n.log.Debug("incoming broadcast message", "data", msg)
+	n.log.Debug("incoming broadcast message", "payload", msg)
 	n.hub.BroadcastMessage(msg)
 }
 
@@ -634,15 +639,15 @@ func (n *Node) Broadcast(msg *common.StreamMessage) {
 func (n *Node) ExecuteRemoteCommand(msg *common.RemoteCommandMessage) {
 	// TODO: Add remote commands metrics
 	// n.metrics.CounterIncrement(metricsRemoteCommandsMsg)
-	n.log.Debug("incoming remote command", "data", msg)
-
 	switch msg.Command { // nolint:gocritic
 	case "disconnect":
 		dmsg, err := msg.ToRemoteDisconnectMessage()
 		if err != nil {
-			n.log.Warn("failed to parse remote disconnect command", "error", err)
+			n.log.Warn("failed to parse remote disconnect command", "data", msg, "error", err)
 			return
 		}
+
+		n.log.Debug("incoming remote command", "command", dmsg)
 
 		n.RemoteDisconnect(dmsg)
 	}
@@ -685,8 +690,10 @@ func (n *Node) DisconnectNow(s *Session) error {
 	)
 
 	if err != nil {
-		s.Log.Error("disconnect failed", "error", err)
+		s.Log.Error("controller disconnect failed", "error", err)
 	}
+
+	s.Log.Debug("controller disconnect succeeded")
 
 	return err
 }
