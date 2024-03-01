@@ -188,6 +188,42 @@ Use shutdown_timeout instead.`)
 
 	c.SSE.AllowedOrigins = c.WS.AllowedOrigins
 
+	if c.Rails.TurboRailsKey != "" {
+		fmt.Println(`DEPRECATION WARNING: turbo_rails_key option is deprecated
+and will be removed in the next major release of anycable-go.
+Use streams_secret instead.`)
+
+		if c.Streams.Secret == "" {
+			c.Streams.Secret = c.Rails.TurboRailsKey
+		}
+
+		c.Streams.Turbo = true
+	}
+
+	if c.Rails.TurboRailsClearText {
+		fmt.Println(`DEPRECATION WARNING: turbo_rails_cleartext option is deprecated
+and will be removed in the next major release of anycable-go.
+It has no effect anymore, use public streams instead.`)
+	}
+
+	if c.Rails.CableReadyKey != "" {
+		fmt.Println(`DEPRECATION WARNING: cable_ready_key option is deprecated
+and will be removed in the next major release of anycable-go.
+Use streams_secret instead.`)
+
+		if c.Streams.Secret == "" {
+			c.Streams.Secret = c.Rails.CableReadyKey
+		}
+
+		c.Streams.CableReady = true
+	}
+
+	if c.Rails.CableReadyClearText {
+		fmt.Println(`DEPRECATION WARNING: cable_ready_cleartext option is deprecated
+and will be removed in the next major release of anycable-go.
+It has no effect anymore, use public streams instead.`)
+	}
+
 	return &c, nil, false
 }
 
@@ -721,6 +757,7 @@ func metricsCLIFlags(c *config.Config, filter *string, mtags *string) []cli.Flag
 			Usage:       "DEPRECATED. Specify how often flush metrics logs (in seconds)",
 			Value:       c.Metrics.LogInterval,
 			Destination: &c.Metrics.LogInterval,
+			Hidden:      true,
 		},
 
 		&cli.StringFlag{
@@ -860,27 +897,55 @@ func jwtCLIFlags(c *config.Config) []cli.Flag {
 func signedStreamsCLIFlags(c *config.Config) []cli.Flag {
 	return withDefaults(signedStreamsCategoryDescription, []cli.Flag{
 		&cli.StringFlag{
+			Name:        "streams_secret",
+			Usage:       "Secret you use to sign stream names",
+			Destination: &c.Streams.Secret,
+		},
+
+		&cli.BoolFlag{
+			Name:        "public_streams",
+			Usage:       "Enable public (unsigned) streams",
+			Destination: &c.Streams.Public,
+		},
+
+		&cli.BoolFlag{
+			Name:        "turbo_streams",
+			Usage:       "Enable Turbo Streams support",
+			Destination: &c.Streams.Turbo,
+		},
+
+		&cli.BoolFlag{
+			Name:        "cable_ready",
+			Usage:       "Enable Cable Ready support",
+			Destination: &c.Streams.CableReady,
+		},
+
+		&cli.StringFlag{
 			Name:        "turbo_rails_key",
-			Usage:       "Enable Turbo Streams fastlane with the specified signing key",
+			Usage:       "[DEPRECATED] Enable Turbo Streams fastlane with the specified signing key",
 			Destination: &c.Rails.TurboRailsKey,
+			Hidden:      true,
 		},
 
 		&cli.BoolFlag{
 			Name:        "turbo_rails_cleartext",
-			Usage:       "Enable Turbo Streams fastlane without stream names signing",
+			Usage:       "[DEPRECATED] Enable Turbo Streams fastlane without stream names signing",
 			Destination: &c.Rails.TurboRailsClearText,
+			Hidden:      true,
 		},
 
 		&cli.StringFlag{
 			Name:        "cable_ready_key",
-			Usage:       "Enable CableReady fastlane with the specified signing key",
+			Usage:       "[DEPRECATED] Enable CableReady fastlane with the specified signing key",
 			Destination: &c.Rails.CableReadyKey,
+			Hidden:      true,
 		},
 
 		&cli.BoolFlag{
 			Name:        "cable_ready_cleartext",
-			Usage:       "Enable Cable Ready fastlane without stream names signing",
+			Usage:       "[DEPRECATED] Enable Cable Ready fastlane without stream names signing",
 			Destination: &c.Rails.CableReadyClearText,
+			Hidden:      true,
 		},
 	})
 }

@@ -13,6 +13,7 @@ import (
 	"github.com/anycable/anycable-go/rpc"
 	"github.com/anycable/anycable-go/server"
 	"github.com/anycable/anycable-go/sse"
+	"github.com/anycable/anycable-go/streams"
 	"github.com/anycable/anycable-go/ws"
 
 	nanoid "github.com/matoous/go-nanoid"
@@ -51,6 +52,7 @@ type Config struct {
 	EmbedNats            bool
 	EmbeddedNats         enats.Config
 	SSE                  sse.Config
+	Streams              streams.Config
 	UserPresets          []string
 }
 
@@ -82,6 +84,7 @@ func NewConfig() Config {
 		Rails:            rails.NewConfig(),
 		EmbeddedNats:     enats.NewConfig(),
 		SSE:              sse.NewConfig(),
+		Streams:          streams.NewConfig(),
 	}
 
 	return config

@@ -22,10 +22,10 @@ import (
 	"github.com/anycable/anycable-go/mrb"
 	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/pubsub"
-	"github.com/anycable/anycable-go/rails"
 	"github.com/anycable/anycable-go/router"
 	"github.com/anycable/anycable-go/server"
 	"github.com/anycable/anycable-go/sse"
+	"github.com/anycable/anycable-go/streams"
 	"github.com/anycable/anycable-go/telemetry"
 	"github.com/anycable/anycable-go/utils"
 	"github.com/anycable/anycable-go/version"
@@ -480,13 +480,18 @@ func (r *Runner) Instrumenter() metricspkg.Instrumenter {
 func (r *Runner) defaultRouter() *router.RouterController {
 	router := router.NewRouterController(nil)
 
-	if r.config.Rails.TurboRailsKey != "" || r.config.Rails.TurboRailsClearText {
-		turboController := rails.NewTurboController(r.config.Rails.TurboRailsKey, r.log)
+	if r.config.Streams.PubSubChannel != "" {
+		streamController := streams.NewStreamsController(&r.config.Streams, r.log)
+		router.Route(r.config.Streams.PubSubChannel, streamController) // nolint:errcheck
+	}
+
+	if r.config.Streams.Turbo && r.config.Streams.Secret != "" {
+		turboController := streams.NewTurboController(r.config.Streams.Secret, r.log)
 		router.Route("Turbo::StreamsChannel", turboController) // nolint:errcheck
 	}
 
-	if r.config.Rails.CableReadyKey != "" || r.config.Rails.CableReadyClearText {
-		crController := rails.NewCableReadyController(r.config.Rails.CableReadyKey, r.log)
+	if r.config.Streams.CableReady && r.config.Streams.Secret != "" {
+		crController := streams.NewCableReadyController(r.config.Streams.Secret, r.log)
 		router.Route("CableReady::Stream", crController) // nolint:errcheck
 	}
 

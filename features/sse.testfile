@@ -1,5 +1,5 @@
 launch :anycable,
-  "./dist/anycable-go --sse --turbo_rails_cleartext --jwt_id_key=qwerty --broadcast_adapter=http --presets=broker"
+  "./dist/anycable-go --sse --public_streams --jwt_id_key=qwerty --broadcast_adapter=http --presets=broker"
 
 wait_tcp 8080
 
@@ -12,7 +12,7 @@ require "uri"
 require "net/http"
 require "fiber"
 
-identifier = URI.encode_www_form_component({channel: "Turbo::StreamsChannel", signed_stream_name: stream_name}.to_json)
+identifier = URI.encode_www_form_component({channel: "$pubsub", stream_name: stream_name}.to_json)
 
 url = "http://localhost:8080/events?jid=#{token}&identifier=#{identifier}"
 

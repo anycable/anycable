@@ -2,6 +2,14 @@
 
 ## master
 
+- Added direct stream subscribing via a dedicated channel. ([@palkan][])
+
+Added a `$pubsub` reserved channel to allow subscribing to streams (signed or unsigned) without relying on channels (similar to Turbo Streams).
+
+Enable public (unsigned) streams support via the `--public_streams` (or `ANYCABLE_PUBLIC_STREAMS=1`) option or provide a secret key to verify signed streams via the `--streams_secret=<val>` (or `ANYCABLE_STREAMS_SECRET=<val>`) option.
+
+- The `--turbo_rails_key` and `--cable_ready_key` options are deprecated in favor of the new `--streams_secret` option. The `--turbo_rails_key` and `--cable_ready_cleartext` are no longer supported (use `--public_streams` and the `$pubsub` channel instead).
+
 - Allowing embedding AnyCable into existing web applications. ([@palkan][])
 
 You can now set up an AnyCable instance without an HTTP server and mount AnyCable WebSocket/SSE handlers wherever you like.

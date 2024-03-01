@@ -1,5 +1,5 @@
 launch :anycable,
-  "./dist/anycable-go --turbo_rails_key=s3Krit --jwt_id_key=qwerty " \
+  "./dist/anycable-go --streams_secret=s3Krit --turbo_streams --jwt_id_key=qwerty " \
   "--metrics_rotate_interval=1 --metrics_log --metrics_log_filter=rpc_call_total,rpc_error_total,rpc_retries_total",
   capture_output: true
 

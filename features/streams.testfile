@@ -1,5 +1,5 @@
 launch :anycable,
-  "./dist/anycable-go --cable_ready_cleartext --jwt_id_key=qwerty " \
+  "./dist/anycable-go --public_streams --jwt_id_key=qwerty " \
   "--metrics_rotate_interval=1 --metrics_log --metrics_log_filter=rpc_call_total,rpc_error_total,rpc_retries_total",
   capture_output: true
 
@@ -13,7 +13,7 @@ scenario = [
   {
     client: {
       protocol: "action_cable",
-      name: "turbo",
+      name: "streamer",
       connection_options: {
         query: {
           jid: token
@@ -22,9 +22,9 @@ scenario = [
       actions: [
         {
           subscribe: {
-            channel: "CableReady::Stream",
+            channel: "$pubsub",
             params: {
-              signed_stream_id: "stream/2023"
+              stream_name: "stream/2023"
             }
           }
         },
