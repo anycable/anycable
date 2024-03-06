@@ -67,7 +67,7 @@ func NewConfig() Config {
 		Port:             8080,
 		Path:             []string{"/cable"},
 		HealthPath:       "/health",
-		BroadcastAdapter: "redis",
+		BroadcastAdapter: "http,redis",
 		Broker:           broker.NewConfig(),
 		Headers:          []string{"cookie"},
 		LogLevel:         "info",

@@ -2,13 +2,28 @@
 
 ## master
 
+- HTTP broadcaster is enabled by default. ([@palkan][])
+
+HTTP broadcaster is now enabled by default in addition to Redis (backward-compatibility). It will be the primary default broadcaster in v2.
+
+- Added new top-level `--secret` configuration option. ([@palkan][])
+
+This is a one secret to rule them all! Unless specific secrets are specified, all features relying on secret keys use the global (_application_) secret either directly (signed streams, JWT) or as a secret base to generate auth tokens (HTTP broadcasting and HTTP RPC).
+
+- Added public mode (`--public`). ([@palkan][])
+
+In this mode, AnyCable doesn't enforce connection authentication, enables public streams, and disables HTTP broadcast endpoint authentication. (So, it's a combination of `--noauth` and `--public_streams`).
+
 - Added direct stream subscribing via a dedicated channel. ([@palkan][])
 
 Added a `$pubsub` reserved channel to allow subscribing to streams (signed or unsigned) without relying on channels (similar to Turbo Streams).
 
 Enable public (unsigned) streams support via the `--public_streams` (or `ANYCABLE_PUBLIC_STREAMS=1`) option or provide a secret key to verify signed streams via the `--streams_secret=<val>` (or `ANYCABLE_STREAMS_SECRET=<val>`) option.
 
-- The `--turbo_rails_key` and `--cable_ready_key` options are deprecated in favor of the new `--streams_secret` option. The `--turbo_rails_key` and `--cable_ready_cleartext` are no longer supported (use `--public_streams` and the `$pubsub` channel instead).
+- Config options refactoring (renaming):
+
+  - Deprecated (but still supported): `--turbo_rails_key` (now `--turbo_streams_secret`), `--cable_ready_key` (now `--cable_ready_secret`), `--jwt_id_key` (now `--jwt_secret`), `--jwt_id_param` (now `--jwt_param`), `--jwt_id_enforce` (now `--enforce_jwt`).
+  - Deprecated (no longer supported): `--turbo_rails_cleartext`, `--cable_ready_cleartext` (use `--public_streams` instead).
 
 - Allowing embedding AnyCable into existing web applications. ([@palkan][])
 

@@ -71,7 +71,7 @@ func TestFlyPresets_When_RedisConfigured(t *testing.T) {
 
 	assert.Equal(t, "0.0.0.0", config.Host)
 	assert.Equal(t, false, config.EmbedNats)
-	assert.Equal(t, "redis", config.BroadcastAdapter)
+	assert.Equal(t, "http,redis", config.BroadcastAdapter)
 	assert.Equal(t, "redis", config.PubSubAdapter)
 	assert.Equal(t, "nats://0.0.0.0:4222", config.EmbeddedNats.ServiceAddr)
 	assert.Equal(t, "nats://0.0.0.0:5222", config.EmbeddedNats.ClusterAddr)
