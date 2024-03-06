@@ -69,14 +69,9 @@ func (HTTPBroadcaster) IsFanout() bool {
 	return false
 }
 
-// Start creates an HTTP server or attaches a handler to the existing one
-func (s *HTTPBroadcaster) Start(done chan (error)) error {
-	server, err := server.ForPort(strconv.Itoa(s.port))
-
-	if err != nil {
-		return err
-	}
-
+// Prepare configures the broadcaster to make it ready to accept requests
+// (i.e., calculates the authentication token, etc.)
+func (s *HTTPBroadcaster) Prepare() error {
 	authHeader := ""
 
 	if s.conf.Secret == "" && s.conf.SecretBase != "" {
@@ -96,6 +91,22 @@ func (s *HTTPBroadcaster) Start(done chan (error)) error {
 	}
 
 	s.authHeader = authHeader
+
+	return nil
+}
+
+// Start creates an HTTP server or attaches a handler to the existing one
+func (s *HTTPBroadcaster) Start(done chan (error)) error {
+	server, err := server.ForPort(strconv.Itoa(s.port))
+
+	if err != nil {
+		return err
+	}
+
+	err = s.Prepare()
+	if err != nil {
+		return err
+	}
 
 	s.server = server
 	s.server.SetupHandler(s.path, http.HandlerFunc(s.Handler))

@@ -153,7 +153,7 @@ test-conformance-http: tmp/anycable-go-test
 	\
 	ANYCABLE_BROADCAST_ADAPTER=http ANYCABLE_HTTP_BROADCAST_SECRET=any_secret \
 	ANYCABLE_HTTP_RPC_SECRET=rpc_secret ANYCABLE_HTTP_RPC_MOUNT_PATH=/_anycable \
-	ANYCABLE_HTTP_BROADCAST_URL=http://localhost:8080/_anycable \
+	ANYCABLE_HTTP_BROADCAST_URL=http://localhost:8080/_broadcast \
 	bundle exec anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token --rpc_host=http://localhost:9292/_anycable" --target-url="ws://localhost:8080/cable" --require=etc/anyt/broadcast_tests/*.rb
 
 test-conformance-nats: tmp/anycable-go-test
@@ -174,7 +174,7 @@ test-conformance-broker-nats: tmp/anycable-go-test
 test-conformance-embedded: tmp/anycable-embedded-test
 	\
 	ANYCABLE_BROADCAST_ADAPTER=http ANYCABLE_HTTP_BROADCAST_SECRET=any_secret \
-	ANYCABLE_HTTP_BROADCAST_URL=http://localhost:8080/_anycable \
+	ANYCABLE_HTTP_BROADCAST_URL=http://localhost:8080/broadcast \
 	ANYCABLE_HTTP_RPC_SECRET=rpc_secret ANYCABLE_HTTP_RPC_MOUNT_PATH=/_anycable \
 	ANYCABLE_RPC_HOST=http://localhost:9292/_anycable \
 	ANYCABLE_HEADERS=cookie,x-api-token \

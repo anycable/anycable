@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/anycable/anycable-go/broadcast"
 	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/utils"
 	"github.com/anycable/anycable-go/version"
@@ -38,6 +39,19 @@ func (e *Embedded) SSEHandler(ctx context.Context) (http.Handler, error) {
 	}
 
 	return sseHandler, nil
+}
+
+// HTTPBroadcastHandler returns an HTTP handler to process broadcasting requests
+func (e *Embedded) HTTPBroadcastHandler() (http.Handler, error) {
+	broadcaster := broadcast.NewHTTPBroadcaster(e.n, &e.r.config.HTTPBroadcast, e.r.log)
+
+	err := broadcaster.Prepare()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return http.HandlerFunc(broadcaster.Handler), nil
 }
 
 // Shutdown stops the AnyCable node gracefully.

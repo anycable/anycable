@@ -21,7 +21,6 @@ func main() {
 		cli.WithDefaultRPCController(),
 		cli.WithDefaultBroker(),
 		cli.WithDefaultSubscriber(),
-		cli.WithDefaultBroadcaster(),
 		cli.WithTelemetry(),
 		cli.WithLogger(logger),
 	}
@@ -56,8 +55,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	broadcastHandler, err := anycable.HTTPBroadcastHandler()
+
+	if err != nil {
+		fmt.Printf("%+v\n", err)
+		os.Exit(1)
+	}
+
 	http.Handle("/cable", wsHandler)
 	http.Handle("/sse", seeHandler)
+	http.Handle("/broadcast", broadcastHandler)
 
 	go http.ListenAndServe(":8080", nil) // nolint:errcheck,gosec
 
