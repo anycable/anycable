@@ -64,3 +64,6 @@ resumable
 ack
 caniuse
 reconnection
+norpc
+noauth
+jid

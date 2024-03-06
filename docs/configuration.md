@@ -89,7 +89,7 @@ This setting disables client authentication checks (so, anyone is allowed to con
 
 **--public_streams** (`ANYCABLE_PUBLIC_STREAMS=true`)
 
-Setting this value allows direct subscribing to streams using unsinged names (see more in the [signed streams docs](./signed_streams.md)).
+Setting this value allows direct subscribing to streams using unsigned names (see more in the [signed streams docs](./signed_streams.md)).
 
 **--public** (`ANYCABLE_PUBLIC=true`)
 
@@ -109,7 +109,7 @@ Authorization secret to protect the broadcasting endpoint (see [Ruby docs](../ru
 
 **--redis_url** (`ANYCABLE_REDIS_URL` or `REDIS_URL`)
 
-Redis URL to connect to (default: `"redis://localhost:6379/5"`). Used by the corresponding pub/sub, broadasting, and broker adapters.
+Redis URL to connect to (default: `"redis://localhost:6379/5"`). Used by the corresponding pub/sub, broadcasting, and broker adapters.
 
 **--redis_channel** (`ANYCABLE_REDIS_CHANNEL`)
 
@@ -119,7 +119,7 @@ Redis channel for broadcasting (default: `"__anycable__"`). When using the `redi
 
 **--nats_servers** (`ANYCABLE_NATS_SERVERS`)
 
-The list of [NATS][] servers to connect to (default: `"nats://localhost:4222"`). Used by the corresponding pub/sub, broadasting, and broker adapters.
+The list of [NATS][] servers to connect to (default: `"nats://localhost:4222"`). Used by the corresponding pub/sub, broadcasting, and broker adapters.
 
 **--nats_channel** (`ANYCABLE_NATS_CHANNEL`)
 
