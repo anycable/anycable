@@ -55,7 +55,7 @@ $ curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer my-
 broadcast_key = OpenSSL::HMAC.hexdigest("SHA256", "<APPLICATION SECRET>", "broadcast-cable")
 ```
 
-When using AnyCable SDKs, you don't need to calculate it yourself. But if you want to publish broadcasts using a custom implementation, you can generate a broadcast key for your secret key as follows:
+When using official AnyCable server libraries, you don't need to calculate it yourself (they all use the same inference mechanism). But if you want to publish broadcasts using a custom implementation, you can generate a broadcast key for your secret key as follows:
 
 ```sh
 echo -n 'broadcast-cable' | openssl dgst -sha256 -hmac '<your secret>' | awk '{print $2}'

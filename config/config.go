@@ -89,3 +89,7 @@ func NewConfig() Config {
 
 	return config
 }
+
+func (c Config) IsPublic() bool {
+	return c.SkipAuth && c.Streams.Public
+}

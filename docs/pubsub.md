@@ -13,7 +13,7 @@ Although, we do not plan to sunset legacy, distributed adapters in the nearest f
 
 By default, pub/sub is disabled (since the default broadcast adapter is legacy, fan-out Redis). To enable the pub/sub layer, you must provide the name of the provider via the `--pubsub` option.
 
-You also need to enable a compatible broadcasting adapter. See [Broadcast adapters](/ruby/broadcast_adapters.md).
+You also need to enable a compatible broadcasting adapter. See [broadcasting](./broadcasting.md).
 
 **NOTE**: It's safe to enable `--pubsub` even if you're still using legacy broadcasting adapters (they do not pass messages through the pub/sub layer).
 

@@ -70,7 +70,7 @@ INFO 2023-07-04T02:00:24.386Z consumer=s2IbkM context=broadcast id=s2IbkM provid
 ...
 ```
 
-See [Broadcast adapters](/ruby/broadcast_adapters.md) for more information.
+See [broadcasting documentation](./broadcasting.md) for more information.
 
 Finally, to re-transmit _registered_ messages within a cluster, you MUST also configure a pub/sub adapter (via the `--pubsub` option). The command will look as follows:
 

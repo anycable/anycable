@@ -41,7 +41,7 @@ Supports wildcards, e.g., `--allowed_origins=*.evilmartians.io,www.evilmartians.
 
 **--broadcast_adapter** (`ANYCABLE_BROADCAST_ADAPTER`, default: `redis`)
 
-[Broadcasting adapter](../ruby/broadcast_adapters.md) to use. Available options: `redis` (default), `redisx`, `nats`, and `http`.
+[Broadcasting adapter](./broadcasting.md) to use. Available options: `redis` (default), `redisx`, `nats`, and `http`.
 
 When HTTP adapter is used, AnyCable-Go accepts broadcasting requests on `:8090/_broadcast`.
 
@@ -190,17 +190,6 @@ For example, using the following URL, you can set the ping interval to 10 second
 ws://localhost:8080/cable?pi=10&ptp=ms
 ```
 
-## HTTP RPC
-
-When using HTTP RPC, you can specify the following additional options:
-
-- `http_rpc_secret`: a secret token used to authenticate RPC requests.
-- `http_rpc_timeout`: timeout for RPC requests (default: 3s).
-
-You MUST use `rpc_host` configuration option to provide the URL for HTTP RPC, e.g.: `https://my.web.app/anycable`.
-
-Please, refer to the [RPC over](../ruby/http_rpc.md) documentation for more information about this communication mode.
-
 ## TLS
 
 To secure your `anycable-go` server provide the paths to SSL certificate and private key:
@@ -216,45 +205,6 @@ If your RPC server requires TLS you can enable it via `--rpc_enable_tls` (`ANYCA
 If RPC server uses certificate issued by private CA, then you can pass either its file path or PEM contents with `--rpc_tls_root_ca` (`ANYCABLE_RPC_TLS_ROOT_CA`).
 
 If RPC uses self-signed certificate, you can disable RPC server certificate verification by setting `--rpc_tls_verify` (`ANYCABLE_RPC_TLS_VERIFY`) to `false`, but this is insecure, use only in test/development.
-
-## Concurrency settings
-
-AnyCable-Go uses a single Go gRPC client\* to communicate with AnyCable RPC servers (see [the corresponding PR](https://github.com/anycable/anycable-go/pull/88)). We limit the number of concurrent RPC calls to avoid flooding servers (and getting `ResourceExhausted` exceptions in response).
-
-\* A single _client_ doesn't necessary mean a single connection; a Go gRPC client could maintain multiple HTTP2 connections, for example, when using [DNS-based load balancing](../deployment/load_balancing).
-
-We limit the number of concurrent RPC calls at the application level (to prevent RPC servers overload). By default, the concurrency limit is equal to **28**, which is intentionally less than the default RPC size (see [Ruby configuration](../ruby/configuration.md#concurrency-settings)): there is a tiny lag between the times when the response is received by the client and the corresponding worker is returned to the pool. Thus, whenever you update the concurrency settings, make sure that the AnyCable-Go value is _slightly less_ than the AnyCable-RPC one.
-
-You can change this value via `--rpc_concurrency` (`ANYCABLE_RPC_CONCURRENCY`) parameter.
-
-## Adaptive concurrency
-
-<p class="pro-badge-header"></p>
-
-AnyCable-Go Pro provides the **adaptive concurrency** feature. When it is enabled, AnyCable-Go automatically adjusts its RPC concurrency limit depending on the two factors: the number of `ResourceExhausted` errors (indicating that the current concurrency limit is greater than RPC servers capacity) and the number of pending RPC calls (indicating the current concurrency is too small to process incoming messages). The first factor (exhausted errors) has a priority (so if we have both a huge backlog and a large number of errors we decrease the concurrency limit).
-
-You can enable the adaptive concurrency by specifying 0 as the `--rpc_concurrency` value:
-
-```sh
-$ anycable-go --rpc_concurrency=0
-
-...
-
-INFO 2023-02-23T15:26:13.649Z context=rpc RPC controller initialized: \
-  localhost:50051 (concurrency: auto (initial=25, min=5, max=100), enable_tls: false, proto_versions: v1)
-```
-
-You should see the `(concurrency: auto (...))` in the logs. You can also specify the upper and lower bounds for concurrency via the following parameters:
-
-```sh
-$ anycable-go \
-  --rpc_concurrency=0 \
-  --rpc_concurrency_initial=30 \
-  --rpc_concurrency_max=50 \
-  --rpc_concurrency_min=5
-```
-
-You can also monitor the current concurrency value via the `rpc_capacity_num` metrics.
 
 ## Disconnect settings
 

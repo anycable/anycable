@@ -1,10 +1,10 @@
-# Getting Started with AnyCable-Go
+# Getting Started with AnyCable
 
-AnyCable-Go is a WebSocket server for AnyCable written in Golang.
+AnyCable is a language-agnostic real-time server focused on performance and reliability written in Go.
+
+> The quickest way to get AnyCable is to use our managed (and free) solution: [plus.anycable.io](https://plus.anycable.io)
 
 ## Installation
-
-> The quickest way to get AnyCable for production is to use our hosted version: [plus.anycable.io](https://plus.anycable.io)
 
 The easiest way to install AnyCable-Go is to [download](https://github.com/anycable/anycable-go/releases) a pre-compiled binary.
 
@@ -12,18 +12,9 @@ MacOS users could install it with [Homebrew](https://brew.sh/)
 
 ```sh
 brew install anycable-go
-
-# or use --HEAD option for edge versions
-brew install anycable-go --HEAD
 ```
 
 Arch Linux users can install [anycable-go package from AUR](https://aur.archlinux.org/packages/anycable-go/).
-
-Of course, you can install it from source too:
-
-```sh
-go get -u -f github.com/anycable/anycable-go/cmd/anycable-go
-```
 
 ### Via NPM
 
@@ -38,27 +29,27 @@ yarn add --dev @anycable/anycable-go
 npx anycable-go
 ```
 
-**NOTE:** The version of the NPM package is the same as the version of the AnyCable-Go binary (which is downloaded automatically on the first run).
+**NOTE:** The version of the NPM package is the same as the version of the AnyCable server binary (which is downloaded automatically on the first run).
 
 ## Usage
 
-Run server:
+After installation, you can run AnyCable as follows:
 
 ```sh
 $ anycable-go
 
-=> INFO time context=main Starting AnyCable v1.4.8 (pid: 12902, open files limit: 524288, gomaxprocs: 4)
+2024-03-06 13:38:07.545 INF Starting AnyCable 1.5.0-4f16b99 (with mruby 1.2.0 (2015-11-17)) (pid: 8289, open file limit: 122880, gomaxprocs: 8) nodeid=hj2mXN
+...
+2024-03-06 13:38:56.490 INF RPC controller initialized: localhost:50051 (concurrency: 28, impl: grpc, enable_tls: false, proto_versions: v1) nodeid=FlCtwf context=rpc
 ```
 
-By default, `anycable-go` tries to connect to a gRPC server listening at `localhost:50051` (the default host for the Ruby gem).
-
-You can change this setting by providing `--rpc_host` option or `ANYCABLE_RPC_HOST` env variable (read more about [configuration](./configuration.md)).
-
-All other configuration parameters have the same default values as the corresponding parameters for the AnyCable RPC server, so you don't need to change them usually.
-
-### Standalone mode (pub/sub only)
+By default, AnyCable tries to connect to a gRPC server listening at `localhost:50051` (the default host for the Ruby gem).
 
 AnyCable is designed as a logic-less proxy for your real-time features relying on a backend server to authenticate connections, authorize subscriptions and process incoming messages. That's why our default configuration assumes having an RPC server to handle all this logic.
+
+You can read more about AnyCable RPC in the [corresponding documentation](./rpc.md).
+
+### Standalone mode (pub/sub only)
 
 For pure pub/sub functionality, you can use AnyCable in a standalone mode, without any RPC servers. For that, you must configure the following features:
 
@@ -68,16 +59,69 @@ For pure pub/sub functionality, you can use AnyCable in a standalone mode, witho
 
 There is also a shortcut option `--public` to enable both `--noauth` and `--public_streams` options. **Use it with caution**.
 
+You can also explicitly disable the RPC component by specifying the `--norpc` option.
+
 Thus, to run AnyCable real-time server in an insecure standalone mode, use the following command:
 
 ```sh
 $ anycable-go --public
 
+2024-03-06 14:00:12.549 INF Starting AnyCable 1.5.0-4f16b99 (with mruby 1.2.0 (2015-11-17)) (pid: 17817, open file limit: 122880, gomaxprocs: 8) nodeid=wAhWDB
+2024-03-06 14:00:12.549 WRN Server is running in the public mode nodeid=wAhWDB
 ...
 ```
 
 To secure access to AnyCable server, specify either the `--jwt_secret` or `--streams_secret` option. There is also the `--secret` shortcut:
 
 ```sh
-anycable-go --secret=VERY_SECRET_VALUE
+anycable-go --secret=VERY_SECRET_VALUE --norpc
 ```
+
+Read more about pub/sub mode in the [signed streams documentation](./signed_streams.md).
+
+### Connecting to AnyCable
+
+AnyCable uses the [Action Cable protocol][protocol] for client-server communication. We recommend using our official [JavaScript client library][anycable-client] for all JavaScript/TypeScript runtimes:
+
+```js
+import { createCable } from '@anycable/web'
+
+const cable = createCable(CABLE_URL)
+
+const subscription = cable.subscribeTo('ChatChannel', { roomId: '42' })
+
+const _ = await subscription.perform('speak', { msg: 'Hello' })
+
+subscription.on('message', msg => {
+  if (msg.type === 'typing') {
+    console.log(`User ${msg.name} is typing`)
+  } else {
+    console.log(`${msg.name}: ${msg.text}`)
+  }
+})
+```
+
+**Note**: The snippet above assumes having a "ChatChannel" defined in your application (which is connected to AnyCable via RPC).
+
+You can also use:
+
+- Third-party Action Cable-compatible clients.
+
+- EventSource (Server-Sent Events) connections ([more info](./sse.md)).
+
+- Custom WebSocket clients following the [Action Cable protocol][protocol].
+
+AnyCable Pro also supports:
+
+- Apollo GraphQL WebSocket clients ([more info](./apollo.md))
+
+- HTTP streaming (long-polling) ([more info](./long_polling.md))
+
+- OCPP WebSocket clients ([more info](./ocpp.md))
+
+### Broadcasting messages
+
+Finally, to broadcast messages to connected clients via the name pub/sub streams, you can use one of the provided [broadcast adapters](./broadcasting.md).
+
+[anycable-client]: https://github.com/anycable/anycable-client
+[protocol]: ../misc/action_cable_protocol.md

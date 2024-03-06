@@ -52,7 +52,7 @@ You can use [AnyCable JS client](https://github.com/anycable/anycable-client) li
 
 ## Broadcasting messages
 
-Broker is responsible for **registering broadcast messages**. Each message MUST be registered once; thus, we MUST use a broadcasting method which publishes messages to a single node in a cluster (see [Broadcast adapters](../ruby/broadcast_adapters.md)). Currently, `http` and `redisx` adapters are supported.
+Broker is responsible for **registering broadcast messages**. Each message MUST be registered once; thus, we MUST use a broadcasting method which publishes messages to a single node in a cluster (see [broadcasting](./broadcasting.md)). Currently, `http` and `redisx` adapters are supported.
 
 **NOTE:** When legacy adapters are used, enabling a broker has no effect.
 
