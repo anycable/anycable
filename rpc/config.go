@@ -54,6 +54,8 @@ type Config struct {
 	Secret string
 	// Timeout for HTTP RPC requests (in ms)
 	RequestTimeout int
+	// SecretBase is a secret used to generate authentication token
+	SecretBase string
 }
 
 // NewConfig builds a new config

@@ -259,13 +259,55 @@ It has no effect anymore, use public streams instead.`)
 		c.RPC.Implementation = "none"
 	}
 
-	configureSecrets(
-		c.Secret,
-		&c.Streams.Secret,
-		&c.JWT.Secret,
-		&c.HTTPBroadcast.Secret,
-		&c.RPC.Secret,
-	)
+	// Legacy HTTP authentication stuff
+	if c.HTTPBroadcast.Secret == "" {
+		c.HTTPBroadcast.Secret = c.BroadcastKey
+	}
+
+	// Fallback secrets
+	if c.Secret != "" {
+		if c.Streams.Secret == "" {
+			c.Streams.Secret = c.Secret
+		}
+
+		if c.JWT.Secret == "" {
+			c.JWT.Secret = c.Secret
+		}
+
+		if c.HTTPBroadcast.Secret == "" {
+			c.HTTPBroadcast.SecretBase = c.Secret
+		}
+
+		if c.RPC.Secret == "" {
+			c.RPC.SecretBase = c.Secret
+		}
+	}
+
+	// Nullify none secrets
+	if c.Streams.Secret == "none" {
+		c.Streams.Secret = ""
+	}
+
+	if c.JWT.Secret == "none" {
+		c.JWT.Secret = ""
+	}
+
+	if c.RPC.Secret == "none" {
+		c.RPC.Secret = ""
+	}
+
+	if c.HTTPBroadcast.Secret == "none" {
+		c.HTTPBroadcast.Secret = ""
+	}
+
+	// Configure default HTTP port
+	if c.HTTPBroadcast.Port == 0 {
+		if c.HTTPBroadcast.IsSecured() {
+			c.HTTPBroadcast.Port = c.Port
+		} else {
+			c.HTTPBroadcast.Port = 8090
+		}
+	}
 
 	// Configure public mode and other insecure features
 	if isPublic {
@@ -273,6 +315,7 @@ It has no effect anymore, use public streams instead.`)
 		c.Streams.Public = true
 		// Ensure broadcasting is also public
 		c.HTTPBroadcast.Secret = ""
+		c.HTTPBroadcast.SecretBase = ""
 	}
 
 	return &c, nil, false
@@ -342,6 +385,13 @@ func serverCLIFlags(c *config.Config, path *string, isPublic *bool) []cli.Flag {
 			Usage:       "A common secret key used by all features by default",
 			Value:       c.Secret,
 			Destination: &c.Secret,
+		},
+
+		&cli.StringFlag{
+			Name:        "broadcast_key",
+			Usage:       "An authentication key for broadcast requests",
+			Value:       c.BroadcastKey,
+			Destination: &c.BroadcastKey,
 		},
 
 		&cli.BoolFlag{
@@ -542,8 +592,9 @@ func httpBroadcastCLIFlags(c *config.Config) []cli.Flag {
 
 		&cli.StringFlag{
 			Name:        "http_broadcast_secret",
-			Usage:       "HTTP pub/sub authorization secret",
+			Usage:       "[Deprecated] HTTP pub/sub authorization secret",
 			Destination: &c.HTTPBroadcast.Secret,
+			Hidden:      true,
 		},
 	})
 }
@@ -1217,16 +1268,4 @@ func parseTags(str string) map[string]string {
 	}
 
 	return res
-}
-
-func configureSecrets(source string, targets ...*string) {
-	for _, t := range targets {
-		if (*t) == "" {
-			(*t) = source
-		}
-
-		if (*t) == "none" {
-			(*t) = ""
-		}
-	}
 }

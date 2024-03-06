@@ -42,7 +42,7 @@ var (
 	// MaxConn is a default configuration for maximum connections
 	MaxConn int
 	// Default logger
-	Logger *slog.Logger
+	Logger *slog.Logger = slog.Default()
 )
 
 // ForPort creates new or returns the existing server for the specified port

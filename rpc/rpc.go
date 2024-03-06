@@ -13,6 +13,8 @@ import (
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/protocol"
+	"github.com/anycable/anycable-go/utils"
+	"github.com/joomcode/errorx"
 
 	pb "github.com/anycable/anycable-go/protos"
 	"google.golang.org/grpc"
@@ -44,6 +46,8 @@ const (
 	metricsRPCPending      = "rpc_pending_num"
 	metricsRPCCapacity     = "rpc_capacity_num"
 	metricsGRPCActiveConns = "grpc_active_conn_num"
+
+	secretKeyPhrase = "rpc-cable"
 )
 
 type grpcClientHelper struct {
@@ -198,6 +202,19 @@ func (c *Controller) Start() error {
 		switch impl {
 		case "http":
 			var err error
+
+			if c.config.Secret == "" && c.config.SecretBase != "" {
+				secret, verr := utils.NewMessageVerifier(c.config.SecretBase).Sign([]byte(secretKeyPhrase))
+
+				if verr != nil {
+					verr = errorx.Decorate(verr, "failed to auto-generate authentication key for HTTP RPC")
+					return verr
+				}
+
+				c.log.Info("auto-generated authorization secret from the application secret")
+				c.config.Secret = string(secret)
+			}
+
 			dialer, err = NewHTTPDialer(c.config)
 			if err != nil {
 				return err

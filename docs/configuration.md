@@ -81,7 +81,11 @@ Comma-separated list of cookies to proxy to RPC (default: all cookies).
 
 **--secret** (`ANYCABLE_SECRET`)
 
-A common secret key used by all AnyCable features by default (i.e., unless a specific key is specified): [JWT authentication](./jwt_identification.md), [signed streams](./signed_streams.md), etc.
+A common secret key used by the following components (unless a specific key is specified): [JWT authentication](./jwt_identification.md), [signed streams](./signed_streams.md).
+
+**--broadcast_key** (`ANYCABLE_BROADCAST_KEY`)
+
+A secret key used to authenticate broadcast requests. See [broadcasting docs](./broadcasting.md). You can use the special "none" value to disable broadcasting authentication.
 
 **--noauth** (`ANYCABLE_NOAUTH=true`)
 
@@ -93,17 +97,13 @@ Setting this value allows direct subscribing to streams using unsigned names (se
 
 **--public** (`ANYCABLE_PUBLIC=true`)
 
-This is a shortcut to specify both `--noauth` and `--public_streams` and remove the protection from HTTP broadcasting endpoint (`--http_broadcast_secret=""`), so you can use AnyCable without any protection. **Do not do this in production**.
+This is a shortcut to specify both `--noauth`, `--public_streams` and `--broadcast_key=none`, so you can use AnyCable without any protection. **Do not do this in production**.
 
 ## HTTP API
 
 **--http_broadcast_port** (`ANYCABLE_HTTP_BROADCAST_PORT`, default: `8090`)
 
 You can specify on which port to receive broadcasting requests (NOTE: it could be the same port as the main HTTP server listens to).
-
-**--http_broadcast_secret** (`ANYCABLE_HTTP_BROADCAST_SECRET`)
-
-Authorization secret to protect the broadcasting endpoint (see [Ruby docs](../ruby/broadcast_adapters.md#securing-http-endpoint)). If this value is not set, the `--secret` setting is used.
 
 ## Redis configuration
 

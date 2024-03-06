@@ -9,6 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/joomcode/errorx"
 )
 
 type MessageVerifier struct {
@@ -27,9 +29,13 @@ func (m *MessageVerifier) Generate(payload interface{}) (string, error) {
 	}
 
 	encoded := base64.StdEncoding.EncodeToString(payloadJson)
-	digest := hmac.New(sha256.New, m.key)
-	digest.Write([]byte(encoded))
-	signature := []byte(fmt.Sprintf("%x", digest.Sum(nil)))
+
+	signature, err := m.Sign([]byte(encoded))
+
+	if err != nil {
+		return "", err
+	}
+
 	signed := encoded + "--" + string(signature)
 	return signed, nil
 }
@@ -72,8 +78,23 @@ func (m *MessageVerifier) isValid(msg string) bool {
 	data := []byte(parts[0])
 	digest := []byte(parts[1])
 
+	return m.VerifySignature(data, digest)
+}
+
+func (m *MessageVerifier) Sign(payload []byte) ([]byte, error) {
+	digest := hmac.New(sha256.New, m.key)
+	_, err := digest.Write(payload)
+
+	if err != nil {
+		return nil, errorx.Decorate(err, "failed to sign payload")
+	}
+
+	return []byte(fmt.Sprintf("%x", digest.Sum(nil))), nil
+}
+
+func (m *MessageVerifier) VerifySignature(payload []byte, digest []byte) bool {
 	h := hmac.New(sha256.New, m.key)
-	h.Write(data)
+	h.Write(payload)
 
 	actual := []byte(fmt.Sprintf("%x", h.Sum(nil)))
 

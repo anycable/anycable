@@ -22,6 +22,7 @@ import (
 type Config struct {
 	ID                   string
 	Secret               string
+	BroadcastKey         string
 	SkipAuth             bool
 	App                  node.Config
 	RPC                  rpc.Config

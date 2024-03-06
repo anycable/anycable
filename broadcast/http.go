@@ -9,11 +9,13 @@ import (
 	"strconv"
 
 	"github.com/anycable/anycable-go/server"
+	"github.com/anycable/anycable-go/utils"
+	"github.com/joomcode/errorx"
 )
 
 const (
-	defaultHTTPPort = 8090
-	defaultHTTPPath = "/_broadcast"
+	defaultHTTPPath    = "/_broadcast"
+	broadcastKeyPhrase = "broadcast-cable"
 )
 
 // HTTPConfig contains HTTP pubsub adapter configuration
@@ -24,20 +26,26 @@ type HTTPConfig struct {
 	Path string
 	// Secret token to authorize requests
 	Secret string
+	// SecretBase is a secret used to generate a token if none provided
+	SecretBase string
 }
 
 // NewHTTPConfig builds a new config for HTTP pub/sub
 func NewHTTPConfig() HTTPConfig {
 	return HTTPConfig{
-		Port: defaultHTTPPort,
 		Path: defaultHTTPPath,
 	}
+}
+
+func (c *HTTPConfig) IsSecured() bool {
+	return c.Secret != "" || c.SecretBase != ""
 }
 
 // HTTPBroadcaster represents HTTP broadcaster
 type HTTPBroadcaster struct {
 	port       int
 	path       string
+	conf       *HTTPConfig
 	authHeader string
 	server     *server.HTTPServer
 	node       Handler
@@ -48,18 +56,12 @@ var _ Broadcaster = (*HTTPBroadcaster)(nil)
 
 // NewHTTPBroadcaster builds a new HTTPSubscriber struct
 func NewHTTPBroadcaster(node Handler, config *HTTPConfig, l *slog.Logger) *HTTPBroadcaster {
-	authHeader := ""
-
-	if config.Secret != "" {
-		authHeader = fmt.Sprintf("Bearer %s", config.Secret)
-	}
-
 	return &HTTPBroadcaster{
-		node:       node,
-		log:        l.With("context", "broadcast").With("provider", "http"),
-		port:       config.Port,
-		path:       config.Path,
-		authHeader: authHeader,
+		node: node,
+		log:  l.With("context", "broadcast").With("provider", "http"),
+		port: config.Port,
+		path: config.Path,
+		conf: config,
 	}
 }
 
@@ -75,10 +77,38 @@ func (s *HTTPBroadcaster) Start(done chan (error)) error {
 		return err
 	}
 
+	authHeader := ""
+
+	if s.conf.Secret == "" && s.conf.SecretBase != "" {
+		secret, err := utils.NewMessageVerifier(s.conf.SecretBase).Sign([]byte(broadcastKeyPhrase))
+
+		if err != nil {
+			err = errorx.Decorate(err, "failed to auto-generate authentication key for HTTP broadcaster")
+			return err
+		}
+
+		s.log.Info("auto-generated authorization secret from the application secret")
+		s.conf.Secret = string(secret)
+	}
+
+	if s.conf.Secret != "" {
+		authHeader = fmt.Sprintf("Bearer %s", s.conf.Secret)
+	}
+
+	s.authHeader = authHeader
+
 	s.server = server
 	s.server.SetupHandler(s.path, http.HandlerFunc(s.Handler))
 
-	s.log.Info(fmt.Sprintf("Accept broadcast requests at %s%s", s.server.Address(), s.path))
+	var verifiedVia string
+
+	if s.authHeader != "" {
+		verifiedVia = "authorization required"
+	} else {
+		verifiedVia = "no authorization"
+	}
+
+	s.log.Info(fmt.Sprintf("Accept broadcast requests at %s%s (%s)", s.server.Address(), s.path, verifiedVia))
 
 	go func() {
 		if err := s.server.StartAndAnnounce("broadcasting HTTP server"); err != nil {

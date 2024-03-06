@@ -1,5 +1,5 @@
 launch :anycable,
-  "./dist/anycable-go --sse --public_streams --secret=qwerty --broadcast_adapter=http --presets=broker --http_broadcast_secret=none"
+  "./dist/anycable-go --sse --public_streams --secret=qwerty --broadcast_adapter=http --presets=broker"
 
 wait_tcp 8080
 
@@ -18,9 +18,15 @@ url = "http://localhost:8080/events?jid=#{token}&identifier=#{identifier}"
 
 Event = Struct.new(:type, :data, :id, :retry)
 
+# echo -n 'broadcast-cable' | openssl dgst -sha256 -hmac 'qwerty' | awk '{print $2}'
+BROADCAST_KEY = "42923a28b760e667fc92f7c6123bb07a282822b329dd2ef48e7aee7830d98485"
+
 def broadcast(stream, data)
-  uri = URI.parse("http://localhost:8090/_broadcast")
-  header = {"Content-Type": "application/json"}
+  uri = URI.parse("http://localhost:8080/_broadcast")
+  header = {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer #{BROADCAST_KEY}"
+  }
   data = {stream: stream, data: data.to_json}
   http = Net::HTTP.new(uri.host, uri.port)
   request = Net::HTTP::Post.new(uri.request_uri, header)
