@@ -8,7 +8,6 @@ import (
 	"github.com/anycable/anycable-go/metrics"
 	nconfig "github.com/anycable/anycable-go/nats"
 	"github.com/anycable/anycable-go/node"
-	"github.com/anycable/anycable-go/rails"
 	rconfig "github.com/anycable/anycable-go/redis"
 	"github.com/anycable/anycable-go/rpc"
 	"github.com/anycable/anycable-go/server"
@@ -22,6 +21,8 @@ import (
 // Config contains main application configuration
 type Config struct {
 	ID                   string
+	Secret               string
+	SkipAuth             bool
 	App                  node.Config
 	RPC                  rpc.Config
 	BrokerAdapter        string
@@ -48,7 +49,6 @@ type Config struct {
 	Debug                bool
 	Metrics              metrics.Config
 	JWT                  identity.JWTConfig
-	Rails                rails.Config
 	EmbedNats            bool
 	EmbeddedNats         enats.Config
 	SSE                  sse.Config
@@ -81,7 +81,6 @@ func NewConfig() Config {
 		NATS:             nconfig.NewNATSConfig(),
 		DisconnectQueue:  node.NewDisconnectQueueConfig(),
 		JWT:              identity.NewJWTConfig(""),
-		Rails:            rails.NewConfig(),
 		EmbeddedNats:     enats.NewConfig(),
 		SSE:              sse.NewConfig(),
 		Streams:          streams.NewConfig(),

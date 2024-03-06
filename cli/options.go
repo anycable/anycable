@@ -59,6 +59,12 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 	var metricsFilter string
 	var enatsRoutes, enatsGateways string
 	var presets string
+	var turboRailsKey, cableReadyKey string
+	var turboRailsClearText, cableReadyClearText bool
+	var jwtIdKey, jwtIdParam string
+	var jwtIdEnforce bool
+	var noRPC bool
+	var isPublic bool
 
 	// Print raw version without prefix
 	cli.VersionPrinter = func(cCtx *cli.Context) {
@@ -66,21 +72,21 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 	}
 
 	flags := []cli.Flag{}
-	flags = append(flags, serverCLIFlags(&c, &path)...)
+	flags = append(flags, serverCLIFlags(&c, &path, &isPublic)...)
 	flags = append(flags, sslCLIFlags(&c)...)
 	flags = append(flags, broadcastCLIFlags(&c)...)
 	flags = append(flags, brokerCLIFlags(&c)...)
 	flags = append(flags, redisCLIFlags(&c)...)
 	flags = append(flags, httpBroadcastCLIFlags(&c)...)
 	flags = append(flags, natsCLIFlags(&c)...)
-	flags = append(flags, rpcCLIFlags(&c, &headers, &cookieFilter)...)
+	flags = append(flags, rpcCLIFlags(&c, &headers, &cookieFilter, &noRPC)...)
 	flags = append(flags, disconnectorCLIFlags(&c)...)
 	flags = append(flags, logCLIFlags(&c)...)
 	flags = append(flags, metricsCLIFlags(&c, &metricsFilter, &mtags)...)
 	flags = append(flags, wsCLIFlags(&c)...)
 	flags = append(flags, pingCLIFlags(&c)...)
-	flags = append(flags, jwtCLIFlags(&c)...)
-	flags = append(flags, signedStreamsCLIFlags(&c)...)
+	flags = append(flags, jwtCLIFlags(&c, &jwtIdKey, &jwtIdParam, &jwtIdEnforce)...)
+	flags = append(flags, signedStreamsCLIFlags(&c, &turboRailsKey, &cableReadyKey, &turboRailsClearText, &cableReadyClearText)...)
 	flags = append(flags, statsdCLIFlags(&c)...)
 	flags = append(flags, embeddedNatsCLIFlags(&c, &enatsRoutes, &enatsGateways)...)
 	flags = append(flags, sseCLIFlags(&c)...)
@@ -188,40 +194,98 @@ Use shutdown_timeout instead.`)
 
 	c.SSE.AllowedOrigins = c.WS.AllowedOrigins
 
-	if c.Rails.TurboRailsKey != "" {
+	if turboRailsKey != "" {
 		fmt.Println(`DEPRECATION WARNING: turbo_rails_key option is deprecated
 and will be removed in the next major release of anycable-go.
 Use streams_secret instead.`)
 
 		if c.Streams.Secret == "" {
-			c.Streams.Secret = c.Rails.TurboRailsKey
+			c.Streams.TurboSecret = turboRailsKey
 		}
 
 		c.Streams.Turbo = true
 	}
 
-	if c.Rails.TurboRailsClearText {
+	if turboRailsClearText {
 		fmt.Println(`DEPRECATION WARNING: turbo_rails_cleartext option is deprecated
 and will be removed in the next major release of anycable-go.
 It has no effect anymore, use public streams instead.`)
 	}
 
-	if c.Rails.CableReadyKey != "" {
+	if cableReadyKey != "" {
 		fmt.Println(`DEPRECATION WARNING: cable_ready_key option is deprecated
 and will be removed in the next major release of anycable-go.
 Use streams_secret instead.`)
 
 		if c.Streams.Secret == "" {
-			c.Streams.Secret = c.Rails.CableReadyKey
+			c.Streams.CableReadySecret = cableReadyKey
 		}
 
 		c.Streams.CableReady = true
 	}
 
-	if c.Rails.CableReadyClearText {
+	if cableReadyClearText {
 		fmt.Println(`DEPRECATION WARNING: cable_ready_cleartext option is deprecated
 and will be removed in the next major release of anycable-go.
 It has no effect anymore, use public streams instead.`)
+	}
+
+	if jwtIdKey != "" {
+		fmt.Println(`DEPRECATION WARNING: jwt_id_key option is deprecated
+		and will be removed in the next major release of anycable-go.
+		Use jwt_secret instead.`)
+
+		if c.JWT.Secret == "" {
+			c.JWT.Secret = jwtIdKey
+		}
+	}
+
+	if jwtIdParam != "" {
+		fmt.Println(`DEPRECATION WARNING: jwt_id_param option is deprecated
+		and will be removed in the next major release of anycable-go.
+		Use jwt_param instead.`)
+
+		if c.JWT.Param == "" {
+			c.JWT.Param = jwtIdParam
+		}
+	}
+
+	if jwtIdEnforce {
+		fmt.Println(`DEPRECATION WARNING: jwt_id_enforce option is deprecated
+		and will be removed in the next major release of anycable-go.
+		Use enfore_jwt instead.`)
+
+		c.JWT.Force = true
+	}
+
+	// Configure RPC
+	if noRPC {
+		c.RPC.Implementation = "none"
+	}
+
+	// Configure secrets
+	if c.Streams.Secret == "" {
+		c.Streams.Secret = c.Secret
+	}
+
+	if c.JWT.Secret == "" {
+		c.JWT.Secret = c.Secret
+	}
+
+	if c.HTTPBroadcast.Secret == "" {
+		c.HTTPBroadcast.Secret = c.Secret
+	}
+
+	if c.RPC.Secret == "" {
+		c.RPC.Secret = c.Secret
+	}
+
+	// Configure public mode
+	if isPublic {
+		c.SkipAuth = true
+		c.Streams.Public = true
+		// Ensure broadcasting is also public
+		c.HTTPBroadcast.Secret = ""
 	}
 
 	return &c, nil, false
@@ -269,7 +333,7 @@ var (
 )
 
 // serverCLIFlags returns base server flags
-func serverCLIFlags(c *config.Config, path *string) []cli.Flag {
+func serverCLIFlags(c *config.Config, path *string, isPublic *bool) []cli.Flag {
 	return withDefaults(serverCategoryDescription, []cli.Flag{
 		&cli.StringFlag{
 			Name:        "host",
@@ -284,6 +348,26 @@ func serverCLIFlags(c *config.Config, path *string) []cli.Flag {
 			Usage:       "Server port",
 			EnvVars:     []string{envPrefix + "PORT", "PORT"},
 			Destination: &c.Port,
+		},
+
+		&cli.StringFlag{
+			Name:        "secret",
+			Usage:       "A common secret key used by all features by default",
+			Value:       c.Secret,
+			Destination: &c.Secret,
+		},
+
+		&cli.BoolFlag{
+			Name:        "public",
+			Usage:       "[DANGER ZONE] Run server in the public mode allowing all connections and stream subscriptions",
+			Destination: isPublic,
+		},
+
+		&cli.BoolFlag{
+			Name:        "noauth",
+			Usage:       "[DANGER ZONE] Disable client authentication over RPC",
+			Value:       c.SkipAuth,
+			Destination: &c.SkipAuth,
 		},
 
 		&cli.IntFlag{
@@ -366,6 +450,7 @@ func broadcastCLIFlags(c *config.Config) []cli.Flag {
 			Usage:       "The size of the goroutines pool to broadcast messages",
 			Value:       c.App.HubGopoolSize,
 			Destination: &c.App.HubGopoolSize,
+			Hidden:      true,
 		},
 	})
 }
@@ -422,6 +507,7 @@ func redisCLIFlags(c *config.Config) []cli.Flag {
 			Usage:       "Interval to rediscover sentinels in seconds",
 			Value:       c.Redis.SentinelDiscoveryInterval,
 			Destination: &c.Redis.SentinelDiscoveryInterval,
+			Hidden:      true,
 		},
 
 		&cli.IntFlag{
@@ -429,6 +515,7 @@ func redisCLIFlags(c *config.Config) []cli.Flag {
 			Usage:       "Interval to periodically ping Redis to make sure it's alive",
 			Value:       c.Redis.KeepalivePingInterval,
 			Destination: &c.Redis.KeepalivePingInterval,
+			Hidden:      true,
 		},
 
 		&cli.BoolFlag{
@@ -436,6 +523,7 @@ func redisCLIFlags(c *config.Config) []cli.Flag {
 			Usage:       "Verify Redis server TLS certificate (only if URL protocol is rediss://)",
 			Value:       c.Redis.TLSVerify,
 			Destination: &c.Redis.TLSVerify,
+			Hidden:      true,
 		},
 
 		&cli.BoolFlag{
@@ -443,6 +531,7 @@ func redisCLIFlags(c *config.Config) []cli.Flag {
 			Usage:       "Disable client-side caching",
 			Value:       c.Redis.DisableCache,
 			Destination: &c.Redis.DisableCache,
+			Hidden:      true,
 		},
 	})
 }
@@ -493,6 +582,7 @@ func natsCLIFlags(c *config.Config) []cli.Flag {
 			Name:        "nats_dont_randomize_servers",
 			Usage:       "Pass this option to disable NATS servers randomization during (re-)connect",
 			Destination: &c.NATS.DontRandomizeServers,
+			Hidden:      true,
 		},
 	})
 }
@@ -512,6 +602,7 @@ func embeddedNatsCLIFlags(c *config.Config, routes *string, gateways *string) []
 			Usage:       "NATS server bind address",
 			Value:       c.EmbeddedNats.ServiceAddr,
 			Destination: &c.EmbeddedNats.ServiceAddr,
+			Hidden:      true,
 		},
 
 		&cli.StringFlag{
@@ -519,6 +610,7 @@ func embeddedNatsCLIFlags(c *config.Config, routes *string, gateways *string) []
 			Usage:       "NATS cluster service bind address",
 			Value:       c.EmbeddedNats.ClusterAddr,
 			Destination: &c.EmbeddedNats.ClusterAddr,
+			Hidden:      true,
 		},
 
 		&cli.StringFlag{
@@ -539,6 +631,7 @@ func embeddedNatsCLIFlags(c *config.Config, routes *string, gateways *string) []
 			Usage:       "NATS gateway bind address",
 			Value:       c.EmbeddedNats.GatewayAddr,
 			Destination: &c.EmbeddedNats.GatewayAddr,
+			Hidden:      true,
 		},
 
 		&cli.StringFlag{
@@ -559,6 +652,7 @@ func embeddedNatsCLIFlags(c *config.Config, routes *string, gateways *string) []
 			Usage:       "Embedded NATS store directory (for JetStream)",
 			Value:       c.EmbeddedNats.StoreDir,
 			Destination: &c.EmbeddedNats.StoreDir,
+			Hidden:      true,
 		},
 
 		&cli.StringFlag{
@@ -572,24 +666,32 @@ func embeddedNatsCLIFlags(c *config.Config, routes *string, gateways *string) []
 			Name:        "enats_debug",
 			Usage:       "Enable NATS server logs",
 			Destination: &c.EmbeddedNats.Debug,
+			Hidden:      true,
 		},
 
 		&cli.BoolFlag{
 			Name:        "enats_trace",
 			Usage:       "Enable NATS server protocol trace logs",
 			Destination: &c.EmbeddedNats.Trace,
+			Hidden:      true,
 		},
 	})
 }
 
 // rpcCLIFlags returns CLI flags for RPC
-func rpcCLIFlags(c *config.Config, headers, cookieFilter *string) []cli.Flag {
+func rpcCLIFlags(c *config.Config, headers, cookieFilter *string, isNone *bool) []cli.Flag {
 	return withDefaults(rpcCategoryDescription, []cli.Flag{
 		&cli.StringFlag{
 			Name:        "rpc_host",
 			Usage:       "RPC service address (full URL in case of HTTP RPC)",
 			Value:       c.RPC.Host,
 			Destination: &c.RPC.Host,
+		},
+
+		&cli.BoolFlag{
+			Name:        "norpc",
+			Usage:       "Disable RPC component and run server in the standalone mode",
+			Destination: isNone,
 		},
 
 		&cli.IntFlag{
@@ -603,6 +705,7 @@ func rpcCLIFlags(c *config.Config, headers, cookieFilter *string) []cli.Flag {
 			Name:        "rpc_enable_tls",
 			Usage:       "Enable client-side TLS with the RPC server",
 			Destination: &c.RPC.EnableTLS,
+			Hidden:      true,
 		},
 
 		&cli.BoolFlag{
@@ -610,12 +713,14 @@ func rpcCLIFlags(c *config.Config, headers, cookieFilter *string) []cli.Flag {
 			Usage:       "Whether to verify the RPC server certificate",
 			Destination: &c.RPC.TLSVerify,
 			Value:       true,
+			Hidden:      true,
 		},
 
 		&cli.StringFlag{
 			Name:        "rpc_tls_root_ca",
 			Usage:       "CA root certificate file path or contents in PEM format (if not set, system CAs will be used)",
 			Destination: &c.RPC.TLSRootCA,
+			Hidden:      true,
 		},
 
 		&cli.IntFlag{
@@ -623,6 +728,7 @@ func rpcCLIFlags(c *config.Config, headers, cookieFilter *string) []cli.Flag {
 			Usage:       "Override default MaxCallRecvMsgSize for RPC client (bytes)",
 			Value:       c.RPC.MaxRecvSize,
 			Destination: &c.RPC.MaxRecvSize,
+			Hidden:      true,
 		},
 
 		&cli.IntFlag{
@@ -630,6 +736,7 @@ func rpcCLIFlags(c *config.Config, headers, cookieFilter *string) []cli.Flag {
 			Usage:       "Override default MaxCallSendMsgSize for RPC client (bytes)",
 			Value:       c.RPC.MaxSendSize,
 			Destination: &c.RPC.MaxSendSize,
+			Hidden:      true,
 		},
 
 		&cli.StringFlag{
@@ -650,6 +757,7 @@ func rpcCLIFlags(c *config.Config, headers, cookieFilter *string) []cli.Flag {
 			Usage:       "RPC implementation (grpc, http)",
 			Value:       c.RPC.Implementation,
 			Destination: &c.RPC.Implementation,
+			Hidden:      true,
 		},
 
 		&cli.StringFlag{
@@ -664,6 +772,7 @@ func rpcCLIFlags(c *config.Config, headers, cookieFilter *string) []cli.Flag {
 			Usage:       "HTTP RPC timeout (in ms)",
 			Value:       c.RPC.RequestTimeout,
 			Destination: &c.RPC.RequestTimeout,
+			Hidden:      true,
 		},
 	})
 }
@@ -683,6 +792,7 @@ func disconnectorCLIFlags(c *config.Config) []cli.Flag {
 			Usage:       "Max number of Disconnect calls per second",
 			Value:       c.DisconnectQueue.Rate,
 			Destination: &c.DisconnectQueue.Rate,
+			Hidden:      true,
 		},
 
 		&cli.IntFlag{
@@ -770,6 +880,7 @@ func metricsCLIFlags(c *config.Config, filter *string, mtags *string) []cli.Flag
 			Name:        "metrics_log_formatter",
 			Usage:       "Specify the path to custom Ruby formatter script (only supported on MacOS and Linux)",
 			Destination: &c.Metrics.LogFormatter,
+			Hidden:      true,
 		},
 
 		&cli.StringFlag{
@@ -813,6 +924,7 @@ func wsCLIFlags(c *config.Config) []cli.Flag {
 			Usage:       "WebSocket connection read buffer size",
 			Value:       c.WS.ReadBufferSize,
 			Destination: &c.WS.ReadBufferSize,
+			Hidden:      true,
 		},
 
 		&cli.IntFlag{
@@ -820,6 +932,7 @@ func wsCLIFlags(c *config.Config) []cli.Flag {
 			Usage:       "WebSocket connection write buffer size",
 			Value:       c.WS.WriteBufferSize,
 			Destination: &c.WS.WriteBufferSize,
+			Hidden:      true,
 		},
 
 		&cli.Int64Flag{
@@ -827,12 +940,14 @@ func wsCLIFlags(c *config.Config) []cli.Flag {
 			Usage:       "Maximum size of a message in bytes",
 			Value:       c.WS.MaxMessageSize,
 			Destination: &c.WS.MaxMessageSize,
+			Hidden:      true,
 		},
 
 		&cli.BoolFlag{
 			Name:        "enable_ws_compression",
 			Usage:       "Enable experimental WebSocket per message compression",
 			Destination: &c.WS.EnableCompression,
+			Hidden:      true,
 		},
 
 		&cli.StringFlag{
@@ -858,6 +973,7 @@ func pingCLIFlags(c *config.Config) []cli.Flag {
 			Usage:       "Precision for timestamps in ping messages (s, ms, ns)",
 			Value:       c.App.PingTimestampPrecision,
 			Destination: &c.App.PingTimestampPrecision,
+			Hidden:      true,
 		},
 
 		&cli.IntFlag{
@@ -870,16 +986,30 @@ func pingCLIFlags(c *config.Config) []cli.Flag {
 }
 
 // jwtCLIFlags returns CLI flags for JWT
-func jwtCLIFlags(c *config.Config) []cli.Flag {
+func jwtCLIFlags(c *config.Config, jwtIdKey *string, jwtIdParam *string, jwtIdEnforce *bool) []cli.Flag {
 	return withDefaults(jwtCategoryDescription, []cli.Flag{
 		&cli.StringFlag{
 			Name:        "jwt_id_key",
+			Destination: jwtIdKey,
+			Usage:       "[Depracated]",
+			Hidden:      true,
+		},
+
+		&cli.StringFlag{
+			Name:        "jwt_secret",
 			Usage:       "The encryption key used to verify JWT tokens",
 			Destination: &c.JWT.Secret,
 		},
 
 		&cli.StringFlag{
 			Name:        "jwt_id_param",
+			Destination: jwtIdParam,
+			Usage:       "[Deprecated]",
+			Hidden:      true,
+		},
+
+		&cli.StringFlag{
+			Name:        "jwt_param",
 			Usage:       "The name of a query string param or an HTTP header carrying a token",
 			Value:       c.JWT.Param,
 			Destination: &c.JWT.Param,
@@ -887,6 +1017,13 @@ func jwtCLIFlags(c *config.Config) []cli.Flag {
 
 		&cli.BoolFlag{
 			Name:        "jwt_id_enforce",
+			Usage:       "[Deprecated]",
+			Destination: jwtIdEnforce,
+			Hidden:      true,
+		},
+
+		&cli.BoolFlag{
+			Name:        "enforce_jwt",
 			Usage:       "Whether to enforce token presence for all connections",
 			Destination: &c.JWT.Force,
 		},
@@ -894,7 +1031,7 @@ func jwtCLIFlags(c *config.Config) []cli.Flag {
 }
 
 // signedStreamsCLIFlags returns misc CLI flags
-func signedStreamsCLIFlags(c *config.Config) []cli.Flag {
+func signedStreamsCLIFlags(c *config.Config, turboRailsKey *string, cableReadyKey *string, turboRailsClearText *bool, cableReadyCleartext *bool) []cli.Flag {
 	return withDefaults(signedStreamsCategoryDescription, []cli.Flag{
 		&cli.StringFlag{
 			Name:        "streams_secret",
@@ -922,29 +1059,41 @@ func signedStreamsCLIFlags(c *config.Config) []cli.Flag {
 
 		&cli.StringFlag{
 			Name:        "turbo_rails_key",
-			Usage:       "[DEPRECATED] Enable Turbo Streams fastlane with the specified signing key",
-			Destination: &c.Rails.TurboRailsKey,
+			Usage:       "[Deprecated]",
+			Destination: turboRailsKey,
 			Hidden:      true,
+		},
+
+		&cli.StringFlag{
+			Name:        "turbo_streams_secret",
+			Usage:       "A custom secret to verify Turbo Streams",
+			Destination: &c.Streams.TurboSecret,
 		},
 
 		&cli.BoolFlag{
 			Name:        "turbo_rails_cleartext",
 			Usage:       "[DEPRECATED] Enable Turbo Streams fastlane without stream names signing",
-			Destination: &c.Rails.TurboRailsClearText,
+			Destination: turboRailsClearText,
 			Hidden:      true,
 		},
 
 		&cli.StringFlag{
 			Name:        "cable_ready_key",
-			Usage:       "[DEPRECATED] Enable CableReady fastlane with the specified signing key",
-			Destination: &c.Rails.CableReadyKey,
+			Usage:       "[Deprecated]",
+			Destination: cableReadyKey,
 			Hidden:      true,
+		},
+
+		&cli.StringFlag{
+			Name:        "cable_ready_secret",
+			Usage:       "A custom secret to verify CableReady streams",
+			Destination: &c.Streams.CableReadySecret,
 		},
 
 		&cli.BoolFlag{
 			Name:        "cable_ready_cleartext",
 			Usage:       "[DEPRECATED] Enable Cable Ready fastlane without stream names signing",
-			Destination: &c.Rails.CableReadyClearText,
+			Destination: cableReadyCleartext,
 			Hidden:      true,
 		},
 	})
@@ -969,6 +1118,7 @@ func statsdCLIFlags(c *config.Config) []cli.Flag {
 			Usage:       "Statsd client maximum UDP packet size",
 			Value:       c.Metrics.Statsd.MaxPacketSize,
 			Destination: &c.Metrics.Statsd.MaxPacketSize,
+			Hidden:      true,
 		},
 		&cli.StringFlag{
 			Name:        "statsd_tags_format",

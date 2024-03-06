@@ -1,5 +1,5 @@
 launch :anycable,
-  "./dist/anycable-go --sse --public_streams --jwt_id_key=qwerty --broadcast_adapter=http --presets=broker"
+  "./dist/anycable-go --sse --public_streams --secret=qwerty --broadcast_adapter=http --presets=broker"
 
 wait_tcp 8080
 

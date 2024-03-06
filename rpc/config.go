@@ -46,7 +46,7 @@ type Config struct {
 	MaxRecvSize int
 	// Max send msg size (bytes)
 	MaxSendSize int
-	// Underlying implementation (grpc, http)
+	// Underlying implementation (grpc, http, or none)
 	Implementation string
 	// Alternative dialer implementation
 	DialFun Dialer

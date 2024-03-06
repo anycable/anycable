@@ -17,6 +17,28 @@ type Identifier interface {
 	Identify(sid string, env *common.SessionEnv) (*common.ConnectResult, error)
 }
 
+type IdentifierPipeline struct {
+	identifiers []Identifier
+}
+
+var _ Identifier = (*IdentifierPipeline)(nil)
+
+func NewIdentifierPipeline(identifiers ...Identifier) *IdentifierPipeline {
+	return &IdentifierPipeline{identifiers}
+}
+
+func (p *IdentifierPipeline) Identify(sid string, env *common.SessionEnv) (*common.ConnectResult, error) {
+	for _, i := range p.identifiers {
+		res, err := i.Identify(sid, env)
+
+		if err != nil || res != nil {
+			return res, err
+		}
+	}
+
+	return nil, nil
+}
+
 type IdentifiableController struct {
 	controller node.Controller
 	identifier Identifier

@@ -505,3 +505,8 @@ func ConfirmationMessage(identifier string) string {
 func RejectionMessage(identifier string) string {
 	return string(utils.ToJSON(Reply{Identifier: identifier, Type: RejectedType}))
 }
+
+// DisconnectionMessage returns a disconnect message with the specified reason and reconnect flag
+func DisconnectionMessage(reason string, reconnect bool) string {
+	return string(utils.ToJSON(DisconnectMessage{Type: DisconnectType, Reason: reason, Reconnect: reconnect}))
+}

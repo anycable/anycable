@@ -178,11 +178,12 @@ func (t *Tracker) appProperties() map[string]interface{} {
 	props.Set("deploy", guessPlatform())
 
 	// Features
+	props.Set("has-secret", t.config.Secret != "")
+	props.Set("no-auth", t.config.SkipAuth)
 	props.Set("jwt", t.config.JWT.Enabled())
-	props.Set("turbo", t.config.Rails.TurboRailsKey != "")
-	props.Set("turbo-ct", t.config.Rails.TurboRailsClearText)
-	props.Set("cr", t.config.Rails.CableReadyKey != "")
-	props.Set("cr-ct", t.config.Rails.CableReadyClearText)
+	props.Set("public-streams", t.config.Streams.Public)
+	props.Set("turbo", t.config.Streams.Turbo)
+	props.Set("cr", t.config.Streams.CableReady)
 	props.Set("enats", t.config.EmbedNats)
 	props.Set("broadcast", t.config.BroadcastAdapter)
 	props.Set("pubsub", t.config.PubSubAdapter)

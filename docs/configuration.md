@@ -22,14 +22,6 @@ Here is the list of the most commonly used configuration parameters.
 
 Server host and port (default: `"localhost:8080"`).
 
-**--rpc_host** (`ANYCABLE_RPC_HOST`)
-
-RPC service address (default: `"localhost:50051"`).
-
-**--rpc_impl** (`ANYCABLE_RPC_IMPL`)
-
-RPC implementation to use, HTTP or gRPC (default: inferred from the `rpc_host` value, so no need to specify manually in most cases). See below for more details on [HTTP RPC](#http-rpc).
-
 **--path** (`ANYCABLE_PATH`)
 
 WebSocket endpoint path (default: `"/cable"`).
@@ -41,14 +33,6 @@ You can also use wildcards (at the end of the paths) or path placeholders:
 ```sh
 anycable-go --path="/cable,/admin/cable/*,/accounts/{tenant}/cable"
 ```
-
-**--headers** (`ANYCABLE_HEADERS`)
-
-Comma-separated list of headers to proxy to RPC (default: `"cookie"`).
-
-**--proxy-cookies** (`ANYCABLE_PROXY_COOKIES`)
-
-Comma-separated list of cookies to proxy to RPC (default: all cookies).
 
 **--allowed_origins** (`ANYCABLE_ALLOWED_ORIGINS`)
 
@@ -71,29 +55,77 @@ You can also enable multiple adapters at once by specifying them separated by co
 
 Pub/Sub adapter to use to distribute broadcasted messages within the cluster (when non-distributed broadcasting adapter is used). **Required for broker**.
 
+**--streams_secret** (`ANYCABLE_STREAMS_SECRET`)
+
+A secret key used to verify [signed_streams](./signed_streams.md). If not set, the `--secret` setting is used (see below).
+
+## RPC settings
+
+**--rpc_host** (`ANYCABLE_RPC_HOST`)
+
+RPC service address (default: `"localhost:50051"`). You can also specify the scheme part to indicate which RPC protocol to use, gRPC or HTTP (gRPC is assumed by default). See below for more details on [HTTP RPC](#http-rpc).
+
+**--norpc** (`ANYCABLE_NORPC=true`)
+
+This setting disables the RPC component completely. That means, you can only use AnyCable in a standalone mode (with [JWT authentication](./jwt_identification.md) and [signed streams](./signed_streams.md)).
+
+**--headers** (`ANYCABLE_HEADERS`)
+
+Comma-separated list of headers to proxy to RPC (default: `"cookie"`).
+
+**--proxy-cookies** (`ANYCABLE_PROXY_COOKIES`)
+
+Comma-separated list of cookies to proxy to RPC (default: all cookies).
+
+## Security/access settings
+
+**--secret** (`ANYCABLE_SECRET`)
+
+A common secret key used by all AnyCable features by default (i.e., unless a specific key is specified): [JWT authentication](./jwt_identification.md), [signed streams](./signed_streams.md), etc.
+
+**--noauth** (`ANYCABLE_NOAUTH=true`)
+
+This setting disables client authentication checks (so, anyone is allowed to connect). Use it with caution. **NOTE**: if you use _enforced_ JWT authentication, the `--noauth` option has no effect.
+
+**--public_streams** (`ANYCABLE_PUBLIC_STREAMS=true`)
+
+Setting this value allows direct subscribing to streams using unsinged names (see more in the [signed streams docs](./signed_streams.md)).
+
+**--public** (`ANYCABLE_PUBLIC=true`)
+
+This is a shortcut to specify both `--noauth` and `--public_streams` and remove the protection from HTTP broadcasting endpoint (`--http_broadcast_secret=""`), so you can use AnyCable without any protection. **Do not do this in production**.
+
+## HTTP API
+
 **--http_broadcast_port** (`ANYCABLE_HTTP_BROADCAST_PORT`, default: `8090`)
 
 You can specify on which port to receive broadcasting requests (NOTE: it could be the same port as the main HTTP server listens to).
 
 **--http_broadcast_secret** (`ANYCABLE_HTTP_BROADCAST_SECRET`)
 
-Authorization secret to protect the broadcasting endpoint (see [Ruby docs](../ruby/broadcast_adapters.md#securing-http-endpoint)).
+Authorization secret to protect the broadcasting endpoint (see [Ruby docs](../ruby/broadcast_adapters.md#securing-http-endpoint)). If this value is not set, the `--secret` setting is used.
+
+## Redis configuration
 
 **--redis_url** (`ANYCABLE_REDIS_URL` or `REDIS_URL`)
 
-Redis URL for pub/sub (default: `"redis://localhost:6379/5"`).
+Redis URL to connect to (default: `"redis://localhost:6379/5"`). Used by the corresponding pub/sub, broadasting, and broker adapters.
 
 **--redis_channel** (`ANYCABLE_REDIS_CHANNEL`)
 
 Redis channel for broadcasting (default: `"__anycable__"`). When using the `redisx` adapter, it's used as a name of the Redis stream.
 
+## NATS configuration
+
 **--nats_servers** (`ANYCABLE_NATS_SERVERS`)
 
-The list of [NATS][] servers to connect to (default: `"nats://localhost:4222"`).
+The list of [NATS][] servers to connect to (default: `"nats://localhost:4222"`). Used by the corresponding pub/sub, broadasting, and broker adapters.
 
 **--nats_channel** (`ANYCABLE_NATS_CHANNEL`)
 
 NATS channel for broadcasting (default: `"__anycable__"`).
+
+## Logging settings
 
 **--log_level** (`ANYCABLE_LOG_LEVEL`)
 
@@ -102,14 +134,6 @@ Logging level (default: `"info"`).
 **--debug** (`ANYCABLE_DEBUG`)
 
 Enable debug mode (more verbose logging).
-
-**--shutdown_timeout** (`ANYCABLE_SHUTDOWN_TIMEOUT`)
-
-The number of seconds to wait for the server to shutdown gracefully, i.e., disconnect all active sessions and perform the corresponding Disconnect RPC calls (see below). Default: 30.
-
-**--pong_timeout** (`ANYCABLE_PONG_TIMEOUT`)
-
-For clients using the [extended Action Cable protocol](../misc/action_cable_protocol.md#action-cable-extended-protocol), the number of seconds to wait for the client to respond to the PING message with the PONG command. The default value is zero, meaning that no PONGs are expected. The recommended value to activate this feature is 10 seconds. Requiring pongs helps to detect broken connections faster.
 
 ## Presets
 

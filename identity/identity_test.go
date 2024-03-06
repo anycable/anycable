@@ -135,3 +135,41 @@ func TestIdentifiableController(t *testing.T) {
 		controller.AssertCalled(t, "Disconnect", "42", env, "name=jack", []string{"chat"})
 	})
 }
+
+func TestIdentifierPipeline(t *testing.T) {
+	mocked := mocks.Identifier{}
+	pub := NewPublicIdentifier()
+
+	pipe := NewIdentifierPipeline(&mocked, pub)
+
+	env := common.NewSessionEnv("ws://demo.anycable.io/cable", &map[string]string{"cookie": "val=1;"})
+
+	t.Run("first identifier success", func(t *testing.T) {
+		mocked.On("Identify", "mock-ok", env).Return(
+			&common.ConnectResult{Identifier: "mock_welcome"},
+			nil,
+		)
+
+		res, err := pipe.Identify("mock-ok", env)
+
+		assert.NoError(t, err)
+		assert.Equal(t, "mock_welcome", res.Identifier)
+	})
+
+	t.Run("second identifier success", func(t *testing.T) {
+		mocked.On("Identify", "mock-nok", env).Return(nil, nil)
+
+		res, err := pipe.Identify("mock-nok", env)
+
+		assert.NoError(t, err)
+		assert.Equal(t, `{"sid":"mock-nok"}`, res.Identifier)
+	})
+
+	t.Run("first identifier fail", func(t *testing.T) {
+		mocked.On("Identify", "mock-err", env).Return(nil, errors.New("failed"))
+
+		_, err := pipe.Identify("mock-err", env)
+
+		assert.Error(t, err)
+	})
+}

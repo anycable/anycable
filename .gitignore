@@ -44,3 +44,4 @@ Gemfile.lock
 /k6
 
 /coverage.out
+admin/ui/build

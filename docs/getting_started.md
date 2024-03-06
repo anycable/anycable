@@ -4,6 +4,8 @@ AnyCable-Go is a WebSocket server for AnyCable written in Golang.
 
 ## Installation
 
+> The quickest way to get AnyCable for production is to use our hosted version: [plus.anycable.io](https://plus.anycable.io)
+
 The easiest way to install AnyCable-Go is to [download](https://github.com/anycable/anycable-go/releases) a pre-compiled binary.
 
 MacOS users could install it with [Homebrew](https://brew.sh/)

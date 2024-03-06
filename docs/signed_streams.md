@@ -167,3 +167,5 @@ CableReady.configure do |config|
   config.verifier_key = "<SECRET>"
 end
 ```
+
+You can also specify custom secrets for Turbo Streams and CableReady via the `--turbo_streams_secret` and `--cable_ready_secret` parameters respectively.

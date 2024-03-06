@@ -1,8 +1,8 @@
-# JWT identification
+# JWT authentication
 
 AnyCable provides support for [JWT][jwt]-based authentication and identification.
 
-You can pass a properly structured token along the connection request to authorize the connection and set up _identifiers_ (in terms of Action Cable). This approach brings the following benefits:
+We use the term "identification", because you can also pass a properly structured information as a part of the token to not only authentication the connection but also set up _identifiers_ (in terms of Action Cable). This approach brings the following benefits:
 
 - **Performance**. No RPC call is required during the connection initiation, since we already have identification information. Thus, less load on the RPC server, much faster connection time (at least, 2x faster).
 - **Usability**. Universal way of dealing with credentials (no need to deal with cookies for web and whatever else for mobile apps).
@@ -14,11 +14,12 @@ You can pass a properly structured token along the connection request to authori
 
 **NOTE**: Currently, we only support the HMAC signing algorithms.
 
-First, you must enable JWT identification support in `anycable-go` by configuring the following params:
+By default, the `--secret` configuration parameter is used as a JWT secret key. If you want to use a custom key for JWT, you can specify it via the `--jwt_secret` (`ANYCABLE_JWT_SECRET`) parameter.
 
-- **--jwt_id_key** (`ANYCABLE_JWT_ID_KEY`): the encryption key used to verify tokens.
-- (_Optional_) **--jwt_id_param** (`ANYCABLE_JWT_ID_PARAM`): the name of a query string param or an HTTP header, which carries a token. The header name is prefixed with `X-`. Default: `jid` (and the `X-JID` header correspondingly).
-- (_Optional_) **--jwt_id_enforce** (`ANYCABLE_JWT_ID_ENFORCE`): whether to require all connection requests to contain a token. Connections without a token would be rejected right away. If not set, the servers fallbacks to the RPC call (as w/o JWT enabled). Default: false.
+Other configuration options are:
+
+- (_Optional_) **--jwt_param** (`ANYCABLE_ID_PARAM`, default: "jid"): the name of a query string param or an HTTP header, which carries a token. The header name is prefixed with `X-`.
+- (_Optional_) **--enforce_jwt** (`ANYCABLE_ENFORCE_JWT`, default: false): whether to require all connection requests to contain a token. Connections without a token would be rejected right away. If not set, the servers fallbacks to the RPC call (if RPC is configured) or would be accepted if authentication is disabled (`--noauth`).
 
 A client must provide an identification token either via a query param or via an HTTP header (if possible). For example:
 

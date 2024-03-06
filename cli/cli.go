@@ -377,10 +377,23 @@ func (r *Runner) newController(metrics *metricspkg.Metrics) (node.Controller, er
 		return nil, errorx.Decorate(err, "!!! Failed to initialize controller !!!")
 	}
 
+	ids := []identity.Identifier{}
+
 	if r.config.JWT.Enabled() {
-		identifier := identity.NewJWTIdentifier(&r.config.JWT, r.log)
+		ids = append(ids, identity.NewJWTIdentifier(&r.config.JWT, r.log))
+		r.log.Info(fmt.Sprintf("JWT authentication is enabled (param: %s, enforced: %v)", r.config.JWT.Param, r.config.JWT.Force))
+	}
+
+	if r.config.SkipAuth {
+		ids = append(ids, identity.NewPublicIdentifier())
+		r.log.Info("connection authentication is disabled")
+	}
+
+	if len(ids) > 1 {
+		identifier := identity.NewIdentifierPipeline(ids...)
 		controller = identity.NewIdentifiableController(controller, identifier)
-		r.log.Info(fmt.Sprintf("JWT identification is enabled (param: %s, enforced: %v)", r.config.JWT.Param, r.config.JWT.Force))
+	} else if len(ids) == 1 {
+		controller = identity.NewIdentifiableController(controller, ids[0])
 	}
 
 	if !r.Router().Empty() {
