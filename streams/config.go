@@ -40,7 +40,7 @@ func (c Config) GetTurboSecret() string {
 	return c.Secret
 }
 
-func (c Config) GetCableReaDySecret() string {
+func (c Config) GetCableReadySecret() string {
 	if c.CableReadySecret != "" {
 		return c.CableReadySecret
 	}

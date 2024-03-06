@@ -197,11 +197,9 @@ Use shutdown_timeout instead.`)
 	if turboRailsKey != "" {
 		fmt.Println(`DEPRECATION WARNING: turbo_rails_key option is deprecated
 and will be removed in the next major release of anycable-go.
-Use streams_secret instead.`)
+Use turbo_streams_secret instead.`)
 
-		if c.Streams.Secret == "" {
-			c.Streams.TurboSecret = turboRailsKey
-		}
+		c.Streams.TurboSecret = turboRailsKey
 
 		c.Streams.Turbo = true
 	}
@@ -215,11 +213,9 @@ It has no effect anymore, use public streams instead.`)
 	if cableReadyKey != "" {
 		fmt.Println(`DEPRECATION WARNING: cable_ready_key option is deprecated
 and will be removed in the next major release of anycable-go.
-Use streams_secret instead.`)
+Use cable_ready_secret instead.`)
 
-		if c.Streams.Secret == "" {
-			c.Streams.CableReadySecret = cableReadyKey
-		}
+		c.Streams.CableReadySecret = cableReadyKey
 
 		c.Streams.CableReady = true
 	}
@@ -263,24 +259,15 @@ It has no effect anymore, use public streams instead.`)
 		c.RPC.Implementation = "none"
 	}
 
-	// Configure secrets
-	if c.Streams.Secret == "" {
-		c.Streams.Secret = c.Secret
-	}
+	configureSecrets(
+		c.Secret,
+		&c.Streams.Secret,
+		&c.JWT.Secret,
+		&c.HTTPBroadcast.Secret,
+		&c.RPC.Secret,
+	)
 
-	if c.JWT.Secret == "" {
-		c.JWT.Secret = c.Secret
-	}
-
-	if c.HTTPBroadcast.Secret == "" {
-		c.HTTPBroadcast.Secret = c.Secret
-	}
-
-	if c.RPC.Secret == "" {
-		c.RPC.Secret = c.Secret
-	}
-
-	// Configure public mode
+	// Configure public mode and other insecure features
 	if isPublic {
 		c.SkipAuth = true
 		c.Streams.Public = true
@@ -1230,4 +1217,16 @@ func parseTags(str string) map[string]string {
 	}
 
 	return res
+}
+
+func configureSecrets(source string, targets ...*string) {
+	for _, t := range targets {
+		if (*t) == "" {
+			(*t) = source
+		}
+
+		if (*t) == "none" {
+			(*t) = ""
+		}
+	}
 }

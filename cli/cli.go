@@ -498,13 +498,13 @@ func (r *Runner) defaultRouter() *router.RouterController {
 		router.Route(r.config.Streams.PubSubChannel, streamController) // nolint:errcheck
 	}
 
-	if r.config.Streams.Turbo && r.config.Streams.Secret != "" {
-		turboController := streams.NewTurboController(r.config.Streams.Secret, r.log)
+	if r.config.Streams.Turbo && r.config.Streams.GetTurboSecret() != "" {
+		turboController := streams.NewTurboController(r.config.Streams.GetTurboSecret(), r.log)
 		router.Route("Turbo::StreamsChannel", turboController) // nolint:errcheck
 	}
 
-	if r.config.Streams.CableReady && r.config.Streams.Secret != "" {
-		crController := streams.NewCableReadyController(r.config.Streams.Secret, r.log)
+	if r.config.Streams.CableReady && r.config.Streams.GetCableReadySecret() != "" {
+		crController := streams.NewCableReadyController(r.config.Streams.GetCableReadySecret(), r.log)
 		router.Route("CableReady::Stream", crController) // nolint:errcheck
 	}
 
