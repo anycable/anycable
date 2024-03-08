@@ -42,7 +42,7 @@ To use AnyCable in a standalone (pub/sub only) mode (see [docs](../anycable-go/g
   You the following API to sign streams:
 
   ```ruby
-  signed_name = AnyCable.signed_stream("chat/42")
+  signed_name = AnyCable::Streams.signed("chat/42")
   ```
 
 **NOTE:** For JWT authentication and signed streams, the application secret or dedicated secrets MUST be provided. The values MUST match the ones configured at the AnyCable server side.

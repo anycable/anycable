@@ -30,7 +30,7 @@ describe AnyCable::Config do
 
       specify { raise "Deprecated" if AnyCable::VERSION >= "2.0.0" }
 
-      specify { expect(config.broadcast_key).to eq "my-secret" }
+      specify { expect(config.broadcast_key!).to eq "my-secret" }
     end
 
     context "inferring from #secret" do

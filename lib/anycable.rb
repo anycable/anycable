@@ -26,6 +26,8 @@ require "anycable/httrpc/server"
 #
 # Broadcasting messages to WS is done through _broadcast adapter_ (Redis Pub/Sub by default).
 module AnyCable
+  autoload :Streams, "anycable/streams"
+
   class << self
     # Provide connection factory which
     # is a callable object with build
