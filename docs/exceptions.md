@@ -1,8 +1,10 @@
-# Exceptions Handling
+# Exceptions handling
 
-AnyCable captures all exceptions during your application code (your _connection_ and _channels_) execution.
+AnyCable Ruby RPC server (both gRPC and HTTP) captures all exceptions during your application code (your _connection_ and _channels_) execution.
 
 The default behaviour is to log the exceptions with `"error"` level.
+
+> AnyCable Rails automatically integrates with Rails 7+ error reporting interface (`Rails.error.report(...)`), so you don't need to configure anything yourself.
 
 You can attach your own exceptions handler, for example, to send notifications somewhere (Honeybadger, Sentry, Airbrake, etc.):
 

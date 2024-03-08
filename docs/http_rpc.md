@@ -1,18 +1,16 @@
 # RPC over HTTP
 
-AnyCable supports RPC communication between a WebSocket server and your web application over HTTP (JSON). Although the default gRPC communication is more performant and, thus, preferred, it comes with a price of additional infrastructure complexity—you have to manage a separate process/service.
+AnyCable supports RPC communication between a real-time server and your web application over HTTP. Although the default gRPC communication is more performant and, thus, preferred, it comes with a price of additional infrastructure complexity—you have to manage a separate process/service.
 
-> The OpenAPI spec and the documentation is available here: [anycable.spotlight.io](https://anycable.stoplight.io).
-
-HTTP RPC is a good alternative if you don't want to deal with gRPC or you are using a platform that doesn't support gRPC (e.g., Heroku, Google Cloud Run).
-
-You can embed AnyCable HTTP RPC _server_ (a Rack application) into your Ruby or Rails application's web server (e.g., Puma) and serve AnyCable RPC requests from the same process.
+AnyCable Ruby comes with a Rack middleware that implements AnyCable RPC API. You can mount it into your Rack-compatible application.
 
 > See the [demo](https://github.com/anycable/anycable_rails_demo/pull/1) of using HTTP RPC in a Rails application.
 
+Learn more about different RPC modes in the [AnyCable documentation](../anycable-go/rpc.md).
+
 ## Using with Rails
 
-To enable HTTP RPC in your Rails application, you must configure the `http_rpc_mount_path` parameter. For example, in your `config/anycable.yml`:
+To enable HTTP RPC in your Rails application, all you need is to configure the `http_rpc_mount_path` parameter. For example, in your `config/anycable.yml`:
 
 ```yml
 development:
@@ -22,7 +20,7 @@ production:
   http_rpc_mount_path: "/__some_other_anycable_path"
 ```
 
-That's it! Now configure your WebSocket to perform RPC over HTTP at your mount path (e.g., `/_anycable`).
+That's it! Now configure your AnyCable server to perform RPC over HTTP at your mount path (e.g., `/_anycable`).
 
 **NOTE:** If you don't use AnyCable gRPC server in any environment, you can avoid installing gRPC dependencies by using the `anycable-rails-core` gem instead of `anycable-rails`.
 

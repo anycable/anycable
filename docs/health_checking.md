@@ -1,6 +1,6 @@
-# Health Checking
+# Health checking
 
-AnyCable provides two types of health checks: HTTP and gRPC.
+AnyCable Ruby gRPC server comes with two types of health checks: HTTP and gRPC.
 
 ## HTTP
 
