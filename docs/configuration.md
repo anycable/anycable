@@ -1,8 +1,8 @@
 # Configuration
 
-AnyCable uses [`anyway_config`](https://github.com/palkan/anyway_config) gem for configuration; thus it is possible to set configuration parameters through environment vars, `config/anycable.yml` file or `secrets.yml` when using Rails.
+AnyCable Ruby uses [`anyway_config`](https://github.com/palkan/anyway_config) gem for configuration. Thus,  it is possible to set configuration parameters through environment vars, `config/anycable.yml` file, etc.
 
-You can also pass configuration variables to CLI as options, e.g.:
+When running a gRPC server via our CLI, you can also pass configuration variables as follows:
 
 ```sh
 $ bundle exec anycable --rpc-host 0.0.0.0:50120 \
@@ -14,72 +14,39 @@ $ bundle exec anycable --rpc-host 0.0.0.0:50120 \
 
 ## Primary settings
 
-Here is the list of the most commonly used configuration parameters and the way you can provide them:
+**secret** (`ANYCABLE_SECRET`) (_@since v1.5.0_)
 
-- in Ruby code using parameter name (e.g. `AnyCable.config.rpc_host = "127.0.0.0:42421"`)
-- in `config/anycable.yml`\* or `secrets.yml` using the parameter name
-- through environment variable
-- through a CLI option.
+The application secret used to secure AnyCable features: signed streams, JWT authentication, etc. We recommend setting this value as a single AnyCable-related application secret and rely on libraries to glue pieces together.
 
-**rpc_host** (`ANYCABLE_RPC_HOST`, `--rpc-host`)
+**streams_secret** (`ANYCABLE_STREAMS_SECRET`) (_@since v1.5.0_)
 
-Local address to run gRPC server on (default: `"[::]:50051"`, deprecated, will be changed to `"127.0.0.1:50051"` in future versions).
+A dedicated secret key used to [sign streams](../anycable-go/signed_streams.md). If none specified, the application secret is used.
 
-**rpc_tls_cert** (`ANYCABLE_RPC_TLS_CERT`, `--rpc-tls-cert`) and **rpc_tls_key** (`ANYCABLE_RPC_TLS_KEY`, `--rpc-tls-key`)
+**broadcast_adapter** (`ANYCABLE_BROADCAST_ADAPTER`)
 
-Specify file paths or contents for TLS certificate and private key for gRPC server.
+Broadcasting adapter to use. Available options out-of-the-box: `redis` (default), `http` (will be default in v2), `nats`, `redisx`. For adapter specific options, see [broadcast adapters documentation](./broadcast_adapters.md).
 
-**broadcast_adapter** (`ANYCABLE_BROADCAST_ADAPTER`, `--broadcast-adapter`)
+**broadcast_key** (`ANYCABLE_BROADCAST_KEY`) (_@since v1.5.0_)
 
-[Broadcast adapter](./broadcast_adapters.md) to use. Available options out-of-the-box: `redis` (default), `nats`, `http`.
+A secret key used to authorize broadcast requests. Currently, only used by the HTTP adapter. If not set, the value is inferred from the application secret. See the [broadcast adapters documentation](./broadcast_adapters.md).
 
-**nats_servers** (`ANYCABLE_NATS_SERVERS`, `--nats-servers`)
+## JWT settings
 
-A comma-separated list of NATS server addresses (default: `"nats://localhost:4222"`).
+AnyCable supports [JWT authentication](../anycable-go/jwt_identification.md) out-of-the-box.
 
-**nats_channel** (`ANYCABLE_NATS_CHANNEL`, `--redis-channel`)
+AnyCable Ruby provides an API for generating tokens relying on the following configuration parameters:
 
-NATS pus/sub channel for broadcasting (default: `"__anycable__"`).
+- **jwt_secret** (`ANYCABLE_JWT_SECRET`) (_@since v1.5.0_)
 
-**redis_url** (`REDIS_URL`, `ANYCABLE_REDIS_URL`, `--redis-url`)
+  The secret key used to sign JWT tokens. Optional (the application secret is used if no JWT secret specified)
 
-Redis URL for pub/sub (default: `"redis://localhost:6379"`).
+- **jwt_ttl** (`ANYCABLE_JWT_TTL`) (_@since v1.5.0_)
 
-**redis_channel** (`ANYCABLE_REDIS_CHANNEL`, `--redis-channel`)
-
-Redis channel for broadcasting (default: `"__anycable__"`). When using the `redisx` adapter, it's used as a name of the Redis stream.
-
-**redis_tls_verify** (`ANYCABLE_REDIS_TLS_VERIFY`, `--redis-tls-verify`)
-
-Whether to validate Redis server TLS certificate if `rediss://` protocol is used (default: `false`).
-
-**redis_tls_client_cert_path** (`ANYCABLE_REDIS_TLS_CLIENT_CERT_PATH`, `--redis-tls-client_cert-path`)
-
-Path to file with client TLS certificate in PEM format if Redis server requires client authentication.
-
-**redis_tls_client_key_path** (`ANYCABLE_REDIS_TLS_CLIENT_KEY_PATH`, `--redis-tls-client_key-path`)
-
-Path to file with private key for client TLS certificate if Redis server requires client authentication.
-
-**log_level** (`ANYCABLE_LOG_LEVEL`, `--log-level`)
-
-Logging level (default: `"info"`).
-
-**log_file** (`ANYCABLE_LOG_FILE`, `--log-file`)
-
-Path to the log file. By default AnyCable logs to STDOUT.
-
-**debug** (`ANYCABLE_DEBUG`, `--debug`)
-
-Shortcut to turn on verbose logging ("debug" log level and gRPC logging on).
-
-For the complete list of configuration parameters see [`config.rb`](https://github.com/anycable/anycable/blob/master/lib/anycable/config.rb) file.
-
-\* You can change the default YML config location path by settings `ANYCABLE_CONF` env variable.
+  The time-to-live (TTL) for tokens in seconds. Default: 3600 (1 hour).
 
 ## Presets
 
-AnyCable comes with a few built-in configuration presets for particular deployments environments, such as Fly. The presets are detected and activated automatically
+AnyCable Ruby comes with a few built-in configuration presets for particular deployments environments, such as Fly. The presets are detected and activated automatically
 
 To disable automatic presets activation, provide `ANYCABLE_PRESETS=none` environment variable (or pass the corresponding option to the CLI: `bundle exec anycable --presets=none`).
 
@@ -98,7 +65,17 @@ If the `ANYCABLE_FLY_WS_APP_NAME` env variable is provided, the following defaul
 - `nats_servers`: `"nats://<FLY_REGION>.<ANYCABLE_FLY_WS_APP_NAME>.internal:4222"`
 - `http_broadcast_url`: `"http://<FLY_REGION>.<ANYCABLE_FLY_WS_APP_NAME>.internal:8090/_broadcast"`
 
-## Concurrency settings
+## gRPC settings
+
+**rpc_host** (`ANYCABLE_RPC_HOST`, `--rpc-host`)
+
+Local address to run gRPC server on (default: `"127.0.0.1:50051"`). Set it to `0.0.0.0:50051` to make gRPC server accessible to the outside world (for example, when using containerized environment).
+
+**rpc_tls_cert** (`ANYCABLE_RPC_TLS_CERT`, `--rpc-tls-cert`) and **rpc_tls_key** (`ANYCABLE_RPC_TLS_KEY`, `--rpc-tls-key`)
+
+Specify file paths or contents for TLS certificate and private key for gRPC server.
+
+### Concurrency settings
 
 AnyCable gRPC server maintains a pool of worker threads to execute commands. We rely on the `grpc` gem [default pool size](https://github.com/grpc/grpc/blob/80e834abab5dff45e16e9a1e3b98f20eae5f91ad/src/ruby/lib/grpc/generic/rpc_server.rb#L163), which is equal to **30**.
 
@@ -108,17 +85,13 @@ Increasing pool size makes sense if you have a lot of IO operations in your chan
 
 **NOTE**: Make sure the gRPC pool size is aligned with concurrency limits you have in your application, such as database pool size.
 
-**IMPORTANT**: AnyCable-Go concurrency limit must correlate to the RPC server pool size (read more in [AnyCable-Go Configuration](../anycable-go/configuration.md#concurrency-settings)).
+**IMPORTANT**: AnyCable server concurrency limit must correlate to the RPC server pool size (read more [here](../anycable-go/rpc.md#concurrency-settings)).
 
-### Redis connections
+### Alternative gRPC implementations
 
-Redis broadcast adapter uses a single connection to Redis.
+AnyCable Ruby uses the `grpc` gem to run its gRPC server by default. The gem heavily relies on native extensions, which may lead to complications during installation (e.g., on Alpine Linux) and compatibility issues with modern Ruby versions.
 
-## Alternative gRPC implementations
-
-AnyCable uses the `grpc` gem to run its gRPC server by default. The gem heavily relies on native extensions, which may lead to complications during installation (e.g., on Alpine Linux) and compatibility issues with modern Ruby versions.
-
-To be closer to Ruby and depend less on extensions, AnyCable also supports an alternative gRPC implementation—[grpc_kit](https://github.com/cookpad/grpc_kit).
+To be closer to Ruby and depend less on extensions, AnyCable Ruby also supports an alternative gRPC implementation—[grpc_kit](https://github.com/cookpad/grpc_kit).
 
 You can opt-in to use `grpc_kit` by setting `ANYCABLE_GRPC_IMPL=grpc_kit` environment variable for your `bundle exec anycable` process. You also need to update your `Gemfile` to include the `grpc_kit` gem and gRPC-less versions of AnyCable gems:
 

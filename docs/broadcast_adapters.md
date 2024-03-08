@@ -1,12 +1,92 @@
-# Broadcast Adapters
+# Broadcasting
 
-Broadcast adapter is used to handle messages published by your application to WebSocket server which in its turn delivers the messages to connected clients (see [architecture](../architecture.md)).
+AnyCable supports multiple ways of publishing messages from your backend to connected clients: HTTP API, Redis and [NATS][]-backed.
 
-That is, when you call `ActionCable.server.broadcast`, AnyCable first pushes the message to WebSocket server via a broadcast adapter, and the actual _broadcasting_ is happening within a WS server (or servers).
+AnyCable Ruby provides a universal API to publish broadcast messages from your Ruby/Rails applications independently of which underlying technology you would like to use. All you need is to pick and configure an adapter.
 
-AnyCable ships with three broadcast adapters by default: Redis (default), [NATS][], and HTTP.
+Learn more about different broadcasting options and when to prefer one over another in the [AnyCable broadcasting documentation](../anycable-go/broadcasting.md).
 
-**NOTE:** The broadcast adapters fall into two categories: legacy fan-out (distributed) and _singular_.
+## Configuration
+
+By default, AnyCable uses Redis Pub/Sub adapter (`redis`). Use the `broadcast_adapter` (`ANYCABLE_BROADCAST_ADAPTER`) configuration parameter to use another one.
+
+### HTTP
+
+> Enable via `broadcast_adapter: http` in `anycable.yml` or `ANYCABLE_BROADCAST_ADAPTER=http`.
+
+The following configuration options are available:
+
+- **http_broadcast_url** (`ANYCABLE_HTTP_BROADCAST_URL`)
+
+  Specify AnyCable HTTP broadcasting endpoint. Defaults to `http://localhost:8090/_broadcast`.
+
+If your HTTP broadcasting endpoint is secured, use the `broadcast_key` option to provide the key or the application secret (`secret`) to auto-generate it (the configuration MUST match your AnyCable server configuration).
+
+### Redis Pub/Sub
+
+> Enable via `broadcast_adapter: redis` in `anycable.yml` or `ANYCABLE_BROADCAST_ADAPTER=redis`.
+
+**NOTE:** To use Redis adapters, you MUST add the `redis` gem to your Gemfile yourself.
+
+The following configuration options are available:
+
+- **redis_url** (`REDIS_URL`, `ANYCABLE_REDIS_URL`)
+
+  Redis connection URL (MAY include auth credentials) (default: `"redis://localhost:6379"`).
+
+- **redis_channel** (`ANYCABLE_REDIS_CHANNEL`)
+
+  Redis channel used for broadcasting (default: `"__anycable__"`).
+
+- **redis_tls_verify** (`ANYCABLE_REDIS_TLS_VERIFY`)
+
+  Whether to validate Redis server TLS certificate if `rediss://` protocol is used (default: `false`).
+
+- **redis_tls_client_cert_path** (`ANYCABLE_REDIS_TLS_CLIENT_CERT_PATH`, `--redis-tls-client_cert-path`)
+
+  Path to the file with a client TLS certificate in PEM format if the Redis server requires client authentication.
+
+- **redis_tls_client_key_path** (`ANYCABLE_REDIS_TLS_CLIENT_KEY_PATH`)
+
+  Path to the file with a private key for the client TLS certificate if the Redis server requires client authentication.
+
+**NOTE:** Redis broadcast adapter uses a single connection to Redis.
+
+#### Redis Sentinel support
+
+AnyCable could be used with Redis Sentinel out-of-the-box. For that, you should configure it the following way:
+
+- `redis_url` MUST contain a master name (e.g., `ANYCABLE_REDIS_URL=redis://mymaster`)
+- `redis_sentinels` MUST contain a comma separated list of sentinel hosts (e.g., `ANYCABLE_REDIS_SENTINELS=my.redis.sentinel.first:26380,my.redis.sentinel.second:26380`).
+
+If your sentinels are protected with passwords, use the following format: `:password1@my.redis.sentinel.first:26380,:password2@my.redis.sentinel.second:26380`.
+
+> See the [demo](https://github.com/anycable/anycable_rails_demo/pull/8) of using Redis with Sentinels in a local Docker dev environment.
+
+### Redis Streams
+
+> Enable via `broadcast_adapter: redisx` in `anycable.yml` or `ANYCABLE_BROADCAST_ADAPTER=redisx`.
+
+Redis Streams broadcaster shares configuration settings with Redis Pub/Sub (see above).
+The `redis_channel` value used as the name of the Redis Stream to publish broadcasts to.
+
+### NATS Pub/Sub
+
+> Enable via `broadcast_adapter: nats` in `anycable.yml` or `ANYCABLE_BROADCAST_ADAPTER=nats`.
+
+**NOTE:** Make sure you added [`nats-pure` gem][nats-pure] to your Gemfile.
+
+The following configuration options are available:
+
+- **nats_servers** (`ANYCABLE_NATS_SERVERS`, `--nats-servers`)
+
+  A comma-separated list of NATS server addresses (default: `"nats://localhost:4222"`).
+
+- **nats_channel** (`ANYCABLE_NATS_CHANNEL`, `--redis-channel`)
+
+  NATS pus/sub channel for broadcasting (default: `"__anycable__"`).
+
+With [embedded NATS](../anycable-go/embedded_nats.md) feature of AnyCable, you can minimize the number of required components to deploy an AnyCable-backed application.
 
 ## Broadcasting API
 
@@ -48,7 +128,7 @@ end #=> the current batch is published
 
 ### Broadcast options
 
-AnyCable-Go v1.4.5+ supports additional broadcast options. You can pass them as the third argument to the `AnyCable.broadcast` method:
+AnyCable v1.4.5+ supports additional broadcast options. You can pass them as the third argument to the `AnyCable.broadcast` method:
 
 ```ruby
 AnyCable.broadcast("my_stream", {text: "hoi"}, {exclude_socket: "some-socket-id"})
@@ -58,85 +138,5 @@ The following options are supported:
 
 - `exclude_socket`: pass an AnyCable socket ID to exclude it from the broadcast recipients list. Useful if you want to broadcast to all clients except the one that initiated the broadcast.
 
-## HTTP adapter
-
-HTTP adapter has zero-dependencies and, thus, allows you to quickly start using AnyCable.
-
-Since v1.4, HTTP adapter can also be considered for production (thanks to the new [pub/sub component](/anycable-go/pubsub.md) in AnyCable-Go). Moreover, it can be used with the new [broker feature](/anycable-go/broker.md) of AnyCable-Go.
-
-To use HTTP adapter specify `broadcast_adapter` configuration parameter (`--broadcast-adapter=http` or `ANYCABLE_BROADCAST_ADAPTER=http` or set in the code/YML) and make sure your AnyCable WebSocket server supports it. An URL to broadcast to could be specified via `http_broadcast_url` parameter (defaults to `http://localhost:8090/_broadcast`, which corresponds to the [AnyCable-Go](../anycable-go/getting_started.md#configuration-parameters) default).
-
-**NOTE:** For SSL connections, we use the `SSL_VERIFY_NONE` mode.
-
-Example cURL command to publish a message:
-
-```bash
-curl -X POST -H "Content-Type: application/json" -d '{"stream":"my_stream","data":"{\"text\":\"Hello, world!\"}"}' http://localhost:8090/_broadcast
-```
-
-### Securing HTTP endpoint
-
-If your broadcasting HTTP endpoint is open to public, we recommend to protect it via a simple authorization via a header check.
-
-You must configure both Ruby RPC server and a WebSocket server to use the same `http_broadcast_secret` (which will we passed via `Authorization: Bearer %secret%`).
-
-## Redis X
-
-Redis X adapter uses [Redis Streams][redis-streams] instead of Publish/Subscribe to deliver broadcasting messages from your application to WebSocket servers. That gives us the following benefits:
-
-- **Better delivery guarantees**. Even if there is no WebSocket server available at the broadcast time, the message will be stored in Redis and delivered to the server once it is available. In combination with the [broker feature](/anycable-go/broker.md), you can achieve at-least-once delivery guarantees (compared to at-most-once provided by Redis pub/sub).
-
-- **Broker compatibility**. Using a [broker](/anycable-go/broker.md) (or **streams history**) requires handling each broadcasted message by a single node in the cluster (so it can be _registered_ in a cache). With Redis X adapter, we achieve this by using consumer groups for the Redis stream.
-
-Configuration options are the same as for the Redis adapter. The `redis_channel` option is treated as a stream name.
-
-**IMPORTANT:** Redis v6.2+ is required.
-
-See [configuration](./configuration.md) for available Redis options.
-
-## Redis adapter (legacy)
-
-It's a default adapter for AnyCable. It uses Redis [Pub/Sub](https://redis.io/topics/pubsub) feature under the hood. Thus, all the messages delivered to all WebSocket servers at once.
-
-**NOTE:** To use Redis adapter, you must ensure that it is present in your Gemfile; AnyCable gem doesn't have `redis` as a dependency.
-
-See [configuration](./configuration.md) for available Redis options.
-
-### Redis Sentinel support
-
-AnyCable could be used with Redis Sentinel out-of-the-box. For that, you should configure it the following way:
-
-- `redis_url` must contain a master name (e.g., `ANYCABLE_REDIS_URL=redis://mymaster`)
-- `redis_sentinels` must contain a comma separated list of sentinel hosts (e.g., `ANYCABLE_REDIS_SENTINELS=my.redis.sentinel.first:26380,my.redis.sentinel.second:26380`).
-
-If your sentinels are protected with passwords, use the following format: `:password1@my.redis.sentinel.first:26380,:password2@my.redis.sentinel.second:26380`.
-
-> See the [demo](https://github.com/anycable/anycable_rails_demo/pull/8) of using Redis with Sentinels in a local Docker dev environment.
-
-## NATS adapter (legacy)
-
-**NOTE:** Make sure you added [`nats-pure` gem][nats-pure] to your Gemfile.
-
-NATS adapter uses [NATS publish/subscribe](https://docs.nats.io/nats-concepts/core-nats/pubsub) functionality and supports cluster features out-of-the-box.
-
-> With [embedded NATS](../anycable-go/embedded_nats.md) feature of AnyCable-Go, you can minimize the number of required components to deploy an AnyCable-backed application.
-
-See [configuration](./configuration.md) for available NATS options.
-
-## Custom adapters
-
-AnyCable allows you to use custom broadcasting adapters:
-
-```ruby
-# Specify by name (tries to load `AnyCable::BroadcastAdapters::MyAdapter` from
-# "anycable/broadcast_adapters/my_adapter")
-AnyCable.broadcast_adapter = :my_adapter, {option: "value"}
-# or provide an instance (should respond_to #broadcast)
-AnyCable.broadcast_adapter = MyAdapter.new
-```
-
-Want to have a different adapter out-of-the-box? Join [the discussion](https://github.com/anycable/anycable/issues/2).
-
 [NATS]: https://nats.io
 [nats-pure]: https://github.com/nats-io/nats-pure.rb
-[redis-streams]: https://redis.io/docs/data-types/streams-tutorial/

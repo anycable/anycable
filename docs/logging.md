@@ -1,6 +1,6 @@
 # Logging
 
-By default, AnyCable logger logs to STDOUT with `INFO` severity but can be easily configured (see [Configuration](configuration.md#parameters)), for example:
+By default, AnyCable Ruby logs to STDOUT with `INFO` level but can be easily configured (see [Configuration](configuration.md#parameters)), for example:
 
 ```sh
 $ bundle exec anycable --log-file=logs/anycable.log --log-level debug
@@ -17,7 +17,7 @@ You can also specify your own logger instance for full control:
 AnyCable.logger = MyLogger.new
 ```
 
-If you use AnyCable with Rails see the corresponding section in [Using with Rails](../rails/getting_started.md#logging)
+**IMPORTANT:** When using with Rails, AnyCable automatically sets its logger to `Rails.logger`, so AnyCable-specific logging options are no-op.
 
 ## gRPC logging
 
