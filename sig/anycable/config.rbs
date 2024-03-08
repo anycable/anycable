@@ -4,6 +4,12 @@ module AnyCable
     def presets=: (Array[String]) -> void
     def broadcast_adapter: () -> Symbol
     def broadcast_adapter=: (Symbol) -> void
+    def secret: () -> String?
+    def secret=: (String?) -> void
+    def streams_secret: () -> String?
+    def streams_secret=: (String?) -> void
+    def broadcast_key: () -> String?
+    def broadcast_key=: (String?) -> void
     def redis_url: () -> String
     def redis_url=: (String) -> void
     def redis_sentinels: () -> Array[String | Hash[untyped, untyped]]?
@@ -41,8 +47,8 @@ module AnyCable
     def http_health_port=: (Integer) -> void
     def http_health_path: () -> String
     def http_health_path=: (String) -> void
-    def http_rpc_secret: () -> String
-    def http_rpc_secret=: (String) -> void
+    def http_rpc_secret: () -> String?
+    def http_rpc_secret=: (String?) -> void
     def version_check_enabled: () -> bool
     def version_check_enabled=: (bool) -> void
     def version_check_enabled?: () -> bool
@@ -52,6 +58,9 @@ module AnyCable
   end
 
   class Config < Anyway::Config
+    BROADCAST_SECRET_PHRASE: String
+    HTTP_RPC_SECRET_PHRASE: String
+
     def self.usage: (String txt) -> void
     def self.usages: () -> Array[String]
 
@@ -59,6 +68,9 @@ module AnyCable
 
     alias debug? debug
     alias version_check_enabled? version_check_enabled
+
+    def http_rpc_secret!: () -> String?
+    def broadcast_key!: () -> String?
 
     def load: (*untyped) -> void
     def http_health_port_provided?: () -> bool
@@ -74,5 +86,6 @@ module AnyCable
     def write_preset: (Symbol, untyped, preset: String) -> void
     def write_config_attr: (Symbol, untyped) -> void
     def __trace__: () -> untyped
+    def infer_from_application_secret: (String) -> String?
   end
 end
