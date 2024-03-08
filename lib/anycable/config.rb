@@ -85,15 +85,6 @@ module AnyCable
     flag_options :debug, :nats_dont_randomize_servers
     ignore_options :nats_options
 
-    on_load do
-      self.streams_secret ||= secret
-
-      if http_broadcast_secret
-        self.broadcast_key ||= http_broadcast_secret
-        warn "DEPRECATION WARNING: `http_broadcast_secret` is deprecated, use `broadcast_key` instead"
-      end
-    end
-
     def load(*_args)
       super.tap { load_presets }
     end
@@ -107,6 +98,11 @@ module AnyCable
     end
 
     def broadcast_key!
+      if http_broadcast_secret && !broadcast_key
+        self.broadcast_key ||= http_broadcast_secret
+        warn "DEPRECATION WARNING: `http_broadcast_secret` is deprecated, use `broadcast_key` instead"
+      end
+
       return broadcast_key if broadcast_key
       return unless secret
 
@@ -118,6 +114,10 @@ module AnyCable
       return unless secret
 
       self.http_rpc_secret = infer_from_application_secret(HTTP_RPC_SECRET_PHRASE)
+    end
+
+    def streams_secret
+      super || secret
     end
 
     usage <<~TXT

@@ -2,6 +2,10 @@
 
 ## master
 
+- Added signed streams support. ([@palkan][])
+
+- Added `secret` and `broadcast_key` configuration parameters. ([@palkan][])
+
 ## 1.4.3 (2023-10-15)
 
 - Add broadcast options support. ([@palkan][])
