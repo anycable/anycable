@@ -24,8 +24,9 @@ describe "CLI options", :cli do
       expect(cli).to have_output_line("$ anycable [options]")
       expect(cli).to have_output_line("CLI")
       expect(cli).to have_output_line("APPLICATION")
-      expect(cli).to have_output_line("REDIS PUB/SUB")
-      expect(cli).to have_output_line("HTTP PUB/SUB")
+      expect(cli).to have_output_line("REDIS")
+      expect(cli).to have_output_line("HTTP BROADCASTING")
+      expect(cli).to have_output_line("LOGGING")
       expect(cli).to have_output_line("HTTP HEALTH CHECKER")
       expect(cli).to have_stopped
       expect(cli).to have_exit_status(0)
@@ -50,8 +51,8 @@ describe "CLI options", :cli do
     run_cli(
       "-r ../spec/dummies/app.rb " \
       "--broadcast-adapter=http " \
+      "--broadcast-key=test " \
       "--http-broadcast-url=http://my-ws.com/_broadcast/me " \
-      "--http-broadcast-secret=test"
     ) do |cli|
       expect(cli).to have_output_line("Broadcasting HTTP url: http://my-ws.com/_broadcast/me (with authorization)")
     end

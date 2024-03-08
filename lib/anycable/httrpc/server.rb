@@ -4,6 +4,11 @@ module AnyCable
   module HTTRPC
     class Server
       def initialize(token: AnyCable.config.http_rpc_secret)
+        if !token
+          token = AnyCable.config.http_rpc_secret!
+          AnyCable.logger.info("AnyCable HTTP RPC created with authorization key inferred from the application secret")
+        end
+
         @token = token
       end
 

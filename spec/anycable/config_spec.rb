@@ -20,6 +20,56 @@ describe AnyCable::Config do
     end
   end
 
+  describe "#broacdast_key" do
+    subject(:config) { described_class.new }
+
+    specify { expect(config.broadcast_key).to eq nil }
+
+    context "when #http_broadcast_secret is set" do
+      around { |ex| with_env("ANYCABLE_HTTP_BROADCAST_SECRET" => "my-secret", &ex) }
+
+      specify { raise "Deprecated" if AnyCable::VERSION >= "2.0.0" }
+
+      specify { expect(config.broadcast_key).to eq "my-secret" }
+    end
+
+    context "inferring from #secret" do
+      around { |ex| with_env("ANYCABLE_SECRET" => "qwerty", &ex) }
+
+      # echo -n 'broadcast-cable' | openssl dgst -sha256 -hmac 'qwerty' | awk '{print $2}'
+      let(:secret) { "42923a28b760e667fc92f7c6123bb07a282822b329dd2ef48e7aee7830d98485" }
+
+      specify { expect(config.broadcast_key!).to eq secret }
+    end
+  end
+
+  describe "#streams_secret" do
+    subject(:config) { described_class.new }
+
+    specify { expect(config.streams_secret).to eq nil }
+
+    context "when application secret is set" do
+      around { |ex| with_env("ANYCABLE_SECRET" => "qwerty", &ex) }
+
+      specify { expect(config.streams_secret).to eq "qwerty" }
+    end
+  end
+
+  describe "#http_rpc_secret" do
+    subject(:config) { described_class.new }
+
+    specify { expect(config.http_rpc_secret).to eq nil }
+
+    context "inferring from #secret" do
+      around { |ex| with_env("ANYCABLE_SECRET" => "qwerty", &ex) }
+
+      # echo -n 'rpc-cable' | openssl dgst -sha256 -hmac 'qwerty' | awk '{print $2}'
+      let(:secret) { "57c40610d142fe7d7999be4e23dfba4f42c3c542e1f278063e8e3b6a30b0c2bd" }
+
+      specify { expect(config.http_rpc_secret!).to eq secret }
+    end
+  end
+
   describe "#to_redis_params" do
     let(:sentinel_config) do
       [
