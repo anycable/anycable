@@ -7,6 +7,11 @@ require "uri"
 module AnyCable
   # AnyCable configuration.
   class Config < Anyway::Config
+    # These phareses are used to infer secret keys from the application secret
+    # and MUST match the ones used in AnyCable (Go)
+    BROADCAST_SECRET_PHRASE = "broadcast-cable"
+    HTTP_RPC_SECRET_PHRASE = "rpc-cable"
+
     class << self
       # Add usage txt for CLI
       def usage(txt)
@@ -22,9 +27,14 @@ module AnyCable
 
     attr_config(
       presets: "",
+      secret: nil,
 
-      ## PubSub
+      ## Streams
+      streams_secret: nil,
+
+      ## Broadcasting
       broadcast_adapter: :redis,
+      broadcast_key: nil,
 
       ### Redis options
       redis_url: ENV.fetch("REDIS_URL", "redis://localhost:6379"),
@@ -42,6 +52,7 @@ module AnyCable
 
       ### HTTP broadcasting options
       http_broadcast_url: "http://localhost:8090/_broadcast",
+      # DEPRECATED: use `broadcast_key` instead
       http_broadcast_secret: nil,
 
       ### Logging options
@@ -74,6 +85,15 @@ module AnyCable
     flag_options :debug, :nats_dont_randomize_servers
     ignore_options :nats_options
 
+    on_load do
+      self.streams_secret ||= secret
+
+      if http_broadcast_secret
+        self.broadcast_key ||= http_broadcast_secret
+        warn "DEPRECATION WARNING: `http_broadcast_secret` is deprecated, use `broadcast_key` instead"
+      end
+    end
+
     def load(*_args)
       super.tap { load_presets }
     end
@@ -86,36 +106,54 @@ module AnyCable
       !http_health_port.nil? && http_health_port != ""
     end
 
+    def broadcast_key!
+      return broadcast_key if broadcast_key
+      return unless secret
+
+      self.broadcast_key = infer_from_application_secret(BROADCAST_SECRET_PHRASE)
+    end
+
+    def http_rpc_secret!
+      return http_rpc_secret if http_rpc_secret
+      return unless secret
+
+      self.http_rpc_secret = infer_from_application_secret(HTTP_RPC_SECRET_PHRASE)
+    end
+
     usage <<~TXT
       APPLICATION
-          --broadcast-adapter=type          Pub/sub adapter type for broadcasts, default: redis
-          --log-level=level                 Logging level, default: "info"
-          --log-file=path                   Path to log file, default: <none> (log to STDOUT)
-          --debug                           Turn on verbose logging ("debug" level and verbose logging on)
+          --broadcast-adapter=type          Broadcasting adapter, default: redis
+          --secret=secret                   Application secret, default: <none>
+          --broadcast-key=key               Broadcasting secret key, default: <none> (inferred from the application secret if any)
+          --streams-secret=secret           Signed streams secret, default: <none> (inferred from the application secret if any)
 
       HTTP HEALTH CHECKER
           --http-health-port=port           Port to run HTTP health server on, default: <none> (disabled)
           --http-health-path=path           Endpoint to serve health checks, default: "/health"
 
-      REDIS PUB/SUB
-          --redis-url=url                   Redis URL for pub/sub, default: REDIS_URL or "redis://localhost:6379"
+      REDIS
+          --redis-url=url                   Redis URL for broadcasting, default: REDIS_URL or "redis://localhost:6379"
           --redis-channel=name              Redis channel for broadcasting, default: "__anycable__"
           --redis-sentinels=<...hosts>      Redis Sentinel followers addresses (as a comma-separated list), default: nil
           --redis-tls-verify=yes|no         Whether to perform server certificate check in case of rediss:// protocol. Default: yes
           --redis-tls-client_cert-path=path Default: nil
           --redis-tls-client_key-path=path  Default: nil
 
-      NATS PUB/SUB
-          --nats-servers=<...addresses>     NATS servers for pub/sub, default: "nats://localhost:4222"
+      NATS
+          --nats-servers=<...addresses>     NATS servers for broadcasting, default: "nats://localhost:4222"
           --nats-channel=name               NATS channel for broadcasting, default: "__anycable__"
           --nats-dont-randomize-servers     Pass this option to disable NATS servers randomization during (re-)connect
 
-      HTTP PUB/SUB
-          --http-broadcast-url              HTTP pub/sub endpoint URL, default: "http://localhost:8090/_broadcast"
-          --http-broadcast-secret           HTTP pub/sub authorization secret, default: <none> (disabled)
+      HTTP BROADCASTING
+          --http-broadcast-url              HTTP broadcasting endpoint URL, default: "http://localhost:8090/_broadcast"
 
       HTTP RPC
-          --http-rpc-secret                 HTTP RPC authorization secret, default: <none> (disabled)
+          --http-rpc-secret                 HTTP RPC authorization secret, default: <none> (inferred from the application secret if any)
+
+      LOGGING
+          --log-level=level                 Logging level, default: "info"
+          --log-file=path                   Path to log file, default: <none> (log to STDOUT)
+          --debug                           Turn on verbose logging ("debug" level and verbose logging on)
     TXT
 
     # Build Redis parameters
@@ -215,6 +253,15 @@ module AnyCable
 
       write_config_attr(key, value)
       __trace__&.record_value(value, key, type: :preset, preset: preset)
+    end
+
+    def infer_from_application_secret(phrase)
+      app_secret = secret
+      return unless app_secret
+
+      require "openssl"
+
+      OpenSSL::HMAC.hexdigest("SHA256", app_secret, phrase)
     end
   end
 end

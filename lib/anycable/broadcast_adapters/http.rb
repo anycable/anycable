@@ -40,15 +40,21 @@ module AnyCable
       MAX_ATTEMPTS = 3
       DELAY = 2
 
-      attr_reader :url, :headers, :authorized
-      alias_method :authorized?, :authorized
+      attr_reader :url, :headers, :authorization
 
-      def initialize(url: AnyCable.config.http_broadcast_url, secret: AnyCable.config.http_broadcast_secret)
+      def initialize(url: AnyCable.config.http_broadcast_url, secret: AnyCable.config.broadcast_key)
         @url = url
         @headers = {}
+        @authorization = nil
+
+        if !secret
+          secret = AnyCable.config.broadcast_key!
+          @authorization = "with authorization key inferred from the application secret" if secret
+        end
+
         if secret
           headers["Authorization"] = "Bearer #{secret}"
-          @authorized = true
+          @authorization ||= "with authorization"
         end
 
         @uri = URI.parse(url)
@@ -71,7 +77,7 @@ module AnyCable
       end
 
       def announce!
-        logger.info "Broadcasting HTTP url: #{url}#{authorized? ? " (with authorization)" : ""}"
+        logger.info "Broadcasting HTTP url: #{url} (#{authorization || "no authorization"})"
       end
 
       private

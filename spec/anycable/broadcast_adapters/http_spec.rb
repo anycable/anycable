@@ -7,7 +7,7 @@ require "anycable/broadcast_adapters/http"
 describe AnyCable::BroadcastAdapters::Http do
   before do
     config.http_broadcast_url = "http://ws.example.com/_broadcast"
-    config.http_broadcast_secret = "my-secret"
+    config.broadcast_key = "my-secret"
   end
 
   after { AnyCable.config.reload }
@@ -37,6 +37,17 @@ describe AnyCable::BroadcastAdapters::Http do
 
     specify do
       expect { described_class.new.announce! }.to output(%r{Broadcasting HTTP url: http://ws.example.com/_broadcast}).to_stdout_from_any_process
+    end
+
+    context "with inferred secret" do
+      before do
+        config.secret = "qwerty"
+        config.broadcast_key = nil
+      end
+
+      specify do
+        expect { described_class.new.announce! }.to output(%r{with authorization key inferred from the application secret}).to_stdout_from_any_process
+      end
     end
   end
 
