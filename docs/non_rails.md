@@ -1,13 +1,6 @@
-# Using AnyCable without Rails
+# Using AnyCable Ruby without Rails
 
-AnyCable can be used without Rails, thus allowing you to use ActionCable-like functionality in your app.
-
-> Learn how to use AnyCable with Hanami in the ["AnyCable off Rails: connecting Twilio streams with Hanami"](https://evilmartians.com/chronicles/anycable-goes-off-rails-connecting-twilio-streams-with-hanami) blog post.
-
-## Requirements
-
-- Ruby >= 2.7
-- Redis or NATS (see [broadcast adapters](broadcast_adapters.md))
+AnyCable Ruby can be used without Rails, thus, allowing you to bring real-time and Action Cable-like functionality into your Ruby application.
 
 ## Installation
 
@@ -16,30 +9,51 @@ Add `anycable` gem to your `Gemfile`:
 ```ruby
 gem "anycable", "~> 1.1"
 
-# when using Redis broadcast adapter
+# when using Redis-backed broadcast adapter
 gem "redis", ">= 4.0"
 
-# when using NATS broadcast adapter
+# when using NATS-backed broadcast adapter
 gem "nats-pure", "~> 2"
 ```
 
-(and don't forget to run `bundle install`).
+If you don't plan to use _channels_ (RPC), you can go with the `anycable-core` gem instead of `anycable`.
 
-Now you need to add _channels_ layer to your application (`anycable` gem only provides a [CLI](./cli.md) and a gRPC server).
+## Pub/Sub only mode
 
-You can use an existing solution (e.g., `litecable`) or build your own.
+To use AnyCable in a standalone (pub/sub only) mode (see [docs](../anycable-go/getting_started.md)), you need to use the following APIs:
 
-## Lite Cable
+- Broadcasting.
+
+  See the [corresponding documentation](./broadcast_adapters.md).
+
+- JWT authentication.
+
+  You can generate AnyCable JWT tokens as follows:
+
+  ```ruby
+  # Client entitity identifiers (usually, user ID or similar)
+  identifiers = {user_id: User.first.id}
+
+  token = AnyCable::JWT.encode(identifiers)
+  ```
+
+- Signed streams.
+
+  You the following API to sign streams:
+
+  ```ruby
+  signed_name = AnyCable.signed_stream("chat/42")
+  ```
+
+**NOTE:** For JWT authentication and signed streams, the application secret or dedicated secrets MUST be provided. The values MUST match the ones configured at the AnyCable server side.
+
+## Using channels via Lite Cable
 
 There is a ready-to-go framework – [Lite Cable](https://github.com/palkan/litecable) – which can be used for application logic. It also supports AnyCable out-of-the-box.
 
-Resources:
+> Learn how to use AnyCable with Hanami in the ["AnyCable off Rails: connecting Twilio streams with Hanami"](https://evilmartians.com/chronicles/anycable-goes-off-rails-connecting-twilio-streams-with-hanami) blog post.
 
-- [Lite Cable docs](https://github.com/palkan/litecable)
-- [Lite Cable Sinatra example](https://github.com/palkan/litecable/tree/master/examples/sinatra)
-- [Connecting LiteCable to Hanami](http://gabrielmalakias.com.br/ruby/hanami/iot/2017/05/26/websockets-connecting-litecable-to-hanami.html) by [@GabrielMalakias](https://github.com/GabrielMalakias).
-
-## Custom Ruby framework
+## Custom channels implementation
 
 You can build your own framework to use as _logic-handler_ for AnyCable.
 
