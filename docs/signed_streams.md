@@ -23,7 +23,7 @@ Assume that we want to subscribe a user with ID=17 to their personal notificatio
 First, we need to generate a signed stream name:
 
 ```ruby
-signed_name = AnyCable.signed_stream_name("notifications/17")
+signed_name = AnyCable::Streams.signed("notifications/17")
 ```
 
 Or you can use the `#signed_stream_name` helper in your views

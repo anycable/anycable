@@ -228,8 +228,8 @@ It has no effect anymore, use public streams instead.`)
 
 	if jwtIdKey != "" {
 		fmt.Println(`DEPRECATION WARNING: jwt_id_key option is deprecated
-		and will be removed in the next major release of anycable-go.
-		Use jwt_secret instead.`)
+and will be removed in the next major release of anycable-go.
+Use jwt_secret instead.`)
 
 		if c.JWT.Secret == "" {
 			c.JWT.Secret = jwtIdKey
@@ -238,8 +238,8 @@ It has no effect anymore, use public streams instead.`)
 
 	if jwtIdParam != "" {
 		fmt.Println(`DEPRECATION WARNING: jwt_id_param option is deprecated
-		and will be removed in the next major release of anycable-go.
-		Use jwt_param instead.`)
+and will be removed in the next major release of anycable-go.
+Use jwt_param instead.`)
 
 		if c.JWT.Param == "" {
 			c.JWT.Param = jwtIdParam
@@ -248,8 +248,8 @@ It has no effect anymore, use public streams instead.`)
 
 	if jwtIdEnforce {
 		fmt.Println(`DEPRECATION WARNING: jwt_id_enforce option is deprecated
-		and will be removed in the next major release of anycable-go.
-		Use enfore_jwt instead.`)
+and will be removed in the next major release of anycable-go.
+Use enfore_jwt instead.`)
 
 		c.JWT.Force = true
 	}
@@ -260,6 +260,12 @@ It has no effect anymore, use public streams instead.`)
 	}
 
 	// Legacy HTTP authentication stuff
+	if c.HTTPBroadcast.Secret != "" {
+		fmt.Println(`DEPRECATION WARNING: http_broadcast_secret option is deprecated
+and will be removed in the next major release of anycable-go.
+Use broadcast_key instead.`)
+	}
+
 	if c.HTTPBroadcast.Secret == "" {
 		c.HTTPBroadcast.Secret = c.BroadcastKey
 	}
