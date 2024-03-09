@@ -1,0 +1,14 @@
+module AnyCable
+  interface _ObjectSerializer
+    def serialize: (untyped) -> untyped
+    def deserialize: (String) -> untyped
+  end
+
+  module Serializer
+    def self.object_serializer: () -> _ObjectSerializer?
+    def self.object_serializer=: (_ObjectSerializer?) -> void
+
+    def self.serialize: (untyped) -> untyped
+    def self.deserialize: (untyped) -> untyped
+  end
+end

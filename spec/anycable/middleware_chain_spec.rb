@@ -94,7 +94,7 @@ describe AnyCable::MiddlewareChain, rbs: false do
     end
 
     specify "allows aborting calls via exceptions" do
-      expect(chain.call(:abort, "data", &(proc {}))).to eq({status: :exception, message: "Aborting from middleware"})
+      expect(chain.call(:abort, "data", &proc {})).to eq({status: :exception, message: "Aborting from middleware"})
       expect(chain.call(:test, "data") { raise "Handler exception" }).to eq({status: :exception, message: "Handler exception"})
     end
   end

@@ -2,7 +2,25 @@
 
 ## master
 
+- Added JWT utils. ([@palkan][])
+
+You can now generate and verify AnyCable JWT tokens without using additional dependencies:
+
+```ruby
+token = AnyCable::JWT.encode({user_id: "1"})
+
+identifiers = AnyCable::JWT.decode(token)
+```
+
+This change will deprecate `anycable-rails-jwt`.
+
 - Added signed streams support. ([@palkan][])
+
+You can generate signed stream names as follows:
+
+```ruby
+signed_name = AnyCable::Streams.sign("chat/2024")
+```
 
 - Added `secret` and `broadcast_key` configuration parameters. ([@palkan][])
 

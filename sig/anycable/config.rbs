@@ -8,6 +8,10 @@ module AnyCable
     def secret=: (String?) -> void
     def streams_secret: () -> String?
     def streams_secret=: (String?) -> void
+    def jwt_secret: () -> String?
+    def jwt_secret=: (String?) -> void
+    def jwt_ttl: () -> Integer?
+    def jwt_ttl=: (Integer) -> void
     def broadcast_key: () -> String?
     def broadcast_key=: (String?) -> void
     def redis_url: () -> String
