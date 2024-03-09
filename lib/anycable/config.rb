@@ -32,6 +32,10 @@ module AnyCable
       ## Streams
       streams_secret: nil,
 
+      ## JWT
+      jwt_secret: nil,
+      jwt_ttl: 3600, # 1 hour
+
       ## Broadcasting
       broadcast_adapter: :redis,
       broadcast_key: nil,
@@ -117,6 +121,10 @@ module AnyCable
     end
 
     def streams_secret
+      super || secret
+    end
+
+    def jwt_secret
       super || secret
     end
 

@@ -1,0 +1,21 @@
+module AnyCable
+  module JWT
+    interface _Impl
+      def encode: (Hash[String | Symbol, untyped] payload, String secret_key) -> String
+      def decode: (String token, String secret_key) -> Hash[String, untyped]
+    end
+
+    module BasicImpl
+      extend _Impl
+
+      def self.sign: (String data, String key) -> String
+      def self.secure_compare: (String a, String b) -> bool
+    end
+
+    def self.jwt_impl: () -> _Impl
+    def self.jwt_impl=: (_Impl) -> void
+
+    def self.encode: (untyped payload, ?secret_key: String?, ?ttl: Integer, ?expires_at: Time | Integer) -> String
+    def self.decode: (String token, ?secret_key: String?) -> untyped
+  end
+end
