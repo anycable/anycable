@@ -15,6 +15,7 @@ module AnyCable
 
       def verified(signed_stream_name)
         encoded, sig = signed_stream_name.split("--")
+        raise ArgumentError, "stream name has incorrect format" unless encoded
 
         return unless sig == signature(encoded)
 
