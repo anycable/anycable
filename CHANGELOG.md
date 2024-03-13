@@ -2,6 +2,8 @@
 
 ## master
 
+## 1.5.0-rc.1
+
 - HTTP broadcaster is enabled by default. ([@palkan][])
 
 HTTP broadcaster is now enabled by default in addition to Redis (backward-compatibility). It will be the primary default broadcaster in v2.
