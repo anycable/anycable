@@ -6,6 +6,7 @@ package enats
 import (
 	"context"
 	"errors"
+	"log/slog"
 )
 
 // NewConfig returns defaults for NATSServiceConfig
@@ -21,6 +22,10 @@ func (Service) Start() error {
 }
 func (Service) Shutdown(ctx context.Context) error { return nil }
 
-func NewService(c *Config) *Service {
+func NewService(c *Config, l *slog.Logger) *Service {
 	return &Service{}
+}
+
+func (s *Service) WaitJetStreamReady(v int) error {
+	return errors.New("not implemented")
 }
