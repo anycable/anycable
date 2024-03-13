@@ -29,7 +29,4 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "anycable-core", AnyCable::VERSION
   spec.add_dependency "grpc", "~> 1.53"
-  # This is a minimal version that supports integer enums in JSON
-  # required by HTTRPC: https://github.com/protocolbuffers/protobuf/pull/11673
-  spec.add_dependency "google-protobuf", "~> 3.23"
 end
