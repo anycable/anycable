@@ -193,6 +193,7 @@ Use shutdown_timeout instead.`)
 	}
 
 	c.SSE.AllowedOrigins = c.WS.AllowedOrigins
+	c.HTTPBroadcast.CORSHosts = c.WS.AllowedOrigins
 
 	if turboRailsKey != "" {
 		fmt.Println(`DEPRECATION WARNING: turbo_rails_key option is deprecated
@@ -600,6 +601,12 @@ func httpBroadcastCLIFlags(c *config.Config) []cli.Flag {
 			Name:        "http_broadcast_secret",
 			Usage:       "[Deprecated] HTTP pub/sub authorization secret",
 			Destination: &c.HTTPBroadcast.Secret,
+			Hidden:      true,
+		},
+
+		&cli.BoolFlag{
+			Name:        "http_broadcast_cors",
+			Destination: &c.HTTPBroadcast.AddCORSHeaders,
 			Hidden:      true,
 		},
 	})
