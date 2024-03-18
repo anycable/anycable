@@ -115,6 +115,10 @@ Redis URL to connect to (default: `"redis://localhost:6379/5"`). Used by the cor
 
 Redis channel for broadcasting (default: `"__anycable__"`). When using the `redisx` adapter, it's used as a name of the Redis stream.
 
+**--redis_disable_cache** (`ANYCABLE_REDIS_DISABLE_CACHE`)
+
+Disable [`CLIENT TRACKING`](https://redis.io/commands/client-tracking/) (it could be blocked by some managed Redis providers).
+
 ## NATS configuration
 
 **--nats_servers** (`ANYCABLE_NATS_SERVERS`)
