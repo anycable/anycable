@@ -162,7 +162,13 @@ func (g *Gate) performBroadcast(streamMsg *common.StreamMessage) {
 }
 
 func buildMessage(msg *common.StreamMessage, identifier string) encoders.EncodedMessage {
-	return encoders.NewCachedEncodedMessage(msg.ToReplyFor(identifier))
+	reply := msg.ToReplyFor(identifier)
+
+	if msg.Meta != nil {
+		reply.Type = msg.Meta.BroadcastType
+	}
+
+	return encoders.NewCachedEncodedMessage(reply)
 }
 
 func streamSessionsSnapshot[T comparable](src map[T]map[string]bool) map[T][]string {

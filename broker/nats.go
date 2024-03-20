@@ -311,6 +311,11 @@ func (n *NATS) writeEpoch(val string) {
 }
 
 func (n *NATS) HandleBroadcast(msg *common.StreamMessage) {
+	if msg.Meta != nil && msg.Meta.Transient {
+		n.broadcaster.Broadcast(msg)
+		return
+	}
+
 	err := n.Ready(jetstreamReadyTimeout)
 	if err != nil {
 		n.log.Debug("JetStream is not ready yet to publish messages, add to backlog")

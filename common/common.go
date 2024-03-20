@@ -289,6 +289,10 @@ func (m *Message) LogValue() slog.Value {
 // which can be used to modify delivery behavior
 type StreamMessageMetadata struct {
 	ExcludeSocket string `json:"exclude_socket,omitempty"`
+	// BroadcastType defines the message type to be used for messages sent to clients
+	BroadcastType string `json:"broadcast_type,omitempty"`
+	// Transient defines whether this message should be stored in the history
+	Transient bool `json:"transient,omitempty"`
 }
 
 func (smm *StreamMessageMetadata) LogValue() slog.Value {

@@ -310,6 +310,8 @@ func sharedIntegrationHistory(t *testing.T, node *Node, controller *mocks.Contro
 	ts := time.Now().Unix()
 
 	node.HandleBroadcast([]byte(`{"stream": "messages_1","data":"Flavia: buona sera"}`))
+	// Transient messages must not be stored in the history
+	node.HandleBroadcast([]byte(`{"stream": "messages_1","data":"Who's there?","meta":{"transient":true}}`))
 	node.HandleBroadcast([]byte(`{"stream": "messages_1","data":"Mario: ta-dam!"}`))
 
 	node.HandleBroadcast([]byte(`{"stream": "presence_1","data":"1 new notification"}`))

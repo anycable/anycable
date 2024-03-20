@@ -234,6 +234,11 @@ func (b *Memory) Shutdown(ctx context.Context) error {
 }
 
 func (b *Memory) HandleBroadcast(msg *common.StreamMessage) {
+	if msg.Meta != nil && msg.Meta.Transient {
+		b.broadcaster.Broadcast(msg)
+		return
+	}
+
 	offset := b.add(msg.Stream, msg.Data)
 
 	msg.Epoch = b.GetEpoch()
