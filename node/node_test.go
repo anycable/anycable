@@ -258,6 +258,54 @@ func TestPerform(t *testing.T) {
 	})
 }
 
+func TestWhisper(t *testing.T) {
+	node := NewMockNode()
+	session := NewMockSession("14", node)
+	session2 := NewMockSession("15", node)
+
+	// Subscribe using different identifiers to make sure whisper is working
+	// per stream name, not per identifier
+	defer subscribeSessionToStream(session, node, "test_channel", "test_whisper")()
+	defer subscribeSessionToStream(session2, node, "test_channel_2", "test_whisper")()
+
+	go node.hub.Run()
+	defer node.hub.Shutdown()
+
+	t.Run("When whispering stream is configured for sending subscription", func(t *testing.T) {
+		session.WriteInternalState(common.WhisperStateKey("test_channel"), "test_whisper")
+
+		err := node.Whisper(session, &common.Message{Identifier: "test_channel", Data: "tshh... it's a secret"})
+		assert.Nil(t, err)
+
+		expected := `{"type":"whisper","identifier":"test_channel_2","message":"tshh... it's a secret"}`
+
+		msg, err := session2.conn.Read()
+		assert.NoError(t, err)
+		assert.Equal(t, expected, string(msg))
+
+		// Sender do not receive the message
+		msg, err = session.conn.Read()
+		assert.Nil(t, msg)
+		assert.Error(t, err, "Session hasn't received any messages")
+	})
+
+	t.Run("When whispering stream is not configured", func(t *testing.T) {
+		session.InternalState = make(map[string]interface{})
+
+		err := node.Whisper(session, &common.Message{Identifier: "test_channel", Data: "tshh... it's a secret"})
+		assert.Nil(t, err)
+
+		msg, err := session2.conn.Read()
+		assert.Error(t, err)
+		assert.Nil(t, msg)
+
+		// Sender do not receive the message
+		msg, err = session.conn.Read()
+		assert.Nil(t, msg)
+		assert.Error(t, err, "Session hasn't received any messages")
+	})
+}
+
 func TestStreamSubscriptionRaceConditions(t *testing.T) {
 	node := NewMockNode()
 	session := NewMockSession("14", node)
@@ -779,6 +827,19 @@ func toJSON(msg encoders.EncodedMessage) []byte {
 	}
 
 	return b
+}
+
+func subscribeSessionToStream(s *Session, n *Node, identifier string, stream string) func() {
+	n.hub.AddSession(s)
+
+	s.subscriptions.AddChannel(identifier)
+	s.subscriptions.AddChannelStream(identifier, stream)
+	n.hub.SubscribeSession(s, stream, identifier)
+	n.broker.Subscribe(stream)
+
+	return func() {
+		n.hub.RemoveSession(s)
+	}
 }
 
 func readMessages(conn Connection, count int) ([]string, error) {

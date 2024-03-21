@@ -64,6 +64,8 @@ const (
 
 	HistoryConfirmedType = "confirm_history"
 	HistoryRejectedType  = "reject_history"
+
+	WhisperType = "whisper"
 )
 
 // Disconnect reasons
@@ -73,6 +75,11 @@ const (
 	IDLE_TIMEOUT_REASON      = "idle_timeout"
 	NO_PONG_REASON           = "no_pong"
 	UNAUTHORIZED_REASON      = "unauthorized"
+)
+
+// Reserver state fields
+const (
+	WHISPER_STATE_SUFFIX = "$w"
 )
 
 // SessionEnv represents the underlying HTTP connection data:
@@ -513,4 +520,9 @@ func RejectionMessage(identifier string) string {
 // DisconnectionMessage returns a disconnect message with the specified reason and reconnect flag
 func DisconnectionMessage(reason string, reconnect bool) string {
 	return string(utils.ToJSON(DisconnectMessage{Type: DisconnectType, Reason: reason, Reconnect: reconnect}))
+}
+
+// WhisperStateKey returns the field name for the given identifier to store the whispering stream name
+func WhisperStateKey(identifier string) string {
+	return identifier + "/" + WHISPER_STATE_SUFFIX
 }

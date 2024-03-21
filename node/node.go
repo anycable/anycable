@@ -173,6 +173,8 @@ func (n *Node) HandleCommand(s *Session, msg *common.Message) (err error) {
 		_, err = n.Perform(s, msg)
 	case "history":
 		err = n.History(s, msg)
+	case "whisper":
+		err = n.Whisper(s, msg)
 	default:
 		err = fmt.Errorf("unknown command: %s", msg.Command)
 	}
@@ -626,6 +628,47 @@ func (n *Node) retreiveHistory(history *common.HistoryRequest, streams []string)
 	}
 
 	return backlog, nil
+}
+
+// Whisper broadcasts the message to the specified whispering stream to
+// all clients except the sender
+func (n *Node) Whisper(s *Session, msg *common.Message) error {
+	// The session must have the whisper stream name defined in the state to be able to whisper
+	// If the stream is not defined, the whisper message is ignored
+	env := s.GetEnv()
+	if env == nil {
+		return errors.New("session environment is missing")
+	}
+
+	streamVal, ok := s.ReadInternalState(common.WhisperStateKey(msg.Identifier))
+
+	if !ok {
+		s.Log.Debug("whisper stream not found", "identifier", msg.Identifier)
+		return nil
+	}
+
+	stream, ok := streamVal.(string)
+
+	if !ok {
+		s.Log.Warn("whisper stream is not a string", "identifier", msg.Identifier, "value", streamVal)
+		return nil
+	}
+
+	broadcast := &common.StreamMessage{
+		Stream: stream,
+		Data:   string(utils.ToJSON(msg.Data)),
+		Meta: &common.StreamMessageMetadata{
+			ExcludeSocket: s.GetID(),
+			BroadcastType: common.WhisperType,
+			Transient:     true,
+		},
+	}
+
+	n.broker.HandleBroadcast(broadcast)
+
+	s.Log.Debug("whispered", "stream", stream)
+
+	return nil
 }
 
 // Broadcast message to stream (locally)
