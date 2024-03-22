@@ -277,7 +277,7 @@ func TestWhisper(t *testing.T) {
 		err := node.Whisper(session, &common.Message{Identifier: "test_channel", Data: "tshh... it's a secret"})
 		assert.Nil(t, err)
 
-		expected := `{"type":"whisper","identifier":"test_channel_2","message":"tshh... it's a secret"}`
+		expected := `{"identifier":"test_channel_2","message":"tshh... it's a secret"}`
 
 		msg, err := session2.conn.Read()
 		assert.NoError(t, err)

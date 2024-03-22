@@ -14,6 +14,8 @@ import (
 type SubscribeRequest struct {
 	StreamName       string `json:"stream_name"`
 	SignedStreamName string `json:"signed_stream_name"`
+
+	whisper bool
 }
 
 func (r *SubscribeRequest) IsPresent() bool {
@@ -106,11 +108,18 @@ func (c *Controller) Subscribe(sid string, env *common.SessionEnv, ids string, i
 		c.log.With("identifier", identifier).Debug("verified", "stream", stream)
 	}
 
+	var state map[string]string
+
+	if request.whisper {
+		state = map[string]string{common.WHISPER_STREAM_STATE: stream}
+	}
+
 	return &common.CommandResult{
 		Status:             common.SUCCESS,
 		Transmissions:      []string{common.ConfirmationMessage(identifier)},
 		Streams:            []string{stream},
 		DisconnectInterest: -1,
+		IState:             state,
 	}, nil
 }
 
@@ -134,6 +143,7 @@ func (c *Controller) Disconnect(sid string, env *common.SessionEnv, ids string, 
 func NewStreamsController(conf *Config, l *slog.Logger) *Controller {
 	key := conf.Secret
 	allowPublic := conf.Public
+	whispers := conf.Whisper
 
 	resolver := func(identifier string) (*SubscribeRequest, error) {
 		var request SubscribeRequest
@@ -144,6 +154,10 @@ func NewStreamsController(conf *Config, l *slog.Logger) *Controller {
 
 		if !allowPublic && request.StreamName != "" {
 			return nil, errors.New("public streams are not allowed")
+		}
+
+		if whispers || (request.StreamName != "") {
+			request.whisper = true
 		}
 
 		return &request, nil

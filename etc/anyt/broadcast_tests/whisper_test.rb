@@ -39,7 +39,7 @@ feature "Whisper" do
 
     client.send(perform_request)
 
-    msg = {"type" => "whisper", "identifier" => {channel: channel}.to_json, "message" => {"event" => "typing", "user" => "Vova"}}
+    msg = {"identifier" => {channel: channel}.to_json, "message" => {"event" => "typing", "user" => "Vova"}}
 
     assert_message msg, client2.receive
     assert_message msg, client3.receive

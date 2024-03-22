@@ -653,7 +653,6 @@ func (n *Node) Whisper(s *Session, msg *common.Message) error {
 		Data:   string(utils.ToJSON(msg.Data)),
 		Meta: &common.StreamMessageMetadata{
 			ExcludeSocket: s.GetID(),
-			BroadcastType: common.WhisperType,
 			Transient:     true,
 		},
 	}

@@ -1097,6 +1097,12 @@ func signedStreamsCLIFlags(c *config.Config, turboRailsKey *string, cableReadyKe
 		},
 
 		&cli.BoolFlag{
+			Name:        "streams_whisper",
+			Usage:       "Enable whispering for signed pub/sub streams",
+			Destination: &c.Streams.Whisper,
+		},
+
+		&cli.BoolFlag{
 			Name:        "turbo_streams",
 			Usage:       "Enable Turbo Streams support",
 			Destination: &c.Streams.Turbo,

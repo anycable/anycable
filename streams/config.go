@@ -9,6 +9,9 @@ type Config struct {
 	// Public determines if public (unsigned) streams are allowed
 	Public bool
 
+	// Whisper determines if whispering is enabled for pub/sub streams
+	Whisper bool
+
 	// PubSubChannel is the channel name used for direct pub/sub
 	PubSubChannel string
 

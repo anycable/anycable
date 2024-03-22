@@ -142,6 +142,27 @@ $digest = hash_hmac('sha256', $encoded, $SECRET_KEY);
 $signed_stream_name = $encoded . '--' . $digest;
 ```
 
+## Whispering
+
+_Whispering_ is an ability to publish _transient_ broadcasts from clients, i.e., without touching your backend. This is useful when you want to share client-only information from one connection to others. Typical examples include typing indicators, cursor position sharing, etc.
+
+Whispering must be enabled explicitly for signed streams via the `--streams_whisper` (`ANYCABLE_STREAMS_WHISPER=true`) option. Public streams always allow whispering.
+
+Here is an example client code using AnyCable JS SDK:
+
+```js
+let channel = cable.streamFrom("chat/22");
+
+channel.on("message", (msg) => {
+  if (msg.event === "typing") {
+    console.log(`user ${msg.name} is typing`);
+  }
+})
+
+// publishing whispers
+channel.whisper({event: "typing", name: user.name})
+```
+
 ## Hotwire and CableReady support
 
 AnyCable provides an ability to terminate Hotwire ([Turbo Streams](https://turbo.hotwired.dev/handbook/streams)) and [CableReady](https://cableready.stimulusreflex.com) (v5+) subscriptions at the WebSocker server using the same signed streams functionality under the hood (and, thus, without performing any RPC calls to authorize subscriptions).

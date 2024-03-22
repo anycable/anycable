@@ -53,6 +53,7 @@ func TestStreamsController(t *testing.T) {
 		assert.Equal(t, []string{common.ConfirmationMessage(`{"channel":"$pubsub","stream_name":"chat:2024"}`)}, res.Transmissions)
 		assert.Equal(t, []string{"chat:2024"}, res.Streams)
 		assert.Equal(t, -1, res.DisconnectInterest)
+		assert.Equal(t, "chat:2024", res.IState[common.WHISPER_STREAM_STATE])
 	})
 
 	t.Run("Subscribe - no public allowed", func(t *testing.T) {
@@ -85,6 +86,28 @@ func TestStreamsController(t *testing.T) {
 		assert.Equal(t, []string{common.ConfirmationMessage(identifier)}, res.Transmissions)
 		assert.Equal(t, []string{"chat:2021"}, res.Streams)
 		assert.Equal(t, -1, res.DisconnectInterest)
+		assert.Nil(t, res.IState)
+	})
+
+	t.Run("Subscribe - signed - whisper", func(t *testing.T) {
+		conf := NewConfig()
+		conf.Secret = key
+		conf.Whisper = true
+		subject := NewStreamsController(&conf, slog.Default())
+
+		require.NotNil(t, subject)
+
+		identifier := `{"channel":"$pubsub","signed_stream_name":"` + stream + `"}`
+
+		res, err := subject.Subscribe("42", nil, "name=jack", identifier)
+
+		require.NoError(t, err)
+		require.NotNil(t, res)
+		require.Equal(t, common.SUCCESS, res.Status)
+		assert.Equal(t, []string{common.ConfirmationMessage(identifier)}, res.Transmissions)
+		assert.Equal(t, []string{"chat:2021"}, res.Streams)
+		assert.Equal(t, -1, res.DisconnectInterest)
+		assert.Equal(t, "chat:2021", res.IState[common.WHISPER_STREAM_STATE])
 	})
 }
 
