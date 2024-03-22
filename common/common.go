@@ -79,7 +79,7 @@ const (
 
 // Reserver state fields
 const (
-	WHISPER_STATE_SUFFIX = "$w"
+	WHISPER_STREAM_STATE = "$w"
 )
 
 // SessionEnv represents the underlying HTTP connection data:
@@ -133,6 +133,10 @@ func (st *SessionEnv) MergeChannelState(id string, other *map[string]string) {
 			(*st.ChannelStates)[id][k] = v
 		}
 	}
+}
+
+func (st *SessionEnv) RemoveChannelState(id string) {
+	delete((*st.ChannelStates), id)
 }
 
 // Returns a value for the specified key of the specified channel
@@ -520,9 +524,4 @@ func RejectionMessage(identifier string) string {
 // DisconnectionMessage returns a disconnect message with the specified reason and reconnect flag
 func DisconnectionMessage(reason string, reconnect bool) string {
 	return string(utils.ToJSON(DisconnectMessage{Type: DisconnectType, Reason: reason, Reconnect: reconnect}))
-}
-
-// WhisperStateKey returns the field name for the given identifier to store the whispering stream name
-func WhisperStateKey(identifier string) string {
-	return identifier + "/" + WHISPER_STATE_SUFFIX
 }

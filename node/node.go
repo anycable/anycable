@@ -494,6 +494,7 @@ func (n *Node) Unsubscribe(s *Session, msg *common.Message) (*common.CommandResu
 		// Make sure to remove all streams subscriptions
 		res.StopAllStreams = true
 
+		s.env.RemoveChannelState(msg.Identifier)
 		s.subscriptions.RemoveChannel(msg.Identifier)
 
 		s.Log.Debug("unsubscribed", "identifier", msg.Identifier)
@@ -640,17 +641,10 @@ func (n *Node) Whisper(s *Session, msg *common.Message) error {
 		return errors.New("session environment is missing")
 	}
 
-	streamVal, ok := s.ReadInternalState(common.WhisperStateKey(msg.Identifier))
+	stream := env.GetChannelStateField(msg.Identifier, common.WHISPER_STREAM_STATE)
 
-	if !ok {
+	if stream == "" {
 		s.Log.Debug("whisper stream not found", "identifier", msg.Identifier)
-		return nil
-	}
-
-	stream, ok := streamVal.(string)
-
-	if !ok {
-		s.Log.Warn("whisper stream is not a string", "identifier", msg.Identifier, "value", streamVal)
 		return nil
 	}
 

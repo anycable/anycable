@@ -272,7 +272,7 @@ func TestWhisper(t *testing.T) {
 	defer node.hub.Shutdown()
 
 	t.Run("When whispering stream is configured for sending subscription", func(t *testing.T) {
-		session.WriteInternalState(common.WhisperStateKey("test_channel"), "test_whisper")
+		session.env.MergeChannelState("test_channel", &map[string]string{common.WHISPER_STREAM_STATE: "test_whisper"})
 
 		err := node.Whisper(session, &common.Message{Identifier: "test_channel", Data: "tshh... it's a secret"})
 		assert.Nil(t, err)
@@ -290,7 +290,7 @@ func TestWhisper(t *testing.T) {
 	})
 
 	t.Run("When whispering stream is not configured", func(t *testing.T) {
-		session.InternalState = make(map[string]interface{})
+		session.env.RemoveChannelState("test_channel")
 
 		err := node.Whisper(session, &common.Message{Identifier: "test_channel", Data: "tshh... it's a secret"})
 		assert.Nil(t, err)
