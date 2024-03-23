@@ -137,7 +137,7 @@ func (s *HTTPBroadcaster) Start(done chan (error)) error {
 	}
 
 	if s.enableCORS {
-		verifiedVia = verifiedVia + ", CORS enabled"
+		verifiedVia += ", CORS enabled"
 	}
 
 	s.log.Info(fmt.Sprintf("Accept broadcast requests at %s%s (%s)", s.server.Address(), s.path, verifiedVia))
