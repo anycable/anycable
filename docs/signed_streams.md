@@ -165,9 +165,9 @@ channel.whisper({event: "typing", name: user.name})
 
 ## Hotwire and CableReady support
 
-AnyCable provides an ability to terminate Hotwire ([Turbo Streams](https://turbo.hotwired.dev/handbook/streams)) and [CableReady](https://cableready.stimulusreflex.com) (v5+) subscriptions at the WebSocker server using the same signed streams functionality under the hood (and, thus, without performing any RPC calls to authorize subscriptions).
+AnyCable can be used to serve Hotwire ([Turbo Streams](https://turbo.hotwired.dev/handbook/streams)) and [CableReady](https://cableready.stimulusreflex.com) (v5+) subscriptions right at the real-time server using the same signed streams functionality under the hood (and, thus, without performing any RPC calls to authorize subscriptions).
 
-In combination with [JWT authentication](./jwt_identification.md), this feature makes it possible to avoid run AnyCable in a standalone mode for Hotwire/CableReady applications.
+In combination with [JWT authentication](./jwt_identification.md), this feature makes it possible to run AnyCable in a standalone mode for Hotwire/CableReady applications.
 
 > 🎥 Check out this [AnyCasts episode](https://anycable.io/blog/anycasts-rails-7-hotwire-and-anycable/) to learn how to use AnyCable with Hotwire Rails application in a RPC-less way.
 

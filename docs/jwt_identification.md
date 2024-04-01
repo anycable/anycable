@@ -33,13 +33,18 @@ The token MUST include the `ext` claim with the JSON-encoded connection identifi
 
 ## Generating tokens
 
-### Rails integration
+### Rails/Ruby
 
-Use [anycable-rails-jwt][] gem to integration JWT identification into your Rails app.
+When using AnyCable Ruby/Rails SDK, you can generate tokens as follows:
 
-### Custom implementation
+```ruby
+token = AnyCable::JWT.encode({user: current_user})
 
-Here is an example Ruby code to generate tokens:
+# Setting TTL is also possible
+token = AnyCable::JWT.encode({user: current_user}, expires_at: 10.minutes.from_now)
+```
+
+If you don't want to use our SDKs (why?), here is how you can generate tokens yourself:
 
 ```ruby
 require "jwt"
@@ -59,6 +64,49 @@ payload = {ext: identifiers.to_json, exp: exp}
 puts JWT.encode payload, ENCRYPTION_KEY, "HS256"
 ```
 
+## JavaScript/TypeScript
+
+You can use [AnyCable server-side JS SDK](https://github.com/anycable/anycable-serverless-js) to generate tokens as follows:
+
+```js
+import { identificator } from "@anycable/serverless-js";
+
+const jwtSecret = "very-secret";
+const jwtTTL = "1h";
+
+export const identifier = identificator(jwtSecret, jwtTTL);
+
+// Then, somewhere in your code, generate a token and provide it to the client
+const userId = authenticatedUser.id;
+const token = await identifier.generateToken({ userId });
+```
+
+## PHP
+
+You can use the following snippet to generate tokens in PHP:
+
+```php
+use Firebase\JWT\JWT;
+
+$identifiers = ['user_id' => 42];
+$payload = ['ext' => json_encode($identifiers), 'exp' => time() + 300];
+$jwt = JWT::encode($payload, $ENCRYPTION_KEY, 'HS256');
+```
+
+## Python
+
+Here is an example Python code to generate AnyCable tokens:
+
+```python
+import json
+import jwt
+import time
+
+identifiers = {'user_id': 42}
+payload = {'ext': json.dumps(identifiers), 'exp': int(time.time()) + 300}
+jwt.encode(payload, ENCRYPTION_KEY, algorithm='HS256')
+```
+
 ### Handling expired tokens
 
 > 🎥 Check out this [AnyCasts episode](https://anycable.io/blog/anycasts-using-anycable-client/) to learn more about the expiration problem and how to solve it using [anycable-client](https://github.com/anycable/anycable-client).
@@ -68,5 +116,4 @@ Whenever a server encounters a token that has expired, it rejects the connection
 See, for example, how [anycable-client handles this](https://github.com/anycable/anycable-client#refreshing-authentication-tokens).
 
 [jwt]: https://jwt.io
-[anycable-rails-jwt]: https://github.com/anycable/anycable-rails-jwt
 [anycable-client]: https://github.com/anycable/anycable-client
