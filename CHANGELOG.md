@@ -2,6 +2,8 @@
 
 ## master
 
+## 1.5.0 (2024-04-01)
+
 - Fixed gRPC keepalive settings to align with the Go server client. ([@palkan][])
 
 - Added JWT utils. ([@palkan][])
