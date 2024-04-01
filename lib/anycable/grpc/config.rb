@@ -35,7 +35,15 @@ module AnyCable
           poll_period: rpc_poll_period,
           pool_keep_alive: rpc_pool_keep_alive,
           tls_credentials: tls_credentials,
-          server_args: enhance_grpc_server_args(normalized_grpc_server_args)
+          server_args: enhance_grpc_server_args(normalized_grpc_server_args).tap do |sargs|
+            # Provide keepalive defaults unless explicitly set.
+            # They must MATCH the corresponding Go client defaults:
+            # https://github.com/anycable/anycable-go/blob/62e77e7f759aa9253c2bd23812dd59ec8471db86/rpc/rpc.go#L512-L515
+            #
+            # See also https://github.com/grpc/grpc/blob/master/doc/keepalive.md and https://grpc.github.io/grpc/core/group__grpc__arg__keys.html
+            sargs["grpc.keepalive_permit_without_calls"] ||= 1
+            sargs["grpc.http2.min_recv_ping_interval_without_data_ms"] ||= 10_000
+          end
         }
       end
 

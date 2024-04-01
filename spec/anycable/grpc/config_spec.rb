@@ -42,18 +42,37 @@ describe AnyCable::Config do
         "grpc.loadreporting" => 1,
         "grpc.max_connection_age_ms" => 10_000,
         "grpc.per_message_compression" => 1,
-        "grpc.max_concurrent_streams" => 10
+        "grpc.max_concurrent_streams" => 10,
+        "grpc.keepalive_permit_without_calls" => 1,
+        "grpc.http2.min_recv_ping_interval_without_data_ms" => 10_000
       })
     end
 
     it "returns default hash if server_args is not a hash" do
       expect(described_class.new(rpc_server_args: "foo").to_grpc_params[:server_args])
-        .to eq({"grpc.max_connection_age_ms" => 300_000})
+        .to eq({
+          "grpc.max_connection_age_ms" => 300_000,
+          "grpc.keepalive_permit_without_calls" => 1,
+          "grpc.http2.min_recv_ping_interval_without_data_ms" => 10_000
+        })
     end
 
     it "returns correct config if server_args is empty but rpc_max_connection_age is set" do
       expect(described_class.new(rpc_server_args: {}, rpc_max_connection_age: 60).to_grpc_params[:server_args])
-        .to eq({"grpc.max_connection_age_ms" => 60_000})
+        .to eq({
+          "grpc.max_connection_age_ms" => 60_000,
+          "grpc.keepalive_permit_without_calls" => 1,
+          "grpc.http2.min_recv_ping_interval_without_data_ms" => 10_000
+        })
+    end
+
+    it "allows overwriting keepalive settings" do
+      expect(described_class.new(rpc_server_args: {"grpc.keepalive_permit_without_calls" => 0}).to_grpc_params[:server_args])
+        .to eq({
+          "grpc.max_connection_age_ms" => 300_000,
+          "grpc.keepalive_permit_without_calls" => 0,
+          "grpc.http2.min_recv_ping_interval_without_data_ms" => 10_000
+        })
     end
   end
 

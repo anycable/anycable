@@ -2,6 +2,8 @@
 
 ## master
 
+- Fixed gRPC keepalive settings to align with the Go server client. ([@palkan][])
+
 - Added JWT utils. ([@palkan][])
 
 You can now generate and verify AnyCable JWT tokens without using additional dependencies:
