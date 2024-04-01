@@ -14,7 +14,7 @@ describe AnyCable::RPC::Handlers::Command do
       Class.new(AnyCable::TestFactory::Channel) do
         def follow(*)
           stream_from "user_#{connection.identifiers["current_user"]}"
-          stream_from "all"
+          stream_from "all", whisper: true
         end
 
         def unfollow(*)
@@ -68,6 +68,7 @@ describe AnyCable::RPC::Handlers::Command do
         expect(subject).to be_success
         expect(subject.streams).to contain_exactly("user_john", "all")
         expect(subject.stop_streams).to eq false
+        expect(subject.istate["$w"]).to eq "all"
       end
     end
 
@@ -83,9 +84,11 @@ describe AnyCable::RPC::Handlers::Command do
       let(:data) { {action: "unfollow"} }
 
       it "responds with stopped streams", :aggregate_failures do
+        env.istate["$w"] = "all"
         expect(subject).to be_success
         expect(subject.stopped_streams).to contain_exactly("all")
         expect(subject.stop_streams).to eq false
+        expect(subject.istate["$w"]).to be_empty
       end
     end
 
@@ -183,7 +186,7 @@ describe AnyCable::RPC::Handlers::Command do
           if connection.identifiers["current_user"] != "john"
             @rejected = true
           else
-            stream_from "test"
+            stream_from "test", whisper: true
           end
         end
       end.tap { |klass| AnyCable::TestFactory.register_channel("test_subscribe", klass) }
@@ -213,6 +216,7 @@ describe AnyCable::RPC::Handlers::Command do
         expect(subject.streams).to eq ["test"]
         expect(subject.stop_streams).to eq false
         expect(subject.transmissions.first).to include("confirm_subscription")
+        expect(subject.istate["$w"]).to eq "test"
       end
     end
 
@@ -260,6 +264,17 @@ describe AnyCable::RPC::Handlers::Command do
 
       channel_logs = log.select { |entry| entry[:source] == channel_id }
       expect(channel_logs.last[:data]).to eq(user: "john", type: "unsubscribed")
+    end
+
+    context "when has whisper stream" do
+      it "responds with stop_all_streams and empty $w state" do
+        env.istate["$w"] = "test"
+
+        expect(subject).to be_success
+        expect(subject.stop_streams).to eq true
+        expect(subject.transmissions.first).to include("confirm_unsubscribe")
+        expect(subject.istate["$w"]).to be_empty
+      end
     end
   end
 

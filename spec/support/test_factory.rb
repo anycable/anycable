@@ -123,8 +123,9 @@ module AnyCable
         @rejected == true
       end
 
-      def stream_from(broadcasting)
+      def stream_from(broadcasting, whisper: false)
         connection.socket.subscribe identifier, broadcasting
+        connection.socket.whisper identifier, broadcasting if whisper
       end
 
       def stop_stream_from(broadcasting)

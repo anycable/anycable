@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 module AnyCable
+  WHISPER_KEY = "$w"
+
   # Socket mock to be used with application connection
   class Socket
     # Represents the per-connection store
@@ -59,10 +61,21 @@ module AnyCable
 
     def unsubscribe(_channel, broadcasting)
       streams[:stop] << broadcasting
+
+      if istate.read(WHISPER_KEY) == broadcasting
+        istate.write(WHISPER_KEY, "")
+      end
+    end
+
+    def whisper(_channel, broadcasting)
+      istate.write(WHISPER_KEY, broadcasting)
     end
 
     def unsubscribe_from_all(_channel)
       @stop_all_streams = true
+      if istate.read(WHISPER_KEY)
+        istate.write(WHISPER_KEY, "")
+      end
     end
 
     def streams
