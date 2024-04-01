@@ -2,6 +2,12 @@
 
 ## master
 
+- Add _whispering_ support to pub/sub streams. ([@palkan][])
+
+Whispering is an ability for client to publish events to the subscribed stream without involving any server-side logic. Whenever a client _whispers_ an event to the channel, it's broadcasted to all other connected clients.
+
+The feature is enabled for public streams automatically. For signed streams, you must opt-in via the `--streams_whisper` (`ANYCABLE_STREAMS_WHISPER=true`) option.
+
 ## 1.5.0-rc.1
 
 - HTTP broadcaster is enabled by default. ([@palkan][])
