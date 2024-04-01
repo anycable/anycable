@@ -3,9 +3,7 @@
 feature "Whisper" do
   channel do
     def subscribed
-      stream_from "a"
-      # whispers_to "a" ???
-      __istate__["$w"] = "a"
+      stream_from "a", whisper: true
     end
   end
 
