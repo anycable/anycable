@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/anycable/anycable-go/logger"
 	pb "github.com/anycable/anycable-go/protos"
 	"github.com/anycable/anycable-go/utils"
 	"github.com/sony/gobreaker"
@@ -210,7 +211,7 @@ func (s *HTTPService) performRequest(ctx context.Context, path string, payload [
 			return nil, status.Error(codes.InvalidArgument, "unprocessable entity")
 		}
 
-		return nil, status.Error(codes.InvalidArgument, string(reason))
+		return nil, status.Error(codes.InvalidArgument, logger.CompactValue(reason).String())
 	}
 
 	if res.StatusCode != http.StatusOK {
@@ -219,7 +220,7 @@ func (s *HTTPService) performRequest(ctx context.Context, path string, payload [
 			return nil, status.Error(codes.Unknown, "internal error")
 		}
 
-		return nil, status.Error(codes.Unknown, string(reason))
+		return nil, status.Error(codes.Unknown, logger.CompactValue(reason).String())
 	}
 
 	// Finally, the response is successful, let's read the body
