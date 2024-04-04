@@ -172,6 +172,10 @@ func NewController(metrics metrics.Instrumenter, config *Config, l *slog.Logger)
 	metrics.RegisterGauge(metricsRPCPending, "The number of pending RPC calls")
 
 	capacity := config.Concurrency
+	if capacity <= 0 {
+		capacity = defaultRPCConcurrency
+		l.Warn("RPC concurrency must be positive, reverted to the default value")
+	}
 	barrier, err := NewFixedSizeBarrier(capacity)
 
 	if err != nil {

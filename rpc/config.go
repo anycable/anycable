@@ -15,6 +15,8 @@ import (
 
 const (
 	defaultRPCHost = "localhost:50051"
+	// Slightly less than default Ruby gRPC server concurrency
+	defaultRPCConcurrency = 28
 )
 
 // ClientHelper provides additional methods to operate gRPC client
@@ -61,7 +63,7 @@ type Config struct {
 // NewConfig builds a new config
 func NewConfig() Config {
 	return Config{
-		Concurrency:    28,
+		Concurrency:    defaultRPCConcurrency,
 		EnableTLS:      false,
 		TLSVerify:      true,
 		Host:           defaultRPCHost,
