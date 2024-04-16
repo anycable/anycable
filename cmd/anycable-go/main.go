@@ -7,7 +7,16 @@ import (
 
 	"github.com/anycable/anycable-go/cli"
 	_ "github.com/anycable/anycable-go/diagnostics"
+
+	_ "unsafe"
 )
+
+// IgnorePC is responsible for adding callers pointer to log records.
+// We don't use `AddSource` in our handler, so why not dropping the `runtime.Callers` overhead?
+// See also https://github.com/rs/zerolog/issues/571#issuecomment-1697479194
+//
+//go:linkname IgnorePC log/slog/internal.IgnorePC
+var IgnorePC = true
 
 func main() {
 	c, err, ok := cli.NewConfigFromCLI(os.Args)
