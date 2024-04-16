@@ -1,0 +1,23 @@
+name: Publish PRO source code
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  upload_source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract Pro source code
+        run: |
+          make dist/anycable-source
+      - name: Push to releases repo
+        uses: JamesIves/github-pages-deploy-action@4.0.0
+        with:
+          repository-name: anycable/anycable-pro-source-releases
+          branch: master
+          folder: dist/anycable-source
+          clean: true
+          force: true
+          token: ${{ secrets.SOURCE_RELEASES_ACCESS_TOKEN }}

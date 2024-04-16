@@ -267,4 +267,11 @@ licenses: bin/go-licenses
 	@env GOFLAGS="-tags=$(GO_TAGS_LICENSES)" $$(go env GOPATH)/bin/go-licenses csv github.com/anycable/anycable-go/cli 2>/dev/null | awk -F',' '{ print $$3 }' | sort | uniq | grep -v "Unknown"
 	@env GOFLAGS="-tags=$(GO_TAGS_LICENSES)" $$(go env GOPATH)/bin/go-licenses csv github.com/anycable/anycable-go/cli 2>/dev/null | grep "Unknown" | grep -v "anycable-go" || echo "No unknown licenses 👌"
 
-.PHONY: tmp/anycable-go-test tmp/anycable-embedded-test vendor
+dist/anycable-source:
+	@rm -rf dist/anycable-source
+	@mkdir -p dist/anycable-source
+	@git ls-files | xargs -I@ sh -c 'mkdir -p $$(dirname "dist/anycable-source/@") && cp @ dist/anycable-source/@'
+	@git ls-files -i --cached -X .sourceignore | xargs -I@ sh -c 'rm dist/anycable-source/@'
+	@find dist/anycable-source -type d -empty -delete
+
+.PHONY: tmp/anycable-go-test tmp/anycable-embedded-test vendor dist/anycable-source
