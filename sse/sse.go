@@ -145,6 +145,15 @@ func subscribeCommandFromGetRequest(r *http.Request) (*common.Message, error) {
 		}
 	}
 
+	if since := r.URL.Query().Get(historySinceParam); since != "" {
+		sinceInt, err := strconv.ParseInt(since, 10, 64)
+		if err != nil {
+			return nil, errorx.Decorate(err, "failed to parse history since value: %s", since)
+		}
+
+		msg.History.Since = sinceInt
+	}
+
 	return msg, nil
 }
 

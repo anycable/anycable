@@ -55,6 +55,8 @@ const source = new EventSource(
 
 ### Usage with signed/public streams
 
+> @since v1.5.1
+
 When using with [signed streams](./signed_streams.md), you can provide the public or signed stream name via the `stream` or `signed_stream` parameter respectively:
 
 ```js
@@ -74,6 +76,21 @@ EventSource is a reliable transport, which means that it will automatically reco
 EventSource also keeps track of received messages and sends the last consumed ID on reconnection. To leverage this feature, you MUST enable AnyCable [reliable streams](./reliable_streams.md) functionality. No additional client-side configuration is required.
 
 **IMPORTANT**: EventSource is assumed to be used with a single stream of data. If you subscribe a client to multiple Action Cable streams (e.g., multiple `stream_from` calls), the last consumed ID will be sent only for the last observed stream.
+
+### Requesting initial history
+
+> @since v1.5.1
+
+You can also specify the timestamp (Unix seconds) from which request initial stream history (if any):
+
+```js
+// Last 5 minutes
+const ts = ((Date.now() / 1000) - 5*60) | 0;
+
+const publicSourceWithHistory = new EventSource(
+  `http://localhost:8080/events?stream=${encodeURIComponent(myStreamName)}&history_since=${ts}`
+);
+```
 
 ### Unauthorized connections or rejected subscriptions
 
