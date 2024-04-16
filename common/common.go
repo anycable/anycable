@@ -190,6 +190,10 @@ type ConnectResult struct {
 }
 
 func (c *ConnectResult) LogValue() slog.Value {
+	if c == nil {
+		return slog.StringValue("nil")
+	}
+
 	return slog.GroupValue(
 		slog.String("status", StatusName(c.Status)),
 		slog.Any("transmissions", logger.CompactValues(c.Transmissions)),
@@ -231,6 +235,10 @@ type CommandResult struct {
 }
 
 func (c *CommandResult) LogValue() slog.Value {
+	if c == nil {
+		return slog.StringValue("nil")
+	}
+
 	return slog.GroupValue(
 		slog.String("status", StatusName(c.Status)),
 		slog.Any("streams", logger.CompactValues(c.Streams)),
@@ -263,6 +271,10 @@ type HistoryPosition struct {
 }
 
 func (hp *HistoryPosition) LogValue() slog.Value {
+	if hp == nil {
+		return slog.StringValue("nil")
+	}
+
 	return slog.GroupValue(slog.String("epoch", hp.Epoch), slog.Uint64("offset", hp.Offset))
 }
 
@@ -276,6 +288,10 @@ type HistoryRequest struct {
 }
 
 func (hr *HistoryRequest) LogValue() slog.Value {
+	if hr == nil {
+		return slog.StringValue("nil")
+	}
+
 	return slog.GroupValue(slog.Int64("since", hr.Since), slog.Any("streams", hr.Streams))
 }
 
@@ -288,6 +304,10 @@ type Message struct {
 }
 
 func (m *Message) LogValue() slog.Value {
+	if m == nil {
+		return slog.StringValue("nil")
+	}
+
 	return slog.GroupValue(
 		slog.String("command", m.Command),
 		slog.String("identifier", m.Identifier),
@@ -307,6 +327,10 @@ type StreamMessageMetadata struct {
 }
 
 func (smm *StreamMessageMetadata) LogValue() slog.Value {
+	if smm == nil {
+		return slog.StringValue("nil")
+	}
+
 	return slog.GroupValue(slog.String("exclude_socket", smm.ExcludeSocket))
 }
 
@@ -374,6 +398,10 @@ type RemoteCommandMessage struct {
 }
 
 func (m *RemoteCommandMessage) LogValue() slog.Value {
+	if m == nil {
+		return slog.StringValue("nil")
+	}
+
 	return slog.GroupValue(slog.String("command", m.Command), slog.Any("payload", m.Payload))
 }
 
@@ -394,6 +422,10 @@ type RemoteDisconnectMessage struct {
 }
 
 func (m *RemoteDisconnectMessage) LogValue() slog.Value {
+	if m == nil {
+		return slog.StringValue("nil")
+	}
+
 	return slog.GroupValue(slog.String("ids", m.Identifier), slog.Bool("reconnect", m.Reconnect))
 }
 
@@ -446,6 +478,10 @@ type Reply struct {
 }
 
 func (r *Reply) LogValue() slog.Value {
+	if r == nil {
+		return slog.StringValue("nil")
+	}
+
 	attrs := []slog.Attr{}
 
 	if r.Type != "" {

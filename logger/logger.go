@@ -22,9 +22,10 @@ func InitLogger(format string, level string) (slog.Handler, error) {
 	case "text":
 		{
 			opts := &tint.Options{
-				Level:      logLevel,
-				NoColor:    !utils.IsTTY(),
-				TimeFormat: "2006-01-02 15:04:05.000",
+				Level:       logLevel,
+				NoColor:     !utils.IsTTY(),
+				TimeFormat:  "2006-01-02 15:04:05.000",
+				ReplaceAttr: transformAttr,
 			}
 			handler = tint.NewHandler(os.Stdout, opts)
 		}
@@ -58,4 +59,16 @@ func parseLevel(level string) (slog.Level, error) {
 	}
 
 	return lvl, nil
+}
+
+// Perform some transformations before sending the log record to the handler:
+// - Transform errors into messages to avoid showing stack traces
+func transformAttr(groups []string, attr slog.Attr) slog.Attr {
+	if attr.Key == "err" || attr.Key == "error" {
+		if err, ok := attr.Value.Any().(error); ok {
+			return slog.Attr{Key: attr.Key, Value: slog.StringValue(err.Error())}
+		}
+	}
+
+	return attr
 }
