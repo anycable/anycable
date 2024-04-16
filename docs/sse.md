@@ -53,6 +53,20 @@ const source = new EventSource(
 
 **IMPORTANT**: You MUST specify either `channel` or `identifier` query parameters. If you don't, the connection will be rejected.
 
+### Usage with signed/public streams
+
+When using with [signed streams](./signed_streams.md), you can provide the public or signed stream name via the `stream` or `signed_stream` parameter respectively:
+
+```js
+const publicSource = new EventSource(
+  `http://localhost:8080/events?stream=${encodeURIComponent(myStreamName)}`
+);
+
+const signedSource = new EventSource(
+  `http://localhost:8080/events?signed_stream=${encodeURIComponent(mySecretStreamName)}`
+);
+```
+
 ### Reliability
 
 EventSource is a reliable transport, which means that it will automatically reconnect if the connection is lost.

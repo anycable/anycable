@@ -255,6 +255,102 @@ func TestSSEHandler(t *testing.T) {
 		require.Equal(t, http.StatusOK, w.Code)
 	})
 
+	t.Run("GET request with stream", func(t *testing.T) {
+		defer assertNoSessions(t, appNode)
+
+		controller.
+			On("Authenticate", "sid-public-stream", mock.Anything).
+			Return(&common.ConnectResult{
+				Identifier:    "se2024",
+				Status:        common.SUCCESS,
+				Transmissions: []string{`{"type":"welcome"}`},
+			}, nil)
+
+		identifier := `{"channel":"$pubsub","stream_name":"chat_1"}`
+
+		controller.
+			On("Subscribe", "sid-public-stream", mock.Anything, "se2024", identifier).
+			Return(&common.CommandResult{
+				Status:        common.SUCCESS,
+				Transmissions: []string{`{"type":"confirm","identifier":"chat_1"}`},
+				Streams:       []string{"chat_1"},
+			}, nil)
+
+		req, _ := http.NewRequest("GET", "/?stream=chat_1", nil)
+		req.Header.Set("X-Request-ID", "sid-public-stream")
+
+		ctx_, release := context.WithTimeout(context.Background(), 2*time.Second)
+		defer release()
+
+		ctx, cancel := context.WithCancel(ctx_)
+		defer cancel()
+
+		req = req.WithContext(ctx)
+
+		w := httptest.NewRecorder()
+		sw := newStreamingWriter(w)
+
+		go handler.ServeHTTP(sw, req)
+
+		msg, err := sw.ReadEvent(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, "event: welcome\n"+`data: {"type":"welcome"}`, msg)
+
+		msg, err = sw.ReadEvent(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, "event: confirm\n"+`data: {"type":"confirm","identifier":"chat_1"}`, msg)
+
+		require.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("GET request with signed_stream", func(t *testing.T) {
+		defer assertNoSessions(t, appNode)
+
+		controller.
+			On("Authenticate", "sid-signed-stream", mock.Anything).
+			Return(&common.ConnectResult{
+				Identifier:    "se2024",
+				Status:        common.SUCCESS,
+				Transmissions: []string{`{"type":"welcome"}`},
+			}, nil)
+
+		identifier := `{"channel":"$pubsub","signed_stream_name":"secretto"}`
+
+		controller.
+			On("Subscribe", "sid-signed-stream", mock.Anything, "se2024", identifier).
+			Return(&common.CommandResult{
+				Status:        common.SUCCESS,
+				Transmissions: []string{`{"type":"confirm","identifier":"secret_chat_1"}`},
+				Streams:       []string{"chat_1"},
+			}, nil)
+
+		req, _ := http.NewRequest("GET", "/?signed_stream=secretto", nil)
+		req.Header.Set("X-Request-ID", "sid-signed-stream")
+
+		ctx_, release := context.WithTimeout(context.Background(), 2*time.Second)
+		defer release()
+
+		ctx, cancel := context.WithCancel(ctx_)
+		defer cancel()
+
+		req = req.WithContext(ctx)
+
+		w := httptest.NewRecorder()
+		sw := newStreamingWriter(w)
+
+		go handler.ServeHTTP(sw, req)
+
+		msg, err := sw.ReadEvent(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, "event: welcome\n"+`data: {"type":"welcome"}`, msg)
+
+		msg, err = sw.ReadEvent(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, "event: confirm\n"+`data: {"type":"confirm","identifier":"secret_chat_1"}`, msg)
+
+		require.Equal(t, http.StatusOK, w.Code)
+	})
+
 	t.Run("GET request with channel + rejected", func(t *testing.T) {
 		defer assertNoSessions(t, appNode)
 

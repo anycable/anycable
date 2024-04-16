@@ -17,8 +17,12 @@ import (
 )
 
 const (
+	signedStreamParam   = "signed_stream"
+	publicStreamParam   = "stream"
+	signedStreamChannel = "$pubsub"
 	turboStreamsParam   = "turbo_signed_stream_name"
 	turboStreamsChannel = "Turbo::StreamsChannel"
+	historySinceParam   = "history_since"
 )
 
 func NewSSESession(n *node.Node, w http.ResponseWriter, r *http.Request, info *server.RequestInfo) (*node.Session, error) {
@@ -73,6 +77,30 @@ func subscribeCommandFromGetRequest(r *http.Request) (*common.Message, error) {
 
 		if channel != "" {
 			identifier = string(utils.ToJSON(map[string]string{"channel": channel}))
+		}
+	}
+
+	// Check for public stream name
+	if identifier == "" {
+		stream := r.URL.Query().Get(publicStreamParam)
+
+		if stream != "" {
+			identifier = string(utils.ToJSON(map[string]string{
+				"channel":     signedStreamChannel,
+				"stream_name": stream,
+			}))
+		}
+	}
+
+	// Check for signed stream name
+	if identifier == "" {
+		stream := r.URL.Query().Get(signedStreamParam)
+
+		if stream != "" {
+			identifier = string(utils.ToJSON(map[string]string{
+				"channel":            signedStreamChannel,
+				"signed_stream_name": stream,
+			}))
 		}
 	}
 

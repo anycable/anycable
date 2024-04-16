@@ -41,8 +41,8 @@ func (m *MessageVerifier) Generate(payload interface{}) (string, error) {
 }
 
 func (m *MessageVerifier) Verified(msg string) (interface{}, error) {
-	if !m.isValid(msg) {
-		return "", errors.New("Invalid message")
+	if err := m.Validate(msg); err != nil {
+		return "", errorx.Decorate(err, "failed to verify message")
 	}
 
 	parts := strings.Split(msg, "--")
@@ -64,21 +64,25 @@ func (m *MessageVerifier) Verified(msg string) (interface{}, error) {
 }
 
 // https://github.com/rails/rails/blob/061bf3156fb90ac6b8ec255dfa39492cf22d7b13/activesupport/lib/active_support/message_verifier.rb#L122
-func (m *MessageVerifier) isValid(msg string) bool {
+func (m *MessageVerifier) Validate(msg string) error {
 	if msg == "" {
-		return false
+		return errors.New("message is empty")
 	}
 
 	parts := strings.Split(msg, "--")
 
 	if len(parts) != 2 {
-		return false
+		return fmt.Errorf("message must contain 2 parts, got %d", len(parts))
 	}
 
 	data := []byte(parts[0])
 	digest := []byte(parts[1])
 
-	return m.VerifySignature(data, digest)
+	if m.VerifySignature(data, digest) {
+		return nil
+	} else {
+		return errors.New("invalid signature")
+	}
 }
 
 func (m *MessageVerifier) Sign(payload []byte) ([]byte, error) {
