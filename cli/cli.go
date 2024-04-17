@@ -322,10 +322,6 @@ func (r *Runner) runNode() (*node.Node, error) {
 		}
 
 		for _, broadcaster := range broadcasters {
-			if !broadcaster.IsFanout() && !subscriber.IsMultiNode() {
-				r.log.Warn("Using a non-distributed broadcaster without a pub/sub enabled; each broadcasted message is only processed by a single node")
-			}
-
 			err = broadcaster.Start(r.errChan)
 			if err != nil {
 				return nil, errorx.Decorate(err, "failed to start broadcaster")
