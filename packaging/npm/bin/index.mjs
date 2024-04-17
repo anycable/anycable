@@ -12,7 +12,7 @@ const exePath = path.join(__dirname, `anycable-go${extension}`);
 
 // Check if binary exists and download if not
 if (!fs.existsSync(exePath)) {
-  console.log("Installing AnyCable Go binary...");
+  console.log("Installing AnyCable binary...");
   await install();
   console.log("Installed!");
 }
