@@ -1,7 +1,7 @@
 {
   "name": "@anycable/anycable-go",
-  "version": "1.5.0",
-  "description": "A wrapper to install and run AnyCable-Go server",
+  "version": "1.5.1",
+  "description": "A wrapper to install and run AnyCable server",
   "main": "index.js",
   "bin": {
     "anycable-go": "./bin/index.mjs"

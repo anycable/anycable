@@ -2,6 +2,8 @@
 
 ## master
 
+## 1.5.1 (2024-04-16)
+
 - Add `?history_since` support for SSE connections. ([@palkan][])
 
 - Add `?stream` and `?signed_stream` support for SSE connections. ([@palkan][])
