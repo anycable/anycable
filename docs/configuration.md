@@ -63,7 +63,7 @@ A secret key used to verify [signed_streams](./signed_streams.md). If not set, t
 
 **--rpc_host** (`ANYCABLE_RPC_HOST`)
 
-RPC service address (default: `"localhost:50051"`). You can also specify the scheme part to indicate which RPC protocol to use, gRPC or HTTP (gRPC is assumed by default). See below for more details on [HTTP RPC](#http-rpc).
+RPC service address (default: `"localhost:50051"`). You can also specify the scheme part to indicate which RPC protocol to use, gRPC or HTTP (gRPC is assumed by default). See below for more details on [HTTP RPC](./rpc.md#rpc-over-http).
 
 **--norpc** (`ANYCABLE_NORPC=true`)
 
