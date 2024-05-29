@@ -44,10 +44,10 @@ func TestEncoder_Encode(t *testing.T) {
 	})
 
 	t.Run("with type", func(t *testing.T) {
-		coder := Encoder{RawData: true}
+		rawCoder := Encoder{RawData: true}
 		msg := &common.Reply{Type: "test", Identifier: "test_channel", Message: "hello"}
 
-		actual, err := coder.Encode(msg)
+		actual, err := rawCoder.Encode(msg)
 
 		assert.NoError(t, err)
 		assert.Nil(t, actual)
