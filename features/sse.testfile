@@ -157,3 +157,27 @@ streaming_request(URI(url + "&history_since=#{start_time}")) do |stream|
   # And, finally, the history confirmation
   fail "Expected history confirmation" unless stream.resume.type == "confirm_history"
 end
+
+# Start new raw session with history_since
+streaming_request(URI(url + "&raw=1&history_since=#{start_time}")) do |stream|
+  # And now we should receive the missed messages
+  %w[
+    Hello,\ stream!
+    Where\ are\ you,\ stream?
+  ].each do |msg|
+    missed_message = stream.resume
+
+    if missed_message.data != {"text" => msg}
+      fail "Expected missed message #{msg}, got: #{missed_message.data}"
+    end
+  end
+
+  # Broadcast another message
+  broadcast stream_name, {"text" => "Keep rawing, rawing, rawing!"}
+
+  broadcast_event = stream.resume
+
+  if broadcast_event.data != {"text" => "Keep rawing, rawing, rawing!"}
+    fail "Expected broadcast data, got: #{broadcast_event.data}"
+  end
+end

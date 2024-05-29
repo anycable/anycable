@@ -21,6 +21,8 @@ const lastIdDelimeter = "/"
 // Encoder is responsible for converting messages to SSE format (event:, data:, etc.)
 // NOTE: It's only used to encode messages from server to client.
 type Encoder struct {
+	// Whether to send protocol events or just data messages
+	RawData bool
 	// Whether to send only the "message" field of the payload as data or the whole payload
 	UnwrapData bool
 }
@@ -55,6 +57,10 @@ func (e *Encoder) Encode(msg encoders.EncodedMessage) (*ws.SentFrame, error) {
 	}
 
 	if msgType != "" {
+		if e.RawData {
+			return nil, nil
+		}
+
 		payload = "event: " + msgType + "\n" + payload
 	}
 

@@ -2,6 +2,8 @@
 
 ## master
 
+- Add `?raw=1` option for EventSource connections to receive only data messages (no protocol messages). ([@palkan][])
+
 ## 1.5.1 (2024-04-16)
 
 - Add `?history_since` support for SSE connections. ([@palkan][])

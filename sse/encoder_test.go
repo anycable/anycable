@@ -32,7 +32,28 @@ func TestEncoder_Encode(t *testing.T) {
 		assert.Equal(t, expected, string(actual.Payload))
 	})
 
+	t.Run("without type + unwrap data + raw data", func(t *testing.T) {
+		getCoder := Encoder{UnwrapData: true, RawData: true}
+		msg := &common.Reply{Identifier: "test_channel", Message: "hello"}
+		expected := `data: hello`
+
+		actual, err := getCoder.Encode(msg)
+
+		assert.NoError(t, err)
+		assert.Equal(t, expected, string(actual.Payload))
+	})
+
 	t.Run("with type", func(t *testing.T) {
+		coder := Encoder{RawData: true}
+		msg := &common.Reply{Type: "test", Identifier: "test_channel", Message: "hello"}
+
+		actual, err := coder.Encode(msg)
+
+		assert.NoError(t, err)
+		assert.Nil(t, actual)
+	})
+
+	t.Run("with type + raw data", func(t *testing.T) {
 		msg := &common.Reply{Type: "test", Identifier: "test_channel", Message: "hello"}
 		expected := "event: test\n" +
 			`data: {"type":"test","identifier":"test_channel","message":"hello"}`

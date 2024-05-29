@@ -7,7 +7,7 @@ const (
 // Long-polling configuration
 type Config struct {
 	Enabled bool
-	// Path is the URL path to handle long-polling requests
+	// Path is the URL path to handle SSE requests
 	Path string
 	// List of allowed origins for CORS requests
 	// We inherit it from the ws.Config

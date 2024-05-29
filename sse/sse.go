@@ -29,8 +29,12 @@ func NewSSESession(n *node.Node, w http.ResponseWriter, r *http.Request, info *s
 	conn := NewConnection(w)
 
 	unwrapData := r.Method == http.MethodGet
+	rawParam := strings.ToLower(r.URL.Query().Get("raw"))
+	rawData := rawParam == "true" || rawParam == "1" || rawParam == "t" || rawParam == "y"
 
-	session := node.NewSession(n, conn, info.URL, info.Headers, info.UID, node.WithEncoder(&Encoder{unwrapData}))
+	enc := &Encoder{UnwrapData: unwrapData, RawData: rawData}
+
+	session := node.NewSession(n, conn, info.URL, info.Headers, info.UID, node.WithEncoder(enc))
 	res, err := n.Authenticate(session)
 
 	if err != nil {

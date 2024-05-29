@@ -400,6 +400,53 @@ func TestSSEHandler(t *testing.T) {
 		assert.Empty(t, w.Body.String())
 	})
 
+	t.Run("GET request with ?raw=t", func(t *testing.T) {
+		defer assertNoSessions(t, appNode)
+
+		controller.
+			On("Authenticate", "sid-gut-raw", mock.Anything).
+			Return(&common.ConnectResult{
+				Identifier:    "se2023",
+				Status:        common.SUCCESS,
+				Transmissions: []string{`{"type":"welcome"}`},
+			}, nil)
+
+		controller.
+			On("Subscribe", "sid-gut-raw", mock.Anything, "se2023", "chat_1").
+			Return(&common.CommandResult{
+				Status:        common.SUCCESS,
+				Transmissions: []string{`{"type":"confirm","identifier":"chat_1"}`},
+				Streams:       []string{"messages_1"},
+			}, nil)
+
+		req, _ := http.NewRequest("GET", "/?identifier=chat_1&raw=t", nil)
+		req.Header.Set("X-Request-ID", "sid-gut-raw")
+
+		ctx_, release := context.WithTimeout(context.Background(), 2*time.Second)
+		defer release()
+
+		ctx, cancel := context.WithCancel(ctx_)
+		defer cancel()
+
+		req = req.WithContext(ctx)
+
+		w := httptest.NewRecorder()
+		sw := newStreamingWriter(w)
+
+		go handler.ServeHTTP(sw, req)
+
+		// We need to wait a bit to make sure that the session is subscribed
+		time.Sleep(1 * time.Second)
+
+		appNode.Broadcast(&common.StreamMessage{Stream: "messages_1", Data: `{"content":"hello"}`})
+
+		msg, err := sw.ReadEvent(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, `data: {"content":"hello"}`, msg)
+
+		require.Equal(t, http.StatusOK, w.Code)
+	})
+
 	t.Run("POST request without commands + server shutdown", func(t *testing.T) {
 		defer assertNoSessions(t, appNode)
 
