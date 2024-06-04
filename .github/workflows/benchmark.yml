@@ -31,6 +31,10 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install bison
+    - name: Install websocket-bench & gops
+      run: |
+        go install github.com/anycable/websocket-bench@latest
+        go install github.com/google/gops@latest
     - uses: ruby/setup-ruby@v1
       with:
         # Use <3.0 since go-mruby's Rakefile has some problems with keyword arguments compatibility
@@ -45,12 +49,6 @@ jobs:
     - run: go mod vendor
     - name: Build mruby
       run: bash -c '(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)'
-    - name: Install websocket-bench & gops
-      env:
-        GO111MODULE: off
-      run: |
-        go get -u github.com/anycable/websocket-bench
-        go get -u github.com/google/gops
     - name: Build test binary
       env:
         BUILD_ARGS: "-race"
