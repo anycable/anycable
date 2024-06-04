@@ -2,6 +2,8 @@
 
 ## master
 
+## 1.5.2 (2024-06-04)
+
 - Add `?raw=1` option for EventSource connections to receive only data messages (no protocol messages). ([@palkan][])
 
 ## 1.5.1 (2024-04-16)
