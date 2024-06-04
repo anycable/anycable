@@ -23,12 +23,12 @@ jobs:
           key: vendor-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             vendor-
-      - run: go mod vendor
-      - name: Build mruby
-        run: bash -c '(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)'
       - uses: actions/setup-go@v4
         with:
           go-version-file: go.mod
+      - run: go mod vendor
+      - name: Build mruby
+        run: bash -c '(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)'
       - name: Build UI assets
         run: |
           curl -L https://github.com/tailwindlabs/tailwindcss/releases/download/v3.4.1/tailwindcss-linux-x64 > ./tailwindcss
