@@ -62,7 +62,16 @@ jobs:
 
   upload_macos_binaries:
     needs: [upload_binaries]
-    runs-on: macos-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - macos-latest
+        suffix:
+          - arm64
+        include:
+          - os: macos-13
+            suffix: amd64
     env:
       GO111MODULE: on
       CGO_ENABLED: "0"
@@ -78,6 +87,9 @@ jobs:
         key: vendor-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           vendor-
+    - uses: actions/setup-go@v4
+      with:
+        go-version-file: go.mod
     - run: go mod vendor
     - uses: ruby/setup-ruby@v1
       with:
@@ -86,9 +98,6 @@ jobs:
         bundler-cache: true
     - name: Build mruby
       run: bash -c '(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)'
-    - uses: actions/setup-go@v4
-      with:
-        go-version-file: go.mod
     - name: Set VERSION (if any)
       if: ${{ contains(github.ref, 'refs/tags/v') }}
       id: version
@@ -96,14 +105,13 @@ jobs:
         echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/v}
     - name: Build binaries for MacOS
       run: |
-        env GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w -X github.com/anycable/anycable-go/version.version=${{ steps.version.outputs.VERSION }} -X github.com/anycable/anycable-go/version.sha=$(echo "$GITHUB_SHA" | cut -c -7)" -a -o dist/anycable-go-darwin-amd64 cmd/anycable-go/main.go
-        env GOOS=darwin GOARCH=arm64 go build -ldflags "-s -w -X github.com/anycable/anycable-go/version.version=${{ steps.version.outputs.VERSION }} -X github.com/anycable/anycable-go/version.sha=$(echo "$GITHUB_SHA" | cut -c -7)" -a -o dist/anycable-go-darwin-arm64 cmd/anycable-go/main.go
+        env GOOS=darwin GOARCH=${{ matrix.suffix }} go build -ldflags "-s -w -X github.com/anycable/anycable-go/version.version=${{ steps.version.outputs.VERSION }} -X github.com/anycable/anycable-go/version.sha=$(echo "$GITHUB_SHA" | cut -c -7)" -a -o dist/anycable-go-darwin-${{ matrix.suffix }} cmd/anycable-go/main.go
     - name: Build binaries with MRuby for MacOS
       env:
         CGO_ENABLED: "1"
       run: |
-        env GOOS=darwin GOARCH=amd64 go build -tags mrb -ldflags "-s -w -X github.com/anycable/anycable-go/version.version=${{ steps.version.outputs.VERSION }} -X github.com/anycable/anycable-go/version.sha=$(echo "$GITHUB_SHA" | cut -c -7)" -a -o dist/anycable-go-mrb-darwin-amd64 cmd/anycable-go/main.go
-        dist/anycable-go-mrb-darwin-amd64 -v
+        env GOOS=darwin GOARCH=${{ matrix.suffix }} go build -tags mrb -ldflags "-s -w -X github.com/anycable/anycable-go/version.version=${{ steps.version.outputs.VERSION }} -X github.com/anycable/anycable-go/version.sha=$(echo "$GITHUB_SHA" | cut -c -7)" -a -o dist/anycable-go-mrb-darwin-${{ matrix.suffix }} cmd/anycable-go/main.go
+        dist/anycable-go-mrb-darwin-${{ matrix.suffix }} -v
     - uses: xresloader/upload-to-github-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
