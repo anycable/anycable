@@ -176,7 +176,7 @@ retry: 31536000000
 
 > @since v1.5.2
 
-In some cases, you may not want to recieve protocol-level events (`welcome`, `confirm_subscription`) via an SSE stream (e.g., using with legacy clients). To consume only data messages, you can add an additional `?raw=1` option to the URL:
+In some cases, you may not want to receive protocol-level events (`welcome`, `confirm_subscription`) via an SSE stream (e.g., using with legacy clients). To consume only data messages, you can add an additional `?raw=1` option to the URL:
 
 ```sh
 $ curl -N "http://localhost:8080/events?channel=ChatChannel&raw=1"
