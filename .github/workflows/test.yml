@@ -16,19 +16,25 @@ jobs:
       BUNDLE_FORCE_RUBY_PLATFORM: 1
       CI: true
       ANYCABLE_GRPC_IMPL: ${{ matrix.grpc_impl }}
+      RACK_VERSION: ${{ matrix.rack }}
       COVERAGE: "true"
       COVERALLS_REPO_TOKEN: ${{ secrets.github_token }}
     strategy:
       fail-fast: false
       matrix:
-        ruby: ["3.0", "3.1", "3.2"]
+        ruby: ["3.0", "3.1", "3.2", "3.3"]
         anyway_config: ["~> 2.2"]
         grpc_impl: ["grpc"]
+        rack: ["~> 3.0"]
         include:
         - ruby: "3.1"
           grpc_impl: "grpc_kit"
         - ruby: "2.7"
           grpc_imlp: "grpc"
+        - ruby: "3.3"
+          rack: "~> 2.0"
+        - ruby: "3.3"
+          rack: "~> 3.0.0"
     steps:
     - run: |
         echo "Commit msg: ${{ github.event.head_commit.message }}"
@@ -45,7 +51,7 @@ jobs:
         bundle exec rspec
     - name: Coveralls upload
       run: |
-        ./coveralls -p --job-flag=ruby-${{ matrix.ruby }}-${{ matrix.grpc_impl }}
+        ./coveralls -p --job-flag=ruby-${{ matrix.ruby }}-${{ matrix.grpc_impl }}-${{ matrix.rack }}
     - name: Run RSpec w/o gRPC
       env:
         GRPC: false
@@ -53,7 +59,7 @@ jobs:
         bundle exec rspec
     - name: Coveralls upload
       run: |
-        ./coveralls -p --job-flag=ruby-${{ matrix.ruby }}-${{ matrix.grpc_impl }}-no-grpc
+        ./coveralls -p --job-flag=ruby-${{ matrix.ruby }}-${{ matrix.grpc_impl }}-no-grpc-${{ matrix.rack }}
     - name: Run RSpec with RBS runtime tester
       if: matrix.ruby == '3.1'
       run: |
