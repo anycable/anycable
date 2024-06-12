@@ -8,6 +8,7 @@ on:
 
 jobs:
   rspec:
+    name: RSpec - Ruby ${{ matrix.ruby }} - ${{ matrix.grpc_impl }} - Rack ${{ matrix.rack }}
     if: ${{ !contains(github.event.head_commit.message, '[ci skip tests]') }}
     runs-on: ubuntu-latest
     env:
