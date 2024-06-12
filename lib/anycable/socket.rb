@@ -154,7 +154,7 @@ module AnyCable
       # (not all of them though, just those enough for Action Cable to work)
       # See https://rubydoc.info/github/rack/rack/master/file/SPEC
       # and https://github.com/rack/rack/blob/master/lib/rack/lint.rb
-      {
+      env = {
         "REQUEST_METHOD" => "GET",
         "SCRIPT_NAME" => "",
         "PATH_INFO" => "/",
@@ -163,13 +163,16 @@ module AnyCable
         "SERVER_PORT" => "80",
         "rack.url_scheme" => "http",
         "rack.input" => StringIO.new("", "r").tap { |io| io.set_encoding(Encoding::ASCII_8BIT) },
-        "rack.version" => ::Rack::VERSION,
         "rack.errors" => StringIO.new("").tap { |io| io.set_encoding(Encoding::ASCII_8BIT) },
         "rack.multithread" => true,
         "rack.multiprocess" => false,
         "rack.run_once" => false,
         "rack.hijack?" => false
       }
+
+      # Rack 3.1 removes `Rack::VERSION`. rack.version is optional (deprecated) since Rack 3.0
+      env["rack.version"] = ::Rack::VERSION if ::Rack::RELEASE < "3.0"
+      env
     end
 
     def build_headers(headers)
