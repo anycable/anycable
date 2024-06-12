@@ -38,7 +38,7 @@ jobs:
     steps:
     - run: |
         echo "Commit msg: ${{ github.event.head_commit.message }}"
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - uses: ruby/setup-ruby@v1
       with:
         ruby-version: ${{ matrix.ruby }}
