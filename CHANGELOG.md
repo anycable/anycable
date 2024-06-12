@@ -2,6 +2,8 @@
 
 ## master
 
+- Fixed compatibility with Rack 3.1 ([@earlopain][])
+
 ## 1.5.0 (2024-04-01)
 
 - Fixed gRPC keepalive settings to align with the Go server client. ([@palkan][])
@@ -211,3 +213,4 @@ See [Changelog](https://github.com/anycable/anycable/blob/0-6-stable/CHANGELOG.m
 [@smasry]: https://github.com/smasry
 [@Envek]: https://github.com/Envek
 [@cylon-v]: https://github.com/cylon-v
+[@earlopain]: https://github.com/earlopain

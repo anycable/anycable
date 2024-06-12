@@ -27,8 +27,10 @@ module AnyCable
         return [404, {}, ["Not found"]] unless AnyCable.rpc_handler.supported?(rpc_command)
 
         # read request body and it's empty, return 422
-        request_body = env["rack.input"].read
-        return [422, {}, ["Empty request body"]] if request_body.empty?
+        # rack.input is optional starting in Rack 3.1
+        if !env["rack.input"] || (request_body = env["rack.input"].read).empty?
+          return [422, {}, ["Empty request body"]]
+        end
 
         payload =
           case rpc_command
