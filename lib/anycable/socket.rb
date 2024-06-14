@@ -161,6 +161,7 @@ module AnyCable
         "QUERY_STRING" => "",
         "SERVER_NAME" => "",
         "SERVER_PORT" => "80",
+        "SERVER_PROTOCOL" => "HTTP/1.1",
         "rack.url_scheme" => "http",
         "rack.input" => StringIO.new("", "r").tap { |io| io.set_encoding(Encoding::ASCII_8BIT) },
         "rack.errors" => StringIO.new("").tap { |io| io.set_encoding(Encoding::ASCII_8BIT) },
