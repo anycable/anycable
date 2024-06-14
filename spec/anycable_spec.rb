@@ -42,7 +42,7 @@ describe AnyCable do
           @options = options
         end
 
-        def broadcast
+        def broadcast(...)
         end
       end
     end
