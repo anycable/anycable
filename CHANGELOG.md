@@ -2,6 +2,8 @@
 
 ## master
 
+## 1.5.1 (2024-06-14) 🇪🇺 ⚽️
+
 - Fixed compatibility with Rack 3.1 ([@earlopain][])
 
 ## 1.5.0 (2024-04-01)
