@@ -1,0 +1,27 @@
+name: Release gems
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - v*
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch current tag as annotated. See https://github.com/actions/checkout/issues/290
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.2
+      - name: Configure RubyGems Credentials
+        uses: rubygems/configure-rubygems-credentials@main
+      - name: Publish to RubyGems
+        run: |
+          gem install gem-release
+          gem release anycable-core anycable
