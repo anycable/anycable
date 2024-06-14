@@ -172,7 +172,11 @@ module AnyCable
       }
 
       # Rack 3.1 removes `Rack::VERSION`. rack.version is optional (deprecated) since Rack 3.0
-      env["rack.version"] = ::Rack::VERSION if ::Rack::RELEASE < "3.0"
+      if ::Rack::RELEASE < "3.0"
+        rversion = ::Rack::VERSION
+        # @type var rversion : String
+        env["rack.version"] = rversion
+      end
       env
     end
 
