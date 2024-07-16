@@ -1,10 +1,13 @@
 {
   "name": "@anycable/anycable-go",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "description": "A wrapper to install and run AnyCable server",
   "main": "index.js",
   "bin": {
     "anycable-go": "./bin/index.mjs"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   },
   "repository": "https://github.com/anycable/anycable-go",
   "keywords": [

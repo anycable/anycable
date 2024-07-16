@@ -21,7 +21,7 @@ export async function install() {
 const baseReleaseUrl =
   "https://github.com/anycable/anycable-go/releases/download/";
 
-import packageJson from "./package.json" assert { type: "json" };
+import packageJson from "./package.json" with { type: "json" };
 const packageVersion = packageJson.version;
 const version = packageVersion.replace(/-patch.*$/, "");
 
