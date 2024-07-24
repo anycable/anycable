@@ -1,0 +1,47 @@
+ignore:
+ - "**/*/Readme.md"
+hostname: https://docs.anycable.io
+url_prefix: <%= ENV.fetch("VERSION_PREFIX", "edge") %>/anycable-go
+
+groups:
+  - name: PRO version
+    tracking_id: pro
+  - name: Server
+    tracking_id: server
+  - name: Go package
+    tracking_id: go_package
+
+defaults:
+  groups:
+    - server
+  tags:
+    - docs
+    - <%= ENV.fetch("VERSION_TAG", "edge") %>
+
+
+pages:
+  - source: "./apollo.md"
+    groups: ["pro"]
+  - source: "./binary_formats.md"
+    groups: ["pro"]
+  - source: "./long_polling.md"
+    groups: ["pro"]
+  - source: "./ocpp.md"
+    groups: ["pro"]
+  - "./broadcasting.md"
+  - "./broker.md"
+  - "./configuration.md"
+  - "./embedded_nats.md"
+  - "./getting_started.md"
+  - "./health_checking.md"
+  - "./instrumentation.md"
+  - "./jwt_identification.md"
+  - source: "./library.md"
+    groups: ["go_package"]
+  - "./pubsub.md"
+  - "./reliable_streams.md"
+  - "./rpc.md"
+  - "./signed_streams.md"
+  - "./sse.md"
+  - "./telemetry.md"
+  - "./tracing.md"
