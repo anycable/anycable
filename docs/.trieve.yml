@@ -1,0 +1,18 @@
+ignore:
+ - "**/*/Readme.md"
+hostname: https://docs.anycable.io
+url_prefix: <%= ENV.fetch("VERSION_PREFIX", "edge") %>/ruby/
+
+groups:
+  - name: Ruby integration
+    tracking_id: ruby
+
+defaults:
+  groups:
+    - ruby
+  tags:
+    - docs
+    - <%= ENV.fetch("VERSION_TAG", "edge") %>
+
+pages:
+  - "./*.md"
