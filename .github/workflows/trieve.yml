@@ -1,0 +1,20 @@
+name: Upload to Trieve
+
+on:
+  push:
+    tags:
+      - v1.3.*
+      - v1.4.*
+      - v1.5.*
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  uptrieve:
+    uses: anycable/github-actions/.github/workflows/uptrieve.yml@master
+    secrets:
+      api_key: ${{ secrets.TRIEVE_API_KEY }}
+      dataset: ${{ secrets.TRIEVE_DATASET }}
+    with:
+      latest_version: "v1.5"
