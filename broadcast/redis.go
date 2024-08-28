@@ -136,6 +136,12 @@ func (s *RedisBroadcaster) runReader(done chan (error)) {
 		return
 	}
 
+	if s.reconnectAttempt > 0 {
+		s.log.Info("reconnected to Redis")
+	}
+
+	s.reconnectAttempt = 0
+
 	// First, create a consumer group for the stream
 	err = s.client.Do(context.Background(),
 		s.client.B().XgroupCreate().Key(s.config.Channel).Group(s.config.Group).Id("$").Mkstream().Build(),
@@ -152,8 +158,6 @@ func (s *RedisBroadcaster) runReader(done chan (error)) {
 			}
 		}
 	}
-
-	s.reconnectAttempt = 0
 
 	readBlockMilliseconds := s.config.StreamReadBlockMilliseconds
 	var lastClaimedAt int64

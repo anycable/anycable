@@ -2,6 +2,8 @@
 
 ## master
 
+- Fix potential deadlocks in Redis pub/sub on reconnect. ([@palkan][])
+
 ## 1.5.2 (2024-06-04)
 
 - Add `?raw=1` option for EventSource connections to receive only data messages (no protocol messages). ([@palkan][])

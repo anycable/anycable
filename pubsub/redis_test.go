@@ -72,6 +72,7 @@ func TestRedisCommon(t *testing.T) {
 
 	SharedSubscriberTests(t, func(handler *TestHandler) Subscriber {
 		sub, err := NewRedisSubscriber(handler, &config, slog.Default())
+		sub.trackingEvents = true
 
 		if err != nil {
 			panic(err)
@@ -96,6 +97,8 @@ func TestRedisReconnect(t *testing.T) {
 
 	subscriber, err := NewRedisSubscriber(handler, &config, slog.Default())
 	require.NoError(t, err)
+
+	subscriber.trackingEvents = true
 
 	done := make(chan error)
 
@@ -153,24 +156,14 @@ func waitRedisSubscription(subscriber Subscriber, stream string) error {
 			}
 		}
 
-		s.subMu.RLock()
-		entry := s.subscriptionEntry(stream)
-		state := subscriptionPending
-		if entry != nil {
-			state = entry.state
-		}
-		s.subMu.RUnlock()
+		event := s.getEvent(stream)
 
 		if unsubscribing {
-			if entry == nil {
+			if event == unsubscribeCmd {
 				return nil
 			}
 		} else {
-			if entry == nil {
-				return fmt.Errorf("No pending subscription: %s", stream)
-			}
-
-			if state == subscriptionCreated {
+			if event == subscribeCmd {
 				return nil
 			}
 		}
