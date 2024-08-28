@@ -70,11 +70,8 @@ build-gobench:
 build-embedded:
 	go build -tags "mrb gops" -ldflags $(LD_FLAGS) -o $(EMBEDDEDDIST) cmd/embedded-cable/main.go
 
-download-mruby:
-	go mod download github.com/mitchellh/go-mruby
-
-prepare-mruby: download-mruby
-	cd $$(go list -m -f '{{.Dir}}' github.com/mitchellh/go-mruby) && \
+prepare-mruby:
+	cd ./vendorlib/go-mruby && \
 	MRUBY_COMMIT=$(MRUBY_VERSION) MRUBY_CONFIG=$(MRUBY_CONFIG) make libmruby.a || \
 	(sed -i '' 's/{ :verbose => $$verbose }/verbose: $$verbose/g' ./mruby-build/mruby/Rakefile && \
 		MRUBY_COMMIT=$(MRUBY_VERSION) MRUBY_CONFIG=$(MRUBY_CONFIG) make libmruby.a)
@@ -82,8 +79,7 @@ prepare-mruby: download-mruby
 upgrade-mruby: clean-mruby prepare-mruby
 
 clean-mruby:
-	cd $$(go list -m -f '{{.Dir}}' github.com/mitchellh/go-mruby) && \
-	rm -rf vendor/mruby
+	rm -rf vendorlib/go-mruby/mruby-build
 
 build-all-mruby:
 	env $(GOBUILD) -tags mrb -o "dist/anycable-go-$(VERSION)-mrb-macos-amd64" cmd/anycable-go/main.go

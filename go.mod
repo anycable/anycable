@@ -30,6 +30,9 @@ require (
 	google.golang.org/grpc v1.60.1
 )
 
+// use vendored go-mruby
+replace github.com/mitchellh/go-mruby => ./vendorlib/go-mruby
+
 require github.com/sony/gobreaker v0.5.0
 
 require (

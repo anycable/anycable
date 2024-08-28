@@ -1,0 +1,7 @@
+language: go
+sudo: required
+go:
+  - "1.14"
+  - "1.13"
+install: sudo apt-get install build-essential g++ bison flex
+script: make all staticcheck
