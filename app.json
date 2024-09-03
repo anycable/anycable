@@ -16,8 +16,8 @@
       "value": "http",
       "required": true
     },
-    "ANYCABLE_HTTP_RPC_SECRET": {
-      "description": "A secret token to authenticate HTTP RPC requests (must be configured for both applications)",
+    "ANYCABLE_SECRET": {
+      "description": "AnyCable secret used to secure HTTP RPC and other features (must be configured for both applications)",
       "value": "",
       "required": false
     }
