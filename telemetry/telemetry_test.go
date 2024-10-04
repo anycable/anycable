@@ -2,57 +2,33 @@ package telemetry
 
 import (
 	"context"
+	"encoding/json"
+	"io"
 	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/anycable/anycable-go/config"
 	"github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/version"
-	"github.com/posthog/posthog-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 type MockClient struct {
-	closed   bool
-	captured []posthog.Capture
+	captured []*http.Request
 }
 
 func NewMockClient() *MockClient {
-	return &MockClient{captured: []posthog.Capture{}}
+	return &MockClient{captured: []*http.Request{}}
 }
 
-func (c *MockClient) Enqueue(msg posthog.Message) error {
-	c.captured = append(c.captured, msg.(posthog.Capture))
+func (c *MockClient) Do(req *http.Request) (*http.Response, error) {
+	c.captured = append(c.captured, req)
 
-	return nil
-}
-
-func (c *MockClient) Close() error {
-	c.closed = true
-
-	return nil
-}
-
-func (c *MockClient) GetAllFlags(flags posthog.FeatureFlagPayloadNoKey) (map[string]interface{}, error) {
 	return nil, nil
-}
-
-func (c *MockClient) GetFeatureFlag(flag posthog.FeatureFlagPayload) (interface{}, error) {
-	return nil, nil
-}
-
-func (c *MockClient) GetFeatureFlags() ([]posthog.FeatureFlag, error) {
-	return nil, nil
-}
-
-func (c *MockClient) IsFeatureEnabled(flag posthog.FeatureFlagPayload) (interface{}, error) {
-	return nil, nil
-}
-
-func (c *MockClient) ReloadFeatureFlags() error {
-	return nil
 }
 
 func TestTracking(t *testing.T) {
@@ -66,21 +42,30 @@ func TestTracking(t *testing.T) {
 
 	t.Setenv("AWS_EXECUTION_ENV", "AWS_ECS_FARGATE")
 
-	conf := config.NewConfig()
-	tracker := NewTracker(metrics, &conf, &Config{})
-	defer tracker.Shutdown(context.Background()) // nolint: errcheck
+	captured := []map[string]interface{}{}
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
 
-	client := NewMockClient()
-	tracker.client = client
+		var event map[string]interface{}
+		require.NoError(t, json.Unmarshal(body, &event))
+		captured = append(captured, event)
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	defer ts.Close()
+
+	conf := config.NewConfig()
+	tracker := NewTracker(metrics, &conf, &Config{Endpoint: ts.URL})
+	defer tracker.Shutdown(context.Background()) // nolint: errcheck
 
 	tracker.Collect()
 
-	require.Equal(t, 1, len(client.captured))
+	require.Equal(t, 1, len(captured))
+	event := captured[0]
 
-	event := client.captured[0]
-
-	assert.Equal(t, "boot", event.Event)
-	assert.Equal(t, version.Version(), event.Properties["version"])
+	assert.Equal(t, "boot", event["event"])
+	assert.Equal(t, version.Version(), event["version"])
 
 	time.Sleep(100 * time.Millisecond)
 
@@ -90,16 +75,13 @@ func TestTracking(t *testing.T) {
 	tracker.observeUsage()
 	tracker.collectUsage()
 
-	require.Equal(t, 2, len(client.captured))
+	require.Equal(t, 2, len(captured))
+	event = captured[1]
 
-	event = client.captured[1]
-
-	assert.Equal(t, "usage", event.Event)
-	assert.Equal(t, "ecs-fargate", event.Properties["deploy"])
-	assert.Equal(t, 14, int(event.Properties["clients_max"].(uint64)))
-	assert.Equal(t, 100, int(event.Properties["mem_sys_max"].(uint64)))
+	assert.Equal(t, "usage", event["event"])
+	assert.Equal(t, "ecs-fargate", event["deploy"])
+	assert.Equal(t, 14, int(event["clients_max"].(float64)))
+	assert.Equal(t, 100, int(event["mem_sys_max"].(float64)))
 
 	require.NoError(t, tracker.Shutdown(context.Background()))
-
-	assert.True(t, client.closed)
 }
