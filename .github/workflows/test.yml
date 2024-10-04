@@ -3,7 +3,7 @@ name: Test
 on:
   push:
     branches:
-    - master
+      - master
   pull_request:
 
 jobs:
@@ -21,34 +21,34 @@ jobs:
         ports: ["6379:6379"]
         options: --health-cmd="redis-cli ping" --health-interval 1s --health-timeout 3s --health-retries 30
     steps:
-    - uses: actions/checkout@v4
-    - name: Install system deps
-      run: |
-        sudo apt-get update
-        sudo apt-get install bison
-    - uses: actions/cache@v1
-      with:
-        path: vendor
-        key: vendor-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          vendor-
-    - run: go mod vendor
-    - name: Build mruby
-      run: bash -c '(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)'
-    - uses: actions/setup-go@v4
-      with:
-        go-version-file: go.mod
-    - name: Run tests
-      run: make test
-    - name: Build
-      run: |
-        make build
-    - name: Upload linux build
-      if: (github.ref == 'refs/head/master' || contains(github.event.pull_request.body, '[Build]'))
-      uses: actions/upload-artifact@v1
-      with:
-        name: anycable-go-Linux-x86_64
-        path: dist/anycable-go
+      - uses: actions/checkout@v4
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install bison
+      - uses: actions/cache@v4
+        with:
+          path: vendor
+          key: vendor-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            vendor-
+      - run: go mod vendor
+      - name: Build mruby
+        run: bash -c '(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)'
+      - uses: actions/setup-go@v4
+        with:
+          go-version-file: go.mod
+      - name: Run tests
+        run: make test
+      - name: Build
+        run: |
+          make build
+      - name: Upload linux build
+        if: (github.ref == 'refs/head/master' || contains(github.event.pull_request.body, '[Build]'))
+        uses: actions/upload-artifact@v4
+        with:
+          name: anycable-go-Linux-x86_64
+          path: dist/anycable-go
 
   test-macos:
     if: "!contains(github.event.head_commit.message, '[ci skip tests]')"
@@ -58,38 +58,38 @@ jobs:
       GOFLAGS: "-mod=vendor"
       COVERAGE: "true"
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-go@v4
-      with:
-        go-version-file: go.mod
-    - name: Install system deps
-      run: |
-        brew install bison
-    - uses: actions/cache@v3
-      with:
-        path: vendor
-        key: vendor-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          vendor-
-    - uses: ruby/setup-ruby@v1
-      with:
-        # Use <3.0 since go-mruby's Rakefile has some problems with keyword arguments compatibility
-        ruby-version: 2.7
-        bundler-cache: true
-    - run: go mod vendor
-    - name: Build mruby
-      run: bash -c '(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)'
-    - name: Run tests
-      run: make test
-    - name: Build
-      run: |
-        make build
-    - name: Upload MacOS build
-      if: (github.ref == 'refs/head/master' || contains(github.event.pull_request.body, '[Build]'))
-      uses: actions/upload-artifact@v1
-      with:
-        name: anycable-go-Darwin-x86_64
-        path: dist/anycable-go
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
+        with:
+          go-version-file: go.mod
+      - name: Install system deps
+        run: |
+          brew install bison
+      - uses: actions/cache@v4
+        with:
+          path: vendor
+          key: vendor-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            vendor-
+      - uses: ruby/setup-ruby@v1
+        with:
+          # Use <3.0 since go-mruby's Rakefile has some problems with keyword arguments compatibility
+          ruby-version: 2.7
+          bundler-cache: true
+      - run: go mod vendor
+      - name: Build mruby
+        run: bash -c '(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)'
+      - name: Run tests
+        run: make test
+      - name: Build
+        run: |
+          make build
+      - name: Upload MacOS build
+        if: (github.ref == 'refs/head/master' || contains(github.event.pull_request.body, '[Build]'))
+        uses: actions/upload-artifact@v4
+        with:
+          name: anycable-go-Darwin-x86_64
+          path: dist/anycable-go
 
   test-conformance:
     if: "!contains(github.event.head_commit.message, '[ci skip tests]')"
@@ -129,37 +129,37 @@ jobs:
         image: nats:alpine
         ports: ["4222:4222"]
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-go@v4
-      with:
-        go-version-file: go.mod
-    - name: Install system deps
-      run: |
-        sudo apt-get update
-        sudo apt-get install bison
-    - name: Install websocket-bench & gops
-      if: matrix.test_command == 'benchmarks'
-      env:
-        GOFLAGS: ""
-      run: |
-        go install github.com/anycable/websocket-bench@latest
-        go install github.com/google/gops@latest
-    - uses: ruby/setup-ruby@v1
-      with:
-        # Use <3.0 since go-mruby's Rakefile has some problems with keyword arguments compatibility
-        ruby-version: 2.7
-        bundler-cache: true
-    - uses: actions/cache@v3
-      with:
-        path: vendor
-        key: vendor-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          vendor-
-    - run: go mod vendor
-    - name: Build mruby
-      run: bash -c '(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)'
-    - name: Run tests
-      run: |
-        bundle install
-        mkdir _icoverdir_
-        make ${{ matrix.test_command }}
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
+        with:
+          go-version-file: go.mod
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install bison
+      - name: Install websocket-bench & gops
+        if: matrix.test_command == 'benchmarks'
+        env:
+          GOFLAGS: ""
+        run: |
+          go install github.com/anycable/websocket-bench@latest
+          go install github.com/google/gops@latest
+      - uses: ruby/setup-ruby@v1
+        with:
+          # Use <3.0 since go-mruby's Rakefile has some problems with keyword arguments compatibility
+          ruby-version: 2.7
+          bundler-cache: true
+      - uses: actions/cache@v4
+        with:
+          path: vendor
+          key: vendor-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            vendor-
+      - run: go mod vendor
+      - name: Build mruby
+        run: bash -c '(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)'
+      - name: Run tests
+        run: |
+          bundle install
+          mkdir _icoverdir_
+          make ${{ matrix.test_command }}
