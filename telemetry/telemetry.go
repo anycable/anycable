@@ -3,11 +3,15 @@ package telemetry
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"maps"
 	"net/http"
 	"os"
 	"runtime"
+	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -212,6 +216,7 @@ func (t *Tracker) bootProperties() map[string]interface{} {
 
 	props.Set("version", version.Version())
 	props.Set("os", runtime.GOOS)
+	props.Set("cluster-fingerprint", t.clusterFingerprint())
 
 	return props
 }
@@ -232,6 +237,7 @@ func (t *Tracker) appProperties() map[string]interface{} {
 	}
 
 	props.Set("deploy", guessPlatform())
+	props.Set("cluster-fingerprint", t.clusterFingerprint())
 
 	// Features
 	props.Set("has-secret", t.config.Secret != "")
@@ -302,4 +308,81 @@ func guessPlatform() string {
 	}
 
 	return ""
+}
+
+// Try to generate a unique cluster fingerprint to identify events
+// from different instances of the same cluster.
+func (t *Tracker) clusterFingerprint() string {
+	platformID := platformServiceID()
+
+	if platformID != "" {
+		return generateDigest(platformID)
+	}
+
+	return generateDigest(
+		// Explicitly set env vars
+		anycableEnvVarsList(),
+		// Command line arguments
+		anycableCLIArgs(),
+	)
+}
+
+func platformServiceID() string {
+	if id, ok := os.LookupEnv("FLY_APP_NAME"); ok {
+		return id
+	}
+
+	if id, ok := os.LookupEnv("HEROKU_APP_ID"); ok {
+		return id
+	}
+
+	if id, ok := os.LookupEnv("RENDER_SERVICE_ID"); ok {
+		return id
+	}
+
+	if id, ok := os.LookupEnv("HATCHBOX_APP_NAME"); ok {
+		return id
+	}
+
+	if id, ok := os.LookupEnv("K_SERVICE"); ok {
+		return id
+	}
+
+	return ""
+}
+
+func generateDigest(parts ...string) string {
+	h := sha256.New()
+
+	for _, part := range parts {
+		if part != "" {
+			h.Write([]byte(part))
+		}
+	}
+
+	return fmt.Sprintf("%x", h.Sum(nil))
+}
+
+// Return a sorted list of AnyCable environment variables.
+func anycableEnvVarsList() string {
+	pairs := os.Environ()
+	vars := []string{}
+
+	for _, pair := range pairs {
+		if strings.HasPrefix(pair, "ANYCABLE") {
+			vars = append(vars, pair)
+		}
+	}
+
+	slices.Sort(vars)
+
+	return strings.Join(vars, ",")
+}
+
+// Return a sorted list of AnyCable CLI arguments.
+func anycableCLIArgs() string {
+	args := os.Args[1:]
+	slices.Sort(args)
+
+	return strings.Join(args, ",")
 }

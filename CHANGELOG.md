@@ -2,6 +2,8 @@
 
 ## master
 
+- Migrate to our custom telemetry endpoint. ([@palkan][])
+
 ## 1.5.3 (2024-08-28)
 
 - Fix potential deadlocks in Redis pub/sub on reconnect. ([@palkan][])
