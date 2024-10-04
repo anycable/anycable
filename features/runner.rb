@@ -186,7 +186,7 @@ if ARGF
         runner.load(script, filename)
         puts "All OK 👍"
       rescue => e
-        $stderr.puts e.message
+        $stderr.puts e.message + "\n#{e.backtrace.take(5).join("\n")}"
         exit(1)
       ensure
         runner.shutdown
