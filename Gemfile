@@ -15,8 +15,8 @@ if File.directory?(File.join(__dir__, "../anycable"))
   gem "anyt", path: "../anyt"
   gem "wsdirector-cli", path: "../wsdirector"
 else
-  gem "anycable", github: "anycable/anycable"
-  gem "anycable-rails", github: "anycable/anycable-rails"
-  gem "anyt", github: "anycable/anyt"
-  gem "wsdirector-cli", github: "palkan/wsdirector"
+  gem "anycable"
+  gem "anycable-rails"
+  gem "anyt"
+  gem "wsdirector-cli"
 end
