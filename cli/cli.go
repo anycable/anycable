@@ -244,6 +244,9 @@ func (r *Runner) runNode() (*node.Node, error) {
 
 	if r.telemetryEnabled {
 		telemetryConfig := telemetry.NewConfig()
+		if customTelemetryUrl := os.Getenv("ANYCABLE_TELEMETRY_URL"); customTelemetryUrl != "" {
+			telemetryConfig.Endpoint = customTelemetryUrl
+		}
 		tracker := telemetry.NewTracker(metrics, r.config, telemetryConfig)
 
 		r.log.With("context", "telemetry").Info(tracker.Announce())

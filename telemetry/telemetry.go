@@ -1,8 +1,11 @@
 package telemetry
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"maps"
+	"net/http"
 	"os"
 	"runtime"
 	"sync"
@@ -14,6 +17,7 @@ import (
 	"github.com/anycable/anycable-go/version"
 	"github.com/hofstadter-io/cinful"
 	"github.com/posthog/posthog-go"
+	"golang.org/x/exp/slog"
 
 	nanoid "github.com/matoous/go-nanoid"
 )
@@ -23,36 +27,44 @@ const (
 )
 
 type Tracker struct {
-	id           string
-	client       posthog.Client
+	id     string
+	client *http.Client
+
+	// Remote service configuration
+	url       string
+	authToken string
+
 	instrumenter *metrics.Metrics
 	config       *config.Config
 	timer        *time.Timer
 
 	closed bool
 
-	mu sync.Mutex
+	mu     sync.Mutex
+	logger *slog.Logger
 
 	// Observed metrics values
 	observations map[string]interface{}
 }
 
-type noopLogger struct{}
-
-func (l noopLogger) Logf(format string, args ...interface{})   {}
-func (l noopLogger) Errorf(format string, args ...interface{}) {}
-
 func NewTracker(instrumenter *metrics.Metrics, c *config.Config, tc *Config) *Tracker {
-	client, _ := posthog.NewWithConfig(tc.Token, posthog.Config{
-		Endpoint: tc.Endpoint,
-		// set to no-op to avoid logging
-		Logger: noopLogger{},
-	})
-
 	id, _ := nanoid.Nanoid(8)
+
+	client := &http.Client{}
+
+	logLevel := slog.LevelInfo
+
+	if tc.Debug {
+		logLevel = slog.LevelDebug
+	}
+
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: logLevel}))
 
 	return &Tracker{
 		client:       client,
+		url:          tc.Endpoint,
+		authToken:    tc.Token,
+		logger:       logger,
 		config:       c,
 		instrumenter: instrumenter,
 		id:           id,
@@ -89,19 +101,63 @@ func (t *Tracker) Shutdown(ctx context.Context) error {
 		t.timer.Stop()
 	}
 
-	return t.client.Close()
+	t.client.CloseIdleConnections()
+
+	return nil
 }
 
 func (t *Tracker) Send(event string, props map[string]interface{}) {
+	t.logger.Debug("send telemetry event", "event", event)
+
 	// Avoid storing IP address
 	props["$ip"] = nil
 	props["distinct_id"] = t.id
+	props["event"] = event
 
-	_ = t.client.Enqueue(posthog.Capture{
-		DistinctId: t.id,
-		Event:      event,
-		Properties: props,
-	})
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	payload, err := json.Marshal(props)
+
+	if err != nil {
+		t.logger.Debug("failed to marshal telemetry payload", "err", err)
+		return
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", t.url, bytes.NewReader(payload))
+	if err != nil {
+		return
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	if t.authToken != "" {
+		req.Header.Set("Authorization", t.authToken)
+	}
+
+	res, err := t.client.Do(req)
+
+	if err != nil {
+		if ctx.Err() != nil {
+			t.logger.Debug("timed out to send telemetry data")
+			return
+		}
+
+		t.logger.Debug("failed to perform telemetry request", "err", err)
+		return
+	}
+
+	defer res.Body.Close()
+
+	if res.StatusCode == http.StatusUnauthorized {
+		t.logger.Debug("telemetry authenticated failed")
+		return
+	}
+
+	if res.StatusCode != http.StatusOK {
+		t.logger.Debug("telemetry request failed", "status", res.StatusCode)
+		return
+	}
 }
 
 func (t *Tracker) monitorUsage() {
