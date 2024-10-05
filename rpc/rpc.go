@@ -554,7 +554,7 @@ func defaultDialer(conf *Config, l *slog.Logger) (pb.RPCClient, ClientHelper, er
 		dialOptions = append(dialOptions, grpc.WithDefaultCallOptions(callOptions...))
 	}
 
-	conn, err := grpc.Dial(
+	conn, err := grpc.NewClient(
 		host,
 		dialOptions...,
 	)

@@ -1,12 +1,11 @@
 # See: https://golangci-lint.run/usage/linters/
 
-run:
-  skip-dirs:
+issues:
+  exclude-dirs:
     - "tmp"
+    - "vendor"
 
 linters:
-  disable:
-    - structcheck
   enable:
     - decorder
     - errname
@@ -21,17 +20,16 @@ linters:
     - unconvert
 
 linters-settings:
-  gci:
-    local-prefixes: github.com/evilmartians/redis-proxy
-
   govet:
-    check-shadowing: true
     enable-all: true
-    disable: fieldalignment
+    disable:
+      - fieldalignment
 
   gosec:
     severity: medium
-    confedence: medium
+    confidence: medium
+    excludes:
+      - G115
 
   stylecheck:
     checks: ["all", "-ST1005", "-ST1003"]
