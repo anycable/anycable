@@ -2,6 +2,7 @@ package broker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"math"
@@ -714,7 +715,7 @@ bucketSetup:
 		}
 
 		// That means that bucket has been already created
-		if err == jetstream.ErrStreamNameAlreadyInUse {
+		if errors.Is(err, jetstream.ErrStreamNameAlreadyInUse) {
 			newBucket = false
 			bucket, err = n.js.KeyValue(context.Background(), key)
 

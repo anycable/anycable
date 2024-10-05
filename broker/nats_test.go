@@ -238,7 +238,7 @@ func TestNATSBroker_Sessions(t *testing.T) {
 	require.NoError(t, anotherBroker.Start(nil))
 	defer anotherBroker.Shutdown(context.Background()) // nolint: errcheck
 
-	require.NoError(t, anotherBroker.Ready())
+	require.NoError(t, anotherBroker.Ready(jetstreamReadyTimeout))
 
 	restored, err := anotherBroker.RestoreSession("test123")
 
@@ -292,7 +292,7 @@ func TestNATSBroker_SessionsTTLChange(t *testing.T) {
 
 	defer broker.Shutdown(context.Background()) // nolint: errcheck
 
-	require.NoError(t, broker.Ready())
+	require.NoError(t, broker.Ready(jetstreamReadyTimeout))
 
 	err = broker.CommitSession("test123", &TestCacheable{"cache-me"})
 	require.NoError(t, err)
@@ -304,7 +304,7 @@ func TestNATSBroker_SessionsTTLChange(t *testing.T) {
 	require.NoError(t, anotherBroker.Start(nil))
 	defer anotherBroker.Shutdown(context.Background()) // nolint: errcheck
 
-	require.NoError(t, anotherBroker.Ready())
+	require.NoError(t, anotherBroker.Ready(jetstreamReadyTimeout))
 
 	// The session must be missing since we recreated the bucket due to TTL change
 	missing, err := anotherBroker.RestoreSession("test123")
@@ -358,7 +358,7 @@ func TestNATSBroker_Epoch(t *testing.T) {
 	require.NoError(t, err)
 	defer broker.Shutdown(context.Background()) // nolint: errcheck
 
-	require.NoError(t, broker.Ready())
+	require.NoError(t, broker.Ready(jetstreamReadyTimeout))
 	broker.Reset() // nolint: errcheck
 
 	epoch := broker.Epoch()
@@ -367,7 +367,7 @@ func TestNATSBroker_Epoch(t *testing.T) {
 	require.NoError(t, anotherBroker.Start(nil))
 	defer anotherBroker.Shutdown(context.Background()) // nolint: errcheck
 
-	require.NoError(t, anotherBroker.Ready())
+	require.NoError(t, anotherBroker.Ready(jetstreamReadyTimeout))
 
 	assert.Equal(t, epoch, anotherBroker.Epoch())
 
