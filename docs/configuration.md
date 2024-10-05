@@ -222,12 +222,6 @@ If you rely on `disconnect` callbacks in your code, you can tune the default dis
 
 The max number of `Disconnect` calls per-second (default: 100).
 
-**--disconnect_timeout** (`ANYCABLE_DISCONNECT_TIMEOUT`)
-
-The number of seconds to wait before forcefully shutting down a disconnect queue during the server graceful shutdown (default: 5).
-
-Thus, the default configuration can handle a backlog of up to 500 calls. By increasing both values, you can reduce the number of lost disconnect notifications.
-
 **--disconnect_mode** (`ANYCABLE_DISCONNECT_MODE`)
 
 This parameter defines when a Disconnect call should be made for a session. The default is "auto", which means that the Disconnect call is made only if we detected the client _interest_ in it. Currently, we only skip Disconnect calls for sessions authenticated via [JWT](./jwt_identification.md) and using [signed streams](./signed_streams.md) (Hotwire or CableReady).
