@@ -2,6 +2,8 @@
 
 ## master
 
+- Print metrics with keys sorted alphabetically. ([@palkan][])
+
 - Upgrade to Go 1.23. ([@palkan][])
 
 - Migrate to our custom telemetry endpoint. ([@palkan][])

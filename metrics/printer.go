@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"log/slog"
+	"slices"
 	"strings"
 
 	"github.com/anycable/anycable-go/utils"
@@ -55,9 +56,14 @@ func (p *BasePrinter) Write(m *Metrics) error {
 
 // Print logs stats data using global logger with info level
 func (p *BasePrinter) Print(snapshot map[string]uint64) {
+	// Sort keys to provide deterministic output
+	keys := utils.Keys(snapshot)
+	slices.Sort(keys)
+
 	fields := make([]interface{}, 0)
 
-	for k, v := range snapshot {
+	for _, k := range keys {
+		v := snapshot[k]
 		if p.filter == nil {
 			fields = append(fields, k, v)
 		} else if _, ok := p.filter[k]; ok {
