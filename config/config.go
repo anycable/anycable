@@ -5,6 +5,7 @@ import (
 	"github.com/anycable/anycable-go/broker"
 	"github.com/anycable/anycable-go/enats"
 	"github.com/anycable/anycable-go/identity"
+	"github.com/anycable/anycable-go/logger"
 	"github.com/anycable/anycable-go/metrics"
 	nconfig "github.com/anycable/anycable-go/nats"
 	"github.com/anycable/anycable-go/node"
@@ -24,37 +25,26 @@ type Config struct {
 	Secret               string
 	BroadcastKey         string
 	SkipAuth             bool
+	PublicMode           bool
+	BroadcastAdapters    []string
+	PubSubAdapter        string
+	UserPresets          []string
+	Log                  logger.Config
+	Server               server.Config
 	App                  node.Config
+	WS                   ws.Config
 	RPC                  rpc.Config
-	BrokerAdapter        string
 	Broker               broker.Config
 	Redis                rconfig.RedisConfig
 	HTTPBroadcast        broadcast.HTTPConfig
 	NATS                 nconfig.NATSConfig
-	Host                 string
-	Port                 int
-	MaxConn              int
-	BroadcastAdapter     string
-	PubSubAdapter        string
-	Path                 []string
-	HealthPath           string
-	Headers              []string
-	Cookies              []string
-	SSL                  server.SSLConfig
-	WS                   ws.Config
-	MaxMessageSize       int64
 	DisconnectorDisabled bool
 	DisconnectQueue      node.DisconnectQueueConfig
-	LogLevel             string
-	LogFormat            string
-	Debug                bool
 	Metrics              metrics.Config
 	JWT                  identity.JWTConfig
-	EmbedNats            bool
 	EmbeddedNats         enats.Config
 	SSE                  sse.Config
 	Streams              streams.Config
-	UserPresets          []string
 }
 
 // NewConfig returns a new empty config
@@ -62,29 +52,24 @@ func NewConfig() Config {
 	id, _ := nanoid.Nanoid(6)
 
 	config := Config{
-		ID:               id,
-		Host:             "localhost",
-		Port:             8080,
-		Path:             []string{"/cable"},
-		HealthPath:       "/health",
-		BroadcastAdapter: "http,redis",
-		Broker:           broker.NewConfig(),
-		Headers:          []string{"cookie"},
-		LogLevel:         "info",
-		LogFormat:        "text",
-		App:              node.NewConfig(),
-		SSL:              server.NewSSLConfig(),
-		WS:               ws.NewConfig(),
-		Metrics:          metrics.NewConfig(),
-		RPC:              rpc.NewConfig(),
-		Redis:            rconfig.NewRedisConfig(),
-		HTTPBroadcast:    broadcast.NewHTTPConfig(),
-		NATS:             nconfig.NewNATSConfig(),
-		DisconnectQueue:  node.NewDisconnectQueueConfig(),
-		JWT:              identity.NewJWTConfig(""),
-		EmbeddedNats:     enats.NewConfig(),
-		SSE:              sse.NewConfig(),
-		Streams:          streams.NewConfig(),
+		ID:     id,
+		Server: server.NewConfig(),
+		// TODO(v2.0): Make HTTP default
+		BroadcastAdapters: []string{"http", "redis"},
+		Broker:            broker.NewConfig(),
+		Log:               logger.NewConfig(),
+		App:               node.NewConfig(),
+		WS:                ws.NewConfig(),
+		Metrics:           metrics.NewConfig(),
+		RPC:               rpc.NewConfig(),
+		Redis:             rconfig.NewRedisConfig(),
+		HTTPBroadcast:     broadcast.NewHTTPConfig(),
+		NATS:              nconfig.NewNATSConfig(),
+		DisconnectQueue:   node.NewDisconnectQueueConfig(),
+		JWT:               identity.NewJWTConfig(""),
+		EmbeddedNats:      enats.NewConfig(),
+		SSE:               sse.NewConfig(),
+		Streams:           streams.NewConfig(),
 	}
 
 	return config

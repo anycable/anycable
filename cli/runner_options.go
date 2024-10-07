@@ -3,7 +3,6 @@ package cli
 import (
 	"log/slog"
 	"os"
-	"strings"
 
 	"github.com/anycable/anycable-go/broadcast"
 	"github.com/anycable/anycable-go/broker"
@@ -68,7 +67,7 @@ func WithBroadcasters(fn broadcastersFactory) Option {
 func WithDefaultBroadcaster() Option {
 	return WithBroadcasters(func(h broadcast.Handler, c *config.Config, l *slog.Logger) ([]broadcast.Broadcaster, error) {
 		broadcasters := []broadcast.Broadcaster{}
-		adapters := strings.Split(c.BroadcastAdapter, ",")
+		adapters := c.BroadcastAdapters
 
 		for _, adapter := range adapters {
 			switch adapter {
@@ -159,11 +158,11 @@ func WithWebSocketEndpoint(path string, fn websocketHandler) Option {
 // WithDefaultBroker is an Option to set Runner broker to default broker from config
 func WithDefaultBroker() Option {
 	return WithBroker(func(br broker.Broadcaster, c *config.Config, l *slog.Logger) (broker.Broker, error) {
-		if c.BrokerAdapter == "" {
+		if c.Broker.Adapter == "" {
 			return broker.NewLegacyBroker(br), nil
 		}
 
-		switch c.BrokerAdapter {
+		switch c.Broker.Adapter {
 		case "memory":
 			b := broker.NewMemoryBroker(br, &c.Broker)
 			return b, nil
@@ -175,7 +174,7 @@ func WithDefaultBroker() Option {
 			b := broker.NewNATSBroker(br, &c.Broker, &c.NATS, l)
 			return b, nil
 		default:
-			return nil, errorx.IllegalArgument.New("Unsupported broker adapter: %s", c.BrokerAdapter)
+			return nil, errorx.IllegalArgument.New("Unsupported broker adapter: %s", c.Broker.Adapter)
 		}
 	})
 }

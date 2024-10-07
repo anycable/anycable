@@ -2,6 +2,7 @@ package ws
 
 // Config contains WebSocket connection configuration.
 type Config struct {
+	Paths             []string
 	ReadBufferSize    int
 	WriteBufferSize   int
 	MaxMessageSize    int64
@@ -11,5 +12,5 @@ type Config struct {
 
 // NewConfig build a new Config struct
 func NewConfig() Config {
-	return Config{ReadBufferSize: 1024, WriteBufferSize: 1024, MaxMessageSize: 65536}
+	return Config{Paths: []string{"/cable"}, ReadBufferSize: 1024, WriteBufferSize: 1024, MaxMessageSize: 65536}
 }

@@ -2,6 +2,7 @@ package enats
 
 // Config represents NATS service configuration
 type Config struct {
+	Enabled          bool
 	Debug            bool
 	Trace            bool
 	Name             string

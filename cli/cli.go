@@ -99,7 +99,7 @@ func (r *Runner) checkAndSetDefaults() error {
 	}
 
 	if r.log == nil {
-		_, err := logger.InitLogger(r.config.LogFormat, r.config.LogLevel)
+		_, err := logger.InitLogger(r.config.Log.LogFormat, r.config.Log.LogLevel)
 		if err != nil {
 			return errorx.Decorate(err, "failed to initialize default logger")
 		}
@@ -113,9 +113,9 @@ func (r *Runner) checkAndSetDefaults() error {
 		return errorx.Decorate(err, "failed to load configuration presets")
 	}
 
-	server.SSL = &r.config.SSL
-	server.Host = r.config.Host
-	server.MaxConn = r.config.MaxConn
+	server.SSL = &r.config.Server.SSL
+	server.Host = r.config.Server.Host
+	server.MaxConn = r.config.Server.MaxConn
 	server.Logger = r.log
 
 	if r.name == "" {
@@ -172,9 +172,9 @@ func (r *Runner) Run() error {
 		return err
 	}
 
-	wsServer, err := server.ForPort(strconv.Itoa(r.config.Port))
+	wsServer, err := server.ForPort(strconv.Itoa(r.config.Server.Port))
 	if err != nil {
-		return errorx.Decorate(err, "failed to initialize WebSocket server at %s:%d", r.config.Host, r.config.Port)
+		return errorx.Decorate(err, "failed to initialize WebSocket server at %s:%d", r.config.Server.Host, r.config.Server.Port)
 	}
 
 	wsHandler, err := r.websocketHandlerFactory(appNode, r.config, r.log)
@@ -182,7 +182,7 @@ func (r *Runner) Run() error {
 		return errorx.Decorate(err, "failed to initialize WebSocket handler")
 	}
 
-	for _, path := range r.config.Path {
+	for _, path := range r.config.WS.Paths {
 		wsServer.SetupHandler(path, wsHandler)
 		r.log.Info(fmt.Sprintf("Handle WebSocket connections at %s%s", wsServer.Address(), path))
 	}
@@ -195,8 +195,8 @@ func (r *Runner) Run() error {
 		wsServer.SetupHandler(path, handler)
 	}
 
-	wsServer.SetupHandler(r.config.HealthPath, http.HandlerFunc(server.HealthHandler))
-	r.log.Info(fmt.Sprintf("Handle health requests at %s%s", wsServer.Address(), r.config.HealthPath))
+	wsServer.SetupHandler(r.config.Server.HealthPath, http.HandlerFunc(server.HealthHandler))
+	r.log.Info(fmt.Sprintf("Handle health requests at %s%s", wsServer.Address(), r.config.Server.HealthPath))
 
 	if r.config.SSE.Enabled {
 		r.log.Info(
@@ -279,7 +279,7 @@ func (r *Runner) runNode() (*node.Node, error) {
 	go disconnector.Run() // nolint:errcheck
 	appNode.SetDisconnector(disconnector)
 
-	if r.config.EmbedNats {
+	if r.config.EmbeddedNats.Enabled {
 		service, enatsErr := r.embedNATS(&r.config.EmbeddedNats)
 
 		if enatsErr != nil {
@@ -354,7 +354,7 @@ func (r *Runner) setMaxProcs() int {
 }
 
 func (r *Runner) announceDebugMode() {
-	if r.config.Debug {
+	if r.config.Log.Debug {
 		r.log.Debug("🔧 🔧 🔧 Debug mode is on 🔧 🔧 🔧")
 	}
 }
@@ -434,7 +434,7 @@ func (r *Runner) defaultDisconnector(n *node.Node, c *config.Config, l *slog.Log
 }
 
 func (r *Runner) defaultWebSocketHandler(n *node.Node, c *config.Config, l *slog.Logger) (http.Handler, error) {
-	extractor := server.DefaultHeadersExtractor{Headers: c.Headers, Cookies: c.Cookies}
+	extractor := server.DefaultHeadersExtractor{Headers: c.RPC.ProxyHeaders, Cookies: c.RPC.ProxyCookies}
 	return ws.WebsocketHandler(common.ActionCableProtocols(), &extractor, &c.WS, r.log, func(wsc *websocket.Conn, info *server.RequestInfo, callback func()) error {
 		wrappedConn := ws.NewConnection(wsc)
 
@@ -457,7 +457,7 @@ func (r *Runner) defaultWebSocketHandler(n *node.Node, c *config.Config, l *slog
 }
 
 func (r *Runner) defaultSSEHandler(n *node.Node, ctx context.Context, c *config.Config) (http.Handler, error) {
-	extractor := server.DefaultHeadersExtractor{Headers: c.Headers, Cookies: c.Cookies}
+	extractor := server.DefaultHeadersExtractor{Headers: c.RPC.ProxyHeaders, Cookies: c.RPC.ProxyCookies}
 	handler := sse.SSEHandler(n, ctx, &extractor, &c.SSE, r.log)
 
 	return handler, nil

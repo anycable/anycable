@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -51,8 +52,8 @@ func (c *Config) LoadPresets(logger *slog.Logger) error {
 }
 
 func (c *Config) loadFlyPreset(defaults *Config) error {
-	if c.Host == defaults.Host {
-		c.Host = "0.0.0.0"
+	if c.Server.Host == defaults.Server.Host {
+		c.Server.Host = "0.0.0.0"
 	}
 
 	region, ok := os.LookupEnv("FLY_REGION")
@@ -73,7 +74,7 @@ func (c *Config) loadFlyPreset(defaults *Config) error {
 
 	// Use the same port for HTTP broadcasts by default
 	if c.HTTPBroadcast.Port == defaults.HTTPBroadcast.Port {
-		c.HTTPBroadcast.Port = c.Port
+		c.HTTPBroadcast.Port = c.Server.Port
 	}
 
 	if c.EmbeddedNats.Name == defaults.EmbeddedNats.Name && appId != "" {
@@ -111,16 +112,16 @@ func (c *Config) loadFlyPreset(defaults *Config) error {
 			c.PubSubAdapter = "nats"
 
 			// NATS hasn't been configured, so we can embed it
-			if !c.EmbedNats || c.NATS.Servers == defaults.NATS.Servers {
-				c.EmbedNats = true
+			if !c.EmbeddedNats.Enabled || c.NATS.Servers == defaults.NATS.Servers {
+				c.EmbeddedNats.Enabled = true
 				c.NATS.Servers = c.EmbeddedNats.ServiceAddr
-				c.BroadcastAdapter = "http,nats"
+				c.BroadcastAdapters = []string{"http", "nats"}
 			}
 		}
 	}
 
-	if !redisEnabled && c.BroadcastAdapter == defaults.BroadcastAdapter {
-		c.BroadcastAdapter = "http"
+	if !redisEnabled && slices.Equal(c.BroadcastAdapters, defaults.BroadcastAdapters) {
+		c.BroadcastAdapters = []string{"http"}
 	}
 
 	if rpcName, ok := os.LookupEnv("ANYCABLE_FLY_RPC_APP_NAME"); ok {
@@ -133,8 +134,8 @@ func (c *Config) loadFlyPreset(defaults *Config) error {
 }
 
 func (c *Config) loadHerokuPreset(defaults *Config) error {
-	if c.Host == defaults.Host {
-		c.Host = "0.0.0.0"
+	if c.Server.Host == defaults.Server.Host {
+		c.Server.Host = "0.0.0.0"
 	}
 
 	if c.HTTPBroadcast.Port == defaults.HTTPBroadcast.Port {
@@ -153,24 +154,24 @@ func (c *Config) loadHerokuPreset(defaults *Config) error {
 
 func (c *Config) loadBrokerPreset(defaults *Config) error {
 	redisEnabled := (c.Redis.URL != defaults.Redis.URL)
-	enatsEnabled := c.EmbedNats
+	enatsEnabled := c.EmbeddedNats.Enabled
 
-	if c.BrokerAdapter == defaults.BrokerAdapter {
+	if c.Broker.Adapter == defaults.Broker.Adapter {
 		if enatsEnabled {
-			c.BrokerAdapter = "nats"
+			c.Broker.Adapter = "nats"
 		} else {
-			c.BrokerAdapter = "memory"
+			c.Broker.Adapter = "memory"
 		}
 	}
 
-	if c.BroadcastAdapter == defaults.BroadcastAdapter {
+	if slices.Equal(c.BroadcastAdapters, defaults.BroadcastAdapters) {
 		switch {
 		case enatsEnabled:
-			c.BroadcastAdapter = "http,nats"
+			c.BroadcastAdapters = []string{"http", "nats"}
 		case redisEnabled:
-			c.BroadcastAdapter = "http,redisx,redis"
+			c.BroadcastAdapters = []string{"http", "redisx", "redis"}
 		default:
-			c.BroadcastAdapter = "http"
+			c.BroadcastAdapters = []string{"http"}
 		}
 	}
 

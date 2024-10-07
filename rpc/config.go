@@ -34,6 +34,10 @@ type Dialer = func(c *Config, l *slog.Logger) (pb.RPCClient, ClientHelper, error
 type Config struct {
 	// RPC instance host
 	Host string
+	// ProxyHeaders to add to RPC request env
+	ProxyHeaders []string
+	// ProxyCookies to add to RPC request env
+	ProxyCookies []string
 	// The max number of simultaneous requests.
 	// Should be slightly less than the RPC server concurrency to avoid
 	// ResourceExhausted errors
@@ -63,6 +67,7 @@ type Config struct {
 // NewConfig builds a new config
 func NewConfig() Config {
 	return Config{
+		ProxyHeaders:   []string{"cookie"},
 		Concurrency:    defaultRPCConcurrency,
 		EnableTLS:      false,
 		TLSVerify:      true,

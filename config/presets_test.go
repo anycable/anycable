@@ -16,7 +16,7 @@ func TestNoPresets(t *testing.T) {
 
 	require.NoError(t, err)
 
-	assert.Equal(t, "localhost", config.Host)
+	assert.Equal(t, "localhost", config.Server.Host)
 }
 
 func TestFlyPresets(t *testing.T) {
@@ -30,7 +30,7 @@ func TestFlyPresets(t *testing.T) {
 
 	config := NewConfig()
 
-	config.Port = 8989
+	config.Server.Port = 8989
 
 	require.Equal(t, []string{"fly"}, config.Presets())
 
@@ -38,12 +38,12 @@ func TestFlyPresets(t *testing.T) {
 
 	require.NoError(t, err)
 
-	assert.Equal(t, "0.0.0.0", config.Host)
-	assert.Equal(t, 8989, config.Port)
+	assert.Equal(t, "0.0.0.0", config.Server.Host)
+	assert.Equal(t, 8989, config.Server.Port)
 	assert.Equal(t, 8989, config.HTTPBroadcast.Port)
-	assert.Equal(t, true, config.EmbedNats)
+	assert.Equal(t, true, config.EmbeddedNats.Enabled)
 	assert.Equal(t, "nats", config.PubSubAdapter)
-	assert.Equal(t, "", config.BrokerAdapter)
+	assert.Equal(t, "", config.Broker.Adapter)
 	assert.Contains(t, config.EmbeddedNats.Name, "fly-mag-1234-")
 	assert.Equal(t, "nats://0.0.0.0:4222", config.EmbeddedNats.ServiceAddr)
 	assert.Equal(t, "nats://0.0.0.0:5222", config.EmbeddedNats.ClusterAddr)
@@ -69,9 +69,9 @@ func TestFlyPresets_When_RedisConfigured(t *testing.T) {
 
 	require.NoError(t, err)
 
-	assert.Equal(t, "0.0.0.0", config.Host)
-	assert.Equal(t, false, config.EmbedNats)
-	assert.Equal(t, "http,redis", config.BroadcastAdapter)
+	assert.Equal(t, "0.0.0.0", config.Server.Host)
+	assert.Equal(t, false, config.EmbeddedNats.Enabled)
+	assert.Equal(t, []string{"http", "redis"}, config.BroadcastAdapters)
 	assert.Equal(t, "redis", config.PubSubAdapter)
 	assert.Equal(t, "nats://0.0.0.0:4222", config.EmbeddedNats.ServiceAddr)
 	assert.Equal(t, "nats://0.0.0.0:5222", config.EmbeddedNats.ClusterAddr)
@@ -97,14 +97,14 @@ func TestHerokuPresets(t *testing.T) {
 
 	require.NoError(t, err)
 
-	assert.Equal(t, "0.0.0.0", config.Host)
+	assert.Equal(t, "0.0.0.0", config.Server.Host)
 	assert.Equal(t, 4321, config.HTTPBroadcast.Port)
 }
 
 func TestBroker(t *testing.T) {
 	config := NewConfig()
 	config.UserPresets = []string{"broker"}
-	config.BroadcastAdapter = "http"
+	config.BroadcastAdapters = []string{"http"}
 
 	require.Equal(t, []string{"broker"}, config.Presets())
 
@@ -112,8 +112,8 @@ func TestBroker(t *testing.T) {
 
 	require.NoError(t, err)
 
-	assert.Equal(t, "memory", config.BrokerAdapter)
-	assert.Equal(t, "http", config.BroadcastAdapter)
+	assert.Equal(t, "memory", config.Broker.Adapter)
+	assert.Equal(t, []string{"http"}, config.BroadcastAdapters)
 	assert.Equal(t, "", config.PubSubAdapter)
 }
 
@@ -128,15 +128,15 @@ func TestBrokerWhenRedisConfigured(t *testing.T) {
 
 	require.NoError(t, err)
 
-	assert.Equal(t, "memory", config.BrokerAdapter)
-	assert.Equal(t, "http,redisx,redis", config.BroadcastAdapter)
+	assert.Equal(t, "memory", config.Broker.Adapter)
+	assert.Equal(t, []string{"http", "redisx", "redis"}, config.BroadcastAdapters)
 	assert.Equal(t, "redis", config.PubSubAdapter)
 }
 
 func TestBrokerWhenENATSConfigured(t *testing.T) {
 	config := NewConfig()
 	config.UserPresets = []string{"broker"}
-	config.EmbedNats = true
+	config.EmbeddedNats.Enabled = true
 
 	require.Equal(t, []string{"broker"}, config.Presets())
 
@@ -144,8 +144,8 @@ func TestBrokerWhenENATSConfigured(t *testing.T) {
 
 	require.NoError(t, err)
 
-	assert.Equal(t, "nats", config.BrokerAdapter)
-	assert.Equal(t, "http,nats", config.BroadcastAdapter)
+	assert.Equal(t, "nats", config.Broker.Adapter)
+	assert.Equal(t, []string{"http", "nats"}, config.BroadcastAdapters)
 	assert.Equal(t, "nats", config.PubSubAdapter)
 }
 
@@ -159,7 +159,7 @@ func TestFlyWithBrokerPresets(t *testing.T) {
 
 	config := NewConfig()
 	config.UserPresets = []string{"fly", "broker"}
-	config.Port = 8989
+	config.Server.Port = 8989
 
 	require.Equal(t, []string{"fly", "broker"}, config.Presets())
 
@@ -167,13 +167,13 @@ func TestFlyWithBrokerPresets(t *testing.T) {
 
 	require.NoError(t, err)
 
-	assert.Equal(t, "0.0.0.0", config.Host)
-	assert.Equal(t, 8989, config.Port)
+	assert.Equal(t, "0.0.0.0", config.Server.Host)
+	assert.Equal(t, 8989, config.Server.Port)
 	assert.Equal(t, 8989, config.HTTPBroadcast.Port)
-	assert.Equal(t, true, config.EmbedNats)
+	assert.Equal(t, true, config.EmbeddedNats.Enabled)
 	assert.Equal(t, "nats", config.PubSubAdapter)
-	assert.Equal(t, "nats", config.BrokerAdapter)
-	assert.Equal(t, "http,nats", config.BroadcastAdapter)
+	assert.Equal(t, "nats", config.Broker.Adapter)
+	assert.Equal(t, []string{"http", "nats"}, config.BroadcastAdapters)
 	assert.Equal(t, "nats://0.0.0.0:4222", config.EmbeddedNats.ServiceAddr)
 	assert.Equal(t, "nats://0.0.0.0:5222", config.EmbeddedNats.ClusterAddr)
 	assert.Equal(t, "any-test-mag-cluster", config.EmbeddedNats.ClusterName)
@@ -199,7 +199,7 @@ func TestOverrideSomePresetSettings(t *testing.T) {
 
 	require.NoError(t, err)
 
-	assert.Equal(t, "0.0.0.0", config.Host)
+	assert.Equal(t, "0.0.0.0", config.Server.Host)
 	assert.Equal(t, "nats://0.0.0.0:1234", config.EmbeddedNats.ServiceAddr)
 }
 

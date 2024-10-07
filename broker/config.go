@@ -1,6 +1,8 @@
 package broker
 
 type Config struct {
+	// Adapter name
+	Adapter string
 	// For how long to keep history in seconds
 	HistoryTTL int64
 	// Max size of messages to keep in the history per stream

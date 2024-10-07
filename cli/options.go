@@ -50,12 +50,13 @@ func WithCLICustomOptions(factory customOptionsFactory) cliOption {
 }
 
 // NewConfigFromCLI reads config from os.Args. It returns config, error (if any) and a bool value
-// indicating that the usage message or version was shown, no further action required.
+// indicating that the execution was interrupted (e.g., usage message or version was shown), no further action required.
 func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, bool) {
 	c := config.NewConfig()
 
 	var path, headers, cookieFilter, mtags string
-	var helpOrVersionWereShown = true
+	var broadcastAdapters string
+	var cliInterrupted = true
 	var metricsFilter string
 	var enatsRoutes, enatsGateways string
 	var presets string
@@ -64,7 +65,6 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 	var jwtIdKey, jwtIdParam string
 	var jwtIdEnforce bool
 	var noRPC bool
-	var isPublic bool
 
 	// Print raw version without prefix
 	cli.VersionPrinter = func(cCtx *cli.Context) {
@@ -72,9 +72,9 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 	}
 
 	flags := []cli.Flag{}
-	flags = append(flags, serverCLIFlags(&c, &path, &isPublic)...)
+	flags = append(flags, serverCLIFlags(&c, &path)...)
 	flags = append(flags, sslCLIFlags(&c)...)
-	flags = append(flags, broadcastCLIFlags(&c)...)
+	flags = append(flags, broadcastCLIFlags(&c, &broadcastAdapters)...)
 	flags = append(flags, brokerCLIFlags(&c)...)
 	flags = append(flags, redisCLIFlags(&c)...)
 	flags = append(flags, httpBroadcastCLIFlags(&c)...)
@@ -99,7 +99,7 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 		HideHelpCommand: true,
 		Flags:           flags,
 		Action: func(nc *cli.Context) error {
-			helpOrVersionWereShown = false
+			cliInterrupted = false
 			return nil
 		},
 	}
@@ -121,26 +121,30 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 	//
 	// Unfortunately, cli module does not support another way of detecting if or which
 	// command was run.
-	if helpOrVersionWereShown {
+	if cliInterrupted {
 		return &config.Config{}, nil, true
 	}
 
-	if path != "" {
-		c.Path = strings.Split(path, ",")
+	if broadcastAdapters != "" {
+		c.BroadcastAdapters = strings.Split(broadcastAdapters, ",")
 	}
 
-	c.Headers = strings.Split(strings.ToLower(headers), ",")
+	if path != "" {
+		c.WS.Paths = strings.Split(path, ",")
+	}
+
+	c.RPC.ProxyHeaders = strings.Split(strings.ToLower(headers), ",")
 
 	if len(cookieFilter) > 0 {
-		c.Cookies = strings.Split(cookieFilter, ",")
+		c.RPC.ProxyCookies = strings.Split(cookieFilter, ",")
 	}
 
-	if c.Debug {
-		c.LogLevel = "debug"
+	if c.Log.Debug {
+		c.Log.LogLevel = "debug"
 	}
 
 	if c.Metrics.Port == 0 {
-		c.Metrics.Port = c.Port
+		c.Metrics.Port = c.Server.Port
 	}
 
 	if mtags != "" {
@@ -174,7 +178,7 @@ Use metrics_rotate_interval instead.`)
 	}
 
 	// Automatically set the URL of the embedded NATS as the pub/sub server URL
-	if c.EmbedNats && c.NATS.Servers == nats.DefaultURL {
+	if c.EmbeddedNats.Enabled && c.NATS.Servers == nats.DefaultURL {
 		c.NATS.Servers = c.EmbeddedNats.ServiceAddr
 	}
 
@@ -310,14 +314,14 @@ Use broadcast_key instead.`)
 	// Configure default HTTP port
 	if c.HTTPBroadcast.Port == 0 {
 		if c.HTTPBroadcast.IsSecured() {
-			c.HTTPBroadcast.Port = c.Port
+			c.HTTPBroadcast.Port = c.Server.Port
 		} else {
 			c.HTTPBroadcast.Port = 8090
 		}
 	}
 
 	// Configure public mode and other insecure features
-	if isPublic {
+	if c.PublicMode {
 		c.SkipAuth = true
 		c.Streams.Public = true
 		// Ensure broadcasting is also public
@@ -370,21 +374,21 @@ var (
 )
 
 // serverCLIFlags returns base server flags
-func serverCLIFlags(c *config.Config, path *string, isPublic *bool) []cli.Flag {
+func serverCLIFlags(c *config.Config, path *string) []cli.Flag {
 	return withDefaults(serverCategoryDescription, []cli.Flag{
 		&cli.StringFlag{
 			Name:        "host",
-			Value:       c.Host,
+			Value:       c.Server.Host,
 			Usage:       "Server host",
-			Destination: &c.Host,
+			Destination: &c.Server.Host,
 		},
 
 		&cli.IntFlag{
 			Name:        "port",
-			Value:       c.Port,
+			Value:       c.Server.Port,
 			Usage:       "Server port",
 			EnvVars:     []string{envPrefix + "PORT", "PORT"},
-			Destination: &c.Port,
+			Destination: &c.Server.Port,
 		},
 
 		&cli.StringFlag{
@@ -404,7 +408,8 @@ func serverCLIFlags(c *config.Config, path *string, isPublic *bool) []cli.Flag {
 		&cli.BoolFlag{
 			Name:        "public",
 			Usage:       "[DANGER ZONE] Run server in the public mode allowing all connections and stream subscriptions",
-			Destination: isPublic,
+			Value:       c.PublicMode,
+			Destination: &c.PublicMode,
 		},
 
 		&cli.BoolFlag{
@@ -417,21 +422,21 @@ func serverCLIFlags(c *config.Config, path *string, isPublic *bool) []cli.Flag {
 		&cli.IntFlag{
 			Name:        "max-conn",
 			Usage:       "Limit simultaneous server connections (0 – without limit)",
-			Destination: &c.MaxConn,
+			Destination: &c.Server.MaxConn,
 		},
 
 		&cli.StringFlag{
 			Name:        "path",
-			Value:       strings.Join(c.Path, ","),
+			Value:       strings.Join(c.WS.Paths, ","),
 			Usage:       "WebSocket endpoint path (you can specify multiple paths using comma as separator)",
 			Destination: path,
 		},
 
 		&cli.StringFlag{
 			Name:        "health-path",
-			Value:       c.HealthPath,
+			Value:       c.Server.HealthPath,
 			Usage:       "HTTP health endpoint path",
-			Destination: &c.HealthPath,
+			Destination: &c.Server.HealthPath,
 		},
 
 		&cli.IntFlag{
@@ -457,31 +462,31 @@ func sslCLIFlags(c *config.Config) []cli.Flag {
 		&cli.PathFlag{
 			Name:        "ssl_cert",
 			Usage:       "SSL certificate path",
-			Destination: &c.SSL.CertPath,
+			Destination: &c.Server.SSL.CertPath,
 		},
 
 		&cli.PathFlag{
 			Name:        "ssl_key",
 			Usage:       "SSL private key path",
-			Destination: &c.SSL.KeyPath,
+			Destination: &c.Server.SSL.KeyPath,
 		},
 	})
 }
 
 // broadcastCLIFlags returns broadcast_adapter flag
-func broadcastCLIFlags(c *config.Config) []cli.Flag {
+func broadcastCLIFlags(c *config.Config, adapters *string) []cli.Flag {
 	return withDefaults(broadcastCategoryDescription, []cli.Flag{
 		&cli.StringFlag{
 			Name:        "broadcast_adapter",
 			Usage:       "Broadcasting adapter to use (http, redisx, redis or nats). You can specify multiple at once via a comma-separated list",
-			Value:       c.BroadcastAdapter,
-			Destination: &c.BroadcastAdapter,
+			Value:       strings.Join(c.BroadcastAdapters, ","),
+			Destination: adapters,
 		},
 		&cli.StringFlag{
 			Name:        "broker",
 			Usage:       "Broker engine to use (memory)",
-			Value:       c.BrokerAdapter,
-			Destination: &c.BrokerAdapter,
+			Value:       c.Broker.Adapter,
+			Destination: &c.Broker.Adapter,
 		},
 		&cli.StringFlag{
 			Name:        "pubsub",
@@ -644,8 +649,8 @@ func embeddedNatsCLIFlags(c *config.Config, routes *string, gateways *string) []
 		&cli.BoolFlag{
 			Name:        "embed_nats",
 			Usage:       "Enable embedded NATS server and use it for pub/sub",
-			Value:       c.EmbedNats,
-			Destination: &c.EmbedNats,
+			Value:       c.EmbeddedNats.Enabled,
+			Destination: &c.EmbeddedNats.Enabled,
 		},
 
 		&cli.StringFlag{
@@ -793,7 +798,7 @@ func rpcCLIFlags(c *config.Config, headers, cookieFilter *string, isNone *bool) 
 		&cli.StringFlag{
 			Name:        "headers",
 			Usage:       "List of headers to proxy to RPC",
-			Value:       strings.Join(c.Headers, ","),
+			Value:       strings.Join(c.RPC.ProxyHeaders, ","),
 			Destination: headers,
 		},
 
@@ -877,21 +882,21 @@ func logCLIFlags(c *config.Config) []cli.Flag {
 		&cli.StringFlag{
 			Name:        "log_level",
 			Usage:       "Set logging level (debug/info/warn/error)",
-			Value:       c.LogLevel,
-			Destination: &c.LogLevel,
+			Value:       c.Log.LogLevel,
+			Destination: &c.Log.LogLevel,
 		},
 
 		&cli.StringFlag{
 			Name:        "log_format",
 			Usage:       "Set logging format (text/json)",
-			Value:       c.LogFormat,
-			Destination: &c.LogFormat,
+			Value:       c.Log.LogFormat,
+			Destination: &c.Log.LogFormat,
 		},
 
 		&cli.BoolFlag{
 			Name:        "debug",
 			Usage:       "Enable debug mode (more verbose logging)",
-			Destination: &c.Debug,
+			Destination: &c.Log.Debug,
 		},
 	})
 }
