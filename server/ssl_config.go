@@ -2,8 +2,8 @@ package server
 
 // SSLConfig contains SSL parameters
 type SSLConfig struct {
-	CertPath string
-	KeyPath  string
+	CertPath string `toml:"cert_path"`
+	KeyPath  string `toml:"key_path"`
 }
 
 // NewSSLConfig build a new SSLConfig struct

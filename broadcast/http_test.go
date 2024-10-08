@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/BurntSushi/toml"
 	"github.com/anycable/anycable-go/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -88,4 +89,29 @@ func TestHttpHandler(t *testing.T) {
 
 		assert.Equal(t, http.StatusCreated, rr.Code)
 	})
+}
+
+func TestHTTPConfig__ToToml(t *testing.T) {
+	conf := NewHTTPConfig()
+	conf.Port = 8080
+	conf.Path = "/broadcast"
+	conf.Secret = ""
+	conf.AddCORSHeaders = true
+	conf.CORSHosts = "example.com,test.com"
+
+	tomlStr := conf.ToToml()
+
+	assert.Contains(t, tomlStr, "port = 8080")
+	assert.Contains(t, tomlStr, "path = \"/broadcast\"")
+	assert.Contains(t, tomlStr, "# secret = \"\"")
+	assert.Contains(t, tomlStr, "cors_headers = true")
+	assert.Contains(t, tomlStr, "cors_hosts = \"example.com,test.com\"")
+
+	// Round-trip test
+	conf2 := NewHTTPConfig()
+
+	_, err := toml.Decode(tomlStr, &conf2)
+	require.NoError(t, err)
+
+	assert.Equal(t, conf, conf2)
 }

@@ -1,6 +1,7 @@
 package redis
 
 import (
+	"fmt"
 	"net/url"
 	"strings"
 	"time"
@@ -12,27 +13,27 @@ import (
 type RedisConfig struct {
 	// Redis instance URL or master name in case of sentinels usage
 	// or list of URLs if cluster usage
-	URL string
+	URL string `toml:"url"`
 	// Redis channel to subscribe to (legacy pub/sub)
-	Channel string
+	Channel string `toml:"channel"`
 	// Redis stream consumer group name
-	Group string
+	Group string `toml:"group"`
 	// Redis stream read wait time in milliseconds
-	StreamReadBlockMilliseconds int64
+	StreamReadBlockMilliseconds int64 `toml:"stream_read_block_milliseconds"`
 	// Internal channel name for node-to-node broadcasting
-	InternalChannel string
+	InternalChannel string `toml:"internal_channel"`
 	// List of Redis Sentinel addresses
-	Sentinels string
+	Sentinels string `toml:"sentinels"`
 	// Redis Sentinel discovery interval (seconds)
-	SentinelDiscoveryInterval int
+	SentinelDiscoveryInterval int `toml:"sentinel_discovery_interval"`
 	// Redis keepalive ping interval (seconds)
-	KeepalivePingInterval int
+	KeepalivePingInterval int `toml:"keepalive_ping_interval"`
 	// Whether to check server's certificate for validity (in case of rediss:// protocol)
-	TLSVerify bool
+	TLSVerify bool `toml:"tls_verify"`
 	// Max number of reconnect attempts
-	MaxReconnectAttempts int
+	MaxReconnectAttempts int `toml:"max_reconnect_attempts"`
 	// Disable client-side caching
-	DisableCache bool
+	DisableCache bool `toml:"disable_cache"`
 
 	// List of hosts to connect
 	hosts []string
@@ -119,6 +120,56 @@ func (config *RedisConfig) parseSentinels() (*rueidis.ClientOption, error) {
 	options.Sentinel.MasterSet = sentinelMaster.Host
 
 	return options, nil
+}
+
+func (config RedisConfig) ToToml() string {
+	var result strings.Builder
+
+	result.WriteString("# Redis instance URL or master name in case of sentinels usage\n")
+	result.WriteString("# or list of URLs if cluster usage\n")
+	result.WriteString(fmt.Sprintf("url = \"%s\"\n", config.URL))
+
+	result.WriteString("# Channel name for legacy broadcasting\n")
+	result.WriteString(fmt.Sprintf("channel = \"%s\"\n", config.Channel))
+
+	result.WriteString("# Stream consumer group name for RedisX broadcasting\n")
+	result.WriteString(fmt.Sprintf("group = \"%s\"\n", config.Group))
+
+	result.WriteString("# Streams read wait time in milliseconds\n")
+	result.WriteString(fmt.Sprintf("stream_read_block_milliseconds = %d\n", config.StreamReadBlockMilliseconds))
+
+	result.WriteString("# Channel name for pub/sub (node-to-node)\n")
+	result.WriteString(fmt.Sprintf("internal_channel = \"%s\"\n", config.InternalChannel))
+
+	result.WriteString("# Sentinel addresses (comma-separated list)\n")
+	result.WriteString(fmt.Sprintf("sentinels = \"%s\"\n", config.Sentinels))
+
+	result.WriteString("# Sentinel discovery interval (seconds)\n")
+	result.WriteString(fmt.Sprintf("sentinel_discovery_interval = %d\n", config.SentinelDiscoveryInterval))
+
+	result.WriteString("# Keepalive ping interval (seconds)\n")
+	result.WriteString(fmt.Sprintf("keepalive_ping_interval = %d\n", config.KeepalivePingInterval))
+
+	result.WriteString("# Enable TLS Verify\n")
+	if config.TLSVerify {
+		result.WriteString(fmt.Sprintf("tls_verify = %t\n", config.TLSVerify))
+	} else {
+		result.WriteString("# tls_verify = true\n")
+	}
+
+	result.WriteString("# Max number of reconnect attempts\n")
+	result.WriteString(fmt.Sprintf("max_reconnect_attempts = %d\n", config.MaxReconnectAttempts))
+
+	result.WriteString("# Disable client-side caching\n")
+	if config.DisableCache {
+		result.WriteString(fmt.Sprintf("disable_cache = %t\n", config.DisableCache))
+	} else {
+		result.WriteString("# disable_cache = true\n")
+	}
+
+	result.WriteString("\n")
+
+	return result.String()
 }
 
 func parseRedisURL(url string) (options *rueidis.ClientOption, err error) {

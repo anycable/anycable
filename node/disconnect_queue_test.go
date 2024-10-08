@@ -6,7 +6,9 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/BurntSushi/toml"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDisconnectQueue_Run(t *testing.T) {
@@ -83,4 +85,23 @@ func newQueue() *DisconnectQueue {
 	q := NewDisconnectQueue(node, &config, slog.Default())
 
 	return q
+}
+
+func TestDisconnectQueueConfig_ToToml(t *testing.T) {
+	conf := NewDisconnectQueueConfig()
+	conf.Rate = 50
+	conf.Backlog = 2048
+
+	tomlStr := conf.ToToml()
+
+	assert.Contains(t, tomlStr, "rate = 50")
+	assert.Contains(t, tomlStr, "backlog = 2048")
+
+	// Round-trip test
+	conf2 := NewDisconnectQueueConfig()
+
+	_, err := toml.Decode(tomlStr, &conf2)
+	require.NoError(t, err)
+
+	assert.Equal(t, conf, conf2)
 }

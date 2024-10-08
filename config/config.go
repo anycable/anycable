@@ -105,7 +105,7 @@ func (c *Config) LoadFromFile() error {
 	return nil
 }
 
-func (c Config) Display() string {
+func (c Config) ToToml() string {
 	var result strings.Builder
 
 	result.WriteString("# AnyCable server configuration.\n# Read more at https://docs.anycable.io/anycable-go/configuration\n\n")
@@ -167,6 +167,51 @@ func (c Config) Display() string {
 	} else {
 		result.WriteString(fmt.Sprintf("presets = [\"%s\"]\n\n", strings.Join(c.UserPresets, "\", \"")))
 	}
+
+	result.WriteString("# Server configuration\n[server]\n")
+	result.WriteString(c.Server.ToToml())
+
+	result.WriteString("# Logging configuration\n[logging]\n")
+	result.WriteString(c.Log.ToToml())
+
+	result.WriteString("# RPC configuration\n[rpc]\n")
+	result.WriteString(c.RPC.ToToml())
+
+	result.WriteString("# Broker configuration\n[broker]\n")
+	result.WriteString(c.Broker.ToToml())
+
+	result.WriteString("# JWT configuration\n[jwt]\n")
+	result.WriteString(c.JWT.ToToml())
+
+	result.WriteString("# Pub/sub (signed) streams configuration\n[streams]\n")
+	result.WriteString(c.Streams.ToToml())
+
+	result.WriteString("# WebSockets configuration\n[ws]\n")
+	result.WriteString(c.WS.ToToml())
+
+	result.WriteString("# SSE configuration\n[sse]\n")
+	result.WriteString(c.SSE.ToToml())
+
+	result.WriteString("# Redis configuration\n[redis]\n")
+	result.WriteString(c.Redis.ToToml())
+
+	result.WriteString("# NATS configuration\n[nats]\n")
+	result.WriteString(c.NATS.ToToml())
+
+	result.WriteString("# Broadcasting configuration\n[http_broadcast]\n")
+	result.WriteString(c.HTTPBroadcast.ToToml())
+
+	result.WriteString("# Metrics configuration\n[metrics]\n")
+	result.WriteString(c.Metrics.ToToml())
+
+	result.WriteString("# App configuration\n[app]\n")
+	result.WriteString(c.App.ToToml())
+
+	result.WriteString("# Disconnector configuration\n[disconnector]\n")
+	result.WriteString(c.DisconnectQueue.ToToml())
+
+	result.WriteString("# Embedded NATS configuration\n[embedded_nats]\n")
+	result.WriteString(c.EmbeddedNats.ToToml())
 
 	return result.String()
 }

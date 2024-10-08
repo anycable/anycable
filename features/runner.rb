@@ -40,6 +40,7 @@ class BenchRunner
 
   def initialize
     @processes = {}
+    @teardowns = []
     @pipes = {}
     @log_level = ENV["DEBUG"] == "true" ? LOG_LEVEL_TO_NUM[:debug] : LOG_LEVEL_TO_NUM[:info]
   end
@@ -160,6 +161,9 @@ class BenchRunner
     processes.each_value do |process|
       process.stop
     end
+
+    teardowns.each(&:call)
+    teardowns.clear
   end
 
   def retrying(delay: 1, attempts: 2, &block)
@@ -176,9 +180,13 @@ class BenchRunner
     end
   end
 
+  def at_exit(&block)
+    teardowns << block
+  end
+
   private
 
-  attr_reader :processes, :pipes, :log_level
+  attr_reader :processes, :pipes, :log_level, :teardowns
 
   def log(level, &block)
     return unless log_level >= LOG_LEVEL_TO_NUM[level]

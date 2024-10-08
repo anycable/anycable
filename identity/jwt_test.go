@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/BurntSushi/toml"
 	"github.com/anycable/anycable-go/common"
 	"github.com/golang-jwt/jwt"
 	"github.com/stretchr/testify/assert"
@@ -163,4 +164,24 @@ func TestJWTIdentifierIdentify(t *testing.T) {
 		assert.Equal(t, common.FAILURE, res.Status)
 		assert.Equal(t, []string{"{\"type\":\"disconnect\",\"reason\":\"unauthorized\",\"reconnect\":false}"}, res.Transmissions)
 	})
+}
+
+func TestConfig__ToToml(t *testing.T) {
+	conf := NewJWTConfig("jwt-secret")
+	conf.Force = false
+	conf.Param = "token"
+
+	tomlStr := conf.ToToml()
+
+	assert.Contains(t, tomlStr, "param = \"token\"")
+	assert.Contains(t, tomlStr, "secret = \"jwt-secret\"")
+	assert.Contains(t, tomlStr, "# force = true")
+
+	// Round-trip test
+	conf2 := NewJWTConfig("bla")
+
+	_, err := toml.Decode(tomlStr, &conf2)
+	require.NoError(t, err)
+
+	assert.Equal(t, conf, conf2)
 }

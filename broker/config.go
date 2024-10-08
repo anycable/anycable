@@ -1,14 +1,19 @@
 package broker
 
+import (
+	"fmt"
+	"strings"
+)
+
 type Config struct {
 	// Adapter name
-	Adapter string
+	Adapter string `toml:"adapter"`
 	// For how long to keep history in seconds
-	HistoryTTL int64
+	HistoryTTL int64 `toml:"history_ttl"`
 	// Max size of messages to keep in the history per stream
-	HistoryLimit int
+	HistoryLimit int `toml:"history_limit"`
 	// Sessions cache TTL in seconds (after disconnect)
-	SessionsTTL int64
+	SessionsTTL int64 `toml:"sessions_ttl"`
 }
 
 func NewConfig() Config {
@@ -20,4 +25,28 @@ func NewConfig() Config {
 		// 5 minutes by default
 		SessionsTTL: 5 * 60,
 	}
+}
+
+func (c Config) ToToml() string {
+	var result strings.Builder
+
+	result.WriteString("# Broker backend adapter\n")
+	if c.Adapter == "" {
+		result.WriteString("# adapter = \"memory\"\n")
+	} else {
+		result.WriteString(fmt.Sprintf("adapter = \"%s\"\n", c.Adapter))
+	}
+
+	result.WriteString("# For how long to keep streams history (seconds)\n")
+	result.WriteString(fmt.Sprintf("history_ttl = %d\n", c.HistoryTTL))
+
+	result.WriteString("# Max number of messages to keep in a stream history\n")
+	result.WriteString(fmt.Sprintf("history_limit = %d\n", c.HistoryLimit))
+
+	result.WriteString("# For how long to store sessions state for resumeability (seconds)\n")
+	result.WriteString(fmt.Sprintf("sessions_ttl = %d\n", c.SessionsTTL))
+
+	result.WriteString("\n")
+
+	return result.String()
 }

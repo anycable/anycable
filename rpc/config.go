@@ -33,33 +33,33 @@ type Dialer = func(c *Config, l *slog.Logger) (pb.RPCClient, ClientHelper, error
 // Config contains RPC controller configuration
 type Config struct {
 	// RPC instance host
-	Host string
+	Host string `toml:"host"`
 	// ProxyHeaders to add to RPC request env
-	ProxyHeaders []string
+	ProxyHeaders []string `toml:"proxy_headers"`
 	// ProxyCookies to add to RPC request env
-	ProxyCookies []string
+	ProxyCookies []string `toml:"proxy_cookies"`
 	// The max number of simultaneous requests.
 	// Should be slightly less than the RPC server concurrency to avoid
 	// ResourceExhausted errors
-	Concurrency int
+	Concurrency int `toml:"concurrency"`
 	// Enable client-side TLS on RPC connections?
-	EnableTLS bool
+	EnableTLS bool `toml:"enable_tls"`
 	// Whether to verify the RPC server's certificate chain and host name
-	TLSVerify bool
+	TLSVerify bool `toml:"tls_verify"`
 	// CA root TLS certificate path
-	TLSRootCA string
+	TLSRootCA string `toml:"tls_root_ca_path"`
 	// Max receive msg size (bytes)
-	MaxRecvSize int
+	MaxRecvSize int `toml:"max_recv_size"`
 	// Max send msg size (bytes)
-	MaxSendSize int
+	MaxSendSize int `toml:"max_send_size"`
 	// Underlying implementation (grpc, http, or none)
-	Implementation string
+	Implementation string `toml:"implementation"`
 	// Alternative dialer implementation
 	DialFun Dialer
 	// Secret for HTTP RPC authentication
-	Secret string
+	Secret string `toml:"secret"`
 	// Timeout for HTTP RPC requests (in ms)
-	RequestTimeout int
+	RequestTimeout int `toml:"http_request_timeout"`
 	// SecretBase is a secret used to generate authentication token
 	SecretBase string
 }
@@ -144,4 +144,74 @@ func ensureGrpcScheme(url string) string {
 	}
 
 	return "grpc://" + url
+}
+
+func (c Config) ToToml() string {
+	var result strings.Builder
+
+	result.WriteString("# RPC implementation (grpc, http, or none)\n")
+	result.WriteString(fmt.Sprintf("implementation = \"%s\"\n", c.Implementation))
+
+	result.WriteString("# RPC service hostname (including port, e.g., 'anycable-rpc:50051')\n")
+	result.WriteString(fmt.Sprintf("host = \"%s\"\n", c.Host))
+
+	result.WriteString("# Specify HTTP headers that must be proxied to the RPC service\n")
+	if len(c.ProxyHeaders) > 0 {
+		result.WriteString(fmt.Sprintf("proxy_headers = [\"%s\"]\n", strings.Join(c.ProxyHeaders, "\", \"")))
+	} else {
+		result.WriteString("# proxy_headers = [\"cookie\"]\n")
+	}
+
+	result.WriteString("# Specify which cookies must be kept in the proxied Cookie header\n")
+	if len(c.ProxyCookies) > 0 {
+		result.WriteString(fmt.Sprintf("proxy_cookies = [\"%s\"]\n", strings.Join(c.ProxyCookies, "\", \"")))
+	} else {
+		result.WriteString("# proxy_cookies = [\"_session_id\"]\n")
+	}
+
+	result.WriteString("# RPC concurrency (max number of concurrent RPC requests)\n")
+	result.WriteString(fmt.Sprintf("concurrency = %d\n", c.Concurrency))
+
+	result.WriteString("# Enable client-side TLS on RPC connections\n")
+	if c.EnableTLS {
+		result.WriteString(fmt.Sprintf("enable_tls = %v\n", c.EnableTLS))
+	} else {
+		result.WriteString("# enable_tls = true\n")
+	}
+
+	result.WriteString("# Enable TLS Verify for RPC connections\n")
+	if c.TLSVerify {
+		result.WriteString(fmt.Sprintf("tls_verify = %v\n", c.TLSVerify))
+	} else {
+		result.WriteString("# tls_verify = true\n")
+	}
+
+	result.WriteString("# CA root TLS certificate path\n")
+	if c.TLSRootCA == "" {
+		result.WriteString(fmt.Sprintf("tls_root_ca_path = \"%s\"\n", c.TLSRootCA))
+	} else {
+		result.WriteString("# tls_root_ca_path =\n")
+	}
+
+	result.WriteString("# HTTP RPC specific settings\n")
+	result.WriteString("# Secret for HTTP RPC authentication\n")
+	if c.Secret != "" {
+		result.WriteString(fmt.Sprintf("secret = \"%s\"\n", c.Secret))
+	} else {
+		result.WriteString("# secret =\n")
+	}
+
+	result.WriteString("# Timeout for HTTP RPC requests (in ms)\n")
+	result.WriteString(fmt.Sprintf("http_request_timeout = %d\n", c.RequestTimeout))
+
+	result.WriteString("# GRPC fine-tuning\n")
+	result.WriteString("# Max allowed incoming message size (bytes)\n")
+	result.WriteString(fmt.Sprintf("max_recv_size = %d\n", c.MaxRecvSize))
+
+	result.WriteString("# Max allowed outgoing message size (bytes)\n")
+	result.WriteString(fmt.Sprintf("max_send_size = %d\n", c.MaxSendSize))
+
+	result.WriteString("\n")
+
+	return result.String()
 }

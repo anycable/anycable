@@ -380,7 +380,7 @@ Use broadcast_key instead.`)
 	}
 
 	if shouldPrintConfig {
-		fmt.Print(c.Display())
+		fmt.Print(c.ToToml())
 		return &c, nil, true
 	}
 

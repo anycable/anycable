@@ -15,10 +15,10 @@ const (
 )
 
 type JWTConfig struct {
-	Secret string
-	Param  string
+	Secret string `toml:"secret"`
+	Param  string `toml:"param"`
 	Algo   jwt.SigningMethod
-	Force  bool
+	Force  bool `toml:"force"`
 }
 
 var (
@@ -31,6 +31,27 @@ func NewJWTConfig(secret string) JWTConfig {
 
 func (c JWTConfig) Enabled() bool {
 	return c.Secret != ""
+}
+
+func (c JWTConfig) ToToml() string {
+	var result strings.Builder
+
+	result.WriteString("# Secret key\n")
+	result.WriteString(fmt.Sprintf("secret = \"%s\"\n", c.Secret))
+
+	result.WriteString("# Parameter name (an URL query or a header name carrying a token, e.g., `x-<param>`)\n")
+	result.WriteString(fmt.Sprintf("param = \"%s\"\n", c.Param))
+
+	result.WriteString("# Enfore JWT authentication\n")
+	if c.Force {
+		result.WriteString("force = true\n")
+	} else {
+		result.WriteString("# force = true\n")
+	}
+
+	result.WriteString("\n")
+
+	return result.String()
 }
 
 type JWTIdentifier struct {

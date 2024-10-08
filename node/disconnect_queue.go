@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 	"time"
 )
@@ -21,6 +22,20 @@ type DisconnectQueueConfig struct {
 // NewDisconnectQueueConfig builds a new config
 func NewDisconnectQueueConfig() DisconnectQueueConfig {
 	return DisconnectQueueConfig{Rate: 100, Backlog: 4096}
+}
+
+func (c DisconnectQueueConfig) ToToml() string {
+	var result strings.Builder
+
+	result.WriteString("# Limit the number of Disconnect RPC calls per second\n")
+	result.WriteString(fmt.Sprintf("rate = %d\n", c.Rate))
+
+	result.WriteString("# Queue size for disconnect requests\n")
+	result.WriteString(fmt.Sprintf("backlog = %d\n", c.Backlog))
+
+	result.WriteString("\n")
+
+	return result.String()
 }
 
 // DisconnectQueue is a rate-limited executor

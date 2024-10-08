@@ -22,18 +22,18 @@ const (
 // HTTPConfig contains HTTP pubsub adapter configuration
 type HTTPConfig struct {
 	// Port to listen on
-	Port int
+	Port int `toml:"port"`
 	// Path for HTTP broadast
-	Path string
+	Path string `toml:"path"`
 	// Secret token to authorize requests
-	Secret string
+	Secret string `toml:"secret"`
 	// SecretBase is a secret used to generate a token if none provided
 	SecretBase string
 	// AddCORSHeaders enables adding CORS headers (so you can perform broadcast requests from the browser)
 	// (We mostly need it for Stackblitz)
-	AddCORSHeaders bool
+	AddCORSHeaders bool `toml:"cors_headers"`
 	// CORSHosts contains a list of hostnames for CORS (comma-separated)
-	CORSHosts string
+	CORSHosts string `toml:"cors_hosts"`
 }
 
 // NewHTTPConfig builds a new config for HTTP pub/sub
@@ -45,6 +45,43 @@ func NewHTTPConfig() HTTPConfig {
 
 func (c *HTTPConfig) IsSecured() bool {
 	return c.Secret != "" || c.SecretBase != ""
+}
+
+func (c HTTPConfig) ToToml() string {
+	var result strings.Builder
+
+	result.WriteString("# HTTP server port (can be the same as the main server port)\n")
+	result.WriteString(fmt.Sprintf("port = %d\n", c.Port))
+
+	result.WriteString("# HTTP endpoint path for broadcasts\n")
+	result.WriteString(fmt.Sprintf("path = \"%s\"\n", c.Path))
+
+	result.WriteString("# Secret token to authenticate broadcasting requests\n")
+	if c.Secret != "" {
+		result.WriteString(fmt.Sprintf("secret = \"%s\"\n", c.Secret))
+	} else {
+		result.WriteString("# secret = \"\"\n")
+	}
+
+	result.WriteString("# Enable CORS headers\n")
+	if c.AddCORSHeaders {
+		result.WriteString("cors_headers = true\n")
+
+		result.WriteString("# Allowed hosts for CORS (comma-separated)\n")
+		if c.CORSHosts != "" {
+			result.WriteString(fmt.Sprintf("cors_hosts = \"%s\"\n", c.CORSHosts))
+		} else {
+			result.WriteString("# cors_hosts = \"\"\n")
+		}
+	} else {
+		result.WriteString("# cors_headers = false\n")
+		result.WriteString("# Allowed hosts for CORS (comma-separated)\n")
+		result.WriteString("# cors_hosts = \"\"\n")
+	}
+
+	result.WriteString("\n")
+
+	return result.String()
 }
 
 // HTTPBroadcaster represents HTTP broadcaster

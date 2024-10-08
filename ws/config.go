@@ -1,16 +1,51 @@
 package ws
 
+import (
+	"fmt"
+	"strings"
+)
+
 // Config contains WebSocket connection configuration.
 type Config struct {
-	Paths             []string
-	ReadBufferSize    int
-	WriteBufferSize   int
-	MaxMessageSize    int64
-	EnableCompression bool
-	AllowedOrigins    string
+	Paths             []string `toml:"paths"`
+	ReadBufferSize    int      `toml:"read_buffer_size"`
+	WriteBufferSize   int      `toml:"write_buffer_size"`
+	MaxMessageSize    int64    `toml:"max_message_size"`
+	EnableCompression bool     `toml:"enable_compression"`
+	AllowedOrigins    string   `toml:"allowed_origins"`
 }
 
 // NewConfig build a new Config struct
 func NewConfig() Config {
 	return Config{Paths: []string{"/cable"}, ReadBufferSize: 1024, WriteBufferSize: 1024, MaxMessageSize: 65536}
+}
+
+// ToToml converts the Config struct to a TOML string representation
+func (c Config) ToToml() string {
+	var result strings.Builder
+
+	result.WriteString("# WebSocket endpoint paths\n")
+	result.WriteString(fmt.Sprintf("paths = [\"%s\"]\n", strings.Join(c.Paths, "\", \"")))
+
+	result.WriteString("# Allowed origins (a comma-separated list)\n")
+	result.WriteString(fmt.Sprintf("allowed_origins = \"%s\"\n", c.AllowedOrigins))
+
+	result.WriteString("# Read buffer size\n")
+	result.WriteString(fmt.Sprintf("read_buffer_size = %d\n", c.ReadBufferSize))
+
+	result.WriteString("# Write buffer size\n")
+	result.WriteString(fmt.Sprintf("write_buffer_size = %d\n", c.WriteBufferSize))
+
+	result.WriteString("# Maximum message size\n")
+	result.WriteString(fmt.Sprintf("max_message_size = %d\n", c.MaxMessageSize))
+
+	if c.EnableCompression {
+		result.WriteString("# Enable compression (per-message deflate)\n")
+		result.WriteString("enable_compression = true\n")
+		result.WriteString("# enable_compression = true\n")
+	}
+
+	result.WriteString("\n")
+
+	return result.String()
 }
