@@ -1,6 +1,6 @@
-# AnyCable-Go configuration
+# AnyCable server configuration
 
-You can configure AnyCable-Go via CLI options, e.g.:
+You can configure AnyCable server via CLI options, e.g.:
 
 ```sh
 $ anycable-go --rpc_host=localhost:50051 --headers=cookie \
@@ -9,6 +9,8 @@ $ anycable-go --rpc_host=localhost:50051 --headers=cookie \
 ```
 
 Or via the corresponding environment variables (i.e. `ANYCABLE_RPC_HOST`, `ANYCABLE_REDIS_URL`, etc.).
+
+Finally, you can also store configuration in a `.toml` file (see [configuration files](#configuration-files)).
 
 ## Primary settings
 
@@ -257,6 +259,32 @@ You can find the actual value for GOMAXPROCS in the starting logs:
 ```sh
 INFO 2022-06-30T03:31:21.848Z context=main Starting AnyCable 1.2.0-c4f1c6e (with mruby 1.2.0 (2015-11-17)) (pid: 39705, open file limit: 524288, gomaxprocs: 8)
 ```
+
+## Configuration files
+
+Since v1.5.4, you can also provide configuration via a TOML file. This is recommended for applications that require a lot of settings or have complex configurations.
+
+AnyCable will look for a configuration file in the following locations:
+
+- `./anycable.toml`
+- `/ets/anycable/anycable.toml`
+
+You can also specify the path to the configuration file using the `--config-path` option, e.g.:
+
+```sh
+$ anycable-go --config-path=/path/to/anycable.toml
+
+2024-10-07 17:52:37.139 INF Starting AnyCable 1.5.4-87217bb (pid: 80235, open file limit: 122880, gomaxprocs: 8) nodeid=BzeSHV
+2024-10-07 17:52:37.139 INF Using configuration from file: ./path/to/anycable.toml nodeid=BzeSHV
+```
+
+You can generate a sample configuration file (including the currently provided configuration) using the `--print-config` option:
+
+```sh
+anycable-go --print-config > anycable.toml
+```
+
+Finally, if there is a configuration file but you don't want to use it, you can disable it using the `--ignore-config-path` option.
 
 [automaxprocs]: https://github.com/uber-go/automaxprocs
 [NATS]: https://nats.io

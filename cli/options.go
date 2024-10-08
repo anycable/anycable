@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 
@@ -49,14 +50,24 @@ func WithCLICustomOptions(factory customOptionsFactory) cliOption {
 	}
 }
 
+const DefaultConfigPath = "/etc/anycable/anycable.toml"
+const CurrentConfigPath = "./anycable.toml"
+
 // NewConfigFromCLI reads config from os.Args. It returns config, error (if any) and a bool value
 // indicating that the execution was interrupted (e.g., usage message or version was shown), no further action required.
 func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, bool) {
 	c := config.NewConfig()
 
+	if _, err := os.Stat(CurrentConfigPath); err == nil {
+		args = append([]string{args[0], "--config-path", CurrentConfigPath}, args[1:]...)
+	} else if _, err := os.Stat(DefaultConfigPath); err == nil {
+		args = append([]string{args[0], "--config-path", DefaultConfigPath}, args[1:]...)
+	}
+
 	var path, headers, cookieFilter, mtags string
 	var broadcastAdapters string
 	var cliInterrupted = true
+	var shouldPrintConfig = false
 	var metricsFilter string
 	var enatsRoutes, enatsGateways string
 	var presets string
@@ -71,7 +82,42 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 		_, _ = fmt.Fprintf(cCtx.App.Writer, "%v\n", cCtx.App.Version)
 	}
 
-	flags := []cli.Flag{}
+	flags := []cli.Flag{
+		&cli.BoolFlag{
+			Name:  "ignore-config-path",
+			Usage: "Ignore configuration files",
+			Action: func(ctx *cli.Context, val bool) error {
+				if val {
+					c.ConfigFilePath = "none"
+				}
+				return nil
+			},
+		},
+		&cli.StringFlag{
+			Name:  "config-path",
+			Usage: "Path to the TOML configuration file",
+			Action: func(ctx *cli.Context, path string) error {
+				if c.ConfigFilePath == "none" {
+					c.ConfigFilePath = ""
+					return nil
+				}
+
+				c.ConfigFilePath = path
+
+				// check if file exists and try to load config from it
+				if err := c.LoadFromFile(); err != nil {
+					return err
+				}
+
+				return nil
+			},
+		},
+		&cli.BoolFlag{
+			Name:        "print-config",
+			Usage:       "Print configuration and exit",
+			Destination: &shouldPrintConfig,
+		},
+	}
 	flags = append(flags, serverCLIFlags(&c, &path)...)
 	flags = append(flags, sslCLIFlags(&c)...)
 	flags = append(flags, broadcastCLIFlags(&c, &broadcastAdapters)...)
@@ -295,6 +341,10 @@ Use broadcast_key instead.`)
 	}
 
 	// Nullify none secrets
+	if c.Secret == "none" {
+		c.Secret = ""
+	}
+
 	if c.Streams.Secret == "none" {
 		c.Streams.Secret = ""
 	}
@@ -327,6 +377,11 @@ Use broadcast_key instead.`)
 		// Ensure broadcasting is also public
 		c.HTTPBroadcast.Secret = ""
 		c.HTTPBroadcast.SecretBase = ""
+	}
+
+	if shouldPrintConfig {
+		fmt.Print(c.Display())
+		return &c, nil, true
 	}
 
 	return &c, nil, false
@@ -453,6 +508,18 @@ func serverCLIFlags(c *config.Config, path *string) []cli.Flag {
 			Destination: &c.App.ShutdownDisconnectPoolSize,
 			Hidden:      true,
 		},
+
+		&cli.StringFlag{
+			Name:   "node_id",
+			Usage:  "Unique node identifier",
+			Value:  c.ID,
+			Hidden: true,
+			Action: func(ctx *cli.Context, val string) error {
+				c.ID = val
+				c.UserProvidedID = true
+				return nil
+			},
+		},
 	})
 }
 
@@ -479,7 +546,6 @@ func broadcastCLIFlags(c *config.Config, adapters *string) []cli.Flag {
 		&cli.StringFlag{
 			Name:        "broadcast_adapter",
 			Usage:       "Broadcasting adapter to use (http, redisx, redis or nats). You can specify multiple at once via a comma-separated list",
-			Value:       strings.Join(c.BroadcastAdapters, ","),
 			Destination: adapters,
 		},
 		&cli.StringFlag{

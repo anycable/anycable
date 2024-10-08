@@ -1,0 +1,42 @@
+# Generate a configuration file with provided values
+run :anycable_gen_config,
+  ["sh", "-c", './dist/anycable-go --noauth --port 2024 --broadcast_adapter=http,redisx --print-config > ./anycable.toml'],
+  env: {"ANYCABLE_SECRET" => "file-secret", "ANYCABLE_NODE_ID" => "node-1"}, clean_env: true
+
+unless File.exist?("anycable.toml")
+  fail "Config file hasn't been generated"
+end
+
+at_exit { File.delete("anycable.toml") }
+
+# Load from the default local path
+run :anycable_load_config, "dist/anycable-go --print-config", clean_env: true
+
+config = PerfectTOML.parse(stdout(:anycable_load_config))
+
+$errors = []
+def assert_equal(field, expected, actual)
+  $errors << "Expected #{field} to be #{expected}, got #{actual.nil? ? '<null>' : actual}" unless expected == actual
+end
+
+# top-level params
+assert_equal("node ID", "node-1", config["node_id"])
+assert_equal("noauth", true, config["noauth"])
+assert_equal("secret", "file-secret", config["secret"])
+assert_equal("broadcast adapters", %w[http redisx], config["broadcast_adapters"])
+
+# nested params: TODO
+# assert_equal("server.port", 2024, config.dig("server", "port"))
+
+if $errors.any?
+  fail $errors.join("\n")
+end
+
+# Ignoring the config file
+run :anycable_ignore_config_path, "dist/anycable-go --ignore-config-path --print-config", clean_env: true
+
+config = PerfectTOML.parse(stdout(:anycable_ignore_config_path))
+
+$errors.clear
+assert_equal("node ID", nil, config["node_id"])
+assert_equal("secret", nil, config["secret"])

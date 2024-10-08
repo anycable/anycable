@@ -2,6 +2,8 @@
 
 ## master
 
+- Add `anycable.toml` support. ([@palkan][])
+
 - Print metrics with keys sorted alphabetically. ([@palkan][])
 
 - Upgrade to Go 1.23. ([@palkan][])

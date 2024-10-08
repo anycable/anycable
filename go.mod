@@ -36,6 +36,7 @@ replace github.com/mitchellh/go-mruby => ./vendorlib/go-mruby
 require github.com/sony/gobreaker v1.0.0
 
 require (
+	github.com/BurntSushi/toml v1.4.0 // indirect
 	github.com/bufbuild/protocompile v0.14.1 // indirect
 	github.com/klauspost/compress v1.17.10 // indirect
 	github.com/kr/pretty v0.2.0 // indirect

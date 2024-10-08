@@ -7,9 +7,13 @@ begin
   gemfile(retried, quiet: true) do
     source "https://rubygems.org"
 
+    gem "logger"
+    gem "ostruct"
+
     gem "childprocess", "~> 4.1"
     gem "jwt"
     gem "activesupport", "~> 7.0.0"
+    gem "perfect_toml"
   end
 rescue
   raise if retried
@@ -66,12 +70,21 @@ class BenchRunner
     process.start
   end
 
-  def run(name, cmd, timeout: RUN_TIMEOUT)
+  def run(name, cmd, env: {}, clean_env: false, timeout: RUN_TIMEOUT)
     log(:info) { "Running command: #{cmd}" }
 
     r, w = IO.pipe
 
-    process = ChildProcess.build(*cmd.split(/\s+/))
+    cmd = cmd.is_a?(Array) ? cmd : cmd.split(/\s+/)
+
+    process = ChildProcess.build(*cmd)
+    # set process environment variables
+    # Remove all ANYCABLE_ vars that could be set by the Makefile
+    if clean_env
+      ENV.each { |k, _| env[k] ||= nil if k.start_with?("ANYCABLE_") }
+    end
+
+    process.environment.merge!(env)
     process.io.stdout = w
     process.io.stderr = w
 
@@ -186,7 +199,7 @@ if ARGF
         runner.load(script, filename)
         puts "All OK 👍"
       rescue => e
-        $stderr.puts e.message + "\n#{e.backtrace.take(5).join("\n")}"
+        $stderr.puts e.message + "\n#{e.backtrace.take(5).join("\n") if ENV["DEBUG"] == "true"}"
         exit(1)
       ensure
         runner.shutdown

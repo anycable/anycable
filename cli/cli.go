@@ -162,7 +162,11 @@ func (r *Runner) Run() error {
 
 	r.log.Info(fmt.Sprintf("Starting %s %s%s (pid: %d, open file limit: %s, gomaxprocs: %d)", r.name, version.Version(), mrubySupport, os.Getpid(), utils.OpenFileLimit(), numProcs))
 
-	if r.config.IsPublic() {
+	if r.config.ConfigFilePath != "" {
+		r.log.Info(fmt.Sprintf("Using configuration from file: %s", r.config.ConfigFilePath))
+	}
+
+	if r.config.PublicMode {
 		r.log.Warn("Server is running in the public mode")
 	}
 
