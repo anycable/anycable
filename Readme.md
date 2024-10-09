@@ -2,60 +2,57 @@
 [![Build](https://github.com/anycable/anycable-go/workflows/Test/badge.svg)](https://github.com/anycable/anycable-go/actions)
 [![Docker](https://img.shields.io/docker/pulls/anycable/anycable-go.svg)](https://hub.docker.com/r/anycable/anycable-go/)
 [![Documentation](https://img.shields.io/badge/docs-link-brightgreen.svg)](https://docs.anycable.io/anycable-go/getting_started)
-# AnyCable-Go WebSocket Server
+# AnyCable WebSocket Server
 
-WebSocket server for [AnyCable](https://github.com/anycable/anycable).
+A real-time server component of [AnyCable](https://anycable.io) (open-source edition). Check out also our
+[Pro](https://docs.anycable.io/pro) and [managed](https://plus.anycable.io) offerings.
 
-> [AnyCable Pro](https://docs.anycable.io/pro) has been launched 🚀
-
-## Versioning
-
-**Important** Use the same major version of AnyCable-Go as your AnyCable gem.
-AnyCable-Go uses the same major version number (and minor version as well for 0.x series) as other libraries to indicate the compatibility.
+> [!NOTE]
+> You can find all the necessary information about AnyCable in our documentation: [docs.anycable.io](https://docs.anycable.io).
 
 ## Installation
 
-The easiest way to install AnyCable-Go is to [download](https://github.com/anycable/anycable-go/releases) a pre-compiled binary:
+There are several ways to install AnyCable server:
 
-```shell
-# Example for `anycable-go-linux-amd64`
-curl -fsSL https://github.com/anycable/anycable-go/releases/latest/download/anycable-go-linux-amd64 -o anycable-go
-chmod +x anycable-go
-./anycable-go -v
-```
+- On MacOS, you can install AnyCable via [Homebrew](https://brew.sh/):
 
-MacOS users could install it with [Homebrew](https://brew.sh/)
+  ```shell
+  brew install anycable-go
+  ```
 
-```shell
-brew install anycable-go
-```
+- Docker images are available on [Docker Hub](https://hub.docker.com/r/anycable/anycable-go/).
 
-Arch Linux users can install [anycable-go package from AUR](https://aur.archlinux.org/packages/anycable-go/).
+- For Rails projects, we recommend using our `bin/rails g anycable:bin` installer for local development.
 
-Of course, you can install it from source too:
+- For JavaScript projects, we recommend installing AnyCable via NPM:
 
-```shell
-go install github.com/anycable/anycable-go/cmd/anycable-go@latest
-```
+  ```sh
+  npm install --save-dev @anycable/anycable-go
+  pnpm install --save-dev @anycable/anycable-go
+  yarn add --dev @anycable/anycable-go
 
-For JavaScript projects, there is also an option to install AnyCable-Go via NPM:
+  # and run as follows
+  npx anycable-go
+  ```
 
-```sh
-npm install --save-dev @anycable/anycable-go
-pnpm install --save-dev @anycable/anycable-go
-yarn add --dev @anycable/anycable-go
+- You can use [heroku-anycable-go](https://github.com/anycable/heroku-anycable-go) buildpack for Heroku deployments.
 
-# and run as follows
-npx anycable-go
-```
+- Arch Linux users can install [anycable-go package from AUR](https://aur.archlinux.org/packages/anycable-go/).
 
-## Upgrade
+- Or you can download a binary from the [releases page](https://github.com/anycable/anycable-go/releases):
 
-For instructions on how to upgrade to a newer version see [upgrade notes](https://docs.anycable.io/upgrade-notes/Readme.md).
+  ```sh
+  # Example for `anycable-go-linux-amd64`
+  curl -fsSL https://github.com/anycable/anycable-go/releases/latest/download/anycable-go-linux-amd64 -o anycable-go
+  chmod +x anycable-go
+  ./anycable-go -v
+  ```
 
-### Heroku
+- Of course, you can install it from source too:
 
-See [heroku-anycable-go](https://github.com/anycable/heroku-anycable-go) buildpack.
+  ```shell
+  go install github.com/anycable/anycable-go/cmd/anycable-go@latest
+  ```
 
 ## Usage
 
@@ -64,14 +61,10 @@ Run server:
 ```shell
 $ anycable-go
 
-=> INFO 2020-02-05T08:44:57.684Z context=main Starting AnyCable 1.1.0
+2024-10-09 11:00:01.402 INF Starting AnyCable 1.5.3-f39ff3f (pid: 85844, open file limit: 122880, gomaxprocs: 8) nodeid=E4eFyM
 ```
 
-You can also provide configuration parameters through the corresponding environment variables (i.e. `ANYCABLE_RPC_HOST`, `ANYCABLE_REDIS_URL`, etc).
-
-For more information about available options run `anycable-go -h`.
-
-📑 [Documentation](https://docs.anycable.io/anycable-go/getting_started)
+For more information about available options run `anycable-go -h` or check out [the documentation](https://docs.anycable.io/anycable-go/configuration).
 
 ## Build
 
@@ -106,10 +99,6 @@ We use [golangci-lint](https://golangci-lint.run) to lint Go source code:
 ```sh
 make lint
 ```
-
-## Docker
-
-See available images [here](https://hub.docker.com/r/anycable/anycable-go/).
 
 ## Contributing
 
