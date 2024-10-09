@@ -94,6 +94,16 @@ func (c Config) ToToml() string {
 		result.WriteString("# tags.key = \"value\"\n")
 	}
 
+	result.WriteString("# StatsD configuration\n")
+	var prefix = "# "
+	if c.Statsd.Enabled() {
+		prefix = ""
+	}
+	result.WriteString(fmt.Sprintf("%sstatsd.host = \"%s\"\n", prefix, c.Statsd.Host))
+	result.WriteString(fmt.Sprintf("%sstatsd.prefix = \"%s\"\n", prefix, c.Statsd.Prefix))
+	result.WriteString(fmt.Sprintf("%sstatsd.tags_format = \"%s\"\n", prefix, c.Statsd.TagFormat))
+	result.WriteString(fmt.Sprintf("%sstatsd.max_packet_size = %d\n", prefix, c.Statsd.MaxPacketSize))
+
 	result.WriteString("\n")
 
 	return result.String()

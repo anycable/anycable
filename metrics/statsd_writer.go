@@ -10,10 +10,10 @@ import (
 )
 
 type StatsdConfig struct {
-	Host          string
-	Prefix        string
-	TagFormat     string
-	MaxPacketSize int
+	Host          string `toml:"host"`
+	Prefix        string `toml:"prefix"`
+	TagFormat     string `toml:"tags_format"`
+	MaxPacketSize int    `toml:"max_packet_size"`
 }
 
 type StatsdLogger struct {
