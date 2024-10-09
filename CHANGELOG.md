@@ -2,6 +2,8 @@
 
 ## master
 
+## 1.5.4 (2024-10-08)
+
 - Add `anycable.toml` support. ([@palkan][])
 
 - Print metrics with keys sorted alphabetically. ([@palkan][])
