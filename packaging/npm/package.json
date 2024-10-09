@@ -1,6 +1,6 @@
 {
   "name": "@anycable/anycable-go",
-  "version": "1.5.2",
+  "version": "1.5.4",
   "description": "A wrapper to install and run AnyCable server",
   "main": "index.js",
   "bin": {
@@ -30,8 +30,7 @@
     "x64",
     "arm64"
   ],
-  "scripts": {
-  },
+  "scripts": {},
   "dependencies": {
     "node-downloader-helper": "^1.0.18"
   }
