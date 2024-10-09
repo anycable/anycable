@@ -242,8 +242,10 @@ and will be removed in the next major release of anycable-go.
 Use shutdown_timeout instead.`)
 	}
 
-	c.SSE.AllowedOrigins = c.WS.AllowedOrigins
-	c.HTTPBroadcast.CORSHosts = c.WS.AllowedOrigins
+	// Propagate allowed origins to all the components
+	c.WS.AllowedOrigins = c.Server.AllowedOrigins
+	c.SSE.AllowedOrigins = c.Server.AllowedOrigins
+	c.HTTPBroadcast.CORSHosts = c.Server.AllowedOrigins
 
 	if turboRailsKey != "" {
 		fmt.Println(`DEPRECATION WARNING: turbo_rails_key option is deprecated
@@ -444,6 +446,12 @@ func serverCLIFlags(c *config.Config, path *string) []cli.Flag {
 			Usage:       "Server port",
 			EnvVars:     []string{envPrefix + "PORT", "PORT"},
 			Destination: &c.Server.Port,
+		},
+
+		&cli.StringFlag{
+			Name:        "allowed_origins",
+			Usage:       `Accept requests only from specified origins, e.g., "www.example.com,*example.io". No check is performed if empty`,
+			Destination: &c.Server.AllowedOrigins,
 		},
 
 		&cli.StringFlag{
@@ -1070,12 +1078,6 @@ func wsCLIFlags(c *config.Config) []cli.Flag {
 			Usage:       "Enable experimental WebSocket per message compression",
 			Destination: &c.WS.EnableCompression,
 			Hidden:      true,
-		},
-
-		&cli.StringFlag{
-			Name:        "allowed_origins",
-			Usage:       `Accept requests only from specified origins, e.g., "www.example.com,*example.io". No check is performed if empty`,
-			Destination: &c.WS.AllowedOrigins,
 		},
 	})
 }

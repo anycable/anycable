@@ -12,7 +12,7 @@ type Config struct {
 	WriteBufferSize   int      `toml:"write_buffer_size"`
 	MaxMessageSize    int64    `toml:"max_message_size"`
 	EnableCompression bool     `toml:"enable_compression"`
-	AllowedOrigins    string   `toml:"allowed_origins"`
+	AllowedOrigins    string   `toml:"-"`
 }
 
 // NewConfig build a new Config struct
@@ -26,9 +26,6 @@ func (c Config) ToToml() string {
 
 	result.WriteString("# WebSocket endpoint paths\n")
 	result.WriteString(fmt.Sprintf("paths = [\"%s\"]\n", strings.Join(c.Paths, "\", \"")))
-
-	result.WriteString("# Allowed origins (a comma-separated list)\n")
-	result.WriteString(fmt.Sprintf("allowed_origins = \"%s\"\n", c.AllowedOrigins))
 
 	result.WriteString("# Read buffer size\n")
 	result.WriteString(fmt.Sprintf("read_buffer_size = %d\n", c.ReadBufferSize))

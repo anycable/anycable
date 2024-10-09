@@ -33,6 +33,7 @@ func TestConfig__ToToml(t *testing.T) {
 	conf.HealthPath = "/healthz"
 	conf.SSL.CertPath = "/path/to/cert"
 	conf.SSL.KeyPath = "/path/to/key"
+	conf.AllowedOrigins = "http://example.com"
 
 	tomlStr := conf.ToToml()
 
@@ -40,6 +41,7 @@ func TestConfig__ToToml(t *testing.T) {
 	assert.Contains(t, tomlStr, "port = 8082")
 	assert.Contains(t, tomlStr, "# max_conn = 1000")
 	assert.Contains(t, tomlStr, "health_path = \"/healthz\"")
+	assert.Contains(t, tomlStr, "allowed_origins = \"http://example.com\"")
 	assert.Contains(t, tomlStr, "ssl.cert_path = \"/path/to/cert\"")
 	assert.Contains(t, tomlStr, "ssl.key_path = \"/path/to/key\"")
 

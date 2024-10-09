@@ -18,7 +18,7 @@ type Config struct {
 	// Define when to invoke Disconnect callback
 	DisconnectMode string `toml:"disconnect_mode"`
 	// The number of goroutines to use for disconnect calls on shutdown
-	ShutdownDisconnectPoolSize int `toml:"shutdown_disconnect_pool_size"`
+	ShutdownDisconnectPoolSize int `toml:"shutdown_disconnect_gopool_size"`
 	// How often server should send Action Cable ping messages (seconds)
 	PingInterval int `toml:"ping_interval"`
 	// How ofter to refresh node stats (seconds)
@@ -74,8 +74,8 @@ func (c Config) ToToml() string {
 	result.WriteString("# The number of Go routines to use for broadcasting (server-to-client fan-out)\n")
 	result.WriteString(fmt.Sprintf("broadcast_gopool_size = %d\n", c.HubGopoolSize))
 
-	result.WriteString("# The number of goroutines to use for Disconnect RPC calls on shutdown\n")
-	result.WriteString(fmt.Sprintf("shutdown_disconnect_pool_size = %d\n", c.ShutdownDisconnectPoolSize))
+	result.WriteString("# The number of Go routines to use for Disconnect RPC calls on shutdown\n")
+	result.WriteString(fmt.Sprintf("shutdown_disconnect_gopool_size = %d\n", c.ShutdownDisconnectPoolSize))
 
 	result.WriteString("\n")
 

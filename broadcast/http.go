@@ -63,20 +63,11 @@ func (c HTTPConfig) ToToml() string {
 		result.WriteString("# secret = \"\"\n")
 	}
 
-	result.WriteString("# Enable CORS headers\n")
+	result.WriteString("# Enable CORS headers (allowed origins are used as allowed hosts)\n")
 	if c.AddCORSHeaders {
 		result.WriteString("cors_headers = true\n")
-
-		result.WriteString("# Allowed hosts for CORS (comma-separated)\n")
-		if c.CORSHosts != "" {
-			result.WriteString(fmt.Sprintf("cors_hosts = \"%s\"\n", c.CORSHosts))
-		} else {
-			result.WriteString("# cors_hosts = \"\"\n")
-		}
 	} else {
 		result.WriteString("# cors_headers = false\n")
-		result.WriteString("# Allowed hosts for CORS (comma-separated)\n")
-		result.WriteString("# cors_hosts = \"\"\n")
 	}
 
 	result.WriteString("\n")

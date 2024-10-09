@@ -15,7 +15,6 @@ func TestConfig_ToToml(t *testing.T) {
 	conf.WriteBufferSize = 2048
 	conf.MaxMessageSize = 131072
 	conf.EnableCompression = true
-	conf.AllowedOrigins = "http://example.com"
 
 	tomlStr := conf.ToToml()
 
@@ -24,7 +23,6 @@ func TestConfig_ToToml(t *testing.T) {
 	assert.Contains(t, tomlStr, "write_buffer_size = 2048")
 	assert.Contains(t, tomlStr, "max_message_size = 131072")
 	assert.Contains(t, tomlStr, "enable_compression = true")
-	assert.Contains(t, tomlStr, "allowed_origins = \"http://example.com\"")
 
 	// Round-trip test
 	conf2 := Config{}

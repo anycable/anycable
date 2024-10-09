@@ -97,7 +97,6 @@ func TestHTTPConfig__ToToml(t *testing.T) {
 	conf.Path = "/broadcast"
 	conf.Secret = ""
 	conf.AddCORSHeaders = true
-	conf.CORSHosts = "example.com,test.com"
 
 	tomlStr := conf.ToToml()
 
@@ -105,7 +104,6 @@ func TestHTTPConfig__ToToml(t *testing.T) {
 	assert.Contains(t, tomlStr, "path = \"/broadcast\"")
 	assert.Contains(t, tomlStr, "# secret = \"\"")
 	assert.Contains(t, tomlStr, "cors_headers = true")
-	assert.Contains(t, tomlStr, "cors_hosts = \"example.com,test.com\"")
 
 	// Round-trip test
 	conf2 := NewHTTPConfig()

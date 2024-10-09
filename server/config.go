@@ -6,11 +6,12 @@ import (
 )
 
 type Config struct {
-	Host       string    `toml:"host"`
-	Port       int       `toml:"port"`
-	MaxConn    int       `toml:"max_conn"`
-	HealthPath string    `toml:"health_path"`
-	SSL        SSLConfig `toml:"ssl"`
+	Host           string    `toml:"host"`
+	Port           int       `toml:"port"`
+	AllowedOrigins string    `toml:"allowed_origins"`
+	MaxConn        int       `toml:"max_conn"`
+	HealthPath     string    `toml:"health_path"`
+	SSL            SSLConfig `toml:"ssl"`
 }
 
 func NewConfig() Config {
@@ -29,6 +30,10 @@ func (c Config) ToToml() string {
 	result.WriteString(fmt.Sprintf("host = %q\n", c.Host))
 	result.WriteString("# Port to listen on\n")
 	result.WriteString(fmt.Sprintf("port = %d\n", c.Port))
+
+	result.WriteString("# Allowed origins (a comma-separated list)\n")
+	result.WriteString(fmt.Sprintf("allowed_origins = \"%s\"\n", c.AllowedOrigins))
+
 	result.WriteString("# Maximum number of allowed concurrent connections\n")
 	if c.MaxConn == 0 {
 		result.WriteString("# max_conn = 1000\n")
