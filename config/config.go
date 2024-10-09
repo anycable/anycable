@@ -14,6 +14,7 @@ import (
 	"github.com/anycable/anycable-go/metrics"
 	nconfig "github.com/anycable/anycable-go/nats"
 	"github.com/anycable/anycable-go/node"
+	"github.com/anycable/anycable-go/pubsub"
 	rconfig "github.com/anycable/anycable-go/redis"
 	"github.com/anycable/anycable-go/rpc"
 	"github.com/anycable/anycable-go/server"
@@ -43,7 +44,12 @@ type Config struct {
 	RPC                  rpc.Config
 	Broker               broker.Config
 	Redis                rconfig.RedisConfig
+	LegacyRedisBroadcast broadcast.LegacyRedisConfig
+	RedisBroadcast       broadcast.RedisConfig
+	NATSBroadcast        broadcast.LegacyNATSConfig
 	HTTPBroadcast        broadcast.HTTPConfig
+	RedisPubSub          pubsub.RedisConfig
+	NATSPubSub           pubsub.NATSConfig
 	NATS                 nconfig.NATSConfig
 	DisconnectorDisabled bool
 	DisconnectQueue      node.DisconnectQueueConfig
@@ -64,21 +70,26 @@ func NewConfig() Config {
 		ID:     id,
 		Server: server.NewConfig(),
 		// TODO(v2.0): Make HTTP default
-		BroadcastAdapters: []string{"http", "redis"},
-		Broker:            broker.NewConfig(),
-		Log:               logger.NewConfig(),
-		App:               node.NewConfig(),
-		WS:                ws.NewConfig(),
-		Metrics:           metrics.NewConfig(),
-		RPC:               rpc.NewConfig(),
-		Redis:             rconfig.NewRedisConfig(),
-		HTTPBroadcast:     broadcast.NewHTTPConfig(),
-		NATS:              nconfig.NewNATSConfig(),
-		DisconnectQueue:   node.NewDisconnectQueueConfig(),
-		JWT:               identity.NewJWTConfig(""),
-		EmbeddedNats:      enats.NewConfig(),
-		SSE:               sse.NewConfig(),
-		Streams:           streams.NewConfig(),
+		BroadcastAdapters:    []string{"http", "redis"},
+		Broker:               broker.NewConfig(),
+		Log:                  logger.NewConfig(),
+		App:                  node.NewConfig(),
+		WS:                   ws.NewConfig(),
+		Metrics:              metrics.NewConfig(),
+		RPC:                  rpc.NewConfig(),
+		Redis:                rconfig.NewRedisConfig(),
+		RedisBroadcast:       broadcast.NewRedisConfig(),
+		LegacyRedisBroadcast: broadcast.NewLegacyRedisConfig(),
+		NATSBroadcast:        broadcast.NewLegacyNATSConfig(),
+		HTTPBroadcast:        broadcast.NewHTTPConfig(),
+		RedisPubSub:          pubsub.NewRedisConfig(),
+		NATSPubSub:           pubsub.NewNATSConfig(),
+		NATS:                 nconfig.NewNATSConfig(),
+		DisconnectQueue:      node.NewDisconnectQueueConfig(),
+		JWT:                  identity.NewJWTConfig(""),
+		EmbeddedNats:         enats.NewConfig(),
+		SSE:                  sse.NewConfig(),
+		Streams:              streams.NewConfig(),
 	}
 
 	return config
@@ -198,8 +209,19 @@ func (c Config) ToToml() string {
 	result.WriteString("# NATS configuration\n[nats]\n")
 	result.WriteString(c.NATS.ToToml())
 
-	result.WriteString("# Broadcasting configuration\n[http_broadcast]\n")
+	result.WriteString("# Broadcast adapters configuration\n[http_broadcast]\n")
 	result.WriteString(c.HTTPBroadcast.ToToml())
+	result.WriteString("[redis_stream_broadcast]\n")
+	result.WriteString(c.RedisBroadcast.ToToml())
+	result.WriteString("[redis_pubsub_broadcast]\n")
+	result.WriteString(c.LegacyRedisBroadcast.ToToml())
+	result.WriteString("[nats_broadcast]\n")
+	result.WriteString(c.NATSBroadcast.ToToml())
+
+	result.WriteString("# Pub/sub adapters configuration\n[redis_pubsub]\n")
+	result.WriteString(c.RedisPubSub.ToToml())
+	result.WriteString("[nats_pubsub]\n")
+	result.WriteString(c.NATSPubSub.ToToml())
 
 	result.WriteString("# Metrics configuration\n[metrics]\n")
 	result.WriteString(c.Metrics.ToToml())

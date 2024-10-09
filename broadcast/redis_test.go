@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/BurntSushi/toml"
 	"github.com/anycable/anycable-go/mocks"
 	rconfig "github.com/anycable/anycable-go/redis"
 	"github.com/anycable/anycable-go/utils"
@@ -64,10 +65,12 @@ func TestRedisBroadcaster(t *testing.T) {
 		return
 	}
 
-	config := rconfig.NewRedisConfig()
+	rconfig := rconfig.NewRedisConfig()
+	config := NewRedisConfig()
+	config.Redis = &rconfig
 
 	if redisURL != "" {
-		config.URL = redisURL
+		rconfig.URL = redisURL
 	}
 
 	config.StreamReadBlockMilliseconds = 500
@@ -154,12 +157,14 @@ func TestRedisBroadcasterAcksClaims(t *testing.T) {
 		return
 	}
 
-	config := rconfig.NewRedisConfig()
+	rconfig := rconfig.NewRedisConfig()
+	config := NewRedisConfig()
+	config.Redis = &rconfig
 	// Make it short to avoid sleeping for too long in tests
 	config.StreamReadBlockMilliseconds = 100
 
 	if redisURL != "" {
-		config.URL = redisURL
+		rconfig.URL = redisURL
 	}
 
 	handler := &mocks.Handler{}
@@ -181,7 +186,7 @@ func TestRedisBroadcasterAcksClaims(t *testing.T) {
 			closed = true
 			// Close the connection to prevent consumer from ack-ing the message
 			broadcaster.client.Close()
-			broadcaster.reconnectAttempt = config.MaxReconnectAttempts + 1
+			broadcaster.reconnectAttempt = config.Redis.MaxReconnectAttempts + 1
 		}
 	})
 
@@ -284,4 +289,25 @@ func waitRedisStreamConsumers(client rueidis.Client, count int) error {
 		time.Sleep(500 * time.Millisecond)
 		attempts++
 	}
+}
+
+func TestRedisConfig__ToToml(t *testing.T) {
+	config := NewRedisConfig()
+	config.Stream = "test_stream"
+	config.Group = "test_group"
+	config.StreamReadBlockMilliseconds = 3000
+
+	tomlStr := config.ToToml()
+
+	assert.Contains(t, tomlStr, "stream = \"test_stream\"")
+	assert.Contains(t, tomlStr, "group = \"test_group\"")
+	assert.Contains(t, tomlStr, "stream_read_block_milliseconds = 3000")
+
+	// Round-trip test
+	config2 := NewRedisConfig()
+
+	_, err := toml.Decode(tomlStr, &config2)
+	require.NoError(t, err)
+
+	assert.Equal(t, config, config2)
 }

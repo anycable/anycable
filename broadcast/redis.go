@@ -16,10 +16,44 @@ import (
 	"github.com/redis/rueidis"
 )
 
+type RedisConfig struct {
+	Stream string `toml:"stream"`
+	Group  string `toml:"group"`
+	// Redis stream read wait time in milliseconds
+	StreamReadBlockMilliseconds int64 `toml:"stream_read_block_milliseconds"`
+
+	Redis *rconfig.RedisConfig `toml:"redis"`
+}
+
+func NewRedisConfig() RedisConfig {
+	return RedisConfig{
+		Stream:                      "__anycable__",
+		Group:                       "bx",
+		StreamReadBlockMilliseconds: 2000,
+	}
+}
+
+func (c RedisConfig) ToToml() string {
+	var result strings.Builder
+
+	result.WriteString("# Redis stream name for broadcasts\n")
+	result.WriteString(fmt.Sprintf("stream = \"%s\"\n", c.Stream))
+
+	result.WriteString("# Stream consumer group name\n")
+	result.WriteString(fmt.Sprintf("group = \"%s\"\n", c.Group))
+
+	result.WriteString("# Streams read wait time in milliseconds\n")
+	result.WriteString(fmt.Sprintf("stream_read_block_milliseconds = %d\n", c.StreamReadBlockMilliseconds))
+
+	result.WriteString("\n")
+
+	return result.String()
+}
+
 // RedisBroadcaster represents Redis broadcaster using Redis streams
 type RedisBroadcaster struct {
 	node   Handler
-	config *rconfig.RedisConfig
+	config *RedisConfig
 
 	// Unique consumer identifier
 	consumerName string
@@ -39,7 +73,7 @@ type RedisBroadcaster struct {
 var _ Broadcaster = (*RedisBroadcaster)(nil)
 
 // NewRedisBroadcaster builds a new RedisSubscriber struct
-func NewRedisBroadcaster(node Handler, config *rconfig.RedisConfig, l *slog.Logger) *RedisBroadcaster {
+func NewRedisBroadcaster(node Handler, config *RedisConfig, l *slog.Logger) *RedisBroadcaster {
 	name, _ := nanoid.Nanoid(6)
 
 	return &RedisBroadcaster{
@@ -57,18 +91,18 @@ func (s *RedisBroadcaster) IsFanout() bool {
 }
 
 func (s *RedisBroadcaster) Start(done chan error) error {
-	options, err := s.config.ToRueidisOptions()
+	options, err := s.config.Redis.ToRueidisOptions()
 
 	if err != nil {
 		return err
 	}
 
-	if s.config.IsSentinel() { //nolint:gocritic
-		s.log.With("stream", s.config.Channel).With("consumer", s.consumerName).Info(fmt.Sprintf("Starting Redis broadcaster at %v (sentinels)", s.config.Hostnames()))
-	} else if s.config.IsCluster() {
-		s.log.With("stream", s.config.Channel).With("consumer", s.consumerName).Info(fmt.Sprintf("Starting Redis broadcaster at %v (cluster)", s.config.Hostnames()))
+	if s.config.Redis.IsSentinel() { //nolint:gocritic
+		s.log.With("stream", s.config.Stream).With("consumer", s.consumerName).Info(fmt.Sprintf("Starting Redis broadcaster at %v (sentinels)", s.config.Redis.Hostnames()))
+	} else if s.config.Redis.IsCluster() {
+		s.log.With("stream", s.config.Stream).With("consumer", s.consumerName).Info(fmt.Sprintf("Starting Redis broadcaster at %v (cluster)", s.config.Redis.Hostnames()))
 	} else {
-		s.log.With("stream", s.config.Channel).With("consumer", s.consumerName).Info(fmt.Sprintf("Starting Redis broadcaster at %s", s.config.Hostname()))
+		s.log.With("stream", s.config.Stream).With("consumer", s.consumerName).Info(fmt.Sprintf("Starting Redis broadcaster at %s", s.config.Redis.Hostname()))
 	}
 
 	s.clientOptions = options
@@ -94,7 +128,7 @@ func (s *RedisBroadcaster) Shutdown(ctx context.Context) error {
 
 	res := s.client.Do(
 		context.Background(),
-		s.client.B().XgroupDelconsumer().Key(s.config.Channel).Group(s.config.Group).Consumername(s.consumerName).Build(),
+		s.client.B().XgroupDelconsumer().Key(s.config.Stream).Group(s.config.Group).Consumername(s.consumerName).Build(),
 	)
 
 	err := res.Error()
@@ -144,7 +178,7 @@ func (s *RedisBroadcaster) runReader(done chan (error)) {
 
 	// First, create a consumer group for the stream
 	err = s.client.Do(context.Background(),
-		s.client.B().XgroupCreate().Key(s.config.Channel).Group(s.config.Group).Id("$").Mkstream().Build(),
+		s.client.B().XgroupCreate().Key(s.config.Stream).Group(s.config.Group).Id("$").Mkstream().Build(),
 	).Error()
 
 	if err != nil {
@@ -204,7 +238,7 @@ func (s *RedisBroadcaster) runReader(done chan (error)) {
 
 func (s *RedisBroadcaster) readFromStream(blockTime int64) ([]rueidis.XRangeEntry, error) {
 	streamRes := s.client.Do(context.Background(),
-		s.client.B().Xreadgroup().Group(s.config.Group, s.consumerName).Block(blockTime).Streams().Key(s.config.Channel).Id(">").Build(),
+		s.client.B().Xreadgroup().Group(s.config.Group, s.consumerName).Block(blockTime).Streams().Key(s.config.Stream).Id(">").Build(),
 	)
 
 	res, _ := streamRes.AsXRead()
@@ -218,7 +252,7 @@ func (s *RedisBroadcaster) readFromStream(blockTime int64) ([]rueidis.XRangeEntr
 		return nil, nil
 	}
 
-	if messages, ok := res[s.config.Channel]; ok {
+	if messages, ok := res[s.config.Stream]; ok {
 		return messages, nil
 	}
 
@@ -227,7 +261,7 @@ func (s *RedisBroadcaster) readFromStream(blockTime int64) ([]rueidis.XRangeEntr
 
 func (s *RedisBroadcaster) autoclaimMessages(blockTime int64) ([]rueidis.XRangeEntry, error) {
 	claimRes := s.client.Do(context.Background(),
-		s.client.B().Xautoclaim().Key(s.config.Channel).Group(s.config.Group).Consumer(s.consumerName).MinIdleTime(fmt.Sprintf("%d", blockTime)).Start("0-0").Build(),
+		s.client.B().Xautoclaim().Key(s.config.Stream).Group(s.config.Group).Consumer(s.consumerName).MinIdleTime(fmt.Sprintf("%d", blockTime)).Start("0-0").Build(),
 	)
 
 	arr, err := claimRes.ToArray()
@@ -260,8 +294,8 @@ func (s *RedisBroadcaster) broadcastXrange(messages []rueidis.XRangeEntry) {
 			s.node.HandleBroadcast([]byte(payload))
 
 			ackRes := s.client.DoMulti(context.Background(),
-				s.client.B().Xack().Key(s.config.Channel).Group(s.config.Group).Id(message.ID).Build(),
-				s.client.B().Xdel().Key(s.config.Channel).Id(message.ID).Build(),
+				s.client.B().Xack().Key(s.config.Stream).Group(s.config.Group).Id(message.ID).Build(),
+				s.client.B().Xdel().Key(s.config.Stream).Id(message.ID).Build(),
 			)
 
 			err := ackRes[0].Error()
@@ -274,7 +308,7 @@ func (s *RedisBroadcaster) broadcastXrange(messages []rueidis.XRangeEntry) {
 }
 
 func (s *RedisBroadcaster) maybeReconnect(done chan (error)) {
-	if s.reconnectAttempt >= s.config.MaxReconnectAttempts {
+	if s.reconnectAttempt >= s.config.Redis.MaxReconnectAttempts {
 		close(s.finishedCh)
 		done <- errors.New("failed to reconnect to Redis: attempts exceeded") //nolint:stylecheck
 		return

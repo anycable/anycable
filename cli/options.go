@@ -247,6 +247,27 @@ Use shutdown_timeout instead.`)
 	c.SSE.AllowedOrigins = c.Server.AllowedOrigins
 	c.HTTPBroadcast.CORSHosts = c.Server.AllowedOrigins
 
+	// Propagate Redis and NATS configs to components
+	if c.RedisBroadcast.Redis == nil {
+		c.RedisBroadcast.Redis = &c.Redis
+	}
+
+	if c.LegacyRedisBroadcast.Redis == nil {
+		c.LegacyRedisBroadcast.Redis = &c.Redis
+	}
+
+	if c.NATSBroadcast.NATS == nil {
+		c.NATSBroadcast.NATS = &c.NATS
+	}
+
+	if c.RedisPubSub.Redis == nil {
+		c.RedisPubSub.Redis = &c.Redis
+	}
+
+	if c.NATSPubSub.NATS == nil {
+		c.NATSPubSub.NATS = &c.NATS
+	}
+
 	if turboRailsKey != "" {
 		fmt.Println(`DEPRECATION WARNING: turbo_rails_key option is deprecated
 and will be removed in the next major release of anycable-go.
@@ -568,6 +589,21 @@ func broadcastCLIFlags(c *config.Config, adapters *string) []cli.Flag {
 			Value:       c.PubSubAdapter,
 			Destination: &c.PubSubAdapter,
 		},
+
+		&cli.StringFlag{
+			Name:        "redis_channel",
+			Usage:       "Redis channel for broadcasts",
+			Value:       c.LegacyRedisBroadcast.Channel,
+			Destination: &c.LegacyRedisBroadcast.Channel,
+		},
+
+		&cli.StringFlag{
+			Name:        "nats_channel",
+			Usage:       "NATS channel for broadcasts",
+			Value:       c.NATSBroadcast.Channel,
+			Destination: &c.NATSBroadcast.Channel,
+		},
+
 		&cli.IntFlag{
 			Name:        "hub_gopool_size",
 			Usage:       "The size of the goroutines pool to broadcast messages",
@@ -610,13 +646,6 @@ func redisCLIFlags(c *config.Config) []cli.Flag {
 			Value:       c.Redis.URL,
 			EnvVars:     []string{envPrefix + "REDIS_URL", "REDIS_URL"},
 			Destination: &c.Redis.URL,
-		},
-
-		&cli.StringFlag{
-			Name:        "redis_channel",
-			Usage:       "Redis channel for broadcasts",
-			Value:       c.Redis.Channel,
-			Destination: &c.Redis.Channel,
 		},
 
 		&cli.StringFlag{
@@ -699,13 +728,6 @@ func natsCLIFlags(c *config.Config) []cli.Flag {
 			Usage:       "Comma separated list of NATS cluster servers",
 			Value:       c.NATS.Servers,
 			Destination: &c.NATS.Servers,
-		},
-
-		&cli.StringFlag{
-			Name:        "nats_channel",
-			Usage:       "NATS channel for broadcasts",
-			Value:       c.NATS.Channel,
-			Destination: &c.NATS.Channel,
 		},
 
 		&cli.BoolFlag{

@@ -75,13 +75,13 @@ func WithDefaultBroadcaster() Option {
 				hb := broadcast.NewHTTPBroadcaster(h, &c.HTTPBroadcast, l)
 				broadcasters = append(broadcasters, hb)
 			case "redis":
-				rb := broadcast.NewLegacyRedisBroadcaster(h, &c.Redis, l)
+				rb := broadcast.NewLegacyRedisBroadcaster(h, &c.LegacyRedisBroadcast, l)
 				broadcasters = append(broadcasters, rb)
 			case "redisx":
-				rb := broadcast.NewRedisBroadcaster(h, &c.Redis, l)
+				rb := broadcast.NewRedisBroadcaster(h, &c.RedisBroadcast, l)
 				broadcasters = append(broadcasters, rb)
 			case "nats":
-				nb := broadcast.NewLegacyNATSBroadcaster(h, &c.NATS, l)
+				nb := broadcast.NewLegacyNATSBroadcaster(h, &c.NATSBroadcast, l)
 				broadcasters = append(broadcasters, nb)
 			default:
 				return broadcasters, errorx.IllegalArgument.New("Unsupported broadcast adapter: %s", adapter)
@@ -110,9 +110,9 @@ func WithDefaultSubscriber() Option {
 		case "":
 			return pubsub.NewLegacySubscriber(h), nil
 		case "redis":
-			return pubsub.NewRedisSubscriber(h, &c.Redis, l)
+			return pubsub.NewRedisSubscriber(h, &c.RedisPubSub, l)
 		case "nats":
-			return pubsub.NewNATSSubscriber(h, &c.NATS, l)
+			return pubsub.NewNATSSubscriber(h, &c.NATSPubSub, l)
 		}
 
 		return nil, errorx.IllegalArgument.New("Unsupported subscriber adapter: %s", c.PubSubAdapter)

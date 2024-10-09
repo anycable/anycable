@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 
 	"github.com/anycable/anycable-go/common"
@@ -14,9 +15,29 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
+type NATSConfig struct {
+	Channel string `toml:"channel"`
+	NATS    *nconfig.NATSConfig
+}
+
+func NewNATSConfig() NATSConfig {
+	return NATSConfig{
+		Channel: "__anycable_internal__",
+	}
+}
+
+func (c NATSConfig) ToToml() string {
+	var result strings.Builder
+	result.WriteString(fmt.Sprintf("channel = \"%s\"\n", c.Channel))
+
+	result.WriteString("\n")
+
+	return result.String()
+}
+
 type NATSSubscriber struct {
 	node   Handler
-	config *nconfig.NATSConfig
+	config *NATSConfig
 
 	conn *nats.Conn
 
@@ -29,7 +50,7 @@ type NATSSubscriber struct {
 var _ Subscriber = (*NATSSubscriber)(nil)
 
 // NewNATSSubscriber creates a NATS subscriber using pub/sub
-func NewNATSSubscriber(node Handler, config *nconfig.NATSConfig, l *slog.Logger) (*NATSSubscriber, error) {
+func NewNATSSubscriber(node Handler, config *NATSConfig, l *slog.Logger) (*NATSSubscriber, error) {
 	return &NATSSubscriber{
 		node:          node,
 		config:        config,
@@ -41,7 +62,7 @@ func NewNATSSubscriber(node Handler, config *nconfig.NATSConfig, l *slog.Logger)
 func (s *NATSSubscriber) Start(done chan (error)) error {
 	connectOptions := []nats.Option{
 		nats.RetryOnFailedConnect(true),
-		nats.MaxReconnects(s.config.MaxReconnectAttempts),
+		nats.MaxReconnects(s.config.NATS.MaxReconnectAttempts),
 		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
 			if err != nil {
 				s.log.Warn("connection failed", "error", err)
@@ -52,21 +73,21 @@ func (s *NATSSubscriber) Start(done chan (error)) error {
 		}),
 	}
 
-	if s.config.DontRandomizeServers {
+	if s.config.NATS.DontRandomizeServers {
 		connectOptions = append(connectOptions, nats.DontRandomize())
 	}
 
-	nc, err := nats.Connect(s.config.Servers, connectOptions...)
+	nc, err := nats.Connect(s.config.NATS.Servers, connectOptions...)
 
 	if err != nil {
 		return err
 	}
 
-	s.log.Info(fmt.Sprintf("Starting NATS pub/sub: %s", s.config.Servers))
+	s.log.Info(fmt.Sprintf("Starting NATS pub/sub: %s", s.config.NATS.Servers))
 
 	s.conn = nc
 
-	s.Subscribe(s.config.InternalChannel)
+	s.Subscribe(s.config.Channel)
 
 	return nil
 }
@@ -120,7 +141,7 @@ func (s *NATSSubscriber) Broadcast(msg *common.StreamMessage) {
 }
 
 func (s *NATSSubscriber) BroadcastCommand(cmd *common.RemoteCommandMessage) {
-	s.Publish(s.config.InternalChannel, cmd)
+	s.Publish(s.config.Channel, cmd)
 }
 
 func (s *NATSSubscriber) Publish(stream string, msg interface{}) {

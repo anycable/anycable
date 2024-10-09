@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 	"time"
 
@@ -32,9 +33,29 @@ type subscriptionEntry struct {
 	id string
 }
 
+type RedisConfig struct {
+	Channel string `toml:"channel"`
+	Redis   *rconfig.RedisConfig
+}
+
+func NewRedisConfig() RedisConfig {
+	return RedisConfig{
+		Channel: "__anycable_internal__",
+	}
+}
+
+func (c RedisConfig) ToToml() string {
+	var result strings.Builder
+	result.WriteString(fmt.Sprintf("channel = \"%s\"\n", c.Channel))
+
+	result.WriteString("\n")
+
+	return result.String()
+}
+
 type RedisSubscriber struct {
 	node   Handler
-	config *rconfig.RedisConfig
+	config *RedisConfig
 
 	client           rueidis.Client
 	clientOptions    *rueidis.ClientOption
@@ -59,8 +80,8 @@ type RedisSubscriber struct {
 var _ Subscriber = (*RedisSubscriber)(nil)
 
 // NewRedisSubscriber creates a Redis subscriber using pub/sub
-func NewRedisSubscriber(node Handler, config *rconfig.RedisConfig, l *slog.Logger) (*RedisSubscriber, error) {
-	options, err := config.ToRueidisOptions()
+func NewRedisSubscriber(node Handler, config *RedisConfig, l *slog.Logger) (*RedisSubscriber, error) {
+	options, err := config.Redis.ToRueidisOptions()
 
 	if err != nil {
 		return nil, err
@@ -80,17 +101,17 @@ func NewRedisSubscriber(node Handler, config *rconfig.RedisConfig, l *slog.Logge
 }
 
 func (s *RedisSubscriber) Start(done chan (error)) error {
-	if s.config.IsSentinel() { //nolint:gocritic
-		s.log.Info(fmt.Sprintf("Starting Redis pub/sub (sentinels): %v", s.config.Hostnames()))
-	} else if s.config.IsCluster() {
-		s.log.Info(fmt.Sprintf("Starting Redis pub/sub (cluster): %v", s.config.Hostnames()))
+	if s.config.Redis.IsSentinel() { //nolint:gocritic
+		s.log.Info(fmt.Sprintf("Starting Redis pub/sub (sentinels): %v", s.config.Redis.Hostnames()))
+	} else if s.config.Redis.IsCluster() {
+		s.log.Info(fmt.Sprintf("Starting Redis pub/sub (cluster): %v", s.config.Redis.Hostnames()))
 	} else {
-		s.log.Info(fmt.Sprintf("Starting Redis pub/sub: %s", s.config.Hostname()))
+		s.log.Info(fmt.Sprintf("Starting Redis pub/sub: %s", s.config.Redis.Hostname()))
 	}
 
 	// Add internal channel to subscriptions
 	s.subMu.Lock()
-	s.subscriptions[s.config.InternalChannel] = &subscriptionEntry{id: s.config.InternalChannel}
+	s.subscriptions[s.config.Channel] = &subscriptionEntry{id: s.config.Channel}
 	s.subMu.Unlock()
 
 	go s.runPubSub(done)
@@ -146,7 +167,7 @@ func (s *RedisSubscriber) Broadcast(msg *common.StreamMessage) {
 }
 
 func (s *RedisSubscriber) BroadcastCommand(cmd *common.RemoteCommandMessage) {
-	s.Publish(s.config.InternalChannel, cmd)
+	s.Publish(s.config.Channel, cmd)
 }
 
 func (s *RedisSubscriber) Publish(stream string, msg interface{}) {
@@ -202,7 +223,7 @@ func (s *RedisSubscriber) runPubSub(done chan (error)) {
 
 	wait := client.SetPubSubHooks(rueidis.PubSubHooks{
 		OnSubscription: func(m rueidis.PubSubSubscription) {
-			if m.Kind == "subscribe" && m.Channel == s.config.InternalChannel {
+			if m.Kind == "subscribe" && m.Channel == s.config.Channel {
 				if s.reconnectAttempt > 0 {
 					s.log.Info("reconnected")
 				} else {
@@ -264,7 +285,7 @@ func (s *RedisSubscriber) runPubSub(done chan (error)) {
 }
 
 func (s *RedisSubscriber) maybeReconnect(done chan (error)) {
-	if s.reconnectAttempt >= s.config.MaxReconnectAttempts {
+	if s.reconnectAttempt >= s.config.Redis.MaxReconnectAttempts {
 		done <- errors.New("failed to reconnect to Redis: attempts exceeded") //nolint:stylecheck
 		return
 	}

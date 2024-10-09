@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/BurntSushi/toml"
 	"github.com/anycable/anycable-go/common"
 	rconfig "github.com/anycable/anycable-go/redis"
 	"github.com/redis/rueidis"
@@ -24,10 +25,12 @@ var (
 
 // Check if Redis is available and skip tests otherwise
 func init() {
-	config := rconfig.NewRedisConfig()
+	rconfig := rconfig.NewRedisConfig()
+	config := NewRedisConfig()
+	config.Redis = &rconfig
 
 	if redisURL != "" {
-		config.URL = redisURL
+		rconfig.URL = redisURL
 	}
 
 	subscriber, err := NewRedisSubscriber(nil, &config, slog.Default())
@@ -45,7 +48,7 @@ func init() {
 
 	err = subscriber.initClient()
 	if err != nil {
-		fmt.Printf("No Redis detected at %s: %v", config.URL, err)
+		fmt.Printf("No Redis detected at %s: %v", rconfig.URL, err)
 		return
 	}
 
@@ -58,16 +61,35 @@ func init() {
 	redisAvailable = err == nil
 }
 
+func TestRedisConfig__ToToml(t *testing.T) {
+	conf := NewRedisConfig()
+	conf.Channel = "_test_"
+
+	tomlStr := conf.ToToml()
+
+	assert.Contains(t, tomlStr, "channel = \"_test_\"")
+
+	// Round-trip test
+	conf2 := NewRedisConfig()
+
+	_, err := toml.Decode(tomlStr, &conf2)
+	require.NoError(t, err)
+
+	assert.Equal(t, conf, conf2)
+}
+
 func TestRedisCommon(t *testing.T) {
 	if !redisAvailable {
 		t.Skip("Skipping Redis tests: no Redis available")
 		return
 	}
 
-	config := rconfig.NewRedisConfig()
+	rconfig := rconfig.NewRedisConfig()
+	config := NewRedisConfig()
+	config.Redis = &rconfig
 
 	if redisURL != "" {
-		config.URL = redisURL
+		rconfig.URL = redisURL
 	}
 
 	SharedSubscriberTests(t, func(handler *TestHandler) Subscriber {
@@ -89,10 +111,12 @@ func TestRedisReconnect(t *testing.T) {
 	}
 
 	handler := NewTestHandler()
-	config := rconfig.NewRedisConfig()
+	rconfig := rconfig.NewRedisConfig()
+	config := NewRedisConfig()
+	config.Redis = &rconfig
 
 	if redisURL != "" {
-		config.URL = redisURL
+		rconfig.URL = redisURL
 	}
 
 	subscriber, err := NewRedisSubscriber(handler, &config, slog.Default())
@@ -135,7 +159,7 @@ func waitRedisSubscription(subscriber Subscriber, stream string) error {
 	s := subscriber.(*RedisSubscriber)
 
 	if stream == "internal" {
-		stream = s.config.InternalChannel
+		stream = s.config.Channel
 	}
 
 	unsubscribing := false

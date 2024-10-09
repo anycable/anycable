@@ -170,9 +170,6 @@ func TestInvalidURL(t *testing.T) {
 func TestRedisConfig__ToToml(t *testing.T) {
 	config := NewRedisConfig()
 	config.URL = "redis://example.com:6379"
-	config.Channel = "test_channel"
-	config.Group = "test_group"
-	config.StreamReadBlockMilliseconds = 3000
 	config.InternalChannel = "test_internal"
 	config.Sentinels = "sentinel1:26379,sentinel2:26379"
 	config.SentinelDiscoveryInterval = 60
@@ -184,9 +181,6 @@ func TestRedisConfig__ToToml(t *testing.T) {
 	tomlStr := config.ToToml()
 
 	assert.Contains(t, tomlStr, "url = \"redis://example.com:6379\"")
-	assert.Contains(t, tomlStr, "channel = \"test_channel\"")
-	assert.Contains(t, tomlStr, "group = \"test_group\"")
-	assert.Contains(t, tomlStr, "stream_read_block_milliseconds = 3000")
 	assert.Contains(t, tomlStr, "internal_channel = \"test_internal\"")
 	assert.Contains(t, tomlStr, "sentinels = \"sentinel1:26379,sentinel2:26379\"")
 	assert.Contains(t, tomlStr, "sentinel_discovery_interval = 60")

@@ -14,12 +14,6 @@ type RedisConfig struct {
 	// Redis instance URL or master name in case of sentinels usage
 	// or list of URLs if cluster usage
 	URL string `toml:"url"`
-	// Redis channel to subscribe to (legacy pub/sub)
-	Channel string `toml:"channel"`
-	// Redis stream consumer group name
-	Group string `toml:"group"`
-	// Redis stream read wait time in milliseconds
-	StreamReadBlockMilliseconds int64 `toml:"stream_read_block_milliseconds"`
 	// Internal channel name for node-to-node broadcasting
 	InternalChannel string `toml:"internal_channel"`
 	// List of Redis Sentinel addresses
@@ -44,16 +38,13 @@ type RedisConfig struct {
 // NewRedisConfig builds a new config for Redis pubsub
 func NewRedisConfig() RedisConfig {
 	return RedisConfig{
-		KeepalivePingInterval:       30,
-		URL:                         "redis://localhost:6379",
-		Channel:                     "__anycable__",
-		Group:                       "bx",
-		StreamReadBlockMilliseconds: 2000,
-		InternalChannel:             "__anycable_internal__",
-		SentinelDiscoveryInterval:   30,
-		TLSVerify:                   false,
-		MaxReconnectAttempts:        5,
-		DisableCache:                false,
+		KeepalivePingInterval:     30,
+		URL:                       "redis://localhost:6379",
+		InternalChannel:           "__anycable_internal__",
+		SentinelDiscoveryInterval: 30,
+		TLSVerify:                 false,
+		MaxReconnectAttempts:      5,
+		DisableCache:              false,
 	}
 }
 
@@ -128,15 +119,6 @@ func (config RedisConfig) ToToml() string {
 	result.WriteString("# Redis instance URL or master name in case of sentinels usage\n")
 	result.WriteString("# or list of URLs if cluster usage\n")
 	result.WriteString(fmt.Sprintf("url = \"%s\"\n", config.URL))
-
-	result.WriteString("# Channel name for legacy broadcasting\n")
-	result.WriteString(fmt.Sprintf("channel = \"%s\"\n", config.Channel))
-
-	result.WriteString("# Stream consumer group name for RedisX broadcasting\n")
-	result.WriteString(fmt.Sprintf("group = \"%s\"\n", config.Group))
-
-	result.WriteString("# Streams read wait time in milliseconds\n")
-	result.WriteString(fmt.Sprintf("stream_read_block_milliseconds = %d\n", config.StreamReadBlockMilliseconds))
 
 	result.WriteString("# Channel name for pub/sub (node-to-node)\n")
 	result.WriteString(fmt.Sprintf("internal_channel = \"%s\"\n", config.InternalChannel))

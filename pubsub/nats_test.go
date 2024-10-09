@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/BurntSushi/toml"
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/enats"
 	"github.com/anycable/anycable-go/nats"
@@ -18,13 +19,32 @@ import (
 	nats_server "github.com/nats-io/nats.go"
 )
 
+func TestNATSConfig__ToToml(t *testing.T) {
+	conf := NewNATSConfig()
+	conf.Channel = "_test_"
+
+	tomlStr := conf.ToToml()
+
+	assert.Contains(t, tomlStr, "channel = \"_test_\"")
+
+	// Round-trip test
+	conf2 := NewNATSConfig()
+
+	_, err := toml.Decode(tomlStr, &conf2)
+	require.NoError(t, err)
+
+	assert.Equal(t, conf, conf2)
+}
+
 func TestNATSCommon(t *testing.T) {
 	server := buildNATSServer()
 	err := server.Start()
 	require.NoError(t, err)
 	defer server.Shutdown(context.Background()) // nolint:errcheck
 
-	config := nats.NewNATSConfig()
+	nconfig := nats.NewNATSConfig()
+	config := NewNATSConfig()
+	config.NATS = &nconfig
 
 	SharedSubscriberTests(t, func(handler *TestHandler) Subscriber {
 		sub, err := NewNATSSubscriber(handler, &config, slog.Default())
@@ -44,7 +64,9 @@ func TestNATSReconnect(t *testing.T) {
 	defer server.Shutdown(context.Background()) // nolint:errcheck
 
 	handler := NewTestHandler()
-	config := nats.NewNATSConfig()
+	nconfig := nats.NewNATSConfig()
+	config := NewNATSConfig()
+	config.NATS = &nconfig
 
 	subscriber, err := NewNATSSubscriber(handler, &config, slog.Default())
 	require.NoError(t, err)
@@ -93,7 +115,7 @@ func waitNATSSubscription(subscriber Subscriber, stream string) error {
 	}
 
 	if stream == "internal" {
-		stream = s.config.InternalChannel
+		stream = s.config.Channel
 	}
 
 	unsubscribing := false

@@ -2,24 +2,46 @@ package broadcast
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/nats-io/nats.go"
 
 	nconfig "github.com/anycable/anycable-go/nats"
 )
 
+type LegacyNATSConfig struct {
+	Channel string              `toml:"channel"`
+	NATS    *nconfig.NATSConfig `toml:"nats"`
+}
+
+func NewLegacyNATSConfig() LegacyNATSConfig {
+	return LegacyNATSConfig{
+		Channel: "__anycable__",
+	}
+}
+
+func (c LegacyNATSConfig) ToToml() string {
+	var result strings.Builder
+	result.WriteString(fmt.Sprintf("channel = \"%s\"\n", c.Channel))
+
+	result.WriteString("\n")
+
+	return result.String()
+}
+
 type LegacyNATSBroadcaster struct {
 	conn    *nats.Conn
 	handler Handler
-	config  *nconfig.NATSConfig
+	config  *LegacyNATSConfig
 
 	log *slog.Logger
 }
 
 var _ Broadcaster = (*LegacyNATSBroadcaster)(nil)
 
-func NewLegacyNATSBroadcaster(node Handler, c *nconfig.NATSConfig, l *slog.Logger) *LegacyNATSBroadcaster {
+func NewLegacyNATSBroadcaster(node Handler, c *LegacyNATSConfig, l *slog.Logger) *LegacyNATSBroadcaster {
 	return &LegacyNATSBroadcaster{
 		config:  c,
 		handler: node,
@@ -34,7 +56,7 @@ func (LegacyNATSBroadcaster) IsFanout() bool {
 func (s *LegacyNATSBroadcaster) Start(done chan (error)) error {
 	connectOptions := []nats.Option{
 		nats.RetryOnFailedConnect(true),
-		nats.MaxReconnects(s.config.MaxReconnectAttempts),
+		nats.MaxReconnects(s.config.NATS.MaxReconnectAttempts),
 		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
 			if err != nil {
 				s.log.Warn("connection failed", "error", err)
@@ -45,11 +67,11 @@ func (s *LegacyNATSBroadcaster) Start(done chan (error)) error {
 		}),
 	}
 
-	if s.config.DontRandomizeServers {
+	if s.config.NATS.DontRandomizeServers {
 		connectOptions = append(connectOptions, nats.DontRandomize())
 	}
 
-	nc, err := nats.Connect(s.config.Servers, connectOptions...)
+	nc, err := nats.Connect(s.config.NATS.Servers, connectOptions...)
 
 	if err != nil {
 		return err

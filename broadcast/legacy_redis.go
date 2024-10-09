@@ -16,6 +16,26 @@ import (
 	"github.com/gomodule/redigo/redis"
 )
 
+type LegacyRedisConfig struct {
+	Channel string               `toml:"channel"`
+	Redis   *rconfig.RedisConfig `toml:"redis"`
+}
+
+func NewLegacyRedisConfig() LegacyRedisConfig {
+	return LegacyRedisConfig{
+		Channel: "__anycable__",
+	}
+}
+
+func (c LegacyRedisConfig) ToToml() string {
+	var result strings.Builder
+	result.WriteString(fmt.Sprintf("channel = \"%s\"\n", c.Channel))
+
+	result.WriteString("\n")
+
+	return result.String()
+}
+
 // LegacyRedisBroadcaster contains information about Redis pubsub connection
 type LegacyRedisBroadcaster struct {
 	node                      Handler
@@ -33,18 +53,18 @@ type LegacyRedisBroadcaster struct {
 }
 
 // NewLegacyRedisBroadcaster returns new RedisSubscriber struct
-func NewLegacyRedisBroadcaster(node Handler, config *rconfig.RedisConfig, l *slog.Logger) *LegacyRedisBroadcaster {
+func NewLegacyRedisBroadcaster(node Handler, config *LegacyRedisConfig, l *slog.Logger) *LegacyRedisBroadcaster {
 	return &LegacyRedisBroadcaster{
 		node:                      node,
-		url:                       config.URL,
-		sentinels:                 config.Sentinels,
-		sentinelDiscoveryInterval: time.Duration(config.SentinelDiscoveryInterval),
+		url:                       config.Redis.URL,
+		sentinels:                 config.Redis.Sentinels,
+		sentinelDiscoveryInterval: time.Duration(config.Redis.SentinelDiscoveryInterval),
 		channel:                   config.Channel,
-		pingInterval:              time.Duration(config.KeepalivePingInterval),
+		pingInterval:              time.Duration(config.Redis.KeepalivePingInterval),
 		reconnectAttempt:          0,
-		maxReconnectAttempts:      config.MaxReconnectAttempts,
+		maxReconnectAttempts:      config.Redis.MaxReconnectAttempts,
 		log:                       l.With("context", "broadcast").With("provider", "redis"),
-		tlsVerify:                 config.TLSVerify,
+		tlsVerify:                 config.Redis.TLSVerify,
 	}
 }
 
