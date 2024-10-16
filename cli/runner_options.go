@@ -11,6 +11,7 @@ import (
 	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/pubsub"
 	"github.com/anycable/anycable-go/rpc"
+	"github.com/anycable/anycable-go/telemetry"
 	"github.com/joomcode/errorx"
 )
 
@@ -179,10 +180,26 @@ func WithDefaultBroker() Option {
 	})
 }
 
-// WithTelemetry enables AnyCable telemetry unless ANYCABLE_DISABLE_TELEMETRY is set
-func WithTelemetry() Option {
+// WithTelemetry enables AnyCable telemetry unless ANYCABLE_DISABLE_TELEMETRY is set.
+// You can pass custom properties as pairs of key and value.
+func WithTelemetry(props ...string) Option {
 	return func(r *Runner) error {
 		r.telemetryEnabled = os.Getenv("ANYCABLE_DISABLE_TELEMETRY") != "true"
+		r.telemetryConfig = telemetry.NewConfig()
+		if customTelemetryUrl := os.Getenv("ANYCABLE_TELEMETRY_URL"); customTelemetryUrl != "" {
+			r.telemetryConfig.Endpoint = customTelemetryUrl
+		}
+
+		if len(props) > 0 {
+			if len(props)%2 != 0 {
+				return errorx.IllegalArgument.New("telemetry properties should be passed as pairs of key and value")
+			}
+
+			for i := 0; i < len(props); i += 2 {
+				r.telemetryConfig.CustomProps[props[i]] = props[i+1]
+			}
+		}
+
 		return nil
 	}
 }

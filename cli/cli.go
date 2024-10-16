@@ -63,9 +63,11 @@ type Runner struct {
 	broadcastersFactory broadcastersFactory
 	websocketEndpoints  map[string]websocketHandler
 
-	router           *router.RouterController
-	metrics          *metricspkg.Metrics
+	router  *router.RouterController
+	metrics *metricspkg.Metrics
+
 	telemetryEnabled bool
+	telemetryConfig  *telemetry.Config
 
 	errChan       chan error
 	shutdownables []Shutdownable
@@ -247,11 +249,7 @@ func (r *Runner) runNode() (*node.Node, error) {
 	)
 
 	if r.telemetryEnabled {
-		telemetryConfig := telemetry.NewConfig()
-		if customTelemetryUrl := os.Getenv("ANYCABLE_TELEMETRY_URL"); customTelemetryUrl != "" {
-			telemetryConfig.Endpoint = customTelemetryUrl
-		}
-		tracker := telemetry.NewTracker(metrics, r.config, telemetryConfig)
+		tracker := telemetry.NewTracker(metrics, r.config, r.telemetryConfig)
 
 		r.log.With("context", "telemetry").Info(tracker.Announce())
 		go tracker.Collect()

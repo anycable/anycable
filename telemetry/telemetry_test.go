@@ -56,7 +56,11 @@ func TestTracking(t *testing.T) {
 	defer ts.Close()
 
 	conf := config.NewConfig()
-	tracker := NewTracker(metrics, &conf, &Config{Endpoint: ts.URL})
+	tconf := NewConfig()
+	tconf.Endpoint = ts.URL
+	tconf.CustomProps["distro"] = "testo"
+
+	tracker := NewTracker(metrics, &conf, tconf)
 	defer tracker.Shutdown(context.Background()) // nolint: errcheck
 
 	tracker.Collect()
@@ -66,6 +70,7 @@ func TestTracking(t *testing.T) {
 
 	assert.Equal(t, "boot", event["event"])
 	assert.Equal(t, version.Version(), event["version"])
+	assert.Equal(t, "testo", event["distro"])
 
 	time.Sleep(100 * time.Millisecond)
 
@@ -82,6 +87,7 @@ func TestTracking(t *testing.T) {
 	assert.Equal(t, "ecs-fargate", event["deploy"])
 	assert.Equal(t, 14, int(event["clients_max"].(float64)))
 	assert.Equal(t, 100, int(event["mem_sys_max"].(float64)))
+	assert.Equal(t, "testo", event["distro"])
 
 	require.NoError(t, tracker.Shutdown(context.Background()))
 }

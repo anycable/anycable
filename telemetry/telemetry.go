@@ -31,8 +31,9 @@ const (
 )
 
 type Tracker struct {
-	id     string
-	client *http.Client
+	id          string
+	client      *http.Client
+	fingerprint string
 
 	// Remote service configuration
 	url       string
@@ -48,7 +49,8 @@ type Tracker struct {
 	logger *slog.Logger
 
 	// Observed metrics values
-	observations map[string]interface{}
+	observations   map[string]interface{}
+	customizations map[string]string
 }
 
 func NewTracker(instrumenter *metrics.Metrics, c *config.Config, tc *Config) *Tracker {
@@ -64,15 +66,19 @@ func NewTracker(instrumenter *metrics.Metrics, c *config.Config, tc *Config) *Tr
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: logLevel}))
 
+	fingerprint := clusterFingerprint(c)
+
 	return &Tracker{
-		client:       client,
-		url:          tc.Endpoint,
-		authToken:    tc.Token,
-		logger:       logger,
-		config:       c,
-		instrumenter: instrumenter,
-		id:           id,
-		observations: make(map[string]interface{}),
+		client:         client,
+		url:            tc.Endpoint,
+		authToken:      tc.Token,
+		logger:         logger,
+		config:         c,
+		instrumenter:   instrumenter,
+		id:             id,
+		fingerprint:    fingerprint,
+		observations:   make(map[string]interface{}),
+		customizations: tc.CustomProps,
 	}
 }
 
@@ -116,6 +122,7 @@ func (t *Tracker) Send(event string, props map[string]interface{}) {
 	// Avoid storing IP address
 	props["$ip"] = nil
 	props["distinct_id"] = t.id
+	props["cluster-fingerprint"] = t.fingerprint
 	props["event"] = event
 
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
@@ -212,13 +219,7 @@ func (t *Tracker) collectUsage() {
 }
 
 func (t *Tracker) bootProperties() map[string]interface{} {
-	props := posthog.NewProperties()
-
-	props.Set("version", version.Version())
-	props.Set("os", runtime.GOOS)
-	props.Set("cluster-fingerprint", t.clusterFingerprint())
-
-	return props
+	return t.appProperties()
 }
 
 func (t *Tracker) appProperties() map[string]interface{} {
@@ -237,7 +238,6 @@ func (t *Tracker) appProperties() map[string]interface{} {
 	}
 
 	props.Set("deploy", guessPlatform())
-	props.Set("cluster-fingerprint", t.clusterFingerprint())
 
 	// Features
 	props.Set("has-secret", t.config.Secret != "")
@@ -261,6 +261,11 @@ func (t *Tracker) appProperties() map[string]interface{} {
 	props.Set("plus", ok)
 	if ok {
 		props.Set("plus-name", name)
+	}
+
+	// Custom properties
+	for k, v := range t.customizations {
+		props.Set(k, v)
 	}
 
 	return props
@@ -312,18 +317,32 @@ func guessPlatform() string {
 
 // Try to generate a unique cluster fingerprint to identify events
 // from different instances of the same cluster.
-func (t *Tracker) clusterFingerprint() string {
+func clusterFingerprint(c *config.Config) string {
 	platformID := platformServiceID()
 
 	if platformID != "" {
-		return generateDigest(platformID)
+		return generateDigest("P", platformID)
+	}
+
+	platform := guessPlatform()
+	// Explicitly set env vars
+	env := anycableEnvVarsList()
+	// Command line arguments
+	opts := anycableCLIArgs()
+	// File configuration as a string
+	file := anycableFileConfig(c.ConfigFilePath)
+
+	// Likely development environment
+	if env == "" && opts == "" && file == "" && platform == "" {
+		return "default"
 	}
 
 	return generateDigest(
-		// Explicitly set env vars
-		anycableEnvVarsList(),
-		// Command line arguments
-		anycableCLIArgs(),
+		"C",
+		platform,
+		env,
+		opts,
+		file,
 	)
 }
 
@@ -351,7 +370,7 @@ func platformServiceID() string {
 	return ""
 }
 
-func generateDigest(parts ...string) string {
+func generateDigest(prefix string, parts ...string) string {
 	h := sha256.New()
 
 	for _, part := range parts {
@@ -360,7 +379,7 @@ func generateDigest(parts ...string) string {
 		}
 	}
 
-	return fmt.Sprintf("%x", h.Sum(nil))
+	return fmt.Sprintf("%s%x", prefix, h.Sum(nil))
 }
 
 // Return a sorted list of AnyCable environment variables.
@@ -385,4 +404,18 @@ func anycableCLIArgs() string {
 	slices.Sort(args)
 
 	return strings.Join(args, ",")
+}
+
+// Return the contents of AnyCable configuration file if any.
+func anycableFileConfig(path string) string {
+	if path == "" {
+		return ""
+	}
+
+	bytes, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+
+	return string(bytes)
 }
