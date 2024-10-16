@@ -1,6 +1,6 @@
 # Generate a configuration file with provided values
 run :anycable_gen_config,
-  ["sh", "-c", './dist/anycable-go --noauth --port 2024 --broadcast_adapter=http,redisx --sse --metrics_tags=env:production,node_id:xyz --statsd_tags_format=datadog --print-config > ./anycable.toml'],
+  ["sh", "-c", './dist/anycable-go --debug --noauth --port 2024 --broadcast_adapter=http,redisx --sse --metrics_tags=env:production,node_id:xyz --statsd_tags_format=datadog --print-config > ./anycable.toml'],
   env: {"ANYCABLE_SECRET" => "file-secret", "ANYCABLE_NODE_ID" => "node-1", "ANYCABLE_STATSD_HOST" => "localhost:8125"}, clean_env: true
 
 unless File.exist?("anycable.toml")
@@ -24,6 +24,7 @@ assert_equal("node ID", "node-1", config["node_id"])
 assert_equal("noauth", true, config["noauth"])
 assert_equal("secret", "file-secret", config["secret"])
 assert_equal("broadcast adapters", %w[http redisx], config["broadcast_adapters"])
+assert_equal("debug", true, config.dig("logging", "debug"))
 
 # nested params
 assert_equal("server.port", 2024, config.dig("server", "port"))
@@ -43,12 +44,16 @@ config = PerfectTOML.parse(stdout(:anycable_ignore_config_path))
 
 $errors.clear
 assert_equal("node ID", nil, config["node_id"])
-assert_equal("secret", nil, config["secret"])
+assert_equal("secret", "none", config["secret"])
+
+if $errors.any?
+  fail $errors.join("\n")
+end
 
 # Overriding config data
 run :anycable_override_config, "dist/anycable-go --port=2025 --statsd_tags_format=influx --print-config",
     clean_env: true,
-    env: {"ANYCABLE_NODE_ID" => "node-2", "ANYCABLE_SECRET" => "override"}
+    env: {"ANYCABLE_NODE_ID" => "node-2", "ANYCABLE_PORT" => "312", "ANYCABLE_SECRET" => "override", "ANYCABLE_DEBUG" => "false"}
 
 config = PerfectTOML.parse(stdout(:anycable_override_config))
 
@@ -66,3 +71,8 @@ assert_equal("sse.enabled", true, config.dig("sse", "enabled"))
 assert_equal("metrics.tags", {"env" => "production", "node_id" => "xyz"}, config.dig("metrics", "tags"))
 assert_equal("metrics.statsd.host", "localhost:8125", config.dig("metrics", "statsd", "host"))
 assert_equal("metrics.statsd.tags_format", "influx", config.dig("metrics", "statsd", "tags_format"))
+assert_equal("debug", nil, config.dig("logging", "debug"))
+
+if $errors.any?
+  fail $errors.join("\n")
+end

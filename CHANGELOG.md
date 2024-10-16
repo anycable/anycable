@@ -2,6 +2,8 @@
 
 ## master
 
+- Fix configuration parameters precedence (file -> env -> CLI). ([@palkan][])
+
 - Telemetry improvements. ([@palkan][])
 
 ## 1.5.4 (2024-10-08)

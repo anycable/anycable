@@ -30,34 +30,34 @@ import (
 type Config struct {
 	ID                   string `toml:"node_id"`
 	UserProvidedID       bool
-	Secret               string   `toml:"secret"`
-	BroadcastKey         string   `toml:"broadcast_key"`
-	SkipAuth             bool     `toml:"noauth"`
-	PublicMode           bool     `toml:"public"`
-	BroadcastAdapters    []string `toml:"broadcast_adapters"`
-	PubSubAdapter        string   `toml:"pubsub_adapter"`
-	UserPresets          []string `toml:"presets"`
-	Log                  logger.Config
-	Server               server.Config
-	App                  node.Config
-	WS                   ws.Config
-	RPC                  rpc.Config
-	Broker               broker.Config
-	Redis                rconfig.RedisConfig
-	LegacyRedisBroadcast broadcast.LegacyRedisConfig
-	RedisBroadcast       broadcast.RedisConfig
-	NATSBroadcast        broadcast.LegacyNATSConfig
-	HTTPBroadcast        broadcast.HTTPConfig
-	RedisPubSub          pubsub.RedisConfig
-	NATSPubSub           pubsub.NATSConfig
-	NATS                 nconfig.NATSConfig
+	Secret               string                      `toml:"secret"`
+	BroadcastKey         string                      `toml:"broadcast_key"`
+	SkipAuth             bool                        `toml:"noauth"`
+	PublicMode           bool                        `toml:"public"`
+	BroadcastAdapters    []string                    `toml:"broadcast_adapters"`
+	PubSubAdapter        string                      `toml:"pubsub_adapter"`
+	UserPresets          []string                    `toml:"presets"`
+	Log                  logger.Config               `toml:"logging"`
+	Server               server.Config               `toml:"server"`
+	App                  node.Config                 `toml:"app"`
+	WS                   ws.Config                   `toml:"ws"`
+	RPC                  rpc.Config                  `toml:"rpc"`
+	Broker               broker.Config               `toml:"broker"`
+	Redis                rconfig.RedisConfig         `toml:"redis"`
+	LegacyRedisBroadcast broadcast.LegacyRedisConfig `toml:"redis_pubsub_broadcast"`
+	RedisBroadcast       broadcast.RedisConfig       `toml:"redis_stream_broadcast"`
+	NATSBroadcast        broadcast.LegacyNATSConfig  `toml:"nats_broadcast"`
+	HTTPBroadcast        broadcast.HTTPConfig        `toml:"http_broadcast"`
+	RedisPubSub          pubsub.RedisConfig          `toml:"redis_pubsub"`
+	NATSPubSub           pubsub.NATSConfig           `toml:"nats_pubsub"`
+	NATS                 nconfig.NATSConfig          `toml:"nats"`
 	DisconnectorDisabled bool
-	DisconnectQueue      node.DisconnectQueueConfig
-	Metrics              metrics.Config
-	JWT                  identity.JWTConfig
-	EmbeddedNats         enats.Config
-	SSE                  sse.Config
-	Streams              streams.Config
+	DisconnectQueue      node.DisconnectQueueConfig `toml:"disconnector"`
+	Metrics              metrics.Config             `toml:"metrics"`
+	JWT                  identity.JWTConfig         `toml:"jwt"`
+	EmbeddedNats         enats.Config               `toml:"embedded_nats"`
+	SSE                  sse.Config                 `toml:"sse"`
+	Streams              streams.Config             `toml:"streams"`
 
 	ConfigFilePath string
 }

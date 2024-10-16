@@ -5,6 +5,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/anycable/anycable-go/config"
 	"github.com/anycable/anycable-go/node"
@@ -86,31 +87,10 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 		&cli.BoolFlag{
 			Name:  "ignore-config-path",
 			Usage: "Ignore configuration files",
-			Action: func(ctx *cli.Context, val bool) error {
-				if val {
-					c.ConfigFilePath = "none"
-				}
-				return nil
-			},
 		},
 		&cli.StringFlag{
 			Name:  "config-path",
 			Usage: "Path to the TOML configuration file",
-			Action: func(ctx *cli.Context, path string) error {
-				if c.ConfigFilePath == "none" {
-					c.ConfigFilePath = ""
-					return nil
-				}
-
-				c.ConfigFilePath = path
-
-				// check if file exists and try to load config from it
-				if err := c.LoadFromFile(); err != nil {
-					return err
-				}
-
-				return nil
-			},
 		},
 		&cli.BoolFlag{
 			Name:        "print-config",
@@ -141,11 +121,33 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 	app := &cli.App{
 		Name:            "anycable-go",
 		Version:         version.Version(),
-		Usage:           "AnyCable-Go, The WebSocket server for https://anycable.io",
+		Usage:           "AnyCable-Go, a real-time server for https://anycable.io",
 		HideHelpCommand: true,
 		Flags:           flags,
 		Action: func(nc *cli.Context) error {
 			cliInterrupted = false
+			return nil
+		},
+		Before: func(ctx *cli.Context) error {
+			ignored := ctx.Bool("ignore-config-path")
+
+			if ignored {
+				return nil
+			}
+
+			val := ctx.String("config-path")
+
+			if val == "" {
+				return nil
+			}
+
+			c.ConfigFilePath = val
+
+			// check if file exists and try to load config from it
+			if err := c.LoadFromFile(); err != nil {
+				return err
+			}
+
 			return nil
 		},
 	}
@@ -162,7 +164,7 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 		return &config.Config{}, err, false
 	}
 
-	// helpOrVersionWereShown = false indicates that the default action has been run.
+	// cliInterrupted = false indicates that the default action has been run.
 	// true means that help/version message was displayed.
 	//
 	// Unfortunately, cli module does not support another way of detecting if or which
@@ -992,6 +994,7 @@ func logCLIFlags(c *config.Config) []cli.Flag {
 		&cli.BoolFlag{
 			Name:        "debug",
 			Usage:       "Enable debug mode (more verbose logging)",
+			Value:       c.Log.Debug,
 			Destination: &c.Log.Debug,
 		},
 	})
@@ -1319,40 +1322,112 @@ func withDefaults(category string, flags []cli.Flag) []cli.Flag {
 			if len(v.EnvVars) == 0 {
 				v.EnvVars = []string{nameToEnvVarName(v.Name)}
 			}
+			if v.Destination != nil {
+				dest := v.Destination
+				v.Destination = nil
+
+				if v.Action == nil {
+					v.Action = func(ctx *cli.Context, setVal int) error {
+						*dest = setVal
+						return nil
+					}
+				}
+			}
 		case *cli.Int64Flag:
 			v.Category = category
 			if len(v.EnvVars) == 0 {
 				v.EnvVars = []string{nameToEnvVarName(v.Name)}
+			}
+			if v.Destination != nil {
+				dest := v.Destination
+				v.Destination = nil
+
+				if v.Action == nil {
+					v.Action = func(ctx *cli.Context, setVal int64) error {
+						*dest = setVal
+						return nil
+					}
+				}
 			}
 		case *cli.Float64Flag:
 			v.Category = category
 			if len(v.EnvVars) == 0 {
 				v.EnvVars = []string{nameToEnvVarName(v.Name)}
 			}
+			if v.Destination != nil {
+				dest := v.Destination
+				v.Destination = nil
+
+				if v.Action == nil {
+					v.Action = func(ctx *cli.Context, setVal float64) error {
+						*dest = setVal
+						return nil
+					}
+				}
+			}
 		case *cli.DurationFlag:
 			v.Category = category
 			if len(v.EnvVars) == 0 {
 				v.EnvVars = []string{nameToEnvVarName(v.Name)}
+			}
+			if v.Destination != nil {
+				dest := v.Destination
+				v.Destination = nil
+
+				if v.Action == nil {
+					v.Action = func(ctx *cli.Context, setVal time.Duration) error {
+						*dest = setVal
+						return nil
+					}
+				}
 			}
 		case *cli.BoolFlag:
 			v.Category = category
 			if len(v.EnvVars) == 0 {
 				v.EnvVars = []string{nameToEnvVarName(v.Name)}
 			}
+			if v.Destination != nil {
+				dest := v.Destination
+				v.Destination = nil
+
+				if v.Action == nil {
+					v.Action = func(ctx *cli.Context, setVal bool) error {
+						*dest = setVal
+						return nil
+					}
+				}
+			}
 		case *cli.StringFlag:
 			v.Category = category
 			if len(v.EnvVars) == 0 {
 				v.EnvVars = []string{nameToEnvVarName(v.Name)}
+			}
+			if v.Destination != nil {
+				dest := v.Destination
+				v.Destination = nil
+
+				if v.Action == nil {
+					v.Action = func(ctx *cli.Context, setVal string) error {
+						*dest = setVal
+						return nil
+					}
+				}
 			}
 		case *cli.PathFlag:
 			v.Category = category
 			if len(v.EnvVars) == 0 {
 				v.EnvVars = []string{nameToEnvVarName(v.Name)}
 			}
-		case *cli.TimestampFlag:
-			v.Category = category
-			if len(v.EnvVars) == 0 {
-				v.EnvVars = []string{nameToEnvVarName(v.Name)}
+			if v.Destination != nil {
+				dest := v.Destination
+				v.Destination = nil
+
+				if v.Action == nil {
+					v.Action = func(ctx *cli.Context, setVal string) error {
+						*dest = setVal
+						return nil
+					}
+				}
 			}
 		}
 	}
