@@ -1326,6 +1326,8 @@ func withDefaults(category string, flags []cli.Flag) []cli.Flag {
 				dest := v.Destination
 				v.Destination = nil
 
+				*dest = v.Value
+
 				if v.Action == nil {
 					v.Action = func(ctx *cli.Context, setVal int) error {
 						*dest = setVal
@@ -1341,6 +1343,8 @@ func withDefaults(category string, flags []cli.Flag) []cli.Flag {
 			if v.Destination != nil {
 				dest := v.Destination
 				v.Destination = nil
+
+				*dest = v.Value
 
 				if v.Action == nil {
 					v.Action = func(ctx *cli.Context, setVal int64) error {
@@ -1358,6 +1362,8 @@ func withDefaults(category string, flags []cli.Flag) []cli.Flag {
 				dest := v.Destination
 				v.Destination = nil
 
+				*dest = v.Value
+
 				if v.Action == nil {
 					v.Action = func(ctx *cli.Context, setVal float64) error {
 						*dest = setVal
@@ -1373,6 +1379,8 @@ func withDefaults(category string, flags []cli.Flag) []cli.Flag {
 			if v.Destination != nil {
 				dest := v.Destination
 				v.Destination = nil
+
+				*dest = v.Value
 
 				if v.Action == nil {
 					v.Action = func(ctx *cli.Context, setVal time.Duration) error {
@@ -1390,6 +1398,8 @@ func withDefaults(category string, flags []cli.Flag) []cli.Flag {
 				dest := v.Destination
 				v.Destination = nil
 
+				*dest = v.Value
+
 				if v.Action == nil {
 					v.Action = func(ctx *cli.Context, setVal bool) error {
 						*dest = setVal
@@ -1406,6 +1416,8 @@ func withDefaults(category string, flags []cli.Flag) []cli.Flag {
 				dest := v.Destination
 				v.Destination = nil
 
+				*dest = v.Value
+
 				if v.Action == nil {
 					v.Action = func(ctx *cli.Context, setVal string) error {
 						*dest = setVal
@@ -1421,6 +1433,8 @@ func withDefaults(category string, flags []cli.Flag) []cli.Flag {
 			if v.Destination != nil {
 				dest := v.Destination
 				v.Destination = nil
+
+				*dest = v.Value
 
 				if v.Action == nil {
 					v.Action = func(ctx *cli.Context, setVal string) error {

@@ -2,6 +2,8 @@
 
 ## master
 
+- Fix regression with no populating all default configuration values. ([@palkan][])
+
 ## 1.5.5 (2024-10-16)
 
 - Fix configuration parameters precedence (file -> env -> CLI). ([@palkan][])

@@ -32,6 +32,8 @@ assert_equal("sse.enabled", true, config.dig("sse", "enabled"))
 assert_equal("metrics.tags", {"env" => "production", "node_id" => "xyz"}, config.dig("metrics", "tags"))
 assert_equal("metrics.statsd.host", "localhost:8125", config.dig("metrics", "statsd", "host"))
 assert_equal("metrics.statsd.tags_format", "datadog", config.dig("metrics", "statsd", "tags_format"))
+# defaults
+assert_equal("rpc.proxy_headers", ["cookie"], config.dig("rpc", "proxy_headers"))
 
 if $errors.any?
   fail $errors.join("\n")

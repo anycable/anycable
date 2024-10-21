@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -233,7 +234,15 @@ func (c *Controller) Start() error {
 	client, state, err := dialer(c.config, c.log)
 
 	if err == nil {
-		c.log.Info(fmt.Sprintf("RPC controller initialized: %s (concurrency: %s, impl: %s, enable_tls: %t, proto_versions: %s)", host, c.barrier.CapacityInfo(), impl, enableTLS, ProtoVersions))
+		proxiedHeaders := strings.Join(c.config.ProxyHeaders, ",")
+		if proxiedHeaders == "" {
+			proxiedHeaders = "<none>"
+		}
+		proxiedCookies := strings.Join(c.config.ProxyCookies, ",")
+		if proxiedCookies == "" {
+			proxiedCookies = "<all>"
+		}
+		c.log.Info(fmt.Sprintf("RPC controller initialized: %s (concurrency: %s, impl: %s, enable_tls: %t, proto_versions: %s, proxy_headers: %s, proxy_cookies: %s)", host, c.barrier.CapacityInfo(), impl, enableTLS, ProtoVersions, proxiedHeaders, proxiedCookies))
 	} else {
 		return err
 	}
