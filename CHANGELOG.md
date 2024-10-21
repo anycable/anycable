@@ -2,6 +2,8 @@
 
 ## master
 
+## 1.5.6 (2024-10-20)
+
 - Fix regression with no populating all default configuration values. ([@palkan][])
 
 ## 1.5.5 (2024-10-16)
