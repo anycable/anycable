@@ -696,6 +696,10 @@ func (n *Node) Disconnect(s *Session) error {
 	}
 
 	if n.IsShuttingDown() {
+		// Make sure session is removed from hub, so we don't try to send
+		// broadcast messages to them
+		n.hub.RemoveSession(s)
+
 		if s.IsDisconnectable() {
 			return n.DisconnectNow(s)
 		}
