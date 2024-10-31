@@ -673,12 +673,22 @@ func newPingMessage(format string) *common.PingMessage {
 	return (&common.PingMessage{Type: "ping", Message: ts})
 }
 
-func (s *Session) handlePong(msg *common.Message) {
+func (s *Session) keepalive() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	if s.pongTimer == nil {
-		s.Log.Debug("unexpected pong received")
+		return
+	}
+
+	s.pongTimer.Stop()
+}
+
+func (s *Session) resetPong() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.pongTimer == nil {
 		return
 	}
 

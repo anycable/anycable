@@ -162,9 +162,11 @@ func (n *Node) Instrumenter() metrics.Instrumenter {
 // execute the command (if recognized)
 func (n *Node) HandleCommand(s *Session, msg *common.Message) (err error) {
 	s.Log.Debug("incoming message", "data", msg)
+
+	s.keepalive()
+
 	switch msg.Command {
 	case "pong":
-		s.handlePong(msg)
 	case "subscribe":
 		_, err = n.Subscribe(s, msg)
 	case "unsubscribe":
@@ -178,6 +180,10 @@ func (n *Node) HandleCommand(s *Session, msg *common.Message) (err error) {
 	default:
 		err = fmt.Errorf("unknown command: %s", msg.Command)
 	}
+
+	// Reset pong timer after the message has been processed
+	// (so we don't disconnect the client if processing the message took too long)
+	s.resetPong()
 
 	return
 }
