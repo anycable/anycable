@@ -1,0 +1,15 @@
+module AnyCable
+  module WSRPC
+    interface _App
+      def call: (Client client, untyped message) -> void
+    end
+
+    class Server
+      attr_reader logger: Logger
+
+       %a{rbs:test:skip} def initialize: (url: String, token: String, logger: Logger) -> void
+      def build_client: (?untyped app) ?{ () -> untyped } -> Client
+      def call: (Client client, untyped msg) -> (nil | void)
+    end
+  end
+end

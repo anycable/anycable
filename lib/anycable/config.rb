@@ -71,6 +71,10 @@ module AnyCable
       ### HTTP RPC options
       http_rpc_secret: nil,
 
+      ### WebSocket RPC options
+      ws_rpc_url: nil,
+      ws_rpc_max_reconnects: 5,
+
       ### Misc options
       version_check_enabled: true,
       sid_header_enabled: true

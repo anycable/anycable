@@ -1,0 +1,23 @@
+module AnyCable
+  module WSRPC
+    class Client
+      def initialize: (
+        _App app,
+        String url
+      ) -> void
+
+      def send_message: (untyped msg) -> void
+      alias << send_message
+
+      def open: () -> void
+      def open?: () -> bool
+      def closed?: () -> bool
+      def close: () -> void
+      def maybe_reconnect: () -> void
+
+      private
+
+      @attempt: Integer
+    end
+  end
+end

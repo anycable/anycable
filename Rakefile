@@ -36,7 +36,7 @@ end
 namespace :spec do
   desc "Run RSpec with RBS runtime tester enabled"
   task :rbs do
-    rspec_args = ARGV.join.split("--", 2).last
+    rspec_args = ARGV.join.split("--", 2).last if ARGV.include?("--")
     sh <<~COMMAND
       RBS_TEST_LOGLEVEL=error \
       RBS_TEST_TARGET="AnyCable::*" \

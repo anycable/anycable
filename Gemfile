@@ -15,6 +15,8 @@ unless ENV["GRPC"] == "false"
   end
 end
 
+gem "async-websocket"
+
 eval_gemfile "gemfiles/rubocop.gemfile"
 eval_gemfile "gemfiles/rbs.gemfile"
 

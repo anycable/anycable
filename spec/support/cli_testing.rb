@@ -104,13 +104,15 @@ module CLITesting
     raise rspex unless rspex.nil?
   end
 
+  # rubocop:disable Style/ArgumentsForwarding
   def run_cli(opt_string = "", **opts, &block)
-    run_command "bundle exec anycable #{opt_string}", **opts, &block
+    run_command("bundle exec anycable #{opt_string}", **opts, &block)
   end
 
   def run_ruby(opt_string = "", **opts, &block)
-    run_command "bundle exec ruby #{opt_string}", **opts, &block
+    run_command("bundle exec ruby #{opt_string}", **opts, &block)
   end
+  # rubocop:enable Style/ArgumentsForwarding
 end
 
 RSpec.configure do |config|

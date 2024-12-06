@@ -30,6 +30,8 @@ module AnyCable
   autoload :Serializer, "anycable/serializer"
   autoload :Streams, "anycable/streams"
 
+  autoload :WSRPC, "anycable/wsrpc"
+
   class << self
     # Provide connection factory which
     # is a callable object with build

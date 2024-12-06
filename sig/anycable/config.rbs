@@ -53,6 +53,10 @@ module AnyCable
     def http_health_path=: (String) -> void
     def http_rpc_secret: () -> String?
     def http_rpc_secret=: (String?) -> void
+    def ws_rpc_url: () -> String
+    def ws_rpc_url=: (String) -> void
+    def ws_rpc_max_reconnects: () -> Integer
+    def ws_rpc_max_reconnects=: (Integer) -> void
     def version_check_enabled: () -> bool
     def version_check_enabled=: (bool) -> void
     def version_check_enabled?: () -> bool

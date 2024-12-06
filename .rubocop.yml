@@ -19,7 +19,7 @@ AllCops:
   DisplayCopNames: true
   SuggestExtensions: false
   NewCops: disable
-  TargetRubyVersion: 2.7
+  TargetRubyVersion: 3.0
 
 Standard/BlockSingleLineBraces:
   Enabled: false
