@@ -12,8 +12,11 @@ end
 module AnyCable
   module WSRPC
     class Client
-      def initialize(app, url, max_reconnects: AnyCable.config.ws_rpc_max_reconnects, logger: AnyCable.logger)
+      attr_reader :id
+
+      def initialize(app, url, id: nil, max_reconnects: AnyCable.config.ws_rpc_max_reconnects, logger: AnyCable.logger)
         @endpoint = Async::HTTP::Endpoint.parse(url)
+        @id = id || SecureRandom.hex(3)
         @logger = logger
         @app = app
         @main_thread = nil
@@ -39,7 +42,7 @@ module AnyCable
                 @open = true
                 @attempt = 0
 
-                @logger.info("WebSocket RPC client connected")
+                @logger.info("[##{id}] WebSocket RPC client connected")
 
                 input_task = task.async do
                   while msg = @queue.pop # rubocop:disable Lint/AssignmentInCondition
@@ -55,6 +58,7 @@ module AnyCable
                 @open = false
                 input_task&.stop
               end
+            rescue Errno::ECONNREFUSED
             end
 
             @main_task.wait
@@ -86,9 +90,9 @@ module AnyCable
       private
 
       def maybe_reconnect
-        return @logger.info("WebSocket RPC client disconnected") if @closed
+        return @logger.info("[##{id}] WebSocket RPC client closed") if @closed
 
-        @logger.info("WebSocket RPC connection lost")
+        @logger.info("[##{id}] WebSocket RPC connection lost")
 
         @attempt += 1
 
@@ -98,9 +102,9 @@ module AnyCable
 
         delay_base = [2**@attempt, 30].min
         # @type var delay_base: Integer
-        delay_seconds = delay_base + rand
+        delay_seconds = delay_base + @attempt*rand
 
-        @logger.info("WebSocket RPC reconnecting in #{delay_seconds} seconds...")
+        @logger.info("[##{id}] WebSocket RPC reconnecting in #{delay_seconds} seconds...")
 
         # Sleep before attempting reconnect
         sleep(delay_seconds)

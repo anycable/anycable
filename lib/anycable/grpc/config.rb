@@ -5,7 +5,6 @@ AnyCable::Config.attr_config(
   rpc_host: "127.0.0.1:50051",
   rpc_tls_cert: nil,
   rpc_tls_key: nil,
-  rpc_pool_size: 30,
   rpc_max_waiting_requests: 20,
   rpc_poll_period: 1,
   rpc_pool_keep_alive: 0.25,

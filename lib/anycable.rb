@@ -136,4 +136,10 @@ when "grpc_kit"
     require "anycable/grpc_kit"
   rescue LoadError
   end
+when "ws"
+  require "anycable/wsrpc"
+
+  AnyCable.server_builder = ->(config) {
+    AnyCable::WSRPC::Server.new
+  }
 end

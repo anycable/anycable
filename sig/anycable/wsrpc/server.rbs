@@ -5,9 +5,11 @@ module AnyCable
     end
 
     class Server
+      include _Server
+
       attr_reader logger: Logger
 
-       %a{rbs:test:skip} def initialize: (url: String, token: String, logger: Logger) -> void
+      %a{rbs:test:skip} def initialize: (?url: String, ?token: String, ?logger: Logger, ?pool_size: Integer) -> void
       def build_client: (?untyped app) ?{ () -> untyped } -> Client
       def call: (Client client, untyped msg) -> (nil | void)
     end

@@ -5,10 +5,16 @@ module AnyCable
     class Server
       private attr_reader :logger
 
-      def initialize(url: AnyCable.config.ws_rpc_url, token: AnyCable.config.http_rpc_secret, logger: AnyCable.logger)
+      def initialize(
+        url: AnyCable.config.ws_rpc_url,
+        token: AnyCable.config.http_rpc_secret,
+        logger: AnyCable.logger,
+        pool_size: AnyCable.config.rpc_pool_size
+      )
         @url = url
         @token = token
         @logger = logger
+        @pool_size = pool_size
 
         uri = URI.parse(url)
 
@@ -19,24 +25,25 @@ module AnyCable
         end
 
         @client_url = uri.to_s
+        @clients = []
       end
 
-      def build_client(app = nil, &block)
+      def build_client(app = nil, id: nil, &block)
         app ||= block if block_given?
         app ||= self
 
-        Client.new(app, @client_url)
+        Client.new(app, @client_url, id: id, logger: logger)
       end
 
       def call(client, msg)
         event = JSON.parse(msg)
         type = event["type"]
 
-        return logger.info("WebSocket RPC client connected") if type == "connect"
+        return logger.info("[##{client.id}] WebSocket RPC client ready") if type == "connect"
 
         if type == "disconnect"
-          logger.info("WebSocket RPC client disconnected: #{event["reason"]}")
-          event["reconnect"] ? client.open : client.close
+          logger.info("[##{client.id}] WebSocket RPC client disconnected by server: #{event["reason"]}")
+          client.close unless event["reconnect"]
           return
         end
 
@@ -65,6 +72,22 @@ module AnyCable
         }.to_json
 
         client.send_message(response)
+      end
+
+      def start
+        logger.info "Starting #{@pool_size} WebSocket RPC clients..."
+
+        @pool_size.times do |i|
+          client = build_client(id: i + 1)
+          client.open
+          @clients << client
+        end
+      end
+
+      def stop
+        logger.info "Stopping #{@pool_size} WebSocket RPC clients..."
+
+        @clients.each(&:close)
       end
     end
   end

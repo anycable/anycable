@@ -1,10 +1,14 @@
 module AnyCable
   module WSRPC
     class Client
-      def initialize: (
+      %a{rbs:test:skip} def initialize: (
         _App app,
-        String url
+        String url,
+        ?id: String,
+        ?logger: Logger
       ) -> void
+
+      attr_reader id: String
 
       def send_message: (untyped msg) -> void
       alias << send_message

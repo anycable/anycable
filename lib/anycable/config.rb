@@ -75,6 +75,9 @@ module AnyCable
       ws_rpc_url: nil,
       ws_rpc_max_reconnects: 5,
 
+      # General RPC options
+      rpc_pool_size: 30,
+
       ### Misc options
       version_check_enabled: true,
       sid_header_enabled: true
