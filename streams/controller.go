@@ -15,7 +15,8 @@ type SubscribeRequest struct {
 	StreamName       string `json:"stream_name"`
 	SignedStreamName string `json:"signed_stream_name"`
 
-	whisper bool
+	whisper  bool
+	presence bool
 }
 
 func (r *SubscribeRequest) IsPresent() bool {
@@ -108,10 +109,14 @@ func (c *Controller) Subscribe(sid string, env *common.SessionEnv, ids string, i
 		c.log.With("identifier", identifier).Debug("verified", "stream", stream)
 	}
 
-	var state map[string]string
+	state := map[string]string{}
 
 	if request.whisper {
-		state = map[string]string{common.WHISPER_STREAM_STATE: stream}
+		state[common.WHISPER_STREAM_STATE] = stream
+	}
+
+	if request.presence {
+		state[common.PRESENCE_STREAM_STATE] = stream
 	}
 
 	return &common.CommandResult{
@@ -144,6 +149,7 @@ func NewStreamsController(conf *Config, l *slog.Logger) *Controller {
 	key := conf.Secret
 	allowPublic := conf.Public
 	whispers := conf.Whisper
+	presence := conf.Presence
 
 	resolver := func(identifier string) (*SubscribeRequest, error) {
 		var request SubscribeRequest
@@ -158,6 +164,10 @@ func NewStreamsController(conf *Config, l *slog.Logger) *Controller {
 
 		if whispers || (request.StreamName != "") {
 			request.whisper = true
+		}
+
+		if presence || (request.StreamName != "") {
+			request.presence = true
 		}
 
 		return &request, nil

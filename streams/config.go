@@ -17,6 +17,9 @@ type Config struct {
 	// Whisper determines if whispering is enabled for pub/sub streams
 	Whisper bool `toml:"whisper"`
 
+	// Presence determines if presence is enabled for pub/sub streams
+	Presence bool `toml:"presence"`
+
 	// PubSubChannel is the channel name used for direct pub/sub
 	PubSubChannel string `toml:"pubsub_channel"`
 
@@ -78,6 +81,13 @@ func (c Config) ToToml() string {
 		result.WriteString("whisper = true\n")
 	} else {
 		result.WriteString("# whisper = true\n")
+	}
+
+	result.WriteString("# Enable presence support for pub/sub streams\n")
+	if c.Presence {
+		result.WriteString("presence = true\n")
+	} else {
+		result.WriteString("# presence = true\n")
 	}
 
 	result.WriteString("# Name of the channel used for pub/sub\n")

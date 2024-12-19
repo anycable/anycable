@@ -2,6 +2,7 @@ package node
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -175,6 +176,8 @@ func (n *Node) HandleCommand(s *Session, msg *common.Message) (err error) {
 		_, err = n.Perform(s, msg)
 	case "history":
 		err = n.History(s, msg)
+	case "presence":
+		err = n.Presence(s, msg)
 	case "whisper":
 		err = n.Whisper(s, msg)
 	default:
@@ -471,8 +474,12 @@ func (n *Node) Subscribe(s *Session, msg *common.Message) (*common.CommandResult
 			if err := n.History(s, msg); err != nil {
 				s.Log.Warn("couldn't retrieve history", "identifier", msg.Identifier, "error", err)
 			}
+		}
 
-			return res, nil
+		if msg.Presence != nil {
+			if err := n.handlePresenceReply(s, msg.Identifier, common.PresenceJoinType, msg.Presence); err != nil {
+				s.Log.Warn("couldn't process presence join", "identifier", msg.Identifier, "error", err)
+			}
 		}
 	}
 
@@ -670,6 +677,60 @@ func (n *Node) Whisper(s *Session, msg *common.Message) error {
 	return nil
 }
 
+// Presence returns the presence information for the specified identifier
+func (n *Node) Presence(s *Session, msg *common.Message) error {
+	s.smu.Lock()
+
+	if ok := s.subscriptions.HasChannel(msg.Identifier); !ok {
+		s.smu.Unlock()
+		return fmt.Errorf("unknown subscription %s", msg.Identifier)
+	}
+
+	// Check that the presence stream is configured (thus, the feature is enabled)
+	env := s.GetEnv()
+	if env == nil {
+		s.smu.Unlock()
+		return errors.New("session environment is missing")
+	}
+
+	stream := env.GetChannelStateField(msg.Identifier, common.PRESENCE_STREAM_STATE)
+
+	if stream == "" {
+		s.smu.Unlock()
+		return fmt.Errorf("presence stream not found for identifier: %s", msg.Identifier)
+	}
+
+	s.smu.Unlock()
+
+	var options *broker.PresenceInfoOptions
+
+	if msg.Data != nil {
+		buf, err := json.Marshal(&msg.Data)
+		if err != nil {
+			json.Unmarshal(buf, &options) // nolint:errcheck
+		}
+	}
+
+	info, err := n.broker.PresenceInfo(stream, broker.WithPresenceInfoOptions(options))
+
+	if err != nil {
+		s.Send(&common.Reply{
+			Type:       common.PresenceErrorType,
+			Identifier: msg.Identifier,
+		})
+
+		return err
+	}
+
+	s.Send(&common.Reply{
+		Type:       common.PresenceInfoType,
+		Identifier: msg.Identifier,
+		Message:    info,
+	})
+
+	return nil
+}
+
 // Broadcast message to stream (locally)
 func (n *Node) Broadcast(msg *common.StreamMessage) {
 	n.metrics.CounterIncrement(metricsBroadcastMsg)
@@ -820,6 +881,10 @@ func (n *Node) handleCommandReply(s *Session, msg *common.Message, reply *common
 	}
 
 	isConnectionDirty := n.handleCallReply(s, reply.ToCallResult())
+
+	// TODO: RPC-driven presence
+	// n.handlePresenceReply(s, reply.Presence)
+
 	return isDirty || isConnectionDirty
 }
 
@@ -845,6 +910,38 @@ func (n *Node) handleCallReply(s *Session, reply *common.CallResult) bool {
 	}
 
 	return isDirty
+}
+
+func (n *Node) handlePresenceReply(s *Session, identifier string, event string, presence *common.PresenceInfo) error {
+	if presence == nil {
+		return nil
+	}
+
+	// Check that the presence stream is configured (thus, the feature is enabled)
+	env := s.GetEnv()
+	if env == nil {
+		return errors.New("session environment is missing")
+	}
+
+	stream := env.GetChannelStateField(identifier, common.PRESENCE_STREAM_STATE)
+
+	if stream == "" {
+		return fmt.Errorf("presence stream not found for identifier: %s", identifier)
+	}
+
+	sid := s.GetID()
+
+	var err error
+
+	if event == common.PresenceJoinType { // nolint:gocritic
+		err = n.broker.PresenceAdd(stream, sid, presence.ID, presence.Info)
+	} else if event == common.PresenceLeaveType {
+		err = n.broker.PresenceRemove(stream, sid, presence.ID)
+	} else {
+		return fmt.Errorf("unknown presence event: %s", event)
+	}
+
+	return err
 }
 
 // disconnectScheduler controls how quickly to disconnect sessions

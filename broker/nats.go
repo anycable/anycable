@@ -482,6 +482,18 @@ func (n *NATS) Reset() error {
 	return nil
 }
 
+func (n *NATS) PresenceAdd(stream string, sid string, pid string, info interface{}) error {
+	return errors.New("presence not supported")
+}
+
+func (n *NATS) PresenceRemove(stream string, sid string, pid string) error {
+	return errors.New("presence not supported")
+}
+
+func (n *NATS) PresenceInfo(stream string, opts ...PresenceInfoOption) (*PresenceInfo, error) {
+	return nil, errors.New("presence not supported")
+}
+
 func (n *NATS) add(stream string, data string) (uint64, error) {
 	err := n.ensureStreamExists(stream)
 

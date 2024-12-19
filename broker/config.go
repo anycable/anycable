@@ -14,6 +14,8 @@ type Config struct {
 	HistoryLimit int `toml:"history_limit"`
 	// Sessions cache TTL in seconds (after disconnect)
 	SessionsTTL int64 `toml:"sessions_ttl"`
+	// Presence expire TTL in seconds (after disconnect)
+	PresenceTTL int64 `toml:"presence_ttl"`
 }
 
 func NewConfig() Config {
@@ -24,6 +26,8 @@ func NewConfig() Config {
 		HistoryLimit: 100,
 		// 5 minutes by default
 		SessionsTTL: 5 * 60,
+		// 15 seconds by default
+		PresenceTTL: 15,
 	}
 }
 
@@ -45,6 +49,9 @@ func (c Config) ToToml() string {
 
 	result.WriteString("# For how long to store sessions state for resumeability (seconds)\n")
 	result.WriteString(fmt.Sprintf("sessions_ttl = %d\n", c.SessionsTTL))
+
+	result.WriteString("# For how long to keep presence information after session disconnect (seconds)\n")
+	result.WriteString(fmt.Sprintf("presence_ttl = %d\n", c.PresenceTTL))
 
 	result.WriteString("\n")
 
