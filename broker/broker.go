@@ -26,17 +26,14 @@ type Cacheable interface {
 	ToCacheEntry() ([]byte, error)
 }
 
-type PresenceInfo struct {
-	// Total number of present clients (uniq)
-	Total int
-	// Presence records
-	Records []interface{}
-}
-
 // We can extend the presence read functionality in the future
 // (e.g., add pagination, filtering, etc.)
 type PresenceInfoOptions struct {
-	ReturnRecords bool
+	ReturnRecords bool `json:"return_records,omitempty"`
+}
+
+func NewPresenceInfoOptions() *PresenceInfoOptions {
+	return &PresenceInfoOptions{ReturnRecords: true}
 }
 
 type PresenceInfoOption func(*PresenceInfoOptions)
@@ -83,14 +80,17 @@ type Broker interface {
 
 	// Adds a new presence record for the stream. Returns true if that's the first
 	// presence record for the presence ID (pid, a unique user presence identifier).
-	PresenceAdd(stream string, sid string, pid string, info interface{}) error
+	PresenceAdd(stream string, sid string, pid string, info interface{}) (*common.PresenceEvent, error)
 
 	// Removes a presence record for the stream. Returns true if that was the last
 	// record for the presence ID (pid).
-	PresenceRemove(stream string, sid string, pid string) error
+	PresenceRemove(stream string, sid string) (*common.PresenceEvent, error)
 
 	// Retrieves presence information for the stream (counts, records, etc. depending on the options)
-	PresenceInfo(stream string, opts ...PresenceInfoOption) (*PresenceInfo, error)
+	PresenceInfo(stream string, opts ...PresenceInfoOption) (*common.PresenceInfo, error)
+
+	// Marks presence record as finished (for cache expiration)
+	FinishPresence(sid string) error
 }
 
 // LocalBroker is a single-node broker that can used to store streams data locally
@@ -229,14 +229,18 @@ func (LegacyBroker) FinishSession(sid string) error {
 	return nil
 }
 
-func (LegacyBroker) PresenceAdd(stream string, sid string, pid string, info interface{}) error {
-	return errors.New("presence not supported")
-}
-
-func (LegacyBroker) PresenceRemove(stream string, sid string, pid string) error {
-	return errors.New("presence not supported")
-}
-
-func (LegacyBroker) PresenceInfo(stream string, opts ...PresenceInfoOption) (*PresenceInfo, error) {
+func (LegacyBroker) PresenceAdd(stream string, sid string, pid string, info interface{}) (*common.PresenceEvent, error) {
 	return nil, errors.New("presence not supported")
+}
+
+func (LegacyBroker) PresenceRemove(stream string, sid string) (*common.PresenceEvent, error) {
+	return nil, errors.New("presence not supported")
+}
+
+func (LegacyBroker) PresenceInfo(stream string, opts ...PresenceInfoOption) (*common.PresenceInfo, error) {
+	return nil, errors.New("presence not supported")
+}
+
+func (LegacyBroker) FinishPresence(sid string) error {
+	return nil
 }

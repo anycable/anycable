@@ -61,14 +61,15 @@ const (
 	RejectedType   = "reject_subscription"
 	// Not supported by Action Cable currently
 	UnsubscribedType = "unsubscribed"
+	ErrorType        = "error"
 
 	HistoryConfirmedType = "confirm_history"
 	HistoryRejectedType  = "reject_history"
 
+	PresenceInfoType  = "info"
 	PresenceJoinType  = "join"
 	PresenceLeaveType = "leave"
-	PresenceInfoType  = "presence"
-	PresenceErrorType = "presence_error"
+	PresenceType      = "presence"
 
 	WhisperType = "whisper"
 )
@@ -223,10 +224,23 @@ func (c *ConnectResult) ToCallResult() *CallResult {
 	return &res
 }
 
-type PresenceInfo struct {
+type PresenceEvent struct {
 	Type string      `json:"type,omitempty"`
 	Info interface{} `json:"info,omitempty"`
 	ID   string      `json:"id"`
+}
+
+type PresenceInfo struct {
+	// Type is always "presence"
+	Type string `json:"type,omitempty"`
+	// Total number of present clients (uniq)
+	Total int `json:"total"`
+	// Presence records
+	Records []*PresenceEvent `json:"records,omitempty"`
+}
+
+func NewPresenceInfo() *PresenceInfo {
+	return &PresenceInfo{Type: PresenceInfoType}
 }
 
 // CommandResult is a result of performing controller action,
@@ -240,7 +254,6 @@ type CommandResult struct {
 	StoppedStreams     []string
 	Transmissions      []string
 	Broadcasts         []*StreamMessage
-	Presence           *PresenceInfo
 	CState             map[string]string
 	IState             map[string]string
 	DisconnectInterest int
@@ -314,7 +327,7 @@ type Message struct {
 	Identifier string         `json:"identifier"`
 	Data       interface{}    `json:"data,omitempty"`
 	History    HistoryRequest `json:"history,omitempty"`
-	Presence   *PresenceInfo  `json:"presence,omitempty"`
+	Presence   *PresenceEvent `json:"presence,omitempty"`
 }
 
 func (m *Message) LogValue() slog.Value {
@@ -478,18 +491,18 @@ func NewDisconnectMessage(reason string, reconnect bool) *DisconnectMessage {
 
 // Reply represents an outgoing client message
 type Reply struct {
-	Type        string        `json:"type,omitempty"`
-	Identifier  string        `json:"identifier,omitempty"`
-	Message     interface{}   `json:"message,omitempty"`
-	Presence    *PresenceInfo `json:"presence,omitempty"`
-	Reason      string        `json:"reason,omitempty"`
-	Reconnect   bool          `json:"reconnect,omitempty"`
-	StreamID    string        `json:"stream_id,omitempty"`
-	Epoch       string        `json:"epoch,omitempty"`
-	Offset      uint64        `json:"offset,omitempty"`
-	Sid         string        `json:"sid,omitempty"`
-	Restored    bool          `json:"restored,omitempty"`
-	RestoredIDs []string      `json:"restored_ids,omitempty"`
+	Type        string         `json:"type,omitempty"`
+	Identifier  string         `json:"identifier,omitempty"`
+	Message     interface{}    `json:"message,omitempty"`
+	Presence    *PresenceEvent `json:"presence,omitempty"`
+	Reason      string         `json:"reason,omitempty"`
+	Reconnect   bool           `json:"reconnect,omitempty"`
+	StreamID    string         `json:"stream_id,omitempty"`
+	Epoch       string         `json:"epoch,omitempty"`
+	Offset      uint64         `json:"offset,omitempty"`
+	Sid         string         `json:"sid,omitempty"`
+	Restored    bool           `json:"restored,omitempty"`
+	RestoredIDs []string       `json:"restored_ids,omitempty"`
 }
 
 func (r *Reply) LogValue() slog.Value {
@@ -575,14 +588,4 @@ func RejectionMessage(identifier string) string {
 // DisconnectionMessage returns a disconnect message with the specified reason and reconnect flag
 func DisconnectionMessage(reason string, reconnect bool) string {
 	return string(utils.ToJSON(DisconnectMessage{Type: DisconnectType, Reason: reason, Reconnect: reconnect}))
-}
-
-// PresenceJoinMessage returns a presence message for the specified event and data
-func PresenceJoinMessage(id string, info interface{}) string {
-	return string(utils.ToJSON(Reply{Type: PresenceJoinType, Presence: &PresenceInfo{ID: id, Info: info}}))
-}
-
-// PresenceLeaveMessage returns a presence message for the specified event and data
-func PresenceLeaveMessage(id string) string {
-	return string(utils.ToJSON(Reply{Type: PresenceLeaveType, Presence: &PresenceInfo{ID: id}}))
 }

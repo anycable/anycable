@@ -12,5 +12,6 @@
 * [Binary formats](binary_formats.md)
 * [JWT identification](jwt_identification.md)
 * [Signed streams](signed_streams.md)
+* [Presence](presence.md)
 * [Embedded NATS](embedded_nats.md)
 * [Using as a library](library.md)

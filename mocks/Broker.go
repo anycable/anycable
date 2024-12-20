@@ -52,6 +52,24 @@ func (_m *Broker) CommitSession(sid string, session broker.Cacheable) error {
 	return r0
 }
 
+// FinishPresence provides a mock function with given fields: sid
+func (_m *Broker) FinishPresence(sid string) error {
+	ret := _m.Called(sid)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FinishPresence")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string) error); ok {
+		r0 = rf(sid)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // FinishSession provides a mock function with given fields: sid
 func (_m *Broker) FinishSession(sid string) error {
 	ret := _m.Called(sid)
@@ -141,25 +159,37 @@ func (_m *Broker) HistorySince(stream string, ts int64) ([]common.StreamMessage,
 }
 
 // PresenceAdd provides a mock function with given fields: stream, sid, pid, info
-func (_m *Broker) PresenceAdd(stream string, sid string, pid string, info interface{}) error {
+func (_m *Broker) PresenceAdd(stream string, sid string, pid string, info interface{}) (*common.PresenceEvent, error) {
 	ret := _m.Called(stream, sid, pid, info)
 
 	if len(ret) == 0 {
 		panic("no return value specified for PresenceAdd")
 	}
 
-	var r0 error
-	if rf, ok := ret.Get(0).(func(string, string, string, interface{}) error); ok {
+	var r0 *common.PresenceEvent
+	var r1 error
+	if rf, ok := ret.Get(0).(func(string, string, string, interface{}) (*common.PresenceEvent, error)); ok {
+		return rf(stream, sid, pid, info)
+	}
+	if rf, ok := ret.Get(0).(func(string, string, string, interface{}) *common.PresenceEvent); ok {
 		r0 = rf(stream, sid, pid, info)
 	} else {
-		r0 = ret.Error(0)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*common.PresenceEvent)
+		}
 	}
 
-	return r0
+	if rf, ok := ret.Get(1).(func(string, string, string, interface{}) error); ok {
+		r1 = rf(stream, sid, pid, info)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // PresenceInfo provides a mock function with given fields: stream, opts
-func (_m *Broker) PresenceInfo(stream string, opts ...broker.PresenceInfoOption) (*broker.PresenceInfo, error) {
+func (_m *Broker) PresenceInfo(stream string, opts ...broker.PresenceInfoOption) (*common.PresenceInfo, error) {
 	_va := make([]interface{}, len(opts))
 	for _i := range opts {
 		_va[_i] = opts[_i]
@@ -173,16 +203,16 @@ func (_m *Broker) PresenceInfo(stream string, opts ...broker.PresenceInfoOption)
 		panic("no return value specified for PresenceInfo")
 	}
 
-	var r0 *broker.PresenceInfo
+	var r0 *common.PresenceInfo
 	var r1 error
-	if rf, ok := ret.Get(0).(func(string, ...broker.PresenceInfoOption) (*broker.PresenceInfo, error)); ok {
+	if rf, ok := ret.Get(0).(func(string, ...broker.PresenceInfoOption) (*common.PresenceInfo, error)); ok {
 		return rf(stream, opts...)
 	}
-	if rf, ok := ret.Get(0).(func(string, ...broker.PresenceInfoOption) *broker.PresenceInfo); ok {
+	if rf, ok := ret.Get(0).(func(string, ...broker.PresenceInfoOption) *common.PresenceInfo); ok {
 		r0 = rf(stream, opts...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*broker.PresenceInfo)
+			r0 = ret.Get(0).(*common.PresenceInfo)
 		}
 	}
 
@@ -195,22 +225,34 @@ func (_m *Broker) PresenceInfo(stream string, opts ...broker.PresenceInfoOption)
 	return r0, r1
 }
 
-// PresenceRemove provides a mock function with given fields: stream, sid, pid
-func (_m *Broker) PresenceRemove(stream string, sid string, pid string) error {
-	ret := _m.Called(stream, sid, pid)
+// PresenceRemove provides a mock function with given fields: stream, sid
+func (_m *Broker) PresenceRemove(stream string, sid string) (*common.PresenceEvent, error) {
+	ret := _m.Called(stream, sid)
 
 	if len(ret) == 0 {
 		panic("no return value specified for PresenceRemove")
 	}
 
-	var r0 error
-	if rf, ok := ret.Get(0).(func(string, string, string) error); ok {
-		r0 = rf(stream, sid, pid)
+	var r0 *common.PresenceEvent
+	var r1 error
+	if rf, ok := ret.Get(0).(func(string, string) (*common.PresenceEvent, error)); ok {
+		return rf(stream, sid)
+	}
+	if rf, ok := ret.Get(0).(func(string, string) *common.PresenceEvent); ok {
+		r0 = rf(stream, sid)
 	} else {
-		r0 = ret.Error(0)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*common.PresenceEvent)
+		}
 	}
 
-	return r0
+	if rf, ok := ret.Get(1).(func(string, string) error); ok {
+		r1 = rf(stream, sid)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // RestoreSession provides a mock function with given fields: from

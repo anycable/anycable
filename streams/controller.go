@@ -109,13 +109,17 @@ func (c *Controller) Subscribe(sid string, env *common.SessionEnv, ids string, i
 		c.log.With("identifier", identifier).Debug("verified", "stream", stream)
 	}
 
-	state := map[string]string{}
+	var state map[string]string
 
 	if request.whisper {
+		state = make(map[string]string)
 		state[common.WHISPER_STREAM_STATE] = stream
 	}
 
 	if request.presence {
+		if state == nil {
+			state = make(map[string]string)
+		}
 		state[common.PRESENCE_STREAM_STATE] = stream
 	}
 

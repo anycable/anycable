@@ -637,6 +637,12 @@ func brokerCLIFlags(c *config.Config) []cli.Flag {
 			Value:       c.Broker.SessionsTTL,
 			Destination: &c.Broker.SessionsTTL,
 		},
+		&cli.Int64Flag{
+			Name:        "presence_ttl",
+			Usage:       "TTL for presence information (seconds)",
+			Value:       c.Broker.PresenceTTL,
+			Destination: &c.Broker.PresenceTTL,
+		},
 	})
 }
 

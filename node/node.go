@@ -178,6 +178,10 @@ func (n *Node) HandleCommand(s *Session, msg *common.Message) (err error) {
 		err = n.History(s, msg)
 	case "presence":
 		err = n.Presence(s, msg)
+	case "join":
+		err = n.PresenceJoin(s, msg)
+	case "leave":
+		err = n.PresenceLeave(s, msg)
 	case "whisper":
 		err = n.Whisper(s, msg)
 	default:
@@ -499,6 +503,8 @@ func (n *Node) Unsubscribe(s *Session, msg *common.Message) (*common.CommandResu
 
 	s.Log.Debug("controller unsubscribe", "response", res, "err", err)
 
+	presenceStream := ""
+
 	if err != nil {
 		if res == nil || res.Status == common.ERROR {
 			return nil, errorx.Decorate(err, "failed to unsubscribe from %s", msg.Identifier)
@@ -506,6 +512,8 @@ func (n *Node) Unsubscribe(s *Session, msg *common.Message) (*common.CommandResu
 	} else {
 		// Make sure to remove all streams subscriptions
 		res.StopAllStreams = true
+
+		presenceStream = s.env.GetChannelStateField(msg.Identifier, common.PRESENCE_STREAM_STATE)
 
 		s.env.RemoveChannelState(msg.Identifier)
 		s.subscriptions.RemoveChannel(msg.Identifier)
@@ -522,6 +530,13 @@ func (n *Node) Unsubscribe(s *Session, msg *common.Message) (*common.CommandResu
 	if s.IsResumeable() {
 		if berr := n.broker.CommitSession(s.GetID(), s); berr != nil {
 			s.Log.Error("failed to persist session in cache", "error", berr)
+		}
+	}
+
+	// Make sure presence is removed on explicit unsubscribe
+	if presenceStream != "" {
+		if _, err := n.broker.PresenceRemove(presenceStream, s.GetID()); err != nil {
+			s.Log.Error("failed to remove presence", "error", err)
 		}
 	}
 
@@ -702,7 +717,7 @@ func (n *Node) Presence(s *Session, msg *common.Message) error {
 
 	s.smu.Unlock()
 
-	var options *broker.PresenceInfoOptions
+	options := broker.NewPresenceInfoOptions()
 
 	if msg.Data != nil {
 		buf, err := json.Marshal(&msg.Data)
@@ -715,20 +730,49 @@ func (n *Node) Presence(s *Session, msg *common.Message) error {
 
 	if err != nil {
 		s.Send(&common.Reply{
-			Type:       common.PresenceErrorType,
+			Type:       common.PresenceType,
 			Identifier: msg.Identifier,
+			Message:    &common.PresenceInfo{Type: common.ErrorType},
 		})
 
 		return err
 	}
 
 	s.Send(&common.Reply{
-		Type:       common.PresenceInfoType,
+		Type:       common.PresenceType,
 		Identifier: msg.Identifier,
 		Message:    info,
 	})
 
 	return nil
+}
+
+// PresenceJoin adds the session to the presence state for the specified identifier
+func (n *Node) PresenceJoin(s *Session, msg *common.Message) error {
+	s.smu.Lock()
+
+	if ok := s.subscriptions.HasChannel(msg.Identifier); !ok {
+		s.smu.Unlock()
+		return fmt.Errorf("unknown subscription %s", msg.Identifier)
+	}
+
+	s.smu.Unlock()
+
+	return n.handlePresenceReply(s, msg.Identifier, common.PresenceJoinType, msg.Presence)
+}
+
+// PresenceLeave removes the session to the presence state for the specified identifier
+func (n *Node) PresenceLeave(s *Session, msg *common.Message) error {
+	s.smu.Lock()
+
+	if ok := s.subscriptions.HasChannel(msg.Identifier); !ok {
+		s.smu.Unlock()
+		return fmt.Errorf("unknown subscription %s", msg.Identifier)
+	}
+
+	s.smu.Unlock()
+
+	return n.handlePresenceReply(s, msg.Identifier, common.PresenceLeaveType, msg.Presence)
 }
 
 // Broadcast message to stream (locally)
@@ -761,6 +805,8 @@ func (n *Node) Disconnect(s *Session) error {
 	if s.IsResumeable() {
 		n.broker.FinishSession(s.GetID()) // nolint:errcheck
 	}
+
+	n.broker.FinishPresence(s.GetID()) // nolint:errcheck
 
 	if n.IsShuttingDown() {
 		// Make sure session is removed from hub, so we don't try to send
@@ -912,11 +958,7 @@ func (n *Node) handleCallReply(s *Session, reply *common.CallResult) bool {
 	return isDirty
 }
 
-func (n *Node) handlePresenceReply(s *Session, identifier string, event string, presence *common.PresenceInfo) error {
-	if presence == nil {
-		return nil
-	}
-
+func (n *Node) handlePresenceReply(s *Session, identifier string, event string, presence *common.PresenceEvent) error {
 	// Check that the presence stream is configured (thus, the feature is enabled)
 	env := s.GetEnv()
 	if env == nil {
@@ -932,13 +974,28 @@ func (n *Node) handlePresenceReply(s *Session, identifier string, event string, 
 	sid := s.GetID()
 
 	var err error
+	var msg *common.PresenceEvent
 
 	if event == common.PresenceJoinType { // nolint:gocritic
-		err = n.broker.PresenceAdd(stream, sid, presence.ID, presence.Info)
+		if presence == nil {
+			return errors.New("presence data is missing")
+		}
+		msg, err = n.broker.PresenceAdd(stream, sid, presence.ID, presence.Info)
 	} else if event == common.PresenceLeaveType {
-		err = n.broker.PresenceRemove(stream, sid, presence.ID)
+		msg, err = n.broker.PresenceRemove(stream, sid)
 	} else {
 		return fmt.Errorf("unknown presence event: %s", event)
+	}
+
+	if msg != nil {
+		n.Broadcast(&common.StreamMessage{
+			Stream: stream,
+			Data:   string(utils.ToJSON(msg)),
+			Meta: &common.StreamMessageMetadata{
+				BroadcastType: common.PresenceType,
+				Transient:     true,
+			},
+		})
 	}
 
 	return err

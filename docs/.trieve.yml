@@ -32,6 +32,7 @@ pages:
   - "./broker.md"
   - "./configuration.md"
   - "./embedded_nats.md"
+  - "./presence.md"
   - "./getting_started.md"
   - "./health_checking.md"
   - "./instrumentation.md"

@@ -393,6 +393,173 @@ func sharedIntegrationHistory(t *testing.T, node *Node, controller *mocks.Contro
 	})
 }
 
+// A test to verify the presence flow.
+//
+// SETUP:
+// - Two sessions are created (authenticated and subscribed with presence stream).
+//
+// TEST 1 — join/leave events and info:
+// - First session joins the channel.
+// - Both sessions receive join event.
+// - Second session requests presence info.
+// - Second session joins the channel.
+// - First session leaves the channel.
+// - Both sessions receive leave event.
+// - Second session requests presence info.
+//
+// TEST 2 — presence expiration:
+// - Both sessions joins the channel.
+// - Both sessions receive join event.
+// - First session disconnects.
+// - Wait for expiration.
+// - Second session receives leave event.
+// - Second session requests presence info.
+func TestIntegrationPresence_Memory(t *testing.T) {
+	node, controller := setupIntegrationNode()
+
+	bconf := broker.NewConfig()
+	bconf.PresenceTTL = 2
+
+	subscriber := pubsub.NewLegacySubscriber(node)
+
+	br := broker.NewMemoryBroker(subscriber, &bconf)
+	node.SetBroker(br)
+
+	require.NoError(t, br.Start(nil))
+
+	go node.Start()                           // nolint:errcheck
+	defer node.Shutdown(context.Background()) // nolint:errcheck
+
+	sharedIntegrationPresence(t, node, controller)
+}
+
+func sharedIntegrationPresence(t *testing.T, node *Node, controller *mocks.Controller) {
+	controller.
+		On("Subscribe", "sasha", mock.Anything, "sasha", "chat_1").
+		Return(&common.CommandResult{
+			Status:        common.SUCCESS,
+			Transmissions: []string{`{"type":"confirm","identifier":"chat_1"}`},
+			Streams:       []string{"presence_1", "messages_1"},
+			IState:        map[string]string{common.PRESENCE_STREAM_STATE: "presence_1"},
+		}, nil)
+	controller.
+		On("Subscribe", "mia", mock.Anything, "mia", "chat_1").
+		Return(&common.CommandResult{
+			Status:        common.SUCCESS,
+			Transmissions: []string{`{"type":"confirm","identifier":"chat_1"}`},
+			Streams:       []string{"presence_1", "messages_1"},
+			IState:        map[string]string{common.PRESENCE_STREAM_STATE: "presence_1"},
+		}, nil)
+	controller.
+		On("Unsubscribe", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(&common.CommandResult{
+			Status: common.SUCCESS,
+		}, nil)
+
+	setupSessions := func() (*Session, *Session, func()) {
+		session := requireAuthenticatedSession(t, node, "sasha")
+		_, err := node.Subscribe(
+			session,
+			&common.Message{
+				Identifier: "chat_1",
+				Command:    "subscribe",
+			})
+		require.NoError(t, err)
+		assertReceive(t, session, `{"type":"confirm","identifier":"chat_1"}`)
+
+		session2 := requireAuthenticatedSession(t, node, "mia")
+		_, err = node.Subscribe(
+			session2,
+			&common.Message{
+				Identifier: "chat_1",
+				Command:    "subscribe",
+			})
+		require.NoError(t, err)
+		assertReceive(t, session2, `{"type":"confirm","identifier":"chat_1"}`)
+
+		return session, session2, func() {
+			node.Unsubscribe(session, &common.Message{Identifier: "chat_1", Command: "unsubscribe"})  // nolint:errcheck
+			node.Unsubscribe(session2, &common.Message{Identifier: "chat_1", Command: "unsubscribe"}) // nolint:errcheck
+		}
+	}
+
+	t.Run("Join and leave", func(t *testing.T) {
+		sasha, mia, cleanup := setupSessions()
+		defer cleanup()
+
+		err := node.PresenceJoin(sasha, &common.Message{Identifier: "chat_1", Presence: &common.PresenceEvent{ID: "42", Info: map[string]interface{}{"name": "Sasha"}}})
+		require.NoError(t, err)
+
+		assertReceive(t, mia, `{"type":"presence","identifier":"chat_1","message":{"id":"42","info":{"name":"Sasha"},"type":"join"}}`)
+		assertReceive(t, sasha, `{"type":"presence","identifier":"chat_1","message":{"id":"42","info":{"name":"Sasha"},"type":"join"}}`)
+
+		err = node.Presence(mia, &common.Message{Identifier: "chat_1", Command: "presence"})
+		require.NoError(t, err)
+
+		assertReceive(t, mia, `{"type":"presence","identifier":"chat_1","message":{"type":"info","total":1,"records":[{"id":"42","info":{"name":"Sasha"}}]}}`)
+
+		err = node.PresenceJoin(mia, &common.Message{Identifier: "chat_1", Presence: &common.PresenceEvent{ID: "13", Info: map[string]interface{}{"name": "Mia"}}})
+		require.NoError(t, err)
+
+		assertReceive(t, mia, `{"type":"presence","identifier":"chat_1","message":{"id":"13","info":{"name":"Mia"},"type":"join"}}`)
+		assertReceive(t, sasha, `{"type":"presence","identifier":"chat_1","message":{"id":"13","info":{"name":"Mia"},"type":"join"}}`)
+
+		err = node.Presence(sasha, &common.Message{Identifier: "chat_1", Command: "presence"})
+		require.NoError(t, err)
+
+		msg := assertReceiveMsg(t, sasha)
+		assert.Equal(t, "presence", msg["type"])
+		assert.Equal(t, "chat_1", msg["identifier"])
+		payload := msg["message"].(map[string]interface{})
+		assert.Equal(t, "info", payload["type"])
+		assert.Equal(t, float64(2), payload["total"])
+		records := payload["records"].([]interface{})
+		assert.Len(t, records, 2)
+		assert.Contains(t, records, map[string]interface{}{"id": "42", "info": map[string]interface{}{"name": "Sasha"}})
+		assert.Contains(t, records, map[string]interface{}{"id": "13", "info": map[string]interface{}{"name": "Mia"}})
+
+		err = node.PresenceLeave(sasha, &common.Message{Identifier: "chat_1"})
+		require.NoError(t, err)
+
+		assertReceive(t, mia, `{"type":"presence","identifier":"chat_1","message":{"id":"42","type":"leave"}}`)
+		assertReceive(t, sasha, `{"type":"presence","identifier":"chat_1","message":{"id":"42","type":"leave"}}`)
+
+		err = node.Presence(mia, &common.Message{Identifier: "chat_1", Command: "presence"})
+		require.NoError(t, err)
+
+		assertReceive(t, mia, `{"type":"presence","identifier":"chat_1","message":{"type":"info","total":1,"records":[{"id":"13","info":{"name":"Mia"}}]}}`)
+	})
+
+	t.Run("Presence expiration", func(t *testing.T) {
+		sasha, mia, cleanup := setupSessions()
+		defer cleanup()
+
+		err := node.PresenceJoin(sasha, &common.Message{Identifier: "chat_1", Presence: &common.PresenceEvent{ID: "142", Info: map[string]interface{}{"name": "Rickie"}}})
+		require.NoError(t, err)
+
+		assertReceive(t, mia, `{"type":"presence","identifier":"chat_1","message":{"id":"142","info":{"name":"Rickie"},"type":"join"}}`)
+		assertReceive(t, sasha, `{"type":"presence","identifier":"chat_1","message":{"id":"142","info":{"name":"Rickie"},"type":"join"}}`)
+
+		err = node.Presence(mia, &common.Message{Identifier: "chat_1", Command: "presence"})
+		require.NoError(t, err)
+
+		assertReceive(t, mia, `{"type":"presence","identifier":"chat_1","message":{"type":"info","total":1,"records":[{"id":"142","info":{"name":"Rickie"}}]}}`)
+
+		err = node.Disconnect(sasha)
+		require.NoError(t, err)
+
+		// Wait for expiration to happen
+		time.Sleep(4 * time.Second)
+
+		assertReceive(t, mia, `{"type":"presence","identifier":"chat_1","message":{"id":"142","type":"leave"}}`)
+
+		err = node.Presence(mia, &common.Message{Identifier: "chat_1", Command: "presence"})
+		require.NoError(t, err)
+
+		assertReceive(t, mia, `{"type":"presence","identifier":"chat_1","message":{"type":"info","total":0}}`)
+	})
+}
+
 func setupIntegrationNode() (*Node, *mocks.Controller) {
 	config := NewConfig()
 	config.HubGopoolSize = 2
@@ -419,14 +586,30 @@ func requireReceive(t *testing.T, s *Session, expected string) {
 }
 
 func assertReceive(t *testing.T, s *Session, expected string) {
-	msg, err := s.conn.Read()
+	parsedMessage := assertReceiveMsg(t, s)
+
+	var expectedMessage map[string]interface{}
+
+	err := json.Unmarshal([]byte(expected), &expectedMessage)
 	require.NoError(t, err)
 
 	assert.Equal(
 		t,
-		expected,
-		string(msg),
+		expectedMessage,
+		parsedMessage,
 	)
+}
+
+func assertReceiveMsg(t *testing.T, s *Session) map[string]interface{} {
+	msg, err := s.conn.Read()
+	require.NoError(t, err)
+
+	var parsedMessage map[string]interface{}
+
+	err = json.Unmarshal(msg, &parsedMessage)
+	require.NoError(t, err)
+
+	return parsedMessage
 }
 
 func requireAuthenticatedSession(t *testing.T, node *Node, sid string) *Session {

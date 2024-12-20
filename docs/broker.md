@@ -1,11 +1,12 @@
 # Broker deep dive
 
-Broker is a component of AnyCable-Go responsible for keeping streams and sessions information in a cache-like storage. It drives the [Reliable Streams](./reliable_streams.md) feature.
+Broker is a component of AnyCable-Go responsible for keeping streams, sessions and presence information in a cache-like storage. It drives the [Reliable Streams](./reliable_streams.md) and [Presence](./presence.md) features.
 
 Broker implements features that can be characterized as _hot cache utilities_:
 
 - Handling incoming broadcast messages and storing them in a cache—that could help clients to receive missing broadcasts (triggered while the client was offline, for example).
 - Persisting client states—to make it possible to restore on re-connection (by providing a _session id_ of the previous connection).
+- Keeping per-channel presence information.
 
 ## Client-server communication
 
