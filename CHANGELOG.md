@@ -2,6 +2,10 @@
 
 ## master
 
+## 1.6.0-dev
+
+- Presence tracking support for pub/sub streams (see [docs](https://docs.anycable.io/edge/anycable-go/presence)). ([@palkan][])
+
 ## 1.5.6 (2024-10-20)
 
 - Fix regression with no populating all default configuration values. ([@palkan][])
