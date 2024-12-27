@@ -2,6 +2,8 @@
 
 ## master
 
+ - Update google-protobuf to version 4, so anycable-core start support ruby 3.4
+
 ## 1.5.1 (2024-06-14) 🇪🇺 ⚽️
 
 - Fixed compatibility with Rack 3.1 ([@earlopain][])
