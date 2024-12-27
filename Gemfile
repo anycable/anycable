@@ -5,13 +5,12 @@ gem "debug", platform: :mri
 
 gem "benchmark_driver"
 
-# https://github.com/soutaro/steep/issues/466
-gem "activesupport", "~> 6.0"
+gem "activesupport", "~> 8.0"
 
 unless ENV["GRPC"] == "false"
   case ENV["ANYCABLE_GRPC_IMPL"]
   when "grpc_kit" then gem "grpc_kit"
-  else gem "grpc", "~> 1.37"
+  else gem "grpc", "~> 1.6"
   end
 end
 
