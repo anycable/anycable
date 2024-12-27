@@ -30,14 +30,14 @@ describe "client messages" do
 
     it "responds with ERROR", :aggregate_failures do
       expect(subject).to be_error
-      expect(subject.error_msg).to match(/undefined method `fecho'/)
+      expect(subject.error_msg).to match(/undefined method [`']fecho'/)
     end
 
     it "notifies exception handler" do
       subject
 
       expect(TestExHandler.last_error).to have_attributes(
-        exception: have_attributes(message: a_string_matching(/undefined method `fecho'/)),
+        exception: have_attributes(message: a_string_matching(/undefined method [`']fecho'/)),
         method: "command",
         message: request.to_h
       )
