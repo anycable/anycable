@@ -5,61 +5,10 @@
 
 require "google/protobuf"
 
-Google::Protobuf::DescriptorPool.generated_pool.build do
-  add_file("rpc.proto", syntax: :proto3) do
-    add_message "anycable.Env" do
-      optional :url, :string, 1
-      map :headers, :string, :string, 2
-      map :cstate, :string, :string, 3
-      map :istate, :string, :string, 4
-    end
-    add_message "anycable.EnvResponse" do
-      map :cstate, :string, :string, 1
-      map :istate, :string, :string, 2
-    end
-    add_message "anycable.ConnectionRequest" do
-      optional :env, :message, 3, "anycable.Env"
-    end
-    add_message "anycable.ConnectionResponse" do
-      optional :status, :enum, 1, "anycable.Status"
-      optional :identifiers, :string, 2
-      repeated :transmissions, :string, 3
-      optional :error_msg, :string, 4
-      optional :env, :message, 5, "anycable.EnvResponse"
-    end
-    add_message "anycable.CommandMessage" do
-      optional :command, :string, 1
-      optional :identifier, :string, 2
-      optional :connection_identifiers, :string, 3
-      optional :data, :string, 4
-      optional :env, :message, 5, "anycable.Env"
-    end
-    add_message "anycable.CommandResponse" do
-      optional :status, :enum, 1, "anycable.Status"
-      optional :disconnect, :bool, 2
-      optional :stop_streams, :bool, 3
-      repeated :streams, :string, 4
-      repeated :transmissions, :string, 5
-      optional :error_msg, :string, 6
-      optional :env, :message, 7, "anycable.EnvResponse"
-      repeated :stopped_streams, :string, 8
-    end
-    add_message "anycable.DisconnectRequest" do
-      optional :identifiers, :string, 1
-      repeated :subscriptions, :string, 2
-      optional :env, :message, 5, "anycable.Env"
-    end
-    add_message "anycable.DisconnectResponse" do
-      optional :status, :enum, 1, "anycable.Status"
-      optional :error_msg, :string, 2
-    end
-    add_enum "anycable.Status" do
-      value :ERROR, 0
-      value :SUCCESS, 1
-      value :FAILURE, 2
-    end
-  end
-end
+descriptor_data = "\n\trpc.proto\x12\x08\x61nycable\"\xa3\x02\n\x03\x45nv\x12\x0b\n\x03url\x18\x01 \x01(\t\x12+\n\x07headers\x18\x02 \x03(\x0b\x32\x1a.anycable.Env.HeadersEntry\x12)\n\x06\x63state\x18\x03 \x03(\x0b\x32\x19.anycable.Env.CstateEntry\x12)\n\x06istate\x18\x04 \x03(\x0b\x32\x19.anycable.Env.IstateEntry\x1a.\n\x0cHeadersEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\x1a-\n\x0b\x43stateEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\x1a-\n\x0bIstateEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"\xd1\x01\n\x0b\x45nvResponse\x12\x31\n\x06\x63state\x18\x01 \x03(\x0b\x32!.anycable.EnvResponse.CstateEntry\x12\x31\n\x06istate\x18\x02 \x03(\x0b\x32!.anycable.EnvResponse.IstateEntry\x1a-\n\x0b\x43stateEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\x1a-\n\x0bIstateEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"/\n\x11\x43onnectionRequest\x12\x1a\n\x03\x65nv\x18\x03 \x01(\x0b\x32\r.anycable.Env\"\x99\x01\n\x12\x43onnectionResponse\x12 \n\x06status\x18\x01 \x01(\x0e\x32\x10.anycable.Status\x12\x13\n\x0bidentifiers\x18\x02 \x01(\t\x12\x15\n\rtransmissions\x18\x03 \x03(\t\x12\x11\n\terror_msg\x18\x04 \x01(\t\x12\"\n\x03\x65nv\x18\x05 \x01(\x0b\x32\x15.anycable.EnvResponse\"\x7f\n\x0e\x43ommandMessage\x12\x0f\n\x07\x63ommand\x18\x01 \x01(\t\x12\x12\n\nidentifier\x18\x02 \x01(\t\x12\x1e\n\x16\x63onnection_identifiers\x18\x03 \x01(\t\x12\x0c\n\x04\x64\x61ta\x18\x04 \x01(\t\x12\x1a\n\x03\x65nv\x18\x05 \x01(\x0b\x32\r.anycable.Env\"\xd5\x01\n\x0f\x43ommandResponse\x12 \n\x06status\x18\x01 \x01(\x0e\x32\x10.anycable.Status\x12\x12\n\ndisconnect\x18\x02 \x01(\x08\x12\x14\n\x0cstop_streams\x18\x03 \x01(\x08\x12\x0f\n\x07streams\x18\x04 \x03(\t\x12\x15\n\rtransmissions\x18\x05 \x03(\t\x12\x11\n\terror_msg\x18\x06 \x01(\t\x12\"\n\x03\x65nv\x18\x07 \x01(\x0b\x32\x15.anycable.EnvResponse\x12\x17\n\x0fstopped_streams\x18\x08 \x03(\t\"[\n\x11\x44isconnectRequest\x12\x13\n\x0bidentifiers\x18\x01 \x01(\t\x12\x15\n\rsubscriptions\x18\x02 \x03(\t\x12\x1a\n\x03\x65nv\x18\x05 \x01(\x0b\x32\r.anycable.Env\"I\n\x12\x44isconnectResponse\x12 \n\x06status\x18\x01 \x01(\x0e\x32\x10.anycable.Status\x12\x11\n\terror_msg\x18\x02 \x01(\t*-\n\x06Status\x12\t\n\x05\x45RROR\x10\x00\x12\x0b\n\x07SUCCESS\x10\x01\x12\x0b\n\x07\x46\x41ILURE\x10\x02\x32\xda\x01\n\x03RPC\x12\x46\n\x07\x43onnect\x12\x1b.anycable.ConnectionRequest\x1a\x1c.anycable.ConnectionResponse\"\x00\x12@\n\x07\x43ommand\x12\x18.anycable.CommandMessage\x1a\x19.anycable.CommandResponse\"\x00\x12I\n\nDisconnect\x12\x1b.anycable.DisconnectRequest\x1a\x1c.anycable.DisconnectResponse\"\x00\x62\x06proto3"
+
+pool = Google::Protobuf::DescriptorPool.generated_pool
+pool.add_serialized_file(descriptor_data)
 
 module AnyCable
   Env = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("anycable.Env").msgclass
