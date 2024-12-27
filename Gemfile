@@ -5,8 +5,6 @@ gem "debug", platform: :mri
 
 gem "benchmark_driver"
 
-gem "activesupport", "~> 8.0"
-
 unless ENV["GRPC"] == "false"
   case ENV["ANYCABLE_GRPC_IMPL"]
   when "grpc_kit" then gem "grpc_kit"

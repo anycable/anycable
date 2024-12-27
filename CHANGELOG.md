@@ -2,7 +2,9 @@
 
 ## master
 
- - Update google-protobuf to version 4, so anycable-core start support ruby 3.4
+- Ruby 3.0+ is required.
+
+- Update google-protobuf to version 4 (support Ruby 3.4). ([@le0pard][])
 
 ## 1.5.1 (2024-06-14) 🇪🇺 ⚽️
 
@@ -218,3 +220,4 @@ See [Changelog](https://github.com/anycable/anycable/blob/0-6-stable/CHANGELOG.m
 [@Envek]: https://github.com/Envek
 [@cylon-v]: https://github.com/cylon-v
 [@earlopain]: https://github.com/earlopain
+[@le0pard]: https://github.com/le0pard

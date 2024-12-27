@@ -4,8 +4,8 @@ module AnyCable
       def running?: () -> bool
     end
 
-    SUCCESS_RESPONSE: Array[Integer | String]
-    FAILURE_RESPONSE: Array[Integer | String]
+    SUCCESS_RESPONSE: [Integer, String]
+    FAILURE_RESPONSE: [Integer, String]
 
     attr_reader server: _Runnable
     attr_reader port: Integer
