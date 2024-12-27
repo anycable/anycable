@@ -29,7 +29,9 @@ Gem::Specification.new do |spec|
   spec.required_ruby_version = ">= 2.7.0"
 
   spec.add_dependency "anyway_config", "~> 2.2"
-  spec.add_dependency "google-protobuf", "~> 3.25"
+  spec.add_dependency "base64", ">= 0.2"
+  spec.add_dependency "google-protobuf", "~> 4"
+  spec.add_dependency "stringio", "~> 3"
 
   spec.add_development_dependency "redis", ">= 4.0"
   spec.add_development_dependency "nats-pure", "~> 2"
@@ -43,6 +45,7 @@ Gem::Specification.new do |spec|
     spec.add_development_dependency "rack", "~> 3.0"
   end
 
+  spec.add_development_dependency "pry"
   spec.add_development_dependency "rspec", ">= 3.5"
   spec.add_development_dependency "simplecov"
   spec.add_development_dependency "simplecov-lcov"

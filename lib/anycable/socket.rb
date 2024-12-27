@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "stringio"
+
 module AnyCable
   WHISPER_KEY = "$w"
 
