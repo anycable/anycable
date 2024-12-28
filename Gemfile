@@ -7,10 +7,10 @@ gem "puma"
 
 gem "activesupport", "~> 7.0.0"
 
-if File.directory?(File.join(__dir__, "../anycable"))
+if File.directory?(File.join(__dir__, "../anycable-rb"))
   $stdout.puts "\n=== Using local gems for Anyt ===\n\n"
   gem "debug"
-  gem "anycable", path: "../anycable"
+  gem "anycable", path: "../anycable-rb"
   gem "anycable-rails", path: "../anycable-rails"
   gem "anyt", path: "../anyt"
   gem "wsdirector-cli", path: "../wsdirector"

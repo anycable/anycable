@@ -68,3 +68,4 @@ norpc
 noauth
 jid
 webhooks
+realtime
