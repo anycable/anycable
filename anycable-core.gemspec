@@ -26,7 +26,7 @@ Gem::Specification.new do |spec|
     Dir.glob("sig/anycable/**/*.rbs") + %w[sig/anycable.rbs] + %w[sig/manifest.yml]
   spec.require_paths = ["lib"]
 
-  spec.required_ruby_version = ">= 3.0"
+  spec.required_ruby_version = ">= 2.7"
 
   spec.add_dependency "anyway_config", "~> 2.2"
   spec.add_dependency "base64", ">= 0.2"
