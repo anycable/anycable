@@ -5,7 +5,7 @@
 
 ### Tell us about your environment
 
-**AnyCable-Go version:**
+**AnyCable version:**
 
 **AnyCable gem version:**
 

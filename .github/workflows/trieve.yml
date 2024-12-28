@@ -3,11 +3,9 @@ name: Upload to Trieve
 on:
   push:
     tags:
-      - v1.3.*
-      - v1.4.*
-      - v1.5.*
+      - v1.6.*
     branches:
-      - master
+      - main
   workflow_dispatch:
 
 jobs:

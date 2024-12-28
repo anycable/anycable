@@ -61,7 +61,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
             type=sha,prefix=
-            type=edge,branch=master
+            type=edge,branch=main
       - name: Build and push base images
         uses: docker/build-push-action@v4
         with:
@@ -93,7 +93,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
             type=sha,prefix=
-            type=edge,branch=master
+            type=edge,branch=main
       - name: Build and push alpine images
         uses: docker/build-push-action@v4
         with:
@@ -131,7 +131,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
             type=sha,prefix=
-            type=edge,branch=master
+            type=edge,branch=main
       - name: Build and push mrb images
         uses: docker/build-push-action@v4
         with:

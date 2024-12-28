@@ -3,7 +3,7 @@ name: Lint Docs
 on:
   push:
     branches:
-    - master
+    - main
     paths:
     - "**/*.md"
     - ".github/workflows/docs-lint.yml"
