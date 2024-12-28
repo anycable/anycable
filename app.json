@@ -2,7 +2,7 @@
   "name": "anycable-go",
   "description": "Performant and feature-rich WebSocket server for Rails and Ruby applications.",
   "keywords": ["websockets", "rails", "hotwire"],
-  "repository": "https://github.com/anycable/anycable-go",
+  "repository": "https://github.com/anycable/anycable",
   "logo": "https://docs.anycable.io/assets/images/logo.svg",
   "stack": "container",
   "env": {

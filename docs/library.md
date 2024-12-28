@@ -16,7 +16,7 @@ To get started with an application development with AnyCable-Go, you can use our
 
 You can also embed AnyCable into your existing web application in case you want to serve AnyCable WebSocket/SSE connections via the same HTTP server as other requests (e.g., if you build a smart reverse-proxy).
 
-Here is a minimal example Go code (you can find the full and up-to-date version [here](https://github.com/anycable/anycable-go/blob/master/cmd/embedded-cable/main.go)):
+Here is a minimal example Go code (you can find the full and up-to-date version [here](https://github.com/anycable/anycable/blob/master/cmd/embedded-cable/main.go)):
 
 ```go
 package main
