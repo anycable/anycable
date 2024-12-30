@@ -928,8 +928,11 @@ func (n *Node) handleCommandReply(s *Session, msg *common.Message, reply *common
 
 	isConnectionDirty := n.handleCallReply(s, reply.ToCallResult())
 
-	// TODO: RPC-driven presence
-	// n.handlePresenceReply(s, reply.Presence)
+	if reply.Presence != nil {
+		if perr := n.handlePresenceReply(s, msg.Identifier, reply.Presence.Type, reply.Presence); perr != nil {
+			s.Log.Warn("failed to process presence", "err", perr)
+		}
+	}
 
 	return isDirty || isConnectionDirty
 }

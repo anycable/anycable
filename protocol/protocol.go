@@ -81,6 +81,25 @@ func ParseCommandResponse(response *pb.CommandResponse) (*common.CommandResult, 
 		res.IState = response.Env.Istate
 	}
 
+	if response.Presence != nil {
+		res.Presence = &common.PresenceEvent{
+			Type: response.Presence.Type,
+			ID:   response.Presence.Id,
+		}
+
+		if response.Presence.Info != "" {
+			var info interface{}
+
+			err := json.Unmarshal([]byte(response.Presence.Info), &info)
+
+			if err != nil {
+				res.Presence.Info = response.Presence.Info
+			} else {
+				res.Presence.Info = info
+			}
+		}
+	}
+
 	if response.Status.String() == "SUCCESS" {
 		res.Status = common.SUCCESS
 		return res, nil

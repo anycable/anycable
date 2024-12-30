@@ -312,6 +312,53 @@ func TestPerform(t *testing.T) {
 		assert.Nil(t, res.Streams)
 		assert.Empty(t, res.Broadcasts)
 	})
+
+	t.Run("With presence", func(t *testing.T) {
+		url := "/cable-present"
+		headers := map[string]string{"cookie": "token=secret;"}
+		istate := map[string]string{"room": "room:1"}
+
+		channels := make(map[string]map[string]string)
+		channels["test_channel"] = istate
+
+		client.On("Command", mock.Anything,
+			&pb.CommandMessage{
+				Command:               "message",
+				ConnectionIdentifiers: "ids",
+				Identifier:            "test_channel",
+				Data:                  "channel_state",
+				Env:                   &pb.Env{Url: url, Headers: headers, Istate: istate},
+			}).Return(
+			&pb.CommandResponse{
+				Status:         pb.Status_SUCCESS,
+				StoppedStreams: []string{"chat_42"},
+				StopStreams:    false,
+				Env:            &pb.EnvResponse{Istate: map[string]string{common.PRESENCE_STREAM_STATE: "presence_42"}},
+				Transmissions:  []string{"message_sent"},
+				Presence: &pb.PresenceResponse{
+					Type: "leave",
+					Id:   "2024",
+				},
+			}, nil)
+
+		res, err := controller.Perform(
+			"42",
+			&common.SessionEnv{URL: url, Headers: &headers, ChannelStates: &channels},
+			"ids", "test_channel", "channel_state",
+		)
+
+		assert.Nil(t, err)
+		assert.Equal(t, []string{"message_sent"}, res.Transmissions)
+		assert.Equal(t, map[string]string{"$p": "presence_42"}, res.IState)
+		assert.False(t, res.StopAllStreams)
+		assert.Equal(t, []string{"chat_42"}, res.StoppedStreams)
+		assert.Nil(t, res.Streams)
+		assert.Empty(t, res.Broadcasts)
+
+		require.NotNil(t, res.Presence)
+		assert.Equal(t, common.PresenceLeaveType, res.Presence.Type)
+		assert.Equal(t, "2024", res.Presence.ID)
+	})
 }
 
 func TestSubscribe(t *testing.T) {
@@ -411,6 +458,50 @@ func TestSubscribe(t *testing.T) {
 
 		assert.NotNil(t, err)
 		assert.Equal(t, common.ERROR, res.Status)
+	})
+
+	t.Run("With presence", func(t *testing.T) {
+		url := "/cable-present"
+		headers := map[string]string{"cookie": "token=secret;"}
+		cstate := map[string]string{"_s_": "id=42"}
+
+		client.On("Command", mock.Anything,
+			&pb.CommandMessage{
+				Command:               "subscribe",
+				ConnectionIdentifiers: "ids",
+				Identifier:            "test_channel",
+				Env:                   &pb.Env{Url: url, Headers: headers, Cstate: cstate},
+			}).Return(
+			&pb.CommandResponse{
+				Status:        pb.Status_SUCCESS,
+				Streams:       []string{"chat_42"},
+				Env:           &pb.EnvResponse{Cstate: map[string]string{"_s_": "sentCount=1"}},
+				Transmissions: []string{"confirmed"},
+				Presence: &pb.PresenceResponse{
+					Type: "join",
+					Id:   "2024",
+					Info: `{"name":"Torcha"}`,
+				},
+			}, nil)
+
+		res, err := controller.Subscribe(
+			"42",
+			&common.SessionEnv{URL: url, Headers: &headers, ConnectionState: &cstate},
+			"ids", "test_channel",
+		)
+
+		assert.Nil(t, err)
+		assert.Equal(t, []string{"confirmed"}, res.Transmissions)
+		assert.Equal(t, map[string]string{"_s_": "sentCount=1"}, res.CState)
+		assert.False(t, res.StopAllStreams)
+		assert.Equal(t, []string{"chat_42"}, res.Streams)
+		assert.Nil(t, res.StoppedStreams)
+		assert.Empty(t, res.Broadcasts)
+
+		require.NotNil(t, res.Presence)
+		assert.Equal(t, common.PresenceJoinType, res.Presence.Type)
+		assert.Equal(t, "2024", res.Presence.ID)
+		assert.Equal(t, "Torcha", (res.Presence.Info.(map[string]interface{}))["name"])
 	})
 }
 

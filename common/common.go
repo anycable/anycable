@@ -256,6 +256,7 @@ type CommandResult struct {
 	Broadcasts         []*StreamMessage
 	CState             map[string]string
 	IState             map[string]string
+	Presence           *PresenceEvent
 	DisconnectInterest int
 	Status             int
 }
