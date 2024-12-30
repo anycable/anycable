@@ -56,7 +56,11 @@ type HTTPService struct {
 	baseURL *url.URL
 
 	cb *gobreaker.TwoStepCircuitBreaker
+
+	pb.UnimplementedRPCServer
 }
+
+var _ pb.RPCServer = (*HTTPService)(nil)
 
 func NewHTTPDialer(c *Config) (Dialer, error) {
 	service, err := NewHTTPService(c)

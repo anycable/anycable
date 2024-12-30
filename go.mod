@@ -8,7 +8,7 @@ require (
 	github.com/fullstorydev/grpchan v1.1.1
 	github.com/go-chi/chi/v5 v5.2.0
 	github.com/golang-jwt/jwt v3.2.2+incompatible
-	github.com/golang/protobuf v1.5.4
+	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/gomodule/redigo v1.9.2
 	github.com/google/gops v0.3.28
 	github.com/gorilla/websocket v1.5.3
@@ -61,6 +61,6 @@ require (
 	golang.org/x/crypto v0.31.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
-	google.golang.org/protobuf v1.36.0 // indirect
+	google.golang.org/protobuf v1.36.0
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

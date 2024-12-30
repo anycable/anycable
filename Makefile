@@ -125,8 +125,27 @@ run-gobench:
 run-embedded:
 	go run -ldflags $(LD_FLAGS) -tags "mrb gops" ./cmd/embedded-cable/main.go
 
-build-protos:
-	protoc --proto_path=./etc --go_out=plugins=grpc:./protos --grpchan_out=./protos ./etc/rpc.proto
+# https://protobuf.dev/getting-started/gotutorial/
+bin/protoc-gen-go:
+	@test -x $$(go env GOPATH)/bin/protoc-gen-go || \
+		go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+
+# https://pkg.go.dev/google.golang.org/grpc/cmd/protoc-gen-go-grpc
+bin/protoc-gen-go-grpc:
+	@test -x $$(go env GOPATH)/bin/protoc-gen-go-grpc || \
+		go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+
+# https://github.com/fullstorydev/grpchan
+bin/protoc-gen-grpchan:
+	@test -x $$(go env GOPATH)/bin/protoc-gen-grpchan || \
+		go install github.com/fullstorydev/grpchan/cmd/protoc-gen-grpchan@latest
+
+build-protos: bin/protoc-gen-go bin/protoc-gen-go-grpc bin/protoc-gen-grpchan
+	protoc --proto_path=./etc --go_out=./ --go-grpc_out=./ ./etc/rpc.proto
+	mockery --dir ./protos  --name RPCServer --output "./mocks" --outpkg mocks
+	mockery --dir ./protos  --name RPCClient --output "./mocks" --outpkg mocks
+	# replace protos.UnimplementedRPCServer to the mocks.RPCServer struct
+	sed -i '' 's/type RPCServer struct {/type RPCServer struct {\n	protos.UnimplementedRPCServer/g' ./mocks/RPCServer.go
 
 bench:
 	go test -tags mrb -bench=. ./...
