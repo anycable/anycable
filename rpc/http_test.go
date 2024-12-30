@@ -141,6 +141,11 @@ func TestHTTPServiceRPC(t *testing.T) {
 				Transmissions: []string{"confirmed"},
 				Streams:       []string{stream},
 				Status:        pb.Status_SUCCESS,
+				Presence: &pb.PresenceResponse{
+					Type: "join",
+					Id:   "42",
+					Info: `{"name":"Dexter"}`,
+				},
 			}
 
 			w.Write(utils.ToJSON(&res)) // nolint: errcheck
@@ -161,6 +166,9 @@ func TestHTTPServiceRPC(t *testing.T) {
 		assert.Equal(t, pb.Status_SUCCESS, res.Status)
 		assert.Equal(t, []string{"confirmed"}, res.Transmissions)
 		assert.Equal(t, []string{"easy-way-out"}, res.Streams)
+		assert.Equal(t, "join", res.Presence.Type)
+		assert.Equal(t, "42", res.Presence.Id)
+		assert.Equal(t, `{"name":"Dexter"}`, res.Presence.Info)
 	})
 }
 

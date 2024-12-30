@@ -8,6 +8,7 @@ import (
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/encoders"
 	"github.com/anycable/anycable-go/mocks"
+	"github.com/joomcode/errorx"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -603,6 +604,137 @@ func TestHistory(t *testing.T) {
 	})
 }
 
+func TestPresence(t *testing.T) {
+	node := NewMockNode()
+
+	controller := &mocks.Controller{}
+	node.controller = controller
+
+	broker := &mocks.Broker{}
+	node.SetBroker(broker)
+
+	broker.
+		On("CommitSession", mock.Anything, mock.Anything).
+		Return(nil)
+
+	broker.
+		On("Subscribe", mock.Anything).
+		Return(func(name string) string { return name })
+
+	go node.hub.Run()
+	defer node.hub.Shutdown()
+
+	t.Run("join on subscribe", func(t *testing.T) {
+		session := NewMockSession("24", node)
+
+		node.hub.AddSession(session)
+		defer node.hub.RemoveSession(session)
+
+		controller.
+			On("Subscribe", "24", mock.Anything, "24", "test_channel").
+			Return(&common.CommandResult{
+				Status:        common.SUCCESS,
+				Transmissions: []string{`{"type":"confirm","identifier":"test_channel"}`},
+				Streams:       []string{"test_presence"},
+				IState:        map[string]string{common.PRESENCE_STREAM_STATE: "test_presence"},
+				Presence: &common.PresenceEvent{
+					Type: common.PresenceJoinType,
+					ID:   "user_24",
+					Info: "J. Bond",
+				},
+			}, nil)
+
+		broker.On(
+			"PresenceAdd", "test_presence", "24", "user_24", "J. Bond",
+		).Return(&common.PresenceEvent{
+			Type: "join",
+			ID:   "user_24",
+			Info: "J. Bond",
+		}, nil)
+
+		_, err := node.Subscribe(session, &common.Message{Identifier: "test_channel"})
+		require.NoError(t, err)
+
+		assert.Equal(t, "test_presence", session.GetEnv().GetChannelStateField("test_channel", common.PRESENCE_STREAM_STATE))
+
+		assertReceive(t, session, `{"type":"confirm","identifier":"test_channel"}`)
+
+		assertReceive(t, session, `{"type":"presence","identifier":"test_channel","message":{"type":"join","id":"user_24","info":"J. Bond"}}`)
+	})
+
+	t.Run("join on perform", func(t *testing.T) {
+		session := NewMockSession("24", node)
+
+		node.hub.AddSession(session)
+		defer node.hub.RemoveSession(session)
+
+		session.subscriptions.AddChannel("subscribed_channel")
+
+		controller.
+			On("Perform", "24", mock.Anything, "24", "subscribed_channel", `{"action":"follow"}`).
+			Return(&common.CommandResult{
+				Status:  common.SUCCESS,
+				Streams: []string{"test_presence"},
+				IState:  map[string]string{common.PRESENCE_STREAM_STATE: "test_presence"},
+				Presence: &common.PresenceEvent{
+					Type: common.PresenceJoinType,
+					ID:   "user_24",
+					Info: "J. Bond",
+				},
+			}, nil)
+
+		broker.On(
+			"PresenceAdd", "test_presence", "24", "user_24", "J. Bond",
+		).Return(&common.PresenceEvent{
+			Type: "join",
+			ID:   "user_24",
+			Info: "J. Bond",
+		}, nil)
+
+		_, err := node.Perform(session, &common.Message{Identifier: "subscribed_channel", Data: `{"action":"follow"}`})
+		require.NoError(t, err)
+
+		assert.Equal(t, "test_presence", session.GetEnv().GetChannelStateField("subscribed_channel", common.PRESENCE_STREAM_STATE))
+
+		assertReceive(t, session, `{"type":"presence","identifier":"subscribed_channel","message":{"type":"join","id":"user_24","info":"J. Bond"}}`)
+	})
+
+	t.Run("no presence stream configured", func(t *testing.T) {
+		session := NewMockSession("25", node)
+
+		node.hub.AddSession(session)
+		defer node.hub.RemoveSession(session)
+
+		session.subscriptions.AddChannel("subscribed_channel")
+
+		controller.
+			On("Perform", "25", mock.Anything, "25", "subscribed_channel", `{"action":"follow"}`).
+			Return(&common.CommandResult{
+				Status:  common.SUCCESS,
+				Streams: []string{"test_presence"},
+				Presence: &common.PresenceEvent{
+					Type: common.PresenceJoinType,
+					ID:   "user_25",
+					Info: "Fantomas",
+				},
+			}, nil)
+
+		broker.On(
+			"PresenceAdd", mock.Anything, mock.Anything, mock.Anything, mock.Anything,
+		).Run(func(args mock.Arguments) {
+			t.Error("PresenceAdd should not be called")
+		})
+
+		_, err := node.Perform(session, &common.Message{Identifier: "subscribed_channel", Data: `{"action":"follow"}`})
+		require.NoError(t, err)
+
+		assert.Equal(t, "", session.GetEnv().GetChannelStateField("subscribed_channel", common.PRESENCE_STREAM_STATE))
+
+		_, err = session.conn.Read()
+		assert.Error(t, err)
+	})
+}
+
 func TestRestoreSession(t *testing.T) {
 	node := NewMockNode()
 
@@ -848,6 +980,9 @@ func readMessages(conn Connection, count int) ([]string, error) {
 	for i := 0; i < count; i++ {
 		msg, err := conn.Read()
 		if err != nil {
+			if len(messages) > 0 {
+				return messages, errorx.Decorate(err, "received only %d messsages", len(messages))
+			}
 			return nil, err
 		}
 
