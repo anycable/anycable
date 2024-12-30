@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package anycable;
 
+option go_package = "./protos";
+
 service RPC {
   rpc Connect (ConnectionRequest) returns (ConnectionResponse) {}
   rpc Command (CommandMessage) returns (CommandResponse) {}
@@ -24,6 +26,13 @@ message Env {
 message EnvResponse {
   map<string,string> cstate = 1;
   map<string,string> istate = 2;
+}
+
+message PresenceResponse {
+  string type = 1;
+  string id = 2;
+  string info = 3;
+  uint32 ttl = 4;
 }
 
 message ConnectionRequest {
@@ -55,6 +64,7 @@ message CommandResponse {
   string error_msg = 6;
   EnvResponse env = 7;
   repeated string stopped_streams = 8;
+  PresenceResponse presence = 9;
 }
 
 message DisconnectRequest {

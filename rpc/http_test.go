@@ -68,7 +68,7 @@ func TestHTTPServiceRPC(t *testing.T) {
 				Status:        pb.Status_SUCCESS,
 			}
 
-			w.Write(utils.ToJSON(res)) // nolint: errcheck
+			w.Write(utils.ToJSON(&res)) // nolint: errcheck
 		}
 
 		md := metadata.Pairs("album", "Kamni", "year", "2008")
@@ -104,7 +104,7 @@ func TestHTTPServiceRPC(t *testing.T) {
 				ErrorMsg: r.Header.Get("x-anycable-meta-error"),
 			}
 
-			w.Write(utils.ToJSON(res)) // nolint: errcheck
+			w.Write(utils.ToJSON(&res)) // nolint: errcheck
 		}
 
 		md := metadata.Pairs("error", "test error")
@@ -143,7 +143,7 @@ func TestHTTPServiceRPC(t *testing.T) {
 				Status:        pb.Status_SUCCESS,
 			}
 
-			w.Write(utils.ToJSON(res)) // nolint: errcheck
+			w.Write(utils.ToJSON(&res)) // nolint: errcheck
 		}
 
 		md := metadata.Pairs("track", "easy-way-out")
@@ -178,7 +178,7 @@ func TestHTTPServiceAuthentication(t *testing.T) {
 			Status: pb.Status_SUCCESS,
 		}
 
-		w.Write(utils.ToJSON(res)) // nolint: errcheck
+		w.Write(utils.ToJSON(&res)) // nolint: errcheck
 	}))
 
 	defer ts.Close()
@@ -232,7 +232,7 @@ func TestHTTPServiceRequestTimeout(t *testing.T) {
 			time.Sleep(50 * time.Millisecond)
 		}
 
-		w.Write(utils.ToJSON(res)) // nolint: errcheck
+		w.Write(utils.ToJSON(&res)) // nolint: errcheck
 	}))
 
 	defer ts.Close()
