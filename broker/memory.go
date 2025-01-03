@@ -259,11 +259,12 @@ func NewMemoryBroker(node Broadcaster, config *Config) *Memory {
 
 func (b *Memory) Announce() string {
 	return fmt.Sprintf(
-		"Using in-memory broker (epoch: %s, history limit: %d, history ttl: %ds, sessions ttl: %ds)",
+		"Using in-memory broker (epoch: %s, history limit: %d, history ttl: %ds, sessions ttl: %ds, presence ttl: %ds)",
 		b.GetEpoch(),
 		b.config.HistoryLimit,
 		b.config.HistoryTTL,
 		b.config.SessionsTTL,
+		b.config.PresenceTTL,
 	)
 }
 

@@ -63,7 +63,32 @@ You can configure the presence expiration time (for disconnected clients) via th
 
 ## Presence for channels
 
-> 🚧 Presence for channels is to be implemented. You can only use presence with [signed streams](./signed_streams.md) for now.
+Alternativaly to joining and leaving the channel's presence set from the client, you can use control the presence behaviour from the server-side when using channels.
+
+For that, you can provide presence commands (`join` and `leave`) in subscription callbacks
+and channel actions.
+
+### Ruby on Rails integration
+
+Here is a quick overview of using Presence API in Rails' Action Cable:
+
+```ruby
+class ChatChannel < ApplicationCable::Channel
+  def subscribed
+    room = Chat::Room.find(params[:id])
+
+    stream_for room
+
+    join_presence(id: current_user.id, info: {name: current_user.name})
+  end
+end
+```
+
+The full documentation could be found [here](https://docs.anycable.io/edge/rails/extensions?id=presence-tracking).
+
+### JavaScript integration
+
+> 🚧 Presence support in [anycable-serverless-js](https://github.com/anycable/anycable-serverless-js) is coming soon.
 
 ## Presence API
 
