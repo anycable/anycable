@@ -63,7 +63,7 @@ You can configure the presence expiration time (for disconnected clients) via th
 
 ## Presence for channels
 
-Alternativaly to joining and leaving the channel's presence set from the client, you can use control the presence behaviour from the server-side when using channels.
+Alternatively to joining and leaving the channel's presence set from the client, you can use control the presence behaviour from the server-side when using channels.
 
 For that, you can provide presence commands (`join` and `leave`) in subscription callbacks
 and channel actions.
