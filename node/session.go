@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/anycable/anycable-go/broker"
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/encoders"
 	"github.com/anycable/anycable-go/logger"
@@ -42,7 +43,7 @@ type SessionTimers struct {
 	pingDeadline      int64
 	handshakeDeadline int64
 	pongDeadline      int64
-	expireDeadline    int64
+	resumeDeadline    int64
 	presenceDeadline  int64
 
 	nextEvent    timerEvent
@@ -98,9 +99,9 @@ func (st *SessionTimers) schedule() {
 		delay = st.pongDeadline
 	}
 
-	if st.expireDeadline > 0 && (delay == 0 || st.expireDeadline < delay) {
+	if st.resumeDeadline > 0 && (delay == 0 || st.resumeDeadline < delay) {
 		ev = timerEventExpire
-		delay = st.expireDeadline
+		delay = st.resumeDeadline
 	}
 
 	if st.presenceDeadline > 0 && (delay == 0 || st.presenceDeadline < delay) {
@@ -133,6 +134,7 @@ type Session struct {
 	uid           string
 	encoder       encoders.Encoder
 	executor      Executor
+	broker        broker.Broker
 	metrics       metrics.Instrumenter
 	env           *common.SessionEnv
 	subscriptions *SubscriptionState
@@ -153,10 +155,11 @@ type Session struct {
 	pingInterval           time.Duration
 	pingTimestampPrecision string
 
-	pongTimeout time.Duration
+	pongTimeout      time.Duration
+	presenceInterval time.Duration
+	resumeInterval   time.Duration
 
-	resumable bool
-	prevSid   string
+	prevSid string
 
 	Connected bool
 	// Could be used to store arbitrary data within a session
@@ -210,10 +213,12 @@ func WithMetrics(m metrics.Instrumenter) SessionOption {
 	}
 }
 
-// WithResumable allows marking session as resumable (so we store its state in cache)
-func WithResumable(val bool) SessionOption {
+// WithBroker connects a session to a broker, so the session can send keepalive signals for
+// cache and presence
+func WithKeepaliveIntervals(sessionsTTL time.Duration, presenceTTL time.Duration) SessionOption {
 	return func(s *Session) {
-		s.resumable = val
+		s.resumeInterval = sessionsTTL
+		s.presenceInterval = presenceTTL
 	}
 }
 
@@ -248,6 +253,7 @@ func NewSession(node *Node, conn Connection, url string, headers *map[string]str
 		encoder: encoders.JSON{},
 		// Use Action Cable executor by default (implemented by node)
 		executor: node,
+		broker:   node.broker,
 	}
 
 	session.uid = uid
@@ -260,15 +266,19 @@ func NewSession(node *Node, conn Connection, url string, headers *map[string]str
 		opt(session)
 	}
 
-	if session.pingInterval > 0 {
-		session.setupPing()
-	}
-
 	go session.SendMessages()
 
-	session.timers.Start(session.handleTimerEvent)
+	session.startTimers()
 
 	return session
+}
+
+func (s *Session) startTimers() {
+	s.scheduleInitialPing()
+	s.scheduleResumeability()
+	s.schedulePresence()
+
+	s.timers.Start(s.handleTimerEvent)
 }
 
 func (s *Session) GetEnv() *common.SessionEnv {
@@ -295,7 +305,7 @@ func (s *Session) IsConnected() bool {
 }
 
 func (s *Session) IsResumeable() bool {
-	return s.resumable
+	return s.resumeInterval > 0
 }
 
 func (s *Session) maybeDisconnectIdle() {
@@ -725,7 +735,11 @@ func (s *Session) sendPing() {
 	s.schedulePing()
 }
 
-func (s *Session) setupPing() {
+func (s *Session) scheduleInitialPing() {
+	if s.pingInterval <= 0 {
+		return
+	}
+
 	s.timers.mu.Lock()
 	defer s.timers.mu.Unlock()
 
@@ -748,6 +762,24 @@ func (s *Session) schedulePing() {
 
 	s.timers.pingDeadline = time.Now().Add(s.pingInterval).UnixNano()
 	s.timers.schedule()
+}
+
+func (s *Session) scheduleResumeability() {
+	s.timers.mu.Lock()
+	defer s.timers.mu.Unlock()
+
+	if s.resumeInterval > 0 {
+		s.timers.resumeDeadline = time.Now().Add(s.resumeInterval).UnixNano()
+	}
+}
+
+func (s *Session) schedulePresence() {
+	s.timers.mu.Lock()
+	defer s.timers.mu.Unlock()
+
+	if s.presenceInterval > 0 {
+		s.timers.presenceDeadline = time.Now().Add(s.presenceInterval).UnixNano()
+	}
 }
 
 func newPingMessage(format string) *common.PingMessage {
@@ -819,7 +851,13 @@ func (s *Session) handleTimerEvent(ev timerEvent) {
 	case timerEventHandshake:
 		s.maybeDisconnectIdle()
 	case timerEventPresence:
+		s.schedulePresence()
+		s.timers.Schedule()
 	case timerEventExpire:
+		if err := s.broker.TouchSession(s.GetID()); err != nil {
+			s.scheduleResumeability()
+		}
+		s.timers.Schedule()
 	case timerEventPing:
 		s.sendPing()
 	case timerEventPong:

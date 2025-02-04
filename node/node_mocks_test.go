@@ -29,7 +29,8 @@ func NewMockNode() *Node {
 func NewMockSession(uid string, node *Node, opts ...SessionOption) *Session {
 	session := Session{
 		executor:      node,
-		closed:        true,
+		broker:        node.broker,
+		closed:        false,
 		uid:           uid,
 		Log:           slog.With("sid", uid),
 		subscriptions: NewSubscriptionState(),

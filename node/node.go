@@ -803,7 +803,7 @@ func (n *Node) ExecuteRemoteCommand(msg *common.RemoteCommandMessage) {
 // Disconnect adds session to disconnector queue and unregister session from hub
 func (n *Node) Disconnect(s *Session) error {
 	if s.IsResumeable() {
-		n.broker.FinishSession(s.GetID()) // nolint:errcheck
+		n.broker.TouchSession(s.GetID()) // nolint:errcheck
 	}
 
 	n.broker.FinishPresence(s.GetID()) // nolint:errcheck

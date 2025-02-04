@@ -75,8 +75,8 @@ type Broker interface {
 	CommitSession(sid string, session Cacheable) error
 	// Fetches session's state from cache (by session id)
 	RestoreSession(from string) ([]byte, error)
-	// Marks session as finished (for cache expiration)
-	FinishSession(sid string) error
+	// Prevent session cache from expiration
+	TouchSession(sid string) error
 
 	// Adds a new presence record for the stream. Returns true if that's the first
 	// presence record for the presence ID (pid, a unique user presence identifier).
@@ -225,7 +225,7 @@ func (LegacyBroker) RestoreSession(from string) ([]byte, error) {
 	return nil, nil
 }
 
-func (LegacyBroker) FinishSession(sid string) error {
+func (LegacyBroker) TouchSession(sid string) error {
 	return nil
 }
 

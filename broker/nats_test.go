@@ -255,8 +255,18 @@ func TestNATSBroker_Sessions(t *testing.T) {
 	err = broker.CommitSession("test345", &TestCacheable{"cache-me-again"})
 	require.NoError(t, err)
 
-	err = broker.FinishSession("test345")
+	committed, err := anotherBroker.RestoreSession("test345")
+
 	require.NoError(t, err)
+	assert.Equal(t, []byte("cache-me-again"), committed)
+
+	// Expiration
+	time.Sleep(500 * time.Millisecond)
+
+	err = broker.TouchSession("test345")
+	require.NoError(t, err)
+
+	time.Sleep(500 * time.Millisecond)
 
 	finished, err := anotherBroker.RestoreSession("test345")
 
@@ -264,7 +274,7 @@ func TestNATSBroker_Sessions(t *testing.T) {
 	assert.Equal(t, []byte("cache-me-again"), finished)
 
 	// Expiration
-	time.Sleep(2 * time.Second)
+	time.Sleep(1 * time.Second)
 
 	finishedStale, err := anotherBroker.RestoreSession("test345")
 	require.NoError(t, err)
@@ -323,7 +333,7 @@ func TestNATSBroker_SessionsTTLChange(t *testing.T) {
 	assert.Equalf(t, []byte("cache-me-again"), restored, "Expected to restore session data: %s", restored)
 
 	// Touch session
-	err = anotherBroker.FinishSession("test234")
+	err = anotherBroker.TouchSession("test234")
 	require.NoError(t, err)
 
 	time.Sleep(2 * time.Second)

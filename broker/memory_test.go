@@ -152,6 +152,37 @@ func TestMemstream_filterByOffset(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestMemory_RestoreSession(t *testing.T) {
+	config := NewConfig()
+	config.SessionsTTL = 1
+
+	broker := NewMemoryBroker(nil, &config)
+
+	require.NoError(t, broker.CommitSession("123", &TestCacheable{"cache-me"}))
+
+	data, err := broker.RestoreSession("123")
+	require.NoError(t, err)
+	assert.Equal(t, []byte("cache-me"), data)
+
+	time.Sleep(500 * time.Millisecond)
+	broker.expire()
+
+	require.NoError(t, broker.TouchSession("123"))
+	time.Sleep(500 * time.Millisecond)
+	broker.expire()
+
+	data, err = broker.RestoreSession("123")
+	require.NoError(t, err)
+	assert.Equal(t, []byte("cache-me"), data)
+
+	time.Sleep(1 * time.Second)
+	broker.expire()
+
+	data, err = broker.RestoreSession("123")
+	require.NoError(t, err)
+	assert.Nil(t, data)
+}
+
 func TestMemory_Presence(t *testing.T) {
 	config := NewConfig()
 
