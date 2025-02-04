@@ -131,7 +131,7 @@ Parse `--redis_url` (`ANYCABLE_REDIS_URL` or `REDIS_URL`) using the `rueidis` st
 
 - Added ability to require `pong` messages from clients (for better detection of broken connections). ([@palkan][])
 
-Use `--pong_timoout=<number of seconds to wait for ping>` option to enable this feature. **NOTE:** This option is only applied to clients using the extended Action Cable protocol.
+Use `--pong_timeout=<number of seconds to wait for ping>` option to enable this feature. **NOTE:** This option is only applied to clients using the extended Action Cable protocol.
 
 - Allow configuring ping interval and ping timestamp precision per connection. ([@palkan][])
 

@@ -26,6 +26,107 @@ type Executor interface {
 	Disconnect(*Session) error
 }
 
+type timerEvent uint8
+
+const (
+	timerEventHandshake timerEvent = 1
+	timerEventPresence  timerEvent = 2
+	timerEventExpire    timerEvent = 3
+	timerEventPing      timerEvent = 4
+	timerEventPong      timerEvent = 5
+)
+
+type SessionTimers struct {
+	timer *time.Timer
+
+	pingDeadline      int64
+	handshakeDeadline int64
+	pongDeadline      int64
+	expireDeadline    int64
+	presenceDeadline  int64
+
+	nextEvent    timerEvent
+	timerHandler func(timerEvent)
+
+	mu sync.Mutex
+}
+
+func (st *SessionTimers) Start(handler func(timerEvent)) {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+
+	st.timerHandler = handler
+	st.schedule()
+}
+
+func (st *SessionTimers) Stop() {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+
+	if st.timer != nil {
+		st.timer.Stop()
+	}
+}
+
+func (st *SessionTimers) Schedule() {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+
+	st.schedule()
+}
+
+func (st *SessionTimers) schedule() {
+	if st.timer != nil {
+		st.timer.Stop()
+	}
+
+	var ev timerEvent
+	var delay int64
+
+	if st.pingDeadline > 0 {
+		ev = timerEventPing
+		delay = st.pingDeadline
+	}
+
+	if st.handshakeDeadline > 0 && (delay == 0 || st.handshakeDeadline < delay) {
+		ev = timerEventHandshake
+		delay = st.handshakeDeadline
+	}
+
+	if st.pongDeadline > 0 && (delay == 0 || st.pongDeadline < delay) {
+		ev = timerEventPong
+		delay = st.pongDeadline
+	}
+
+	if st.expireDeadline > 0 && (delay == 0 || st.expireDeadline < delay) {
+		ev = timerEventExpire
+		delay = st.expireDeadline
+	}
+
+	if st.presenceDeadline > 0 && (delay == 0 || st.presenceDeadline < delay) {
+		ev = timerEventPresence
+		delay = st.presenceDeadline
+	}
+
+	if ev > 0 {
+		st.nextEvent = ev
+		after := time.Duration(delay-time.Now().UnixNano()) * time.Nanosecond
+		if st.timer != nil {
+			st.timer.Reset(after)
+		} else {
+			st.timer = time.AfterFunc(after, st.tick)
+		}
+	}
+}
+
+func (st *SessionTimers) tick() {
+	st.mu.Lock()
+	op := st.nextEvent
+	st.mu.Unlock()
+
+	st.timerHandler(op)
+}
+
 // Session represents active client
 type Session struct {
 	conn          Connection
@@ -47,15 +148,12 @@ type Session struct {
 
 	sendCh chan *ws.SentFrame
 
-	pingTimer    *time.Timer
-	pingInterval time.Duration
+	timers *SessionTimers
 
+	pingInterval           time.Duration
 	pingTimestampPrecision string
 
-	handshakeDeadline time.Time
-
 	pongTimeout time.Duration
-	pongTimer   *time.Timer
 
 	resumable bool
 	prevSid   string
@@ -101,7 +199,7 @@ func WithExecutor(ex Executor) SessionOption {
 // This option also indicates that we MUST NOT perform Authenticate on connect.
 func WithHandshakeMessageDeadline(deadline time.Time) SessionOption {
 	return func(s *Session) {
-		s.handshakeDeadline = deadline
+		s.timers.handshakeDeadline = deadline.UnixNano()
 	}
 }
 
@@ -143,6 +241,7 @@ func NewSession(node *Node, conn Connection, url string, headers *map[string]str
 		sendCh:                 make(chan *ws.SentFrame, 256),
 		closed:                 false,
 		Connected:              false,
+		timers:                 &SessionTimers{},
 		pingInterval:           time.Duration(node.config.PingInterval) * time.Second,
 		pingTimestampPrecision: node.config.PingTimestampPrecision,
 		// Use JSON by default
@@ -162,15 +261,12 @@ func NewSession(node *Node, conn Connection, url string, headers *map[string]str
 	}
 
 	if session.pingInterval > 0 {
-		session.startPing()
-	}
-
-	if !session.handshakeDeadline.IsZero() {
-		val := time.Until(session.handshakeDeadline)
-		time.AfterFunc(val, session.maybeDisconnectIdle)
+		session.setupPing()
 	}
 
 	go session.SendMessages()
+
+	session.timers.Start(session.handleTimerEvent)
 
 	return session
 }
@@ -188,7 +284,7 @@ func (s *Session) UnderlyingConn() Connection {
 }
 
 func (s *Session) AuthenticateOnConnect() bool {
-	return s.handshakeDeadline.IsZero()
+	return s.timers.handshakeDeadline == 0
 }
 
 func (s *Session) IsConnected() bool {
@@ -207,6 +303,7 @@ func (s *Session) maybeDisconnectIdle() {
 
 	if s.Connected {
 		s.mu.Unlock()
+		s.timers.Schedule()
 		return
 	}
 
@@ -530,15 +627,9 @@ func (s *Session) close() {
 	}
 
 	s.closed = true
-	defer s.mu.Unlock()
+	s.mu.Unlock()
 
-	if s.pingTimer != nil {
-		s.pingTimer.Stop()
-	}
-
-	if s.pongTimer != nil {
-		s.pongTimer.Stop()
-	}
+	s.timers.Stop()
 }
 
 func (s *Session) IsClosed() bool {
@@ -631,12 +722,12 @@ func (s *Session) sendPing() {
 		return
 	}
 
-	s.addPing()
+	s.schedulePing()
 }
 
-func (s *Session) startPing() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (s *Session) setupPing() {
+	s.timers.mu.Lock()
+	defer s.timers.mu.Unlock()
 
 	// Calculate the minimum and maximum durations
 	minDuration := s.pingInterval / 2
@@ -644,18 +735,19 @@ func (s *Session) startPing() {
 
 	initialInterval := time.Duration(rand.Int63n(int64(maxDuration-minDuration))) + minDuration // nolint:gosec
 
-	s.pingTimer = time.AfterFunc(initialInterval, s.sendPing)
+	s.timers.pingDeadline = time.Now().Add(initialInterval).UnixNano()
 
 	if s.pongTimeout > 0 {
-		s.pongTimer = time.AfterFunc(s.pongTimeout+initialInterval, s.handleNoPong)
+		s.timers.pongDeadline = time.Now().Add(s.pongTimeout + initialInterval).UnixNano()
 	}
 }
 
-func (s *Session) addPing() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (s *Session) schedulePing() {
+	s.timers.mu.Lock()
+	defer s.timers.mu.Unlock()
 
-	s.pingTimer = time.AfterFunc(s.pingInterval, s.sendPing)
+	s.timers.pingDeadline = time.Now().Add(s.pingInterval).UnixNano()
+	s.timers.schedule()
 }
 
 func newPingMessage(format string) *common.PingMessage {
@@ -673,26 +765,33 @@ func newPingMessage(format string) *common.PingMessage {
 	return (&common.PingMessage{Type: "ping", Message: ts})
 }
 
+// keepalive is called when we receive a message from the client
 func (s *Session) keepalive() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.timers.mu.Lock()
+	defer s.timers.mu.Unlock()
 
-	if s.pongTimer == nil {
-		return
+	needReschedule := false
+
+	if s.pongTimeout > 0 {
+		s.timers.pongDeadline = 0
+		needReschedule = true
 	}
 
-	s.pongTimer.Stop()
+	if needReschedule {
+		s.timers.schedule()
+	}
 }
 
 func (s *Session) resetPong() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.timers.mu.Lock()
+	defer s.timers.mu.Unlock()
 
-	if s.pongTimer == nil {
+	if s.pongTimeout <= 0 || s.timers.pongDeadline == 0 {
 		return
 	}
 
-	s.pongTimer.Reset(s.pongTimeout)
+	s.timers.pongDeadline = time.Now().Add(s.pongTimeout).UnixNano()
+	s.timers.schedule()
 }
 
 func (s *Session) handleNoPong() {
@@ -709,6 +808,23 @@ func (s *Session) handleNoPong() {
 
 	s.Send(common.NewDisconnectMessage(common.NO_PONG_REASON, true)) // nolint:errcheck
 	s.Disconnect("No Pong", ws.CloseNormalClosure)
+}
+
+func (s *Session) handleTimerEvent(ev timerEvent) {
+	if s.IsClosed() {
+		return
+	}
+
+	switch ev {
+	case timerEventHandshake:
+		s.maybeDisconnectIdle()
+	case timerEventPresence:
+	case timerEventExpire:
+	case timerEventPing:
+		s.sendPing()
+	case timerEventPong:
+		s.handleNoPong()
+	}
 }
 
 func (s *Session) encodeMessage(msg encoders.EncodedMessage) (*ws.SentFrame, error) {
