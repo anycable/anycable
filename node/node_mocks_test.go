@@ -37,6 +37,7 @@ func NewMockSession(uid string, node *Node, opts ...SessionOption) *Session {
 		sendCh:        make(chan *ws.SentFrame, 256),
 		encoder:       encoders.JSON{},
 		metrics:       metrics.NoopMetrics{},
+		timers:        &SessionTimers{},
 	}
 
 	session.SetIdentifiers(uid)
