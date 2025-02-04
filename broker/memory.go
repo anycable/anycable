@@ -164,12 +164,8 @@ func (ms *memstream) filterByTime(since int64, callback func(e *entry)) error {
 }
 
 type sessionEntry struct {
-	data []byte
-}
-
-type expireSessionEntry struct {
-	deadline int64
-	sid      string
+	data       []byte
+	expiration *utils.PriorityQueueItem[string, int64]
 }
 
 type presenceSessionEntry struct {
@@ -232,7 +228,7 @@ type Memory struct {
 	epoch          string
 	streams        map[string]*memstream
 	sessions       map[string]*sessionEntry
-	expireSessions []*expireSessionEntry
+	expireSessions *utils.PriorityQueue[string, int64]
 
 	presence *presenceState
 
@@ -247,13 +243,14 @@ func NewMemoryBroker(node Broadcaster, config *Config) *Memory {
 	epoch, _ := nanoid.Nanoid(4)
 
 	return &Memory{
-		broadcaster: node,
-		config:      config,
-		tracker:     NewStreamsTracker(),
-		streams:     make(map[string]*memstream),
-		sessions:    make(map[string]*sessionEntry),
-		presence:    newPresenceState(),
-		epoch:       epoch,
+		broadcaster:    node,
+		config:         config,
+		tracker:        NewStreamsTracker(),
+		streams:        make(map[string]*memstream),
+		sessions:       make(map[string]*sessionEntry),
+		expireSessions: utils.NewPriorityQueue[string, int64](),
+		presence:       newPresenceState(),
+		epoch:          epoch,
 	}
 }
 
@@ -417,7 +414,17 @@ func (b *Memory) CommitSession(sid string, session Cacheable) error {
 		return err
 	}
 
-	b.sessions[sid] = &sessionEntry{data: cached}
+	deadline := time.Now().UnixMilli() + (b.config.SessionsTTL * 1000)
+	var expiration *utils.PriorityQueueItem[string, int64]
+
+	if entry, ok := b.sessions[sid]; ok {
+		expiration = entry.expiration
+		b.expireSessions.Update(expiration, deadline)
+	} else {
+		expiration = b.expireSessions.PushItem(sid, deadline)
+	}
+
+	b.sessions[sid] = &sessionEntry{data: cached, expiration: expiration}
 
 	return nil
 }
@@ -433,13 +440,10 @@ func (b *Memory) RestoreSession(from string) ([]byte, error) {
 	return nil, nil
 }
 
-func (b *Memory) FinishSession(sid string) error {
+func (b *Memory) TouchSession(sid string) error {
 	b.sessionsMu.Lock()
-	if _, ok := b.sessions[sid]; ok {
-		b.expireSessions = append(
-			b.expireSessions,
-			&expireSessionEntry{sid: sid, deadline: time.Now().Unix() + b.config.SessionsTTL},
-		)
+	if entry, ok := b.sessions[sid]; ok {
+		b.expireSessions.Update(entry.expiration, time.Now().UnixMilli()+(b.config.SessionsTTL*1000))
 	}
 	b.sessionsMu.Unlock()
 
@@ -644,25 +648,31 @@ func (b *Memory) expire() {
 
 	b.streamsMu.Unlock()
 
-	b.sessionsMu.Lock()
-
-	i := 0
-
-	for _, expired := range b.expireSessions {
-		if expired.deadline < now {
-			delete(b.sessions, expired.sid)
-			i++
-			continue
-		}
-		break
-	}
-
-	b.expireSessions = b.expireSessions[i:]
-
-	b.sessionsMu.Unlock()
+	// sessions expiration
+	b.expireSessionsLoop()
 
 	// presence expiration
 	b.expirePresence()
+}
+
+func (b *Memory) expireSessionsLoop() {
+	b.sessionsMu.Lock()
+
+	now := time.Now().UnixMilli()
+
+	for {
+		item := b.expireSessions.Peek()
+
+		if item == nil || item.Priority() > now {
+			break
+		}
+
+		b.expireSessions.PopItem()
+
+		delete(b.sessions, item.Value())
+	}
+
+	b.sessionsMu.Unlock()
 }
 
 func (b *Memory) expirePresence() {

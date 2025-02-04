@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/encoders"
@@ -744,7 +745,7 @@ func TestRestoreSession(t *testing.T) {
 	go node.hub.Run()
 	defer node.hub.Shutdown()
 
-	prev_session := NewMockSession("114", node, WithResumable(true))
+	prev_session := NewMockSession("114", node, WithKeepaliveIntervals(500*time.Millisecond, 500*time.Millisecond))
 	prev_session.subscriptions.AddChannel("fruits_channel")
 	prev_session.subscriptions.AddChannelStream("fruits_channel", "arancia")
 	prev_session.subscriptions.AddChannelStream("fruits_channel", "limoni")
@@ -764,7 +765,7 @@ func TestRestoreSession(t *testing.T) {
 		On("Subscribe", mock.Anything).
 		Return(func(name string) string { return name })
 
-	session := NewMockSession("214", node, WithResumable(true), WithPrevSID("114"))
+	session := NewMockSession("214", node, WithKeepaliveIntervals(500*time.Millisecond, 500*time.Millisecond), WithPrevSID("114"))
 
 	t.Run("Successful restore via header", func(t *testing.T) {
 		res, err := node.Authenticate(session)

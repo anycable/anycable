@@ -21,7 +21,14 @@ func (r *Runner) sessionOptionsFromProtocol(protocol string) []node.SessionOptio
 	opts := []node.SessionOption{}
 
 	if common.IsExtendedActionCableProtocol(protocol) {
-		opts = append(opts, node.WithResumable(true))
+		// configure session cache and presence keepalive intervals
+		// (must be slightly less than the corresponding TTLs)
+		opts = append(opts,
+			node.WithKeepaliveIntervals(
+				time.Duration(r.config.Broker.SessionsTTL*500)*time.Millisecond,
+				time.Duration(r.config.Broker.PresenceTTL*500)*time.Millisecond,
+			),
+		)
 
 		if r.config.App.PongTimeout > 0 {
 			opts = append(opts, node.WithPongTimeout(time.Duration(r.config.App.PongTimeout)*time.Second))

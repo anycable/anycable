@@ -427,7 +427,7 @@ func (n *NATS) RestoreSession(sid string) ([]byte, error) {
 	return entry.Value(), nil
 }
 
-func (n *NATS) FinishSession(sid string) error {
+func (n *NATS) TouchSession(sid string) error {
 	err := n.Ready(jetstreamReadyTimeout)
 	if err != nil {
 		return err
