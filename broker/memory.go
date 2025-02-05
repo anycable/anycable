@@ -450,11 +450,11 @@ func (b *Memory) TouchSession(sid string) error {
 	return nil
 }
 
-func (b *Memory) FinishPresence(sid string) error {
+func (b *Memory) TouchPresence(sid string) error {
 	b.presence.mu.Lock()
 
 	if sp, ok := b.presence.sessions[sid]; ok {
-		sp.deadline = time.Now().Unix() + b.config.PresenceTTL
+		sp.deadline = time.Now().UnixMilli() + (b.config.PresenceTTL * 1000)
 	}
 
 	b.presence.mu.Unlock()
@@ -472,7 +472,8 @@ func (b *Memory) PresenceAdd(stream string, sid string, pid string, info interfa
 
 	if _, ok := b.presence.sessions[sid]; !ok {
 		b.presence.sessions[sid] = &presenceSessionEntry{
-			streams: make(map[string]string),
+			streams:  make(map[string]string),
+			deadline: time.Now().UnixMilli() + (b.config.PresenceTTL * 1000),
 		}
 	}
 
@@ -649,13 +650,13 @@ func (b *Memory) expire() {
 	b.streamsMu.Unlock()
 
 	// sessions expiration
-	b.expireSessionsLoop()
+	b.expireSessionsCache()
 
 	// presence expiration
 	b.expirePresence()
 }
 
-func (b *Memory) expireSessionsLoop() {
+func (b *Memory) expireSessionsCache() {
 	b.sessionsMu.Lock()
 
 	now := time.Now().UnixMilli()
@@ -678,7 +679,7 @@ func (b *Memory) expireSessionsLoop() {
 func (b *Memory) expirePresence() {
 	b.presence.mu.Lock()
 
-	now := time.Now().Unix()
+	now := time.Now().UnixMilli()
 	toDelete := []string{}
 
 	for sid, sp := range b.presence.sessions {

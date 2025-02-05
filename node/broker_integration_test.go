@@ -464,7 +464,9 @@ func sharedIntegrationPresence(t *testing.T, node *Node, controller *mocks.Contr
 		}, nil)
 
 	setupSessions := func() (*Session, *Session, func()) {
-		session := requireAuthenticatedSession(t, node, "sasha")
+		session := requireAuthenticatedSession(t, node, "sasha", WithKeepaliveIntervals(0, 500*time.Millisecond))
+		session.startTimers()
+
 		_, err := node.Subscribe(
 			session,
 			&common.Message{
@@ -474,7 +476,9 @@ func sharedIntegrationPresence(t *testing.T, node *Node, controller *mocks.Contr
 		require.NoError(t, err)
 		assertReceive(t, session, `{"type":"confirm","identifier":"chat_1"}`)
 
-		session2 := requireAuthenticatedSession(t, node, "mia")
+		session2 := requireAuthenticatedSession(t, node, "mia", WithKeepaliveIntervals(0, 500*time.Millisecond))
+		session2.startTimers()
+
 		_, err = node.Subscribe(
 			session2,
 			&common.Message{
@@ -485,8 +489,13 @@ func sharedIntegrationPresence(t *testing.T, node *Node, controller *mocks.Contr
 		assertReceive(t, session2, `{"type":"confirm","identifier":"chat_1"}`)
 
 		return session, session2, func() {
+			// Unsubscribe to ensure sessions are removed from the presence set
 			node.Unsubscribe(session, &common.Message{Identifier: "chat_1", Command: "unsubscribe"})  // nolint:errcheck
 			node.Unsubscribe(session2, &common.Message{Identifier: "chat_1", Command: "unsubscribe"}) // nolint:errcheck
+
+			// Disconnect to ensure timers are stopped and no conflicts between examples
+			session.DisconnectNow("normal", 1)
+			session2.DisconnectNow("normal", 1)
 		}
 	}
 
@@ -552,8 +561,15 @@ func sharedIntegrationPresence(t *testing.T, node *Node, controller *mocks.Contr
 
 		assertReceive(t, mia, `{"type":"presence","identifier":"chat_1","message":{"type":"info","total":1,"records":[{"id":"142","info":{"name":"Rickie"}}]}}`)
 
-		err = node.Disconnect(sasha)
+		// Make sure session doesn't expire while it's still connected
+		time.Sleep(3 * time.Second)
+
+		err = node.Presence(mia, &common.Message{Identifier: "chat_1", Command: "presence"})
 		require.NoError(t, err)
+
+		assertReceive(t, mia, `{"type":"presence","identifier":"chat_1","message":{"type":"info","total":1,"records":[{"id":"142","info":{"name":"Rickie"}}]}}`)
+
+		sasha.DisconnectNow("normal", 1)
 
 		// Wait for expiration to happen
 		time.Sleep(4 * time.Second)
@@ -575,7 +591,9 @@ func setupIntegrationNode() (*Node, *mocks.Controller) {
 	controller := &mocks.Controller{}
 	controller.On("Shutdown").Return(nil)
 
-	node := NewNode(&config, WithController(controller), WithInstrumenter(metrics.NewMetrics(nil, 10, slog.Default())))
+	logger := slog.Default()
+	// slog.SetLogLoggerLevel(slog.LevelDebug)
+	node := NewNode(&config, WithController(controller), WithInstrumenter(metrics.NewMetrics(nil, 10, logger)))
 	node.SetDisconnector(NewNoopDisconnector())
 
 	return node, controller
@@ -619,8 +637,8 @@ func assertReceiveMsg(t *testing.T, s *Session) map[string]interface{} {
 	return parsedMessage
 }
 
-func requireAuthenticatedSession(t *testing.T, node *Node, sid string) *Session {
-	session := NewMockSessionWithEnv(sid, node, "ws://test.anycable.io/cable", nil)
+func requireAuthenticatedSession(t *testing.T, node *Node, sid string, opts ...SessionOption) *Session {
+	session := NewMockSessionWithEnv(sid, node, "ws://test.anycable.io/cable", nil, opts...)
 
 	controller := node.controller.(*mocks.Controller)
 

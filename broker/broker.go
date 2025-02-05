@@ -89,8 +89,8 @@ type Broker interface {
 	// Retrieves presence information for the stream (counts, records, etc. depending on the options)
 	PresenceInfo(stream string, opts ...PresenceInfoOption) (*common.PresenceInfo, error)
 
-	// Marks presence record as finished (for cache expiration)
-	FinishPresence(sid string) error
+	// Marks presence record as still alive
+	TouchPresence(sid string) error
 }
 
 // LocalBroker is a single-node broker that can used to store streams data locally
@@ -241,6 +241,6 @@ func (LegacyBroker) PresenceInfo(stream string, opts ...PresenceInfoOption) (*co
 	return nil, errors.New("presence not supported")
 }
 
-func (LegacyBroker) FinishPresence(sid string) error {
+func (LegacyBroker) TouchPresence(sid string) error {
 	return nil
 }
