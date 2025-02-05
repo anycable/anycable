@@ -806,7 +806,7 @@ func (n *Node) Disconnect(s *Session) error {
 		n.broker.TouchSession(s.GetID()) // nolint:errcheck
 	}
 
-	n.broker.FinishPresence(s.GetID()) // nolint:errcheck
+	n.broker.TouchPresence(s.GetID()) // nolint:errcheck
 
 	if n.IsShuttingDown() {
 		// Make sure session is removed from hub, so we don't try to send

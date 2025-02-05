@@ -257,12 +257,27 @@ func TestMemory_expirePresence(t *testing.T) {
 
 	assert.Equal(t, 2, info.Total)
 
-	broker.FinishPresence("s1") // nolint: errcheck
-	broker.FinishPresence("s2") // nolint: errcheck
+	time.Sleep(500 * time.Millisecond)
+	broker.TouchPresence("s1") // nolint: errcheck
 
-	time.Sleep(2 * time.Second)
+	time.Sleep(500 * time.Millisecond)
+	broker.TouchPresence("s1") // nolint: errcheck
 
-	broker.PresenceAdd("a", "s3", "user_1", "john") // nolint: errcheck
+	time.Sleep(500 * time.Millisecond)
+	broker.TouchPresence("s1") // nolint: errcheck
+
+	time.Sleep(500 * time.Millisecond)
+	broker.expire()
+
+	info, err = broker.PresenceInfo("a")
+	require.NoError(t, err)
+
+	assert.Equal(t, 1, info.Total)
+	assert.Equal(t, "user_1", info.Records[0].ID)
+
+	time.Sleep(1000 * time.Millisecond)
+
+	broker.PresenceAdd("a", "s3", "user_1", "jack") // nolint: errcheck
 
 	broker.expire()
 
@@ -271,4 +286,5 @@ func TestMemory_expirePresence(t *testing.T) {
 
 	assert.Equal(t, 1, info.Total)
 	assert.Equal(t, "user_1", info.Records[0].ID)
+	assert.Equal(t, "jack", info.Records[0].Info)
 }

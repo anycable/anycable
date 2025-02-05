@@ -41,15 +41,15 @@ feature "Presence" do
   end
 
   let(:client2) do
-    build_client(ignore: %w[ping welcome], qs: "test=presence_subscribe&user_id=2024&name=Bart")
+    build_client(ignore: %w[ping welcome], qs: "test=presence_subscribe&user_id=2024&name=Bart", protocol: "actioncable-v1-ext-json")
   end
 
   let(:client2_clone) do
-    build_client(ignore: %w[ping welcome], qs: "test=presence_subscribe&user_id=2024&name=Bart")
+    build_client(ignore: %w[ping welcome], qs: "test=presence_subscribe&user_id=2024&name=Bart", protocol: "actioncable-v1-ext-json")
   end
 
   let(:client3) do
-    build_client(ignore: %w[ping welcome], qs: "test=presence_subscribe&user_id=2025&name=Lisa")
+    build_client(ignore: %w[ping welcome], qs: "test=presence_subscribe&user_id=2025&name=Lisa", protocol: "actioncable-v1-ext-json")
   end
 
   scenario %(

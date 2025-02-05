@@ -856,12 +856,12 @@ func (s *Session) handleTimerEvent(ev timerEvent) {
 	case timerEventHandshake:
 		s.maybeDisconnectIdle()
 	case timerEventPresence:
+		s.broker.TouchPresence(s.GetID()) // nolint:errcheck
 		s.schedulePresence()
 		s.timers.Schedule()
 	case timerEventExpire:
-		if err := s.broker.TouchSession(s.GetID()); err != nil {
-			s.scheduleResumeability()
-		}
+		s.broker.TouchSession(s.GetID()) // nolint:errcheck
+		s.scheduleResumeability()
 		s.timers.Schedule()
 	case timerEventPing:
 		s.sendPing()

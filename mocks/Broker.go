@@ -52,24 +52,6 @@ func (_m *Broker) CommitSession(sid string, session broker.Cacheable) error {
 	return r0
 }
 
-// FinishPresence provides a mock function with given fields: sid
-func (_m *Broker) FinishPresence(sid string) error {
-	ret := _m.Called(sid)
-
-	if len(ret) == 0 {
-		panic("no return value specified for FinishPresence")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(string) error); ok {
-		r0 = rf(sid)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
 // HandleBroadcast provides a mock function with given fields: msg
 func (_m *Broker) HandleBroadcast(msg *common.StreamMessage) {
 	_m.Called(msg)
@@ -316,6 +298,24 @@ func (_m *Broker) Subscribe(stream string) string {
 		r0 = rf(stream)
 	} else {
 		r0 = ret.Get(0).(string)
+	}
+
+	return r0
+}
+
+// TouchPresence provides a mock function with given fields: sid
+func (_m *Broker) TouchPresence(sid string) error {
+	ret := _m.Called(sid)
+
+	if len(ret) == 0 {
+		panic("no return value specified for TouchPresence")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string) error); ok {
+		r0 = rf(sid)
+	} else {
+		r0 = ret.Error(0)
 	}
 
 	return r0

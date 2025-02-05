@@ -494,7 +494,7 @@ func (n *NATS) PresenceInfo(stream string, opts ...PresenceInfoOption) (*common.
 	return nil, errors.New("presence not supported")
 }
 
-func (n *NATS) FinishPresence(sid string) error {
+func (n *NATS) TouchPresence(sid string) error {
 	return nil
 }
 
