@@ -51,6 +51,44 @@ scenario = [
       },
       {
         sleep: {
+          time: 0.5
+        }
+      },
+      {
+        send: {
+          data: {
+            command: "pong"
+          }
+        }
+      },
+      {
+        receive: {
+          "data>": {
+            type: "ping"
+          }
+        }
+      },
+      {
+        sleep: {
+          time: 0.5
+        }
+      },
+      {
+        send: {
+          data: {
+            command: "pong"
+          }
+        }
+      },
+      {
+        receive: {
+          "data>": {
+            type: "ping"
+          }
+        }
+      },
+      {
+        sleep: {
           time: 1
         }
       },
