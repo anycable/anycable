@@ -6,6 +6,8 @@ gem "colorize"
 gem "puma"
 
 gem "activesupport", "~> 7.0.0"
+# https://github.com/rails/rails/issues/54263
+gem "concurrent-ruby", "1.3.4"
 
 if File.directory?(File.join(__dir__, "../anycable-rb"))
   $stdout.puts "\n=== Using local gems for Anyt ===\n\n"
