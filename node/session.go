@@ -761,6 +761,11 @@ func (s *Session) schedulePing() {
 	defer s.timers.mu.Unlock()
 
 	s.timers.pingDeadline = time.Now().Add(s.pingInterval).UnixNano()
+
+	if s.pongTimeout > 0 && s.timers.pongDeadline == 0 {
+		s.timers.pongDeadline = time.Now().Add(s.pongTimeout).UnixNano()
+	}
+
 	s.timers.schedule()
 }
 
@@ -804,7 +809,7 @@ func (s *Session) keepalive() {
 
 	needReschedule := false
 
-	if s.pongTimeout > 0 {
+	if s.timers.pongDeadline > 0 {
 		s.timers.pongDeadline = 0
 		needReschedule = true
 	}
@@ -818,11 +823,11 @@ func (s *Session) resetPong() {
 	s.timers.mu.Lock()
 	defer s.timers.mu.Unlock()
 
-	if s.pongTimeout <= 0 || s.timers.pongDeadline == 0 {
+	if s.timers.pongDeadline <= 0 {
 		return
 	}
 
-	s.timers.pongDeadline = time.Now().Add(s.pongTimeout).UnixNano()
+	s.timers.pongDeadline += s.pongTimeout.Nanoseconds()
 	s.timers.schedule()
 }
 
