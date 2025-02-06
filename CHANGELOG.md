@@ -4,6 +4,8 @@
 
 ## 1.6.0-dev
 
+- Add `publications_total` and `remote_commands_total` metrics. ([@palkan][])
+
 - Add gRPC request timeouts support. ([@palkan][])
 
 You can now configure the timeout for RPC requests via the `--rpc_request_timeout` option (or `ANYCABLE_RPC_REQUEST_TIMEOUT` environment variable). The corresponding metric `rpc_timeouts_total` is also added.

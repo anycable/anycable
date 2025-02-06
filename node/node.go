@@ -31,7 +31,9 @@ const (
 	metricsFailedAuths           = "failed_auths_total"
 	metricsReceivedMsg           = "client_msg_total"
 	metricsFailedCommandReceived = "failed_client_msg_total"
+	metricsPublications          = "publications_total"
 	metricsBroadcastMsg          = "broadcast_msg_total"
+	metricsRemoteCommands        = "remote_commands_total"
 	metricsUnknownBroadcast      = "failed_broadcast_msg_total"
 
 	metricsSentMsg    = "server_msg_total"
@@ -204,6 +206,8 @@ func (n *Node) HandleBroadcast(raw []byte) {
 		n.log.Warn("failed to parse pubsub message", "data", logger.CompactValue(raw), "error", err)
 		return
 	}
+
+	n.metrics.CounterIncrement(metricsPublications)
 
 	switch v := msg.(type) {
 	case common.StreamMessage:
@@ -784,8 +788,7 @@ func (n *Node) Broadcast(msg *common.StreamMessage) {
 
 // Execute remote command (locally)
 func (n *Node) ExecuteRemoteCommand(msg *common.RemoteCommandMessage) {
-	// TODO: Add remote commands metrics
-	// n.metrics.CounterIncrement(metricsRemoteCommandsMsg)
+	n.metrics.CounterIncrement(metricsRemoteCommands)
 	switch msg.Command { // nolint:gocritic
 	case "disconnect":
 		dmsg, err := msg.ToRemoteDisconnectMessage()
@@ -1104,8 +1107,10 @@ func (n *Node) registerMetrics() {
 	n.metrics.RegisterCounter(metricsFailedAuths, "The total number of failed authentication attempts")
 	n.metrics.RegisterCounter(metricsReceivedMsg, "The total number of received messages from clients")
 	n.metrics.RegisterCounter(metricsFailedCommandReceived, "The total number of unrecognized messages received from clients")
+	n.metrics.RegisterCounter(metricsPublications, "The total number of publications received (from the application)")
 	n.metrics.RegisterCounter(metricsBroadcastMsg, "The total number of messages received through PubSub (for broadcast)")
-	n.metrics.RegisterCounter(metricsUnknownBroadcast, "The total number of unrecognized messages received through PubSub")
+	n.metrics.RegisterCounter(metricsRemoteCommands, "The total number of remote commands received through PubSub")
+	n.metrics.RegisterCounter(metricsUnknownBroadcast, "The total number of unrecognized publications received from the application")
 
 	n.metrics.RegisterCounter(metricsSentMsg, "The total number of messages sent to clients")
 	n.metrics.RegisterCounter(metricsFailedSent, "The total number of messages failed to send to clients")

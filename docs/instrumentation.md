@@ -36,6 +36,14 @@ The `rpc_timeouts_total` shows the number of timed out RPC requests. Use this me
 
 The `rpc_pending_num` is the **key latency metrics** of AnyCable-Go. We limit the number of concurrent RPC requests (to prevent the RPC server exhaustion and retries). If the number of pending requests grows (which means we can not keep up with the rate of incoming messages), you should consider either tuning concurrency settings or scale up your cluster.
 
+### `publications_total` / `broadcast_msg_total` / `remote_commands_total`
+
+We provide various metrics around broadcasting functionality that could help you to identify problems in different parts of the AnyCable's pub/sub architecture.
+
+The `publications_total` describes the number of publication requests received from the application through a non-distributed broadcasting interface (e.g., HTTP or Redis Streams). Each publication is processed only by a single node in the cluster, so the values could tell you how the publications are distributed and whether there is a connectivity between the application and the AnyCable cluster. Both message broadcasts and remote commands are considered publications for this metrics.
+
+The `broadcast_msg_total` describes the number of broadcasts (i.e., attempts to send a message to clients connected to a given stream) performed by the server instance. The value is incremented by each server in the cluster for each publication. Note that when using HTTP or Redis Streams broadcaster, this value is only updated when there are registered clients for the stream. When using legacy NATS or Redis Pub/Sub broadcasters, the value is incremented for each publication.
+
 ### `failed_auths_total`
 
 This `failed_auths_total` indicates the total number of unauthenticated connection attempts and has a special purpose: it helps you identify misconfigured client credentials and malicious behaviour. Ideally, the change rate of this number should be low comparing to the `clients_num`.)
