@@ -34,16 +34,16 @@ const (
 	// ProtoVersions contains a comma-seprated list of compatible RPC protos versions
 	// (we pass it as request meta to notify clients)
 	ProtoVersions = "v1"
-	invokeTimeout = 3000
 
-	retryExhaustedInterval   = 10
-	retryUnavailableInterval = 100
+	retryExhaustedInterval   = int64(10)
+	retryUnavailableInterval = int64(100)
 
 	refreshMetricsInterval = time.Duration(10) * time.Second
 
 	metricsRPCCalls        = "rpc_call_total"
 	metricsRPCRetries      = "rpc_retries_total"
 	metricsRPCFailures     = "rpc_error_total"
+	metricsRPCTimeouts     = "rpc_timeout_total"
 	metricsRPCPending      = "rpc_pending_num"
 	metricsRPCCapacity     = "rpc_capacity_num"
 	metricsGRPCActiveConns = "grpc_active_conn_num"
@@ -161,6 +161,11 @@ type Controller struct {
 	log         *slog.Logger
 	clientState ClientHelper
 
+	// Timeout for a single RPC request
+	requestTimeout time.Duration
+	// Timeout for an RPC command that may retry a few times
+	commandTimeout time.Duration
+
 	timerMu      sync.Mutex
 	metricsTimer *time.Timer
 }
@@ -170,6 +175,7 @@ func NewController(metrics metrics.Instrumenter, config *Config, l *slog.Logger)
 	metrics.RegisterCounter(metricsRPCCalls, "The total number of RPC calls")
 	metrics.RegisterCounter(metricsRPCRetries, "The total number of RPC call retries")
 	metrics.RegisterCounter(metricsRPCFailures, "The total number of failed RPC calls")
+	metrics.RegisterCounter(metricsRPCTimeouts, "The total number of RPC call that timed out")
 	metrics.RegisterGauge(metricsRPCPending, "The number of pending RPC calls")
 
 	capacity := config.Concurrency
@@ -192,7 +198,23 @@ func NewController(metrics metrics.Instrumenter, config *Config, l *slog.Logger)
 		metrics.RegisterGauge(metricsGRPCActiveConns, "The number of active HTTP connections used by gRPC")
 	}
 
-	return &Controller{log: l.With("context", "rpc"), metrics: metrics, config: config, barrier: barrier}, nil
+	requestTimeout := time.Duration(config.RequestTimeout) * time.Millisecond
+
+	// TODO(v2): remove this fallback
+	if config.Impl() == "http" {
+		requestTimeout = time.Duration(config.GetHTTPRequestTimeout()) * time.Millisecond
+	}
+
+	commandTimeout := time.Duration(config.CommandTimeout) * time.Millisecond
+
+	return &Controller{
+		log:            l.With("context", "rpc"),
+		metrics:        metrics,
+		config:         config,
+		barrier:        barrier,
+		requestTimeout: requestTimeout,
+		commandTimeout: commandTimeout,
+	}, nil
 }
 
 // Start initializes RPC connection pool
@@ -305,10 +327,10 @@ func (c *Controller) Authenticate(sid string, env *common.SessionEnv) (*common.C
 	defer c.barrier.Release()
 
 	op := func() (interface{}, error) {
-		return c.client.Connect(
-			newContext(sid),
-			protocol.NewConnectMessage(env),
-		)
+		ctx, cancel := c.newRequestContext(sid)
+		defer cancel()
+
+		return c.client.Connect(ctx, protocol.NewConnectMessage(env))
 	}
 
 	c.metrics.CounterIncrement(metricsRPCCalls)
@@ -341,8 +363,11 @@ func (c *Controller) Subscribe(sid string, env *common.SessionEnv, id string, ch
 	defer c.barrier.Release()
 
 	op := func() (interface{}, error) {
+		ctx, cancel := c.newRequestContext(sid)
+		defer cancel()
+
 		return c.client.Command(
-			newContext(sid),
+			ctx,
 			protocol.NewCommandMessage(env, "subscribe", channel, id, ""),
 		)
 	}
@@ -361,8 +386,11 @@ func (c *Controller) Unsubscribe(sid string, env *common.SessionEnv, id string, 
 	defer c.barrier.Release()
 
 	op := func() (interface{}, error) {
+		ctx, cancel := c.newRequestContext(sid)
+		defer cancel()
+
 		return c.client.Command(
-			newContext(sid),
+			ctx,
 			protocol.NewCommandMessage(env, "unsubscribe", channel, id, ""),
 		)
 	}
@@ -381,8 +409,11 @@ func (c *Controller) Perform(sid string, env *common.SessionEnv, id string, chan
 	defer c.barrier.Release()
 
 	op := func() (interface{}, error) {
+		ctx, cancel := c.newRequestContext(sid)
+		defer cancel()
+
 		return c.client.Command(
-			newContext(sid),
+			ctx,
 			protocol.NewCommandMessage(env, "message", channel, id, data),
 		)
 	}
@@ -401,8 +432,11 @@ func (c *Controller) Disconnect(sid string, env *common.SessionEnv, id string, s
 	defer c.barrier.Release()
 
 	op := func() (interface{}, error) {
+		ctx, cancel := c.newRequestContext(sid)
+		defer cancel()
+
 		return c.client.Disconnect(
-			newContext(sid),
+			ctx,
 			protocol.NewDisconnectMessage(env, id, subscriptions),
 		)
 	}
@@ -454,9 +488,10 @@ func (c *Controller) busy() int {
 }
 
 func (c *Controller) retry(sid string, callback func() (interface{}, error)) (res interface{}, err error) {
-	retryAge := 0
+	retryAge := int64(0)
 	attempt := 0
 	wasExhausted := false
+	invokeTimeout := c.commandTimeout.Milliseconds()
 
 	for {
 		if stErr := c.clientState.Ready(); stErr != nil {
@@ -480,6 +515,10 @@ func (c *Controller) retry(sid string, callback func() (interface{}, error)) (re
 
 		code := st.Code()
 
+		if code == codes.DeadlineExceeded {
+			c.metrics.CounterIncrement(metricsRPCTimeouts)
+		}
+
 		if !(code == codes.ResourceExhausted || code == codes.Unavailable) {
 			return nil, err
 		}
@@ -500,7 +539,7 @@ func (c *Controller) retry(sid string, callback func() (interface{}, error)) (re
 			attempt = 0
 		}
 
-		delayMS := int(math.Pow(2, float64(attempt))) * interval
+		delayMS := int64(math.Pow(2, float64(attempt))) * interval
 		delay := time.Duration(delayMS)
 
 		retryAge += delayMS
@@ -513,9 +552,19 @@ func (c *Controller) retry(sid string, callback func() (interface{}, error)) (re
 	}
 }
 
-func newContext(sessionID string) context.Context {
+func noopCancel() {}
+
+func (c *Controller) newRequestContext(sessionID string) (ctx context.Context, cancel context.CancelFunc) {
+	if c.requestTimeout > 0 {
+		ctx, cancel = context.WithTimeout(context.Background(), c.requestTimeout)
+	} else {
+		ctx = context.Background()
+		cancel = noopCancel
+	}
+
 	md := metadata.Pairs("sid", sessionID, "protov", ProtoVersions)
-	return metadata.NewOutgoingContext(context.Background(), md)
+	ctx = metadata.NewOutgoingContext(ctx, md)
+	return
 }
 
 func defaultDialer(conf *Config, l *slog.Logger) (pb.RPCClient, ClientHelper, error) {

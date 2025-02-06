@@ -4,6 +4,10 @@
 
 ## 1.6.0-dev
 
+- Add gRPC request timeouts support. ([@palkan][])
+
+You can now configure the timeout for RPC requests via the `--rpc_request_timeout` option (or `ANYCABLE_RPC_REQUEST_TIMEOUT` environment variable). The corresponding metric `rpc_timeouts_total` is also added.
+
 - Presence tracking support for pub/sub streams and channels (see [docs](https://docs.anycable.io/edge/anycable-go/presence)). ([@palkan][])
 
 ## 1.5.6 (2024-10-20)

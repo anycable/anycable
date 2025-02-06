@@ -247,14 +247,14 @@ func TestHTTPServiceRequestTimeout(t *testing.T) {
 
 	conf := NewConfig()
 	conf.Host = ts.URL
-	conf.RequestTimeout = 50
 
 	service, _ := NewHTTPService(&conf)
 	request := protocol.NewConnectMessage(
 		common.NewSessionEnv("ws://anycable.io/cable", &map[string]string{"cookie": "foo=bar"}),
 	)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
 
 	_, err := service.Connect(ctx, request)
 	atomic.AddInt64(&completed, 1)
