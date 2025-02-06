@@ -899,6 +899,21 @@ func rpcCLIFlags(c *config.Config, headers, cookieFilter *string, isNone *bool) 
 			Hidden:      true,
 		},
 
+		&cli.IntFlag{
+			Name:        "rpc_request_timeout",
+			Usage:       "RPC requests timeout (in ms)",
+			Value:       c.RPC.RequestTimeout,
+			Destination: &c.RPC.RequestTimeout,
+		},
+
+		&cli.IntFlag{
+			Name:        "rpc_command_timeout",
+			Usage:       "RPC commands timeout (in ms)",
+			Value:       c.RPC.CommandTimeout,
+			Destination: &c.RPC.CommandTimeout,
+			Hidden:      true,
+		},
+
 		&cli.StringFlag{
 			Name:        "headers",
 			Usage:       "List of headers to proxy to RPC",
@@ -929,9 +944,9 @@ func rpcCLIFlags(c *config.Config, headers, cookieFilter *string, isNone *bool) 
 
 		&cli.IntFlag{
 			Name:        "http_rpc_timeout",
-			Usage:       "HTTP RPC timeout (in ms)",
-			Value:       c.RPC.RequestTimeout,
-			Destination: &c.RPC.RequestTimeout,
+			Usage:       "[DEPRECATED] HTTP RPC timeout (in ms)",
+			Value:       c.RPC.HTTPRequestTimeout,
+			Destination: &c.RPC.HTTPRequestTimeout,
 			Hidden:      true,
 		},
 	})

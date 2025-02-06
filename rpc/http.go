@@ -167,11 +167,6 @@ func (s *HTTPService) performRequest(ctx context.Context, path string, payload [
 
 	url := s.baseURL.JoinPath(path).String()
 
-	// We use timeouts to detect request queueing at the HTTP RPC side and report ResourceExhausted errors
-	// (so adaptive concurrency control can be applied)
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.conf.RequestTimeout)*time.Millisecond)
-	defer cancel()
-
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(payload))
 	if err != nil {
 		return nil, err

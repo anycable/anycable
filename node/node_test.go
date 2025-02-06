@@ -935,7 +935,7 @@ func TestHandlePubSubWithCommand(t *testing.T) {
 	msg, err := session.conn.Read()
 	assert.Nil(t, err)
 	assert.Equalf(t, expected, string(msg), "Expected to receive %s but got %s", expected, string(msg))
-	assert.True(t, session.closed)
+	assert.True(t, session.IsClosed())
 }
 
 func TestLookupSession(t *testing.T) {

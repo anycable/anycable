@@ -58,8 +58,12 @@ type Config struct {
 	DialFun Dialer
 	// Secret for HTTP RPC authentication
 	Secret string `toml:"secret"`
+	// Request timeout (in ms) (for all RPC implementations)
+	RequestTimeout int `toml:"request_timeout"`
+	// Command execution timeout (in ms) (may consist of multiple request retries)
+	CommandTimeout int `toml:"command_timeout"`
 	// Timeout for HTTP RPC requests (in ms)
-	RequestTimeout int `toml:"http_request_timeout"`
+	HTTPRequestTimeout int `toml:"http_request_timeout"`
 	// SecretBase is a secret used to generate authentication token
 	SecretBase string
 }
@@ -73,7 +77,10 @@ func NewConfig() Config {
 		TLSVerify:      true,
 		Host:           defaultRPCHost,
 		Implementation: "",
-		RequestTimeout: 3000,
+		// TODO(v2): Change the default in v2 to some 5s or whatever
+		RequestTimeout:     0,
+		HTTPRequestTimeout: 0,
+		CommandTimeout:     3000,
 	}
 }
 
@@ -136,6 +143,20 @@ func (c *Config) TLSConfig() (*tls.Config, error) {
 	}
 
 	return tlsConfig, nil
+}
+
+// Backward-compatibility to provide a default value
+func (c *Config) GetHTTPRequestTimeout() int {
+	if c.HTTPRequestTimeout > 0 {
+		return c.HTTPRequestTimeout
+	}
+
+	if c.RequestTimeout > 0 {
+		return c.RequestTimeout
+	}
+
+	// legacy default value
+	return 3000
 }
 
 func ensureGrpcScheme(url string) string {
@@ -201,8 +222,19 @@ func (c Config) ToToml() string {
 		result.WriteString("# secret =\n")
 	}
 
-	result.WriteString("# Timeout for HTTP RPC requests (in ms)\n")
-	result.WriteString(fmt.Sprintf("http_request_timeout = %d\n", c.RequestTimeout))
+	result.WriteString("# Timeout for RPC requests (in ms)\n")
+	if c.RequestTimeout > 0 {
+		result.WriteString(fmt.Sprintf("request_timeout = %d\n", c.RequestTimeout))
+	} else {
+		result.WriteString("# request_timeout = 3000\n")
+	}
+
+	result.WriteString("# Total timeout for RPC commands including retries (in ms)\n")
+	if c.CommandTimeout > 0 {
+		result.WriteString(fmt.Sprintf("command_timeout = %d\n", c.CommandTimeout))
+	} else {
+		result.WriteString("# command_timeout = 3000\n")
+	}
 
 	result.WriteString("# GRPC fine-tuning\n")
 	result.WriteString("# Max allowed incoming message size (bytes)\n")

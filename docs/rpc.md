@@ -108,6 +108,17 @@ $ anycable-go \
 
 You can also monitor the current concurrency value via the `rpc_capacity_num` metrics. Read more about [AnyCable instrumentation](./instrumentation.md).
 
+## Request timeouts
+
+Long-running RPC calls may negatively affect the performance of your application, because they block the client from processing new messages. We recommend setting the timeout for RPC requests to prevent this (for historical reasons, it's not set for gRPC and is set and equal to 3s for HTTP RPC). You can do the via the `--rpc_request_timeout` parameter:
+
+```sh
+# 5s timeout
+anycable-go --rpc_request_timeout=5000
+# or
+ANYCABLE_RPC_REQUEST_TIMEOUT=5000 anycable-go
+```
+
 [proto]: ../misc/rpc_proto.md
 [anycable-ruby]: https://github.com/anycable/anycable
 [anycable-server-js]: https://github.com/anycable/anycable-serverless-js

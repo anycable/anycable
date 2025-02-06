@@ -567,7 +567,7 @@ func TestCustomDialFun(t *testing.T) {
 			}, nil)
 
 		res, err := controller.Authenticate("42", &common.SessionEnv{URL: url, Headers: &headers})
-		require.Nil(t, err)
+		require.Nilf(t, err, "Error: %v", err)
 		assert.Equal(t, []string{"welcome"}, res.Transmissions)
 		assert.Equal(t, "user=john", res.Identifier)
 		assert.Equal(t, map[string]string{"_s_": "test-session"}, res.CState)
