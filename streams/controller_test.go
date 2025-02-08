@@ -72,6 +72,7 @@ func TestStreamsController(t *testing.T) {
 	t.Run("Subscribe - signed", func(t *testing.T) {
 		conf := NewConfig()
 		conf.Secret = key
+		conf.Presence = false
 		subject := NewStreamsController(&conf, slog.Default())
 
 		require.NotNil(t, subject)
@@ -93,6 +94,7 @@ func TestStreamsController(t *testing.T) {
 		conf := NewConfig()
 		conf.Secret = key
 		conf.Whisper = true
+		conf.Presence = false
 		subject := NewStreamsController(&conf, slog.Default())
 
 		require.NotNil(t, subject)

@@ -982,6 +982,8 @@ func (n *Node) handlePresenceReply(s *Session, identifier string, event string, 
 	var err error
 	var msg *common.PresenceEvent
 
+	s.Log.Debug("presence event", "event", event, "presence", presence)
+
 	if event == common.PresenceJoinType { // nolint:gocritic
 		if presence == nil {
 			return errors.New("presence data is missing")
