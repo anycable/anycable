@@ -6,7 +6,7 @@ AnyCable is a language-agnostic real-time server focused on performance and reli
 
 ## Installation
 
-The easiest way to install AnyCable-Go is to [download](https://github.com/anycable/anycable/releases) a pre-compiled binary (for versions < 1.6.0 use our [legacy repository](https://github.com/anycable/anycable/releases)).
+The easiest way to install AnyCable-Go is to [download](https://github.com/anycable/anycable/releases) a pre-compiled binary (for versions < 1.6.0 use our [legacy repository](https://github.com/anycable/anycable-go/releases)).
 
 MacOS users could install it with [Homebrew](https://brew.sh/)
 
