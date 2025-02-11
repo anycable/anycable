@@ -90,6 +90,12 @@ The full documentation could be found [here](https://docs.anycable.io/edge/rails
 
 > 🚧 Presence support in [anycable-serverless-js](https://github.com/anycable/anycable-serverless-js) is coming soon.
 
+## Presence for Hotwire
+
+For Hotwire applications, our `@anycable/turbo-stream` package (>= 0.8.0) provides a custom `<turbo-cable-presence-source>` element to add presence information on the page without needing to write any custom client-side code.
+
+The complete documentation is coming soon; for now, you can check out this [example](https://github.com/anycable/anycasts_demo/pull/17).
+
 ## Presence API
 
 > 🚧 Presence REST API is to be implemented. You can only use the presence API via the WebSocket connection.
