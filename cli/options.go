@@ -103,6 +103,7 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 	flags = append(flags, broadcastCLIFlags(&c, &broadcastAdapters)...)
 	flags = append(flags, brokerCLIFlags(&c)...)
 	flags = append(flags, redisCLIFlags(&c)...)
+	flags = append(flags, redisBroadcastCLIFlags(&c)...)
 	flags = append(flags, httpBroadcastCLIFlags(&c)...)
 	flags = append(flags, natsCLIFlags(&c)...)
 	flags = append(flags, rpcCLIFlags(&c, &headers, &cookieFilter, &noRPC)...)
@@ -430,6 +431,7 @@ const (
 	sslCategoryDescription           = "SSL:"
 	broadcastCategoryDescription     = "BROADCASTING:"
 	redisCategoryDescription         = "REDIS:"
+	redisXCategoryDescription        = "REDIS X BROADCAST:"
 	httpBroadcastCategoryDescription = "HTTP BROADCAST:"
 	natsCategoryDescription          = "NATS:"
 	rpcCategoryDescription           = "RPC:"
@@ -691,6 +693,34 @@ func redisCLIFlags(c *config.Config) []cli.Flag {
 			Usage:       "Disable client-side caching",
 			Value:       c.Redis.DisableCache,
 			Destination: &c.Redis.DisableCache,
+			Hidden:      true,
+		},
+	})
+}
+
+// redisBroadcastCLIFlags returns Redis broadcast flags
+func redisBroadcastCLIFlags(c *config.Config) []cli.Flag {
+	return withDefaults(redisXCategoryDescription, []cli.Flag{
+		&cli.StringFlag{
+			Name:        "redisx_stream",
+			Usage:       "Redis X broadcaster stream name",
+			Value:       c.RedisBroadcast.Stream,
+			Destination: &c.RedisBroadcast.Stream,
+		},
+
+		&cli.StringFlag{
+			Name:        "redisx_group",
+			Usage:       "Redis X broadcaster consumer group name",
+			Value:       c.RedisBroadcast.Group,
+			Destination: &c.RedisBroadcast.Group,
+			Hidden:      true,
+		},
+
+		&cli.Int64Flag{
+			Name:        "redisx_read_block_milliseconds",
+			Usage:       "Redis stream read wait time in milliseconds",
+			Value:       c.RedisBroadcast.StreamReadBlockMilliseconds,
+			Destination: &c.RedisBroadcast.StreamReadBlockMilliseconds,
 			Hidden:      true,
 		},
 	})
