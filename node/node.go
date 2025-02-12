@@ -539,8 +539,18 @@ func (n *Node) Unsubscribe(s *Session, msg *common.Message) (*common.CommandResu
 
 	// Make sure presence is removed on explicit unsubscribe
 	if presenceStream != "" {
-		if _, err := n.broker.PresenceRemove(presenceStream, s.GetID()); err != nil {
+		s.Log.Debug("remove presence", "stream", presenceStream)
+		if msg, err := n.broker.PresenceRemove(presenceStream, s.GetID()); err != nil {
 			s.Log.Error("failed to remove presence", "error", err)
+		} else if msg != nil {
+			n.Broadcast(&common.StreamMessage{
+				Stream: presenceStream,
+				Data:   string(utils.ToJSON(msg)),
+				Meta: &common.StreamMessageMetadata{
+					BroadcastType: common.PresenceType,
+					Transient:     true,
+				},
+			})
 		}
 	}
 

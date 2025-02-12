@@ -734,6 +734,46 @@ func TestPresence(t *testing.T) {
 		_, err = session.conn.Read()
 		assert.Error(t, err)
 	})
+
+	t.Run("leave on unsubscribe", func(t *testing.T) {
+		session := NewMockSession("25", node)
+		session2 := NewMockSession("251", node)
+
+		node.hub.AddSession(session)
+		defer node.hub.RemoveSession(session)
+
+		node.hub.AddSession(session2)
+		defer node.hub.RemoveSession(session2)
+
+		// Register subscription and stream
+		session.subscriptions.AddChannel("test_channel")
+		node.hub.SubscribeSession(session, "test_presence", "test_channel")
+		node.hub.SubscribeSession(session2, "test_presence", "test_channel")
+
+		// Make sure presence stream is defined for the session
+		state := map[string]string{common.PRESENCE_STREAM_STATE: "test_presence"}
+		session.GetEnv().MergeChannelState("test_channel", &state)
+
+		controller.
+			On("Unsubscribe", "25", mock.Anything, "25", "test_channel").
+			Return(&common.CommandResult{
+				Status: common.SUCCESS,
+			}, nil)
+
+		broker.On(
+			"PresenceRemove", "test_presence", "25",
+		).Return(&common.PresenceEvent{
+			Type: "leave",
+			ID:   "user_25",
+		}, nil)
+
+		_, err := node.Unsubscribe(session, &common.Message{Identifier: "test_channel"})
+		require.NoError(t, err)
+
+		assert.Equal(t, "", session.GetEnv().GetChannelStateField("test_channel", common.PRESENCE_STREAM_STATE))
+
+		assertReceive(t, session2, `{"type":"presence","identifier":"test_channel","message":{"type":"leave","id":"user_25"}}`)
+	})
 }
 
 func TestRestoreSession(t *testing.T) {
