@@ -313,6 +313,11 @@ func (s *Session) IsResumeable() bool {
 }
 
 func (s *Session) maybeDisconnectIdle() {
+	// reset handshake deadline
+	s.timers.mu.Lock()
+	s.timers.handshakeDeadline = 0
+	s.timers.mu.Unlock()
+
 	s.mu.Lock()
 
 	if s.Connected {
