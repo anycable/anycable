@@ -33,6 +33,10 @@ func (c JWTConfig) Enabled() bool {
 	return c.Secret != ""
 }
 
+func (c JWTConfig) HeaderKey() string {
+	return strings.ToLower(fmt.Sprintf("x-%s", c.Param))
+}
+
 func (c JWTConfig) ToToml() string {
 	var result strings.Builder
 
@@ -64,12 +68,12 @@ type JWTIdentifier struct {
 
 var _ Identifier = (*JWTIdentifier)(nil)
 
-func NewJWTIdentifier(config *JWTConfig, l *slog.Logger) *JWTIdentifier {
+func NewJWTIdentifier(c *JWTConfig, l *slog.Logger) *JWTIdentifier {
 	return &JWTIdentifier{
-		secret:     []byte(config.Secret),
-		paramName:  config.Param,
-		headerName: strings.ToLower(fmt.Sprintf("x-%s", config.Param)),
-		required:   config.Force,
+		secret:     []byte(c.Secret),
+		paramName:  c.Param,
+		headerName: c.HeaderKey(),
+		required:   c.Force,
 		log:        l.With("context", "jwt"),
 	}
 }

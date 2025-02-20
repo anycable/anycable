@@ -437,6 +437,9 @@ func (r *Runner) defaultDisconnector(n *node.Node, c *config.Config, l *slog.Log
 
 func (r *Runner) defaultWebSocketHandler(n *node.Node, c *config.Config, l *slog.Logger) (http.Handler, error) {
 	extractor := server.DefaultHeadersExtractor{Headers: c.RPC.ProxyHeaders, Cookies: c.RPC.ProxyCookies}
+	if c.JWT.Enabled() {
+		extractor.AuthHeader = c.JWT.HeaderKey()
+	}
 	return ws.WebsocketHandler(common.ActionCableProtocols(), &extractor, &c.WS, r.log, func(wsc *websocket.Conn, info *server.RequestInfo, callback func()) error {
 		wrappedConn := ws.NewConnection(wsc)
 
@@ -460,6 +463,9 @@ func (r *Runner) defaultWebSocketHandler(n *node.Node, c *config.Config, l *slog
 
 func (r *Runner) defaultSSEHandler(n *node.Node, ctx context.Context, c *config.Config) (http.Handler, error) {
 	extractor := server.DefaultHeadersExtractor{Headers: c.RPC.ProxyHeaders, Cookies: c.RPC.ProxyCookies}
+	if c.JWT.Enabled() {
+		extractor.AuthHeader = c.JWT.HeaderKey()
+	}
 	handler := sse.SSEHandler(n, ctx, &extractor, &c.SSE, r.log)
 
 	return handler, nil

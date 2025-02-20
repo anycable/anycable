@@ -4,6 +4,8 @@
 
 ## 1.6.0-dev
 
+- Add JWT header to proxy headers by default. ([@palkan][])
+
 - Add `publications_total` and `remote_commands_total` metrics. ([@palkan][])
 
 - Add gRPC request timeouts support. ([@palkan][])

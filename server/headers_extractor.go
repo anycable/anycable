@@ -11,8 +11,9 @@ type HeadersExtractor interface {
 }
 
 type DefaultHeadersExtractor struct {
-	Headers []string
-	Cookies []string
+	AuthHeader string
+	Headers    []string
+	Cookies    []string
 }
 
 func (h *DefaultHeadersExtractor) FromRequest(r *http.Request) map[string]string {
@@ -28,6 +29,14 @@ func (h *DefaultHeadersExtractor) FromRequest(r *http.Request) map[string]string
 			res[header] = value
 		}
 	}
+
+	if h.AuthHeader != "" {
+		value := r.Header.Get(h.AuthHeader)
+		if value != "" {
+			res[h.AuthHeader] = value
+		}
+	}
+
 	res[remoteAddrHeader], _, _ = net.SplitHostPort(r.RemoteAddr)
 
 	return res

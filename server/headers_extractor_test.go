@@ -46,4 +46,19 @@ func TestHeadersExtractor_FromRequest(t *testing.T) {
 		assert.Equal(t, "yummy_cookie=raisin;", headers["cookie"])
 		assert.Equal(t, "192.0.2.1", headers["REMOTE_ADDR"])
 	})
+
+	t.Run("With specified auth header", func(t *testing.T) {
+		extractor := DefaultHeadersExtractor{AuthHeader: "x-api-token", Headers: []string{"cookie", "x-jid"}}
+		headers := extractor.FromRequest(req)
+
+		assert.Len(t, headers, 3)
+
+		assert.Empty(t, headers["accept-language"])
+		assert.Equal(t, "42", headers["x-api-token"])
+		assert.Equal(t, "yummy_cookie=raisin;tasty_cookie=strawberry", headers["cookie"])
+		assert.Equal(t, "192.0.2.1", headers["REMOTE_ADDR"])
+
+		_, ok := headers["x-jid"]
+		assert.False(t, ok)
+	})
 }
