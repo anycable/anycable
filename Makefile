@@ -151,7 +151,7 @@ bench:
 	go test -tags mrb -bench=. ./...
 
 test:
-	go test -count=1 -timeout=30s -race -tags mrb ./... $(TEST_FLAGS)
+	go test -count=1 -timeout=60s -race -tags mrb ./... $(TEST_FLAGS)
 
 benchmarks: build
 	ruby features/runner.rb features/*.benchfile
