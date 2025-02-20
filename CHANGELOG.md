@@ -4,6 +4,11 @@
 
 ## 1.6.0-dev
 
+- Allow providing auth token via WebSocket sub-protocol. ([@palkan][])
+
+You can pass a token as a `anycable-token.<token>` subprotocol to a WebSocket client.
+This way token is not exposed in the URL.
+
 - Add JWT header to proxy headers by default. ([@palkan][])
 
 - Add `publications_total` and `remote_commands_total` metrics. ([@palkan][])

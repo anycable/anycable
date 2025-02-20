@@ -61,4 +61,20 @@ func TestHeadersExtractor_FromRequest(t *testing.T) {
 		_, ok := headers["x-jid"]
 		assert.False(t, ok)
 	})
+
+	t.Run("With auth header and WebSocket protocols", func(t *testing.T) {
+		req.Header.Set("Sec-Websocket-Protocol", "actioncable-v1-json,anycable-token.s3crett0")
+		extractor := DefaultHeadersExtractor{AuthHeader: "x-jid", Headers: []string{"cookie"}}
+		headers := extractor.FromRequest(req)
+
+		assert.Equal(t, "s3crett0", headers["x-jid"])
+	})
+
+	t.Run("With auth header and WebSocket protocols with spaces", func(t *testing.T) {
+		req.Header.Set("Sec-Websocket-Protocol", "actioncable-v1-json, anycable-token.s3crett0")
+		extractor := DefaultHeadersExtractor{AuthHeader: "x-jid", Headers: []string{"cookie"}}
+		headers := extractor.FromRequest(req)
+
+		assert.Equal(t, "s3crett0", headers["x-jid"])
+	})
 }

@@ -31,6 +31,29 @@ let cable = createCable('ws://cable.example.com/cable?jid=[JWT_TOKEN]')
 
 The token MUST include the `ext` claim with the JSON-encoded connection identifiers.
 
+WebSocket clients may also provide tokens using _sub-protocols_. For that, specify the `anycable-token.<token>` sub-protocol in addition to the actual protocol (e.g., `actioncable-v1-json`):
+
+```js
+const ws = new WebSocket(
+  'wss://cable.example.com/cable',
+  ['actioncable-v1-json', 'anycable-token.<TOKEN>']
+);
+```
+
+When using AnyCable JS client, all you need is to specify the authentication strategy for the cable instance:
+
+```js
+import { createCable } from '@anycable/web'
+
+export default createCable(
+  'ws://cable.example.com/cable',
+  {
+    auth: {token: "secret-value"},
+    websocketAuthStrategy: 'sub-protocol'
+  }
+});
+```
+
 ## Generating tokens
 
 ### Rails/Ruby

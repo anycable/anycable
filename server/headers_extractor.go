@@ -31,6 +31,25 @@ func (h *DefaultHeadersExtractor) FromRequest(r *http.Request) map[string]string
 	}
 
 	if h.AuthHeader != "" {
+		if wsProtocols := r.Header.Get("sec-websocket-protocol"); wsProtocols != "" {
+			if strings.Contains(wsProtocols, "anycable-token.") {
+				var token string
+				protocols := strings.Split(wsProtocols, ",")
+
+				for _, rawProtocol := range protocols {
+					protocol := strings.TrimSpace(rawProtocol)
+					if strings.HasPrefix(protocol, "anycable-token.") {
+						token = strings.TrimPrefix(protocol, "anycable-token.")
+						break
+					}
+				}
+
+				if token != "" {
+					res[h.AuthHeader] = token
+				}
+			}
+		}
+
 		value := r.Header.Get(h.AuthHeader)
 		if value != "" {
 			res[h.AuthHeader] = value

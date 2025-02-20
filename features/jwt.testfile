@@ -30,6 +30,23 @@ scenario = [
   },
   {
     client: {
+      name: "protocol",
+      connection_options: {
+        subprotocol: "anycable-token.#{token}",
+      },
+      actions: [
+        {
+          receive: {
+            "data>": {
+              type: "welcome"
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    client: {
       name: "param",
       connection_options: {
         headers: {
@@ -74,6 +91,7 @@ result = stdout(:wsdirector)
 
 unless result.include?("Group header: 1 clients, 0 failures") &&
   result.include?("Group param: 1 clients, 0 failures") &&
-  result.include?("Group noauth: 1 clients, 0 failures")
+  result.include?("Group noauth: 1 clients, 0 failures") &&
+  result.include?("Group protocol: 1 clients, 0 failures")
   fail "Unexpected scenario result:\n#{result}"
 end
