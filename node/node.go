@@ -540,17 +540,8 @@ func (n *Node) Unsubscribe(s *Session, msg *common.Message) (*common.CommandResu
 	// Make sure presence is removed on explicit unsubscribe
 	if presenceStream != "" {
 		s.Log.Debug("remove presence", "stream", presenceStream)
-		if msg, err := n.broker.PresenceRemove(presenceStream, s.GetID()); err != nil {
+		if _, err := n.broker.PresenceRemove(presenceStream, s.GetID()); err != nil {
 			s.Log.Error("failed to remove presence", "error", err)
-		} else if msg != nil {
-			n.Broadcast(&common.StreamMessage{
-				Stream: presenceStream,
-				Data:   string(utils.ToJSON(msg)),
-				Meta: &common.StreamMessageMetadata{
-					BroadcastType: common.PresenceType,
-					Transient:     true,
-				},
-			})
 		}
 	}
 
@@ -888,6 +879,26 @@ func (n *Node) Size() int {
 	return n.hub.Size()
 }
 
+// broker.Presenter implementation
+func (n *Node) HandleJoin(stream string, msg *common.PresenceEvent) {
+	n.broadcastPresenceEvent(stream, msg)
+}
+
+func (n *Node) HandleLeave(stream string, msg *common.PresenceEvent) {
+	n.broadcastPresenceEvent(stream, msg)
+}
+
+func (n *Node) broadcastPresenceEvent(stream string, msg *common.PresenceEvent) {
+	n.Broadcast(&common.StreamMessage{
+		Stream: stream,
+		Data:   string(utils.ToJSON(msg)),
+		Meta: &common.StreamMessageMetadata{
+			BroadcastType: common.PresenceType,
+			Transient:     true,
+		},
+	})
+}
+
 func transmit(s *Session, transmissions []string) {
 	for _, msg := range transmissions {
 		s.SendJSONTransmission(msg)
@@ -990,7 +1001,6 @@ func (n *Node) handlePresenceReply(s *Session, identifier string, event string, 
 	sid := s.GetID()
 
 	var err error
-	var msg *common.PresenceEvent
 
 	s.Log.Debug("presence event", "event", event, "presence", presence)
 
@@ -998,22 +1008,11 @@ func (n *Node) handlePresenceReply(s *Session, identifier string, event string, 
 		if presence == nil {
 			return errors.New("presence data is missing")
 		}
-		msg, err = n.broker.PresenceAdd(stream, sid, presence.ID, presence.Info)
+		_, err = n.broker.PresenceAdd(stream, sid, presence.ID, presence.Info)
 	} else if event == common.PresenceLeaveType {
-		msg, err = n.broker.PresenceRemove(stream, sid)
+		_, err = n.broker.PresenceRemove(stream, sid)
 	} else {
 		return fmt.Errorf("unknown presence event: %s", event)
-	}
-
-	if msg != nil {
-		n.Broadcast(&common.StreamMessage{
-			Stream: stream,
-			Data:   string(utils.ToJSON(msg)),
-			Meta: &common.StreamMessageMetadata{
-				BroadcastType: common.PresenceType,
-				Transient:     true,
-			},
-		})
 	}
 
 	return err

@@ -95,7 +95,7 @@ func NewNATSBroker(broadcaster Broadcaster, c *Config, nc *natsconfig.NATSConfig
 	}
 
 	if n.local == nil {
-		n.local = NewMemoryBroker(nil, c)
+		n.local = NewMemoryBroker(nil, nil, c)
 	}
 
 	return &n

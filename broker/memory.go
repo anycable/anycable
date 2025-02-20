@@ -223,6 +223,7 @@ func newPresenceState() *presenceState {
 
 type Memory struct {
 	broadcaster    Broadcaster
+	presenter      Presenter
 	config         *Config
 	tracker        *StreamsTracker
 	epoch          string
@@ -239,12 +240,13 @@ type Memory struct {
 
 var _ Broker = (*Memory)(nil)
 
-func NewMemoryBroker(node Broadcaster, config *Config) *Memory {
+func NewMemoryBroker(bro Broadcaster, pm Presenter, c *Config) *Memory {
 	epoch, _ := nanoid.Nanoid(4)
 
 	return &Memory{
-		broadcaster:    node,
-		config:         config,
+		broadcaster:    bro,
+		presenter:      pm,
+		config:         c,
 		tracker:        NewStreamsTracker(),
 		streams:        make(map[string]*memstream),
 		sessions:       make(map[string]*sessionEntry),
@@ -501,11 +503,17 @@ func (b *Memory) PresenceAdd(stream string, sid string, pid string, info interfa
 	streamSessionPresence.add(sid, info)
 
 	if newPresence {
-		return &common.PresenceEvent{
+		ev := &common.PresenceEvent{
 			Type: common.PresenceJoinType,
 			ID:   pid,
 			Info: info,
-		}, nil
+		}
+
+		if b.presenter != nil {
+			b.presenter.HandleJoin(stream, ev)
+		}
+
+		return ev, nil
 	}
 
 	return nil, nil
@@ -554,10 +562,16 @@ func (b *Memory) PresenceRemove(stream string, sid string) (*common.PresenceEven
 	}
 
 	if empty {
-		return &common.PresenceEvent{
+		ev := &common.PresenceEvent{
 			Type: common.PresenceLeaveType,
 			ID:   pid,
-		}, nil
+		}
+
+		if b.presenter != nil {
+			b.presenter.HandleLeave(stream, ev)
+		}
+
+		return ev, nil
 	}
 
 	return nil, nil

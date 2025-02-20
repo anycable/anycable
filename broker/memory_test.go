@@ -7,6 +7,7 @@ import (
 
 	"github.com/anycable/anycable-go/common"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -14,7 +15,7 @@ func TestMemory_Expire(t *testing.T) {
 	config := NewConfig()
 	config.HistoryTTL = 1
 
-	broker := NewMemoryBroker(nil, &config)
+	broker := NewMemoryBroker(nil, nil, &config)
 
 	start := time.Now().Unix() - 10
 
@@ -50,7 +51,7 @@ func TestMemory_Limit(t *testing.T) {
 	config := NewConfig()
 	config.HistoryLimit = 2
 
-	broker := NewMemoryBroker(nil, &config)
+	broker := NewMemoryBroker(nil, nil, &config)
 
 	start := time.Now().Unix() - 10
 
@@ -69,7 +70,7 @@ func TestMemory_Limit(t *testing.T) {
 func TestMemory_FromOffset(t *testing.T) {
 	config := NewConfig()
 
-	broker := NewMemoryBroker(nil, &config)
+	broker := NewMemoryBroker(nil, nil, &config)
 
 	broker.add("test", "a")
 	broker.add("test", "b")
@@ -100,7 +101,7 @@ func TestMemory_FromOffset(t *testing.T) {
 func TestMemory_Store(t *testing.T) {
 	config := NewConfig()
 
-	broker := NewMemoryBroker(nil, &config)
+	broker := NewMemoryBroker(nil, nil, &config)
 	broker.SetEpoch("2023")
 
 	ts := time.Now()
@@ -156,7 +157,7 @@ func TestMemory_RestoreSession(t *testing.T) {
 	config := NewConfig()
 	config.SessionsTTL = 1
 
-	broker := NewMemoryBroker(nil, &config)
+	broker := NewMemoryBroker(nil, nil, &config)
 
 	require.NoError(t, broker.CommitSession("123", &TestCacheable{"cache-me"}))
 
@@ -186,10 +187,21 @@ func TestMemory_RestoreSession(t *testing.T) {
 func TestMemory_Presence(t *testing.T) {
 	config := NewConfig()
 
-	broker := NewMemoryBroker(nil, &config)
+	presenter := &MockPresenter{}
+
+	presenter.On("HandleJoin", mock.Anything, mock.Anything)
+	presenter.On("HandleLeave", mock.Anything, mock.Anything)
+
+	broker := NewMemoryBroker(nil, presenter, &config)
 
 	ev, err := broker.PresenceAdd("a", "s1", "user_1", map[string]interface{}{"name": "John"})
 	require.NoError(t, err)
+
+	presenter.AssertCalled(t, "HandleJoin", "a", &common.PresenceEvent{
+		Type: common.PresenceJoinType,
+		ID:   "user_1",
+		Info: map[string]interface{}{"name": "John"},
+	})
 
 	assert.Equal(t, "user_1", ev.ID)
 	assert.Equal(t, "join", ev.Type)
@@ -204,13 +216,27 @@ func TestMemory_Presence(t *testing.T) {
 	require.NoError(t, err)
 	assert.Nil(t, ev)
 
+	// No new presence event has been triggered
+	presenter.AssertNumberOfCalls(t, "HandleJoin", 1)
+
 	ev, err = broker.PresenceAdd("a", "s3", "user_2", map[string]interface{}{"name": "Alice"})
 	require.NoError(t, err)
 	assert.Equal(t, "user_2", ev.ID)
 
+	presenter.AssertNumberOfCalls(t, "HandleJoin", 2)
+
 	ev, err = broker.PresenceAdd("b", "s3", "user_2", map[string]interface{}{"name": "Alice"})
 	require.NoError(t, err)
 	assert.Equal(t, "user_2", ev.ID)
+
+	// Different stream -> new event
+	presenter.AssertNumberOfCalls(t, "HandleJoin", 3)
+
+	presenter.AssertCalled(t, "HandleJoin", "b", &common.PresenceEvent{
+		Type: common.PresenceJoinType,
+		ID:   "user_2",
+		Info: map[string]interface{}{"name": "Alice"},
+	})
 
 	info, err := broker.PresenceInfo("a")
 	require.NoError(t, err)
@@ -228,6 +254,8 @@ func TestMemory_Presence(t *testing.T) {
 	require.NoError(t, err)
 	assert.Nil(t, ev)
 
+	presenter.AssertNumberOfCalls(t, "HandleLeave", 0)
+
 	info, err = broker.PresenceInfo("a")
 	require.NoError(t, err)
 
@@ -236,6 +264,12 @@ func TestMemory_Presence(t *testing.T) {
 	ev, err = broker.PresenceRemove("a", "s2")
 	require.NoError(t, err)
 	assert.Equal(t, "user_1", ev.ID)
+
+	presenter.AssertNumberOfCalls(t, "HandleLeave", 1)
+	presenter.AssertCalled(t, "HandleLeave", "a", &common.PresenceEvent{
+		Type: common.PresenceLeaveType,
+		ID:   "user_1",
+	})
 
 	info, err = broker.PresenceInfo("a")
 	require.NoError(t, err)
@@ -247,7 +281,7 @@ func TestMemory_expirePresence(t *testing.T) {
 	config := NewConfig()
 	config.PresenceTTL = 1
 
-	broker := NewMemoryBroker(nil, &config)
+	broker := NewMemoryBroker(nil, nil, &config)
 
 	broker.PresenceAdd("a", "s1", "user_1", "john") // nolint: errcheck
 	broker.PresenceAdd("a", "s2", "user_2", "kate") // nolint: errcheck

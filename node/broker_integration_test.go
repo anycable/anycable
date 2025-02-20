@@ -52,7 +52,7 @@ func TestIntegrationRestore_Memory(t *testing.T) {
 
 	subscriber := pubsub.NewLegacySubscriber(node)
 
-	br := broker.NewMemoryBroker(subscriber, &bconf)
+	br := broker.NewMemoryBroker(subscriber, node, &bconf)
 	br.SetEpoch("2022")
 	node.SetBroker(br)
 
@@ -267,7 +267,7 @@ func TestIntegrationHistory_Memory(t *testing.T) {
 
 	subscriber := pubsub.NewLegacySubscriber(node)
 
-	br := broker.NewMemoryBroker(subscriber, &bconf)
+	br := broker.NewMemoryBroker(subscriber, node, &bconf)
 	br.SetEpoch("2022")
 	node.SetBroker(br)
 
@@ -429,7 +429,7 @@ func TestIntegrationPresence_Memory(t *testing.T) {
 
 	subscriber := pubsub.NewLegacySubscriber(node)
 
-	br := broker.NewMemoryBroker(subscriber, &bconf)
+	br := broker.NewMemoryBroker(subscriber, node, &bconf)
 	node.SetBroker(br)
 
 	require.NoError(t, br.Start(nil))

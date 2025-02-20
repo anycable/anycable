@@ -158,14 +158,14 @@ func WithWebSocketEndpoint(path string, fn websocketHandler) Option {
 
 // WithDefaultBroker is an Option to set Runner broker to default broker from config
 func WithDefaultBroker() Option {
-	return WithBroker(func(br broker.Broadcaster, c *config.Config, l *slog.Logger) (broker.Broker, error) {
+	return WithBroker(func(br broker.Broadcaster, pr broker.Presenter, c *config.Config, l *slog.Logger) (broker.Broker, error) {
 		if c.Broker.Adapter == "" {
 			return broker.NewLegacyBroker(br), nil
 		}
 
 		switch c.Broker.Adapter {
 		case "memory":
-			b := broker.NewMemoryBroker(br, &c.Broker)
+			b := broker.NewMemoryBroker(br, pr, &c.Broker)
 			return b, nil
 		case "nats":
 			// TODO: Figure out a better place for this hack.

@@ -647,7 +647,13 @@ func TestPresence(t *testing.T) {
 
 		broker.On(
 			"PresenceAdd", "test_presence", "24", "user_24", "J. Bond",
-		).Return(&common.PresenceEvent{
+		).Run(func(args mock.Arguments) {
+			node.HandleJoin("test_presence", &common.PresenceEvent{
+				Type: "join",
+				ID:   "user_24",
+				Info: "J. Bond",
+			})
+		}).Return(&common.PresenceEvent{
 			Type: "join",
 			ID:   "user_24",
 			Info: "J. Bond",
@@ -686,7 +692,13 @@ func TestPresence(t *testing.T) {
 
 		broker.On(
 			"PresenceAdd", "test_presence", "24", "user_24", "J. Bond",
-		).Return(&common.PresenceEvent{
+		).Run(func(args mock.Arguments) {
+			node.HandleJoin("test_presence", &common.PresenceEvent{
+				Type: "join",
+				ID:   "user_24",
+				Info: "J. Bond",
+			})
+		}).Return(&common.PresenceEvent{
 			Type: "join",
 			ID:   "user_24",
 			Info: "J. Bond",
@@ -762,7 +774,12 @@ func TestPresence(t *testing.T) {
 
 		broker.On(
 			"PresenceRemove", "test_presence", "25",
-		).Return(&common.PresenceEvent{
+		).Run(func(args mock.Arguments) {
+			node.HandleLeave("test_presence", &common.PresenceEvent{
+				Type: "leave",
+				ID:   "user_25",
+			})
+		}).Return(&common.PresenceEvent{
 			Type: "leave",
 			ID:   "user_25",
 		}, nil)

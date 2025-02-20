@@ -26,26 +26,6 @@ type Cacheable interface {
 	ToCacheEntry() ([]byte, error)
 }
 
-// We can extend the presence read functionality in the future
-// (e.g., add pagination, filtering, etc.)
-type PresenceInfoOptions struct {
-	ReturnRecords bool `json:"return_records,omitempty"`
-}
-
-func NewPresenceInfoOptions() *PresenceInfoOptions {
-	return &PresenceInfoOptions{ReturnRecords: true}
-}
-
-type PresenceInfoOption func(*PresenceInfoOptions)
-
-func WithPresenceInfoOptions(opts *PresenceInfoOptions) PresenceInfoOption {
-	return func(o *PresenceInfoOptions) {
-		if opts != nil {
-			*o = *opts
-		}
-	}
-}
-
 // Broker is responsible for:
 // - Managing streams history.
 // - Managing presence information.

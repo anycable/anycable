@@ -39,7 +39,7 @@ import (
 type controllerFactory = func(*metricspkg.Metrics, *config.Config, *slog.Logger) (node.Controller, error)
 type disconnectorFactory = func(*node.Node, *config.Config, *slog.Logger) (node.Disconnector, error)
 type broadcastersFactory = func(broadcast.Handler, *config.Config, *slog.Logger) ([]broadcast.Broadcaster, error)
-type brokerFactory = func(broker.Broadcaster, *config.Config, *slog.Logger) (broker.Broker, error)
+type brokerFactory = func(broker.Broadcaster, broker.Presenter, *config.Config, *slog.Logger) (broker.Broker, error)
 type subscriberFactory = func(pubsub.Handler, *config.Config, *slog.Logger) (pubsub.Subscriber, error)
 type websocketHandler = func(*node.Node, *config.Config, *slog.Logger) (http.Handler, error)
 
@@ -263,7 +263,7 @@ func (r *Runner) runNode() (*node.Node, error) {
 		return nil, errorx.Decorate(err, "couldn't configure pub/sub")
 	}
 
-	appBroker, err := r.brokerFactory(subscriber, r.config, r.log)
+	appBroker, err := r.brokerFactory(subscriber, appNode, r.config, r.log)
 	if err != nil {
 		return nil, errorx.Decorate(err, "failed to initialize broker")
 	}
