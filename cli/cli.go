@@ -779,6 +779,9 @@ func (r *Runner) pusherWebsocketHandler(n *node.Node, c *config.Config) http.Han
 
 func (r *Runner) apolloWebsocketHandler(n *node.Node, c *config.Config) http.Handler {
 	extractor := server.DefaultHeadersExtractor{Headers: c.RPC.ProxyHeaders, Cookies: c.RPC.ProxyCookies}
+	if c.JWT.Enabled() {
+		extractor.AuthHeader = c.JWT.HeaderKey()
+	}
 	return ws.WebsocketHandler(graphql.GraphqlProtocols(), &extractor, &c.WS, r.log, func(wsc *websocket.Conn, info *server.RequestInfo, callback func()) error {
 		wrappedConn := ws.NewConnection(wsc)
 

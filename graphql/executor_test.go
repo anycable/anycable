@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/anycable/anycable-go/common"
+	"github.com/anycable/anycable-go/encoders"
 	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/node_mocks"
 	"github.com/stretchr/testify/assert"
@@ -205,14 +206,18 @@ var (
 )
 
 func buildSession(executor node.Executor) *node.Session {
+	return prepareSession(executor, Encoder{})
+}
+
+func prepareSession(executor node.Executor, encoder encoders.Encoder) *node.Session {
 	sessionCounter++
 	s := node.BuildSession(nil, common.NewSessionEnv("ws://anycable.io/cable", nil))
 	s.Log = slog.With("context", "test")
 	s.SetID(strconv.Itoa(sessionCounter))
-	node.WithEncoder(Encoder{})(&s)
-	node.WithExecutor(executor)(&s)
-	s.SetEnv(common.NewSessionEnv("ws://anycable.io/cable", nil))
-	return &s
+	node.WithEncoder(encoder)(s)
+	node.WithExecutor(executor)(s)
+
+	return s
 }
 
 func buildSubscribeCommand(query string) *common.Message {

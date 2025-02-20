@@ -2,7 +2,6 @@ package graphql
 
 import (
 	"errors"
-	"log/slog"
 	"strconv"
 	"testing"
 
@@ -181,15 +180,7 @@ func TestLegacyHandleCommand(t *testing.T) {
 }
 
 func buildLegacySession() *node.Session {
-	sessionCounter++
-	s := node.Session{
-		Connected: true,
-		Log:       slog.With("context", "test"),
-	}
-	s.SetID(strconv.Itoa(sessionCounter))
-	node.WithEncoder(LegacyEncoder{})(&s)
-	s.SetEnv(common.NewSessionEnv("ws://anycable.io/cable", nil))
-	return &s
+	return prepareSession(nil, LegacyEncoder{})
 }
 
 func buildLegacyStartCommand(query string) *common.Message {
