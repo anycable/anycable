@@ -5,11 +5,9 @@ import (
 
 	"github.com/anycable/anycable-go/broker"
 	"github.com/anycable/anycable-go/common"
-	"github.com/anycable/anycable-go/encoders"
 	"github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/mocks"
 	"github.com/anycable/anycable-go/pubsub"
-	"github.com/anycable/anycable-go/ws"
 )
 
 // NewMockNode build new node with mock controller
@@ -27,30 +25,22 @@ func NewMockNode() *Node {
 
 // NewMockSession returns a new session with a specified uid and identifiers equal to uid
 func NewMockSession(uid string, node *Node, opts ...SessionOption) *Session {
-	session := Session{
-		executor:      node,
-		broker:        node.broker,
-		closed:        false,
-		uid:           uid,
-		Log:           slog.With("sid", uid),
-		subscriptions: NewSubscriptionState(),
-		env:           common.NewSessionEnv("/cable-test", &map[string]string{}),
-		sendCh:        make(chan *ws.SentFrame, 256),
-		encoder:       encoders.JSON{},
-		metrics:       metrics.NoopMetrics{},
-		timers:        &SessionTimers{},
-	}
+	session := BuildSession(mocks.NewMockConnection(), common.NewSessionEnv("/cable-test", &map[string]string{}))
+
+	session.executor = node
+	session.broker = node.broker
+	session.uid = uid
+	session.Log = slog.With("sid", uid)
 
 	session.SetIdentifiers(uid)
-	session.conn = mocks.NewMockConnection()
 
 	for _, opt := range opts {
-		opt(&session)
+		opt(session)
 	}
 
 	go session.SendMessages()
 
-	return &session
+	return session
 }
 
 // NewMockSession returns a new session with a specified uid, path and headers, and identifiers equal to uid

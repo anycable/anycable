@@ -236,26 +236,30 @@ func WithPongTimeout(timeout time.Duration) SessionOption {
 	}
 }
 
-// NewSession build a new Session struct from ws connetion and http request
-func NewSession(node *Node, conn Connection, url string, headers *map[string]string, uid string, opts ...SessionOption) *Session {
-	session := &Session{
-		conn:                   conn,
-		metrics:                node.metrics,
-		env:                    common.NewSessionEnv(url, headers),
-		subscriptions:          NewSubscriptionState(),
-		sendCh:                 make(chan *ws.SentFrame, 256),
-		closed:                 false,
-		Connected:              false,
-		timers:                 &SessionTimers{},
-		pingInterval:           time.Duration(node.config.PingInterval) * time.Second,
-		pingTimestampPrecision: node.config.PingTimestampPrecision,
+// BuildSession builds a new Session struct with the required defaults
+func BuildSession(conn Connection, env *common.SessionEnv) *Session {
+	return &Session{
+		conn:          conn,
+		metrics:       metrics.NoopMetrics{},
+		env:           env,
+		subscriptions: NewSubscriptionState(),
+		sendCh:        make(chan *ws.SentFrame, 256),
+		closed:        false,
+		Connected:     false,
+		timers:        &SessionTimers{},
 		// Use JSON by default
 		encoder: encoders.JSON{},
-		// Use Action Cable executor by default (implemented by node)
-		executor: node,
-		broker:   node.broker,
 	}
+}
 
+// NewSession build a new Session struct from ws connetion and http request
+func NewSession(node *Node, conn Connection, url string, headers *map[string]string, uid string, opts ...SessionOption) *Session {
+	session := BuildSession(conn, common.NewSessionEnv(url, headers))
+	session.metrics = node.metrics
+	session.executor = node
+	session.broker = node.broker
+	session.pingInterval = time.Duration(node.config.PingInterval) * time.Second
+	session.pingTimestampPrecision = node.config.PingTimestampPrecision
 	session.uid = uid
 
 	ctx := node.log.With("sid", session.uid)
