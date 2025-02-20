@@ -187,7 +187,7 @@ func (h *Hub) addSession(ses *node.Session) string {
 		id:      id,
 	}
 
-	deadline := time.Now().Unix() + int64((h.config.PollInterval+h.config.KeepaliveTimeout)*1000)
+	deadline := time.Now().UnixMilli() + int64((h.config.PollInterval+h.config.KeepaliveTimeout)*1000)
 	item := h.heap.PushItem(reg, deadline)
 
 	// fmt.Printf("[%s] new session: id=%s, priority=%d\n", time.Now().String(), item.Value().id, item.Priority())
