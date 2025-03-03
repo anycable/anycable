@@ -1149,6 +1149,13 @@ func wsCLIFlags(c *config.Config) []cli.Flag {
 			Hidden:      true,
 		},
 
+		&cli.IntFlag{
+			Name:        "ws_write_timeout",
+			Usage:       "Maximum time to wait for a write operation to complete",
+			Value:       c.WS.WriteTimeout,
+			Destination: &c.WS.WriteTimeout,
+		},
+
 		&cli.BoolFlag{
 			Name:        "enable_ws_compression",
 			Usage:       "Enable experimental WebSocket per message compression",

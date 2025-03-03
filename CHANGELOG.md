@@ -4,6 +4,8 @@
 
 ## 1.6.0-dev
 
+- Changed default WebSocket write timeout to 2s and added the `ws_write_timeout` configuration option to configure it. ([@palkan][])
+
 - Allow providing auth token via WebSocket sub-protocol. ([@palkan][])
 
 You can pass a token as a `anycable-token.<token>` subprotocol to a WebSocket client.

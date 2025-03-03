@@ -7,6 +7,7 @@ import (
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/server"
+	"github.com/anycable/anycable-go/ws"
 )
 
 const (
@@ -60,5 +61,12 @@ func (r *Runner) sessionOptionsFromParams(info *server.RequestInfo) []node.Sessi
 		opts = append(opts, node.WithPrevSID(pval))
 	}
 
+	return opts
+}
+
+func (r *Runner) sessionOptionsFromWSConfig(c *ws.Config) []node.SessionOption {
+	opts := []node.SessionOption{}
+
+	opts = append(opts, node.WithWriteTimeout(time.Duration(c.WriteTimeout)*time.Second))
 	return opts
 }

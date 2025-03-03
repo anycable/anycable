@@ -17,10 +17,6 @@ import (
 	"github.com/anycable/anycable-go/ws"
 )
 
-const (
-	writeWait = 10 * time.Second
-)
-
 // Executor handles incoming commands (messages)
 type Executor interface {
 	HandleCommand(*Session, *common.Message) error
@@ -148,7 +144,8 @@ type Session struct {
 	// Mutex for protocol-related state (env, subscriptions)
 	smu sync.Mutex
 
-	sendCh chan *ws.SentFrame
+	sendCh       chan *ws.SentFrame
+	writeTimeout time.Duration
 
 	timers *SessionTimers
 
@@ -236,6 +233,13 @@ func WithPongTimeout(timeout time.Duration) SessionOption {
 	}
 }
 
+// WithWriteTimeout allows to set a custom write timeout for a session
+func WithWriteTimeout(timeout time.Duration) SessionOption {
+	return func(s *Session) {
+		s.writeTimeout = timeout
+	}
+}
+
 // BuildSession builds a new Session struct with the required defaults
 func BuildSession(conn Connection, env *common.SessionEnv) *Session {
 	return &Session{
@@ -244,6 +248,7 @@ func BuildSession(conn Connection, env *common.SessionEnv) *Session {
 		env:           env,
 		subscriptions: NewSubscriptionState(),
 		sendCh:        make(chan *ws.SentFrame, 256),
+		writeTimeout:  2 * time.Second,
 		closed:        false,
 		Connected:     false,
 		timers:        &SessionTimers{},
@@ -689,7 +694,7 @@ func (s *Session) sendFrame(message *ws.SentFrame) {
 }
 
 func (s *Session) writeFrame(message *ws.SentFrame) error {
-	return s.writeFrameWithDeadline(message, time.Now().Add(writeWait))
+	return s.writeFrameWithDeadline(message, time.Now().Add(s.writeTimeout))
 }
 
 func (s *Session) writeFrameWithDeadline(message *ws.SentFrame, deadline time.Time) error {

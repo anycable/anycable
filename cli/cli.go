@@ -444,6 +444,7 @@ func (r *Runner) defaultWebSocketHandler(n *node.Node, c *config.Config, l *slog
 		wrappedConn := ws.NewConnection(wsc)
 
 		opts := []node.SessionOption{}
+		opts = append(opts, r.sessionOptionsFromWSConfig(&c.WS)...)
 		opts = append(opts, r.sessionOptionsFromProtocol(wsc.Subprotocol())...)
 		opts = append(opts, r.sessionOptionsFromParams(info)...)
 
