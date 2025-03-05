@@ -80,6 +80,7 @@ const (
 	REMOTE_DISCONNECT_REASON = "remote"
 	IDLE_TIMEOUT_REASON      = "idle_timeout"
 	NO_PONG_REASON           = "no_pong"
+	SLOW_CLIENT_REASON       = "too_slow"
 	UNAUTHORIZED_REASON      = "unauthorized"
 )
 

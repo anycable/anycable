@@ -4,6 +4,10 @@
 
 ## 1.6.0-dev
 
+- Refactor WebSocket message writing to use queues instead of channels to better handle slow clients. ([@palkan][])
+
+Messages are now written to a queue instead of a channel. This prevents from potential blocking when some clients are slow to consume messages (since `io.Write` could be blocking). A new configuration parameter, `ws_max_pending_size`, is added to limit the size of the queue (defaults to 1MB). If the limit is exceeded, the client is closed. A new metrics added to track the disconnected slow clients, `disconnected_slow_clients_total`.
+
 - Changed default WebSocket write timeout to 2s and added the `ws_write_timeout` configuration option to configure it. ([@palkan][])
 
 - Allow providing auth token via WebSocket sub-protocol. ([@palkan][])

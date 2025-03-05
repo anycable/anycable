@@ -28,16 +28,18 @@ const (
 	metricsStreamsNum      = "broadcast_streams_num"
 	metricsDisconnectQueue = "disconnect_queue_size"
 
-	metricsFailedAuths           = "failed_auths_total"
-	metricsReceivedMsg           = "client_msg_total"
-	metricsFailedCommandReceived = "failed_client_msg_total"
-	metricsPublications          = "publications_total"
-	metricsBroadcastMsg          = "broadcast_msg_total"
-	metricsRemoteCommands        = "remote_commands_total"
-	metricsUnknownBroadcast      = "failed_broadcast_msg_total"
+	metricsFailedAuths             = "failed_auths_total"
+	metricsReceivedMsg             = "client_msg_total"
+	metricsFailedCommandReceived   = "failed_client_msg_total"
+	metricsDisconnectedSlowClients = "disconnected_slow_clients_total"
+	metricsPublications            = "publications_total"
+	metricsBroadcastMsg            = "broadcast_msg_total"
+	metricsRemoteCommands          = "remote_commands_total"
+	metricsUnknownBroadcast        = "failed_broadcast_msg_total"
 
-	metricsSentMsg    = "server_msg_total"
-	metricsFailedSent = "failed_server_msg_total"
+	metricsSentMsg      = "server_msg_total"
+	metricsFailedSent   = "failed_server_msg_total"
+	metricsWriteTimeout = "timeout_server_msg_total"
 
 	metricsDataSent     = "data_sent_total"
 	metricsDataReceived = "data_rcvd_total"
@@ -1117,6 +1119,7 @@ func (n *Node) registerMetrics() {
 
 	n.metrics.RegisterCounter(metricsFailedAuths, "The total number of failed authentication attempts")
 	n.metrics.RegisterCounter(metricsReceivedMsg, "The total number of received messages from clients")
+	n.metrics.RegisterCounter(metricsDisconnectedSlowClients, "The total number of disconnected slow clients")
 	n.metrics.RegisterCounter(metricsFailedCommandReceived, "The total number of unrecognized messages received from clients")
 	n.metrics.RegisterCounter(metricsPublications, "The total number of publications received (from the application)")
 	n.metrics.RegisterCounter(metricsBroadcastMsg, "The total number of messages received through PubSub (for broadcast)")
@@ -1125,6 +1128,7 @@ func (n *Node) registerMetrics() {
 
 	n.metrics.RegisterCounter(metricsSentMsg, "The total number of messages sent to clients")
 	n.metrics.RegisterCounter(metricsFailedSent, "The total number of messages failed to send to clients")
+	n.metrics.RegisterCounter(metricsWriteTimeout, "The total number of messages failed to send to clients due to write timeouts")
 
 	n.metrics.RegisterCounter(metricsDataSent, "The total amount of bytes sent to clients")
 	n.metrics.RegisterCounter(metricsDataReceived, "The total amount of bytes received from clients")

@@ -12,6 +12,7 @@ type Config struct {
 	WriteBufferSize   int      `toml:"write_buffer_size"`
 	MaxMessageSize    int64    `toml:"max_message_size"`
 	WriteTimeout      int      `toml:"write_timeout"`
+	MaxPendingSize    uint64   `toml:"max_pending_size"`
 	EnableCompression bool     `toml:"enable_compression"`
 	AllowedOrigins    string   `toml:"-"`
 }
@@ -20,9 +21,10 @@ type Config struct {
 func NewConfig() Config {
 	return Config{
 		Paths:           []string{"/cable"},
-		ReadBufferSize:  1024,
-		WriteBufferSize: 1024,
+		ReadBufferSize:  4096,
+		WriteBufferSize: 4096,
 		MaxMessageSize:  65536,
+		MaxPendingSize:  1024 * 1024, // 1 MB
 		WriteTimeout:    2,
 	}
 }
@@ -45,6 +47,14 @@ func (c Config) ToToml() string {
 
 	result.WriteString("# Write timeout (seconds)\n")
 	result.WriteString(fmt.Sprintf("write_timeout = %d\n", c.WriteTimeout))
+
+	if c.MaxPendingSize > 0 {
+		result.WriteString("# Maximum pending size\n")
+		result.WriteString(fmt.Sprintf("max_pending_size = %d\n", c.MaxPendingSize))
+	} else {
+		result.WriteString("# Maximum pending size\n")
+		result.WriteString("# max_pending_size = 1048576\n")
+	}
 
 	if c.EnableCompression {
 		result.WriteString("# Enable compression (per-message deflate)\n")

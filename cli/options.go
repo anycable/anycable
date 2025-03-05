@@ -1156,6 +1156,13 @@ func wsCLIFlags(c *config.Config) []cli.Flag {
 			Destination: &c.WS.WriteTimeout,
 		},
 
+		&cli.Uint64Flag{
+			Name:        "ws_max_pending_size",
+			Usage:       "Maximum size of the write queue for session before it's considered slow and disconnected (in kB)",
+			Value:       c.WS.MaxPendingSize,
+			Destination: &c.WS.MaxPendingSize,
+		},
+
 		&cli.BoolFlag{
 			Name:        "enable_ws_compression",
 			Usage:       "Enable experimental WebSocket per message compression",

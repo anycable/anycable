@@ -68,5 +68,6 @@ func (r *Runner) sessionOptionsFromWSConfig(c *ws.Config) []node.SessionOption {
 	opts := []node.SessionOption{}
 
 	opts = append(opts, node.WithWriteTimeout(time.Duration(c.WriteTimeout)*time.Second))
+	opts = append(opts, node.WithMaxPendingSize(c.MaxPendingSize))
 	return opts
 }

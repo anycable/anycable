@@ -1,8 +1,10 @@
 package node
 
 import (
+	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/ws"
@@ -218,4 +220,40 @@ func TestMarkDisconnectable(t *testing.T) {
 	session.MarkDisconnectable(false)
 
 	assert.True(t, session.IsDisconnectable())
+}
+
+func TestSend__maxPendingSize(t *testing.T) {
+	node := NewMockNode()
+	session := NewMockSession("123", node)
+	session.maxPendingSize = 1
+
+	session.Send(&common.Reply{Type: "message", Message: "hello"})
+
+	msg, err := session.conn.Read()
+	assert.Nil(t, err)
+
+	assert.Equal(t, `{"type":"message","message":"hello"}`, string(msg))
+
+	// lock writing
+	session.wmu.Lock()
+
+	session.Send(&common.Reply{Type: "message", Message: strings.Repeat("karavana", 64)})
+	// Make sure the message is picked up the the writer routine
+	time.Sleep(100 * time.Millisecond)
+
+	// this one should be dropped
+	session.Send(&common.Reply{Type: "message", Message: strings.Repeat("marivana", 64)})
+
+	// The queue has already > 1kb of data — we must close the session
+	session.Send(&common.Reply{Type: "message", Message: strings.Repeat("karambas", 64)})
+	session.wmu.Unlock()
+
+	// Read the second message
+	msg, err = session.conn.Read()
+	assert.Nil(t, err)
+	assert.Contains(t, string(msg), "karavana")
+	// must receive only slow disconnect notice
+	msg, err = session.conn.Read()
+	assert.Nil(t, err)
+	assert.Equal(t, `{"type":"disconnect","reason":"too_slow","reconnect":true}`, string(msg))
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math/rand"
+	"net"
 	"sync"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/anycable/anycable-go/encoders"
 	"github.com/anycable/anycable-go/logger"
 	"github.com/anycable/anycable-go/metrics"
+	"github.com/anycable/anycable-go/utils"
 	"github.com/anycable/anycable-go/ws"
 )
 
@@ -139,13 +141,16 @@ type Session struct {
 	// Defines if we should perform Disconnect RPC for this session
 	disconnectInterest bool
 
-	// Main mutex (for read/write and important session updates)
+	// Main mutex (for important session updates)
 	mu sync.Mutex
 	// Mutex for protocol-related state (env, subscriptions)
 	smu sync.Mutex
+	// Mutex for writes
+	wmu sync.Mutex
 
-	sendCh       chan *ws.SentFrame
-	writeTimeout time.Duration
+	writeQueue     *utils.Queue[*ws.SentFrame]
+	writeTimeout   time.Duration
+	maxPendingSize uint64
 
 	timers *SessionTimers
 
@@ -240,6 +245,13 @@ func WithWriteTimeout(timeout time.Duration) SessionOption {
 	}
 }
 
+// WithMaxPendingSize allows to set a custom max pending size for a session
+func WithMaxPendingSize(size uint64) SessionOption {
+	return func(s *Session) {
+		s.maxPendingSize = size
+	}
+}
+
 // BuildSession builds a new Session struct with the required defaults
 func BuildSession(conn Connection, env *common.SessionEnv) *Session {
 	return &Session{
@@ -247,7 +259,7 @@ func BuildSession(conn Connection, env *common.SessionEnv) *Session {
 		metrics:       metrics.NoopMetrics{},
 		env:           env,
 		subscriptions: NewSubscriptionState(),
-		sendCh:        make(chan *ws.SentFrame, 256),
+		writeQueue:    utils.NewQueue[*ws.SentFrame](256),
 		writeTimeout:  2 * time.Second,
 		closed:        false,
 		Connected:     false,
@@ -450,7 +462,18 @@ func (s *Session) Serve(callback func()) error {
 
 // SendMessages waits for incoming messages and send them to the client connection
 func (s *Session) SendMessages() {
-	for message := range s.sendCh {
+	for {
+		if !s.writeQueue.Wait() {
+			return
+		}
+
+		item, ok := s.writeQueue.Remove()
+		if !ok {
+			return
+		}
+
+		message := item.Data
+
 		err := s.writeFrame(message)
 
 		if message.FrameType == ws.CloseFrame {
@@ -459,6 +482,10 @@ func (s *Session) SendMessages() {
 		}
 
 		if err != nil {
+			if nerr, ok := err.(net.Error); ok && nerr.Timeout() {
+				s.Log.Debug("write timed out", "error", err, "msg", logger.CompactValue(message.Payload))
+				s.metrics.CounterIncrement(metricsWriteTimeout)
+			}
 			s.metrics.CounterIncrement(metricsFailedSent)
 			s.disconnectNow("Write Failed", ws.CloseAbnormalClosure)
 			return
@@ -632,12 +659,9 @@ func (s *Session) disconnectNow(reason string, code int) {
 		CloseCode:   code,
 	})
 
-	s.mu.Lock()
-	if s.sendCh != nil {
-		close(s.sendCh)
-		s.sendCh = nil
+	if !s.writeQueue.Closed() {
+		s.writeQueue.Close()
 	}
-	s.mu.Unlock()
 
 	s.close()
 }
@@ -672,25 +696,35 @@ func (s *Session) sendClose(reason string, code int) {
 }
 
 func (s *Session) sendFrame(message *ws.SentFrame) {
-	s.mu.Lock()
-
-	if s.sendCh == nil {
-		s.mu.Unlock()
+	if s.writeQueue.Closed() {
 		return
 	}
 
-	select {
-	case s.sendCh <- message:
-	default:
-		if s.sendCh != nil {
-			close(s.sendCh)
-			defer s.Disconnect("Write failed", ws.CloseAbnormalClosure)
-		}
+	pendingTotal := s.writeQueue.Size()
+	s.mu.Lock()
+	maxPending := s.maxPendingSize
+	s.mu.Unlock()
 
-		s.sendCh = nil
+	if maxPending > 0 && pendingTotal >= maxPending {
+		s.writeQueue.Clear()
+		s.mu.Lock()
+		s.maxPendingSize = 0
+		s.mu.Unlock()
+
+		s.Log.Debug("slow client detected, disconnecting", "pending", pendingTotal, "max", s.maxPendingSize)
+
+		s.metrics.CounterIncrement(metricsDisconnectedSlowClients)
+		s.DisconnectWithMessage(common.NewDisconnectMessage(common.SLOW_CLIENT_REASON, true), common.SLOW_CLIENT_REASON)
+		return
 	}
 
-	s.mu.Unlock()
+	size := len(message.Payload)
+
+	item := utils.Item[*ws.SentFrame]{Data: message, Size: uint64(size)}
+
+	if !s.writeQueue.Add(item) {
+		defer s.Disconnect("Write failed", ws.CloseAbnormalClosure)
+	}
 }
 
 func (s *Session) writeFrame(message *ws.SentFrame) error {
@@ -698,21 +732,24 @@ func (s *Session) writeFrame(message *ws.SentFrame) error {
 }
 
 func (s *Session) writeFrameWithDeadline(message *ws.SentFrame, deadline time.Time) error {
-	s.metrics.CounterAdd(metricsDataSent, uint64(len(message.Payload)))
-
 	switch message.FrameType {
 	case ws.TextFrame:
-		s.mu.Lock()
-		defer s.mu.Unlock()
+		s.wmu.Lock()
+		defer s.wmu.Unlock()
 
 		err := s.conn.Write(message.Payload, deadline)
+		if err == nil {
+			s.metrics.CounterAdd(metricsDataSent, uint64(len(message.Payload)))
+		}
 		return err
 	case ws.BinaryFrame:
-		s.mu.Lock()
-		defer s.mu.Unlock()
+		s.wmu.Lock()
+		defer s.wmu.Unlock()
 
 		err := s.conn.WriteBinary(message.Payload, deadline)
-
+		if err == nil {
+			s.metrics.CounterAdd(metricsDataSent, uint64(len(message.Payload)))
+		}
 		return err
 	case ws.CloseFrame:
 		s.conn.Close(message.CloseCode, message.CloseReason)
