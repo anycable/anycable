@@ -167,6 +167,58 @@ func TestUnsubscribeSession(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
+func TestUnsubscribeSessionFromChannel(t *testing.T) {
+	hub := NewHub(2, slog.Default())
+
+	go hub.Run()
+	defer hub.Shutdown()
+
+	session := NewMockSession("123")
+	hub.AddSession(session)
+
+	hub.SubscribeSession(session, "test1", "test_channel")
+	hub.SubscribeSession(session, "test2", "test_channel")
+	hub.SubscribeSession(session, "test3", "other_channel")
+
+	hub.Broadcast("test1", "\"hello1\"")
+	msg, err := session.Read()
+	assert.Nil(t, err)
+	assert.Equal(t, "{\"identifier\":\"test_channel\",\"message\":\"hello1\"}", string(msg))
+
+	hub.Broadcast("test2", "\"hello2\"")
+	msg, err = session.Read()
+	assert.Nil(t, err)
+	assert.Equal(t, "{\"identifier\":\"test_channel\",\"message\":\"hello2\"}", string(msg))
+
+	hub.Broadcast("test3", "\"hello3\"")
+	msg, err = session.Read()
+	assert.Nil(t, err)
+	assert.Equal(t, "{\"identifier\":\"other_channel\",\"message\":\"hello3\"}", string(msg))
+
+	hub.UnsubscribeSessionFromChannel(session, "test_channel")
+
+	hub.Broadcast("test1", "\"goodbye1\"")
+	_, err = session.Read()
+	assert.NotNil(
+		t,
+		err,
+		"Should not receive message from test1 after unsubscribing from test_channel",
+	)
+
+	hub.Broadcast("test2", "\"goodbye2\"")
+	_, err = session.Read()
+	assert.NotNil(
+		t,
+		err,
+		"Should not receive message from test2 after unsubscribing from test_channel",
+	)
+
+	hub.Broadcast("test3", "\"still_here\"")
+	msg, err = session.Read()
+	assert.Nil(t, err)
+	assert.Equal(t, "{\"identifier\":\"other_channel\",\"message\":\"still_here\"}", string(msg))
+}
+
 func TestSubscribeSession(t *testing.T) {
 	hub := NewHub(2, slog.Default())
 
