@@ -149,7 +149,7 @@ $ anycable-go --embed_nats --broker=nats
 
 <p class="pro-badge-header"></p>
 
-AnyCable-Go Pro comes with a Redis-based broker adapter. It stores all data in Redis and, thus, can be used in multi-node installations.
+AnyCable Pro comes with a Redis-based broker adapter. It stores all data in Redis and, thus, can be used in multi-node installations.
 
 To use Redis broker, you need to provide the `--broker` option with the `redis` adapter name:
 
@@ -161,7 +161,37 @@ $ anycable-go --broker=redis
  ...
 ```
 
-When you use the `broker` preset with AnyCable-Go, it automatically configures the Redis broker (if Redis credentials are configured).
+When you use the `broker` preset with AnyCable, it automatically configures the Redis broker (if Redis credentials are configured).
+
+To estimate the required amount of memory for Redis, you can use the following formula:
+
+$$
+M_H = (325 + M_i) \times L \times N_{streams}
+$$
+
+$$
+M_S = 350 \times N_{clients}
+$$
+
+$$
+M = M_S + M_H
+$$
+
+$M$ — total memory required
+
+$M_H$ — memory required to store streams history
+
+$M_S$ — memory required to store sessions cache
+
+$M_i$ — size of a broadcast message
+
+$L$ — history size limit (per stream)
+
+$N_{streams}$ — number of unique streams (see the `broadcast_streams_num` metrics)
+
+$N_{clients}$ — total number of sessions (see the `clients_num` metrics)
+
+Note that the session cache size depends on the number of subscriptions and channel states, so could vary.
 
 #### Streams history expiration
 
