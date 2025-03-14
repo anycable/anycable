@@ -19,7 +19,7 @@ jobs:
       DEBUG: true
     services:
       redis:
-        image: redis:6.0-alpine
+        image: redis:7.4-alpine
         ports: ["6379:6379"]
         options: --health-cmd="redis-cli ping" --health-interval 1s --health-timeout 3s --health-retries 30
     steps:
