@@ -690,6 +690,11 @@ func (b *Memory) expireSessionsCache() {
 	b.sessionsMu.Unlock()
 }
 
+type expirationEvent struct {
+	stream string
+	ev     *common.PresenceEvent
+}
+
 func (b *Memory) expirePresence() {
 	b.presence.mu.Lock()
 
@@ -702,7 +707,7 @@ func (b *Memory) expirePresence() {
 		}
 	}
 
-	leaveMessages := []common.StreamMessage{}
+	leaveEvents := []*expirationEvent{}
 
 	for _, sid := range toDelete {
 		entry := b.presence.sessions[sid]
@@ -725,13 +730,9 @@ func (b *Memory) expirePresence() {
 
 				msg := &common.PresenceEvent{Type: common.PresenceLeaveType, ID: pid}
 
-				leaveMessages = append(leaveMessages, common.StreamMessage{
-					Stream: stream,
-					Data:   string(utils.ToJSON(msg)),
-					Meta: &common.StreamMessageMetadata{
-						BroadcastType: common.PresenceType,
-						Transient:     true,
-					},
+				leaveEvents = append(leaveEvents, &expirationEvent{
+					stream: stream,
+					ev:     msg,
 				})
 
 				if len(b.presence.streams[stream]) == 0 {
@@ -745,11 +746,10 @@ func (b *Memory) expirePresence() {
 
 	b.presence.mu.Unlock()
 
-	if b.broadcaster != nil {
+	if b.presenter != nil {
 		// TODO: batch broadcast?
-		// FIXME: move broadcasts out of broker
-		for _, msg := range leaveMessages {
-			b.broadcaster.Broadcast(&msg)
+		for _, ev := range leaveEvents {
+			b.presenter.HandleLeave(ev.stream, ev.ev)
 		}
 	}
 }
