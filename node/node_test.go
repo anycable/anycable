@@ -622,6 +622,14 @@ func TestPresence(t *testing.T) {
 		On("Subscribe", mock.Anything).
 		Return(func(name string) string { return name })
 
+	broker.
+		On("HandleBroadcast", mock.Anything).
+		Return(nil).
+		Run(func(args mock.Arguments) {
+			msg := args.Get(0).(*common.StreamMessage)
+			node.Broadcast(msg)
+		})
+
 	go node.hub.Run()
 	defer node.hub.Shutdown()
 

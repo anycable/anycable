@@ -891,7 +891,7 @@ func (n *Node) HandleLeave(stream string, msg *common.PresenceEvent) {
 }
 
 func (n *Node) broadcastPresenceEvent(stream string, msg *common.PresenceEvent) {
-	n.Broadcast(&common.StreamMessage{
+	n.broker.HandleBroadcast(&common.StreamMessage{
 		Stream: stream,
 		Data:   string(utils.ToJSON(msg)),
 		Meta: &common.StreamMessageMetadata{
