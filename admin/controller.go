@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"context"
 	"log/slog"
 
 	"github.com/anycable/anycable-go/common"
@@ -43,7 +44,7 @@ func (c *AdminController) Shutdown() error {
 	return nil
 }
 
-func (c *AdminController) Authenticate(sid string, env *common.SessionEnv) (*common.ConnectResult, error) {
+func (c *AdminController) Authenticate(ctx context.Context, sid string, env *common.SessionEnv) (*common.ConnectResult, error) {
 	if c.identifier != nil {
 		return c.identifier.Identify(sid, env)
 	}
@@ -55,7 +56,7 @@ func (c *AdminController) Authenticate(sid string, env *common.SessionEnv) (*com
 	}, nil
 }
 
-func (c *AdminController) Subscribe(sid string, env *common.SessionEnv, identifiers string, stream string) (*common.CommandResult, error) {
+func (c *AdminController) Subscribe(ctx context.Context, sid string, env *common.SessionEnv, identifiers string, stream string) (*common.CommandResult, error) {
 	if err := c.app.HandleSubscribe(sid, stream); err != nil {
 		return nil, err
 	}
@@ -68,7 +69,7 @@ func (c *AdminController) Subscribe(sid string, env *common.SessionEnv, identifi
 	}, nil
 }
 
-func (c *AdminController) Unsubscribe(sid string, env *common.SessionEnv, identifiers string, channel string) (*common.CommandResult, error) {
+func (c *AdminController) Unsubscribe(ctx context.Context, sid string, env *common.SessionEnv, identifiers string, channel string) (*common.CommandResult, error) {
 	return &common.CommandResult{
 		Status:         common.SUCCESS,
 		Transmissions:  []string{},
@@ -77,12 +78,12 @@ func (c *AdminController) Unsubscribe(sid string, env *common.SessionEnv, identi
 	}, nil
 }
 
-func (c *AdminController) Perform(sid string, env *common.SessionEnv, identifiers string, channel string, data string) (*common.CommandResult, error) {
+func (c *AdminController) Perform(ctx context.Context, sid string, env *common.SessionEnv, identifiers string, channel string, data string) (*common.CommandResult, error) {
 	return &common.CommandResult{
 		Status: common.FAILURE,
 	}, nil
 }
 
-func (c *AdminController) Disconnect(sid string, env *common.SessionEnv, identifiers string, subscriptions []string) error {
+func (c *AdminController) Disconnect(ctx context.Context, sid string, env *common.SessionEnv, identifiers string, subscriptions []string) error {
 	return c.app.HandleDisconnect(sid, subscriptions)
 }

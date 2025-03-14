@@ -2,6 +2,10 @@
 
 ## master
 
+## 1.6.0 (2025-03-17) ☘️
+
+- Add presence support for Redis broker.
+
 ## 1.4.0 (2023-07-07)
 
 - Add Redis broker.

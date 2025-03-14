@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 
+	_ "embed"
+
 	rconfig "github.com/anycable/anycable-go/redis"
 	"github.com/joomcode/errorx"
 
@@ -21,8 +23,10 @@ import (
 // RedisBroker is a broker implementation that uses Redis Streams to keep streams history
 type RedisBroker struct {
 	broadcaster Broadcaster
+	presenter   Presenter
 	conf        *Config
 	tracker     *StreamsTracker
+	presence    *redisPresence
 
 	rconf    *rconfig.RedisConfig
 	client   rueidis.Client
@@ -41,46 +45,22 @@ const (
 	redisEpochKey       = "$ac:e"
 )
 
-const (
-	// This script is responsible for adding a message to the cache.
-	// A separate key is used to store the current position in the stream.
-	// A separate stream is used to store timestamps for positions (used by HistorySince).
-	//
-	// KEYS[1] - stream key
-	// ARGV[1] - message payload
-	// ARGV[2] - history limit
-	// ARGV[3] - history ttl
-	addToStreamSource = `
-	local key = "$ac:s:" .. KEYS[1]
-	local posKey = "$ac:spos:" .. KEYS[1]
-	local tsKey = "$ac:sts:" .. KEYS[1]
-
-	local pos = redis.call("incr", posKey)
-	local posTTL = tonumber(ARGV[3]) * 10
-	redis.call("expire", posKey, posTTL)
-
-	local maxlen = ARGV[2]
-
-	redis.call("xadd", key, "MAXLEN", maxlen, pos, "d", ARGV[1])
-	redis.call("xadd", tsKey, "MAXLEN", maxlen, "*", "pos", pos)
-
-	redis.call("expire", key, ARGV[3])
-	redis.call("expire", tsKey, ARGV[3])
-
-	return pos
-	`
-)
+//go:embed redis/add_message.lua
+var addToStreamSource string
 
 var _ Broker = (*RedisBroker)(nil)
 
-func NewRedisBroker(broadcaster Broadcaster, c *Config, rc *rconfig.RedisConfig, l *slog.Logger) *RedisBroker {
-	return &RedisBroker{
+func NewRedisBroker(broadcaster Broadcaster, p Presenter, c *Config, rc *rconfig.RedisConfig, l *slog.Logger) *RedisBroker {
+	b := RedisBroker{
 		broadcaster: broadcaster,
+		presenter:   p,
 		conf:        c,
 		rconf:       rc,
 		tracker:     NewStreamsTracker(),
 		log:         l.With("context", "broker").With("provider", "redis"),
 	}
+	b.presence = NewRedisPresence(&b)
+	return &b
 }
 
 func (b *RedisBroker) Start(done chan (error)) error {
@@ -113,6 +93,10 @@ func (b *RedisBroker) Start(done chan (error)) error {
 	b.log.Debug("broker epoch", "epoch", b.epoch)
 
 	b.addScript = rueidis.NewLuaScript(addToStreamSource)
+	if err := b.presence.Start(); err != nil {
+		b.client.Close()
+		return err
+	}
 
 	return nil
 }
@@ -125,6 +109,10 @@ func (b *RedisBroker) Shutdown(ctx context.Context) error {
 		b.client.Close()
 	}
 
+	if err := b.presence.Stop(ctx); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -133,7 +121,7 @@ func (b *RedisBroker) Announce() string {
 	// ensure Redis config is parsed
 	b.rconf.ToRueidisOptions() // nolint:errcheck
 
-	brokerParams := fmt.Sprintf("(history limit: %d, history ttl: %ds, sessions ttl: %ds)", b.conf.HistoryLimit, b.conf.HistoryTTL, b.conf.SessionsTTL)
+	brokerParams := fmt.Sprintf("(history limit: %d, history ttl: %ds, sessions ttl: %ds, presence ttl: %ds)", b.conf.HistoryLimit, b.conf.HistoryTTL, b.conf.SessionsTTL, b.conf.PresenceTTL)
 
 	if b.rconf.IsSentinel() { //nolint:gocritic
 		return fmt.Sprintf("Using Redis broker at %v (sentinels) %s", b.rconf.Hostnames(), brokerParams)
@@ -190,18 +178,17 @@ func (b *RedisBroker) Unsubscribe(stream string) string {
 }
 
 func (b *RedisBroker) HistoryFrom(stream string, epoch string, offset uint64) ([]common.StreamMessage, error) {
-	b.clientMu.RLock()
+	client, err := b.Client()
 
-	if b.client == nil {
-		b.clientMu.RUnlock()
-		return nil, errors.New("no Redis client initialized")
+	if err != nil {
+		return nil, err
 	}
 
+	b.clientMu.RLock()
 	if epoch != b.epoch {
 		b.clientMu.RUnlock()
 		return nil, errors.New("epoch mismatch")
 	}
-
 	b.clientMu.RUnlock()
 
 	ctx := context.Background()
@@ -212,7 +199,7 @@ func (b *RedisBroker) HistoryFrom(stream string, epoch string, offset uint64) ([
 		return nil, errors.New("stream does not exist")
 	}
 
-	res := b.client.Do(ctx, b.client.B().Xrange().Key(key).Start(start).End("+").Build())
+	res := client.Do(ctx, b.client.B().Xrange().Key(key).Start(start).End("+").Build())
 
 	if res.Error() != nil {
 		return nil, errorx.Decorate(res.Error(), "failed to get history from Redis")
@@ -243,14 +230,11 @@ func (b *RedisBroker) HistoryFrom(stream string, epoch string, offset uint64) ([
 }
 
 func (b *RedisBroker) HistorySince(stream string, ts int64) ([]common.StreamMessage, error) {
-	b.clientMu.RLock()
+	client, err := b.Client()
 
-	if b.client == nil {
-		b.clientMu.RUnlock()
-		return nil, errors.New("no Redis client initialized")
+	if err != nil {
+		return nil, err
 	}
-
-	b.clientMu.RUnlock()
 
 	ctx := context.Background()
 	key := redisStreamTsPrefix + stream
@@ -261,7 +245,7 @@ func (b *RedisBroker) HistorySince(stream string, ts int64) ([]common.StreamMess
 		return nil, nil
 	}
 
-	res := b.client.Do(ctx, b.client.B().Xrange().Key(key).Start(start).End("+").Count(1).Build())
+	res := client.Do(ctx, b.client.B().Xrange().Key(key).Start(start).End("+").Count(1).Build())
 
 	if res.Error() != nil {
 		return nil, errorx.Decorate(res.Error(), "failed to get history from Redis")
@@ -286,19 +270,16 @@ func (b *RedisBroker) HistorySince(stream string, ts int64) ([]common.StreamMess
 }
 
 func (b *RedisBroker) Peak(stream string) (*common.StreamMessage, error) {
-	b.clientMu.RLock()
+	client, err := b.Client()
 
-	if b.client == nil {
-		b.clientMu.RUnlock()
-		return nil, errors.New("no Redis client initialized")
+	if err != nil {
+		return nil, err
 	}
-
-	b.clientMu.RUnlock()
 
 	ctx := context.Background()
 	key := redisStreamPrefix + stream
 
-	res := b.client.Do(ctx, b.client.B().Xrevrange().Key(key).End("+").Start("-").Count(1).Build())
+	res := client.Do(ctx, client.B().Xrevrange().Key(key).End("+").Start("-").Count(1).Build())
 
 	if res.Error() != nil {
 		return nil, errorx.Decorate(res.Error(), "failed to get stream tail from Redis")
@@ -325,14 +306,11 @@ func (b *RedisBroker) Peak(stream string) (*common.StreamMessage, error) {
 }
 
 func (b *RedisBroker) CommitSession(sid string, session Cacheable) error {
-	b.clientMu.RLock()
+	client, err := b.Client()
 
-	if b.client == nil {
-		b.clientMu.RUnlock()
-		return errors.New("no Redis client initialized")
+	if err != nil {
+		return err
 	}
-
-	b.clientMu.RUnlock()
 
 	ctx := context.Background()
 	key := redisSessionsPrefix + sid
@@ -343,7 +321,7 @@ func (b *RedisBroker) CommitSession(sid string, session Cacheable) error {
 		return errorx.Decorate(err, "failed to serialize session")
 	}
 
-	err = b.client.Do(ctx, b.client.B().Set().Key(key).Value(string(data)).ExSeconds(ttl).Build()).Error()
+	err = client.Do(ctx, client.B().Set().Key(key).Value(string(data)).ExSeconds(ttl).Build()).Error()
 
 	if err != nil {
 		return errorx.Decorate(err, "failed to store session in Redis")
@@ -353,19 +331,16 @@ func (b *RedisBroker) CommitSession(sid string, session Cacheable) error {
 }
 
 func (b *RedisBroker) RestoreSession(sid string) ([]byte, error) {
-	b.clientMu.RLock()
+	client, err := b.Client()
 
-	if b.client == nil {
-		b.clientMu.RUnlock()
-		return nil, errors.New("no Redis client initialized")
+	if err != nil {
+		return nil, err
 	}
-
-	b.clientMu.RUnlock()
 
 	key := redisSessionsPrefix + sid
 	ctx := context.Background()
 
-	data, err := b.client.Do(ctx, b.client.B().Get().Key(key).Build()).ToString()
+	data, err := client.Do(ctx, b.client.B().Get().Key(key).Build()).ToString()
 
 	if err != nil {
 		if rueidis.IsRedisNil(err) {
@@ -379,20 +354,17 @@ func (b *RedisBroker) RestoreSession(sid string) ([]byte, error) {
 }
 
 func (b *RedisBroker) TouchSession(sid string) error {
-	b.clientMu.RLock()
+	client, err := b.Client()
 
-	if b.client == nil {
-		b.clientMu.RUnlock()
-		return errors.New("no Redis client initialized")
+	if err != nil {
+		return err
 	}
-
-	b.clientMu.RUnlock()
 
 	ctx := context.Background()
 	key := redisSessionsPrefix + sid
 	ttl := b.conf.SessionsTTL
 
-	err := b.client.Do(ctx, b.client.B().Expire().Key(key).Seconds(ttl).Build()).Error()
+	err = client.Do(ctx, client.B().Expire().Key(key).Seconds(ttl).Build()).Error()
 
 	if err != nil {
 		return errorx.Decorate(err, "failed to delete session cache from Redis")
@@ -423,26 +395,6 @@ func (b *RedisBroker) SetEpoch(val string) error {
 
 	b.epoch = val
 
-	return nil
-}
-
-func (b *RedisBroker) SupportsPresence() bool {
-	return false
-}
-
-func (b *RedisBroker) PresenceAdd(stream string, sid string, pid string, info interface{}) (*common.PresenceEvent, error) {
-	return nil, errors.New("presence not supported")
-}
-
-func (b *RedisBroker) PresenceRemove(stream string, sid string) (*common.PresenceEvent, error) {
-	return nil, errors.New("presence not supported")
-}
-
-func (b *RedisBroker) PresenceInfo(stream string, opts ...PresenceInfoOption) (*common.PresenceInfo, error) {
-	return nil, errors.New("presence not supported")
-}
-
-func (b *RedisBroker) TouchPresence(sid string) error {
 	return nil
 }
 
@@ -511,21 +463,18 @@ func (b *RedisBroker) calculateEpoch() (string, error) {
 }
 
 func (b *RedisBroker) add(stream string, data string) (uint64, error) {
-	b.clientMu.RLock()
+	client, err := b.Client()
 
-	if b.client == nil {
-		b.clientMu.RUnlock()
-		return 0, errors.New("no Redis client initialized")
+	if err != nil {
+		return 0, err
 	}
-
-	b.clientMu.RUnlock()
 
 	ctx := context.Background()
 	key := stream
 	ttl := fmt.Sprintf("%d", b.conf.HistoryTTL)
 	limit := fmt.Sprintf("%d", b.conf.HistoryLimit)
 
-	res := b.addScript.Exec(ctx, b.client, []string{key}, []string{data, limit, ttl})
+	res := b.addScript.Exec(ctx, client, []string{key}, []string{data, limit, ttl})
 
 	if res.Error() != nil {
 		return 0, errorx.Decorate(res.Error(), "failed to add message to Redis stream")
@@ -554,6 +503,17 @@ func (b *RedisBroker) keyExists(ctx context.Context, key string) bool {
 	}
 
 	return exists > 0
+}
+
+func (b *RedisBroker) Client() (rueidis.Client, error) {
+	b.clientMu.RLock()
+	defer b.clientMu.RUnlock()
+
+	if b.client == nil {
+		return nil, errors.New("no Redis client initialized")
+	}
+
+	return b.client, nil
 }
 
 // Consider in future releases, if we need to trim everlasting streams

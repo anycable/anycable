@@ -98,7 +98,7 @@ func (app *App) PageHandler(path string, name string, populate ...func(*pageData
 func (app *App) SSEHandler() (http.Handler, error) {
 	extractor := server.DefaultHeadersExtractor{}
 	sseConf := sse.Config{AllowedOrigins: "*"}
-	handler := sse.SSEHandler(app.node, app.server.ShutdownCtx(), &extractor, &sseConf, app.log)
+	handler := sse.SSEHandler(app.node, app.metrics, app.server.ShutdownCtx(), &extractor, &sseConf, app.log)
 
 	return handler, nil
 }

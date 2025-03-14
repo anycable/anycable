@@ -162,7 +162,7 @@ func TestIntegrationRestore_Redis(t *testing.T) {
 	bconf.SessionsTTL = 2
 
 	subscriber := pubsub.NewLegacySubscriber(node)
-	broker := broker.NewRedisBroker(subscriber, &bconf, &redisConfig, slog.Default())
+	broker := broker.NewRedisBroker(subscriber, node, &bconf, &redisConfig, slog.Default())
 	node.SetBroker(broker)
 
 	require.NoError(t, node.Start())
@@ -401,7 +401,7 @@ func TestIntegrationHistory_Redis(t *testing.T) {
 	bconf := broker.NewConfig()
 
 	subscriber := pubsub.NewLegacySubscriber(node)
-	broker := broker.NewRedisBroker(subscriber, &bconf, &redisConfig, slog.Default())
+	broker := broker.NewRedisBroker(subscriber, node, &bconf, &redisConfig, slog.Default())
 	node.SetBroker(broker)
 
 	require.NoError(t, node.Start())
@@ -540,6 +540,30 @@ func TestIntegrationPresence_Memory(t *testing.T) {
 	node.SetBroker(br)
 
 	require.NoError(t, br.Start(nil))
+
+	go node.Start()                           // nolint:errcheck
+	defer node.Shutdown(context.Background()) // nolint:errcheck
+
+	sharedIntegrationPresence(t, node, controller)
+}
+
+func TestIntegrationPresence_Redis(t *testing.T) {
+	if !redisAvailable {
+		t.Skip("Redis is not available")
+		return
+	}
+
+	node, controller := setupIntegrationNode()
+
+	bconf := broker.NewConfig()
+	bconf.PresenceTTL = 2
+
+	subscriber := pubsub.NewLegacySubscriber(node)
+	br := broker.NewRedisBroker(subscriber, node, &bconf, &redisConfig, slog.Default())
+	node.SetBroker(br)
+
+	require.NoError(t, br.Start(nil))
+	require.NoError(t, br.Reset())
 
 	go node.Start()                           // nolint:errcheck
 	defer node.Shutdown(context.Background()) // nolint:errcheck

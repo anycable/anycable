@@ -1,0 +1,165 @@
+launch :anycable_1,
+  "./dist/anycable-go --public --norpc --broker=redis --pubsub=redis --presence_ttl=2"
+
+wait_tcp 8080
+
+launch :anycable_2,
+  "./dist/anycable-go --public --norpc --broker=redis --pubsub=redis --presence_ttl=2 --port 8081 --http_broadcast_port 8081"
+
+wait_tcp 8081
+
+join_scenario = [
+  {
+    client: {
+      protocol: "action_cable",
+      actions: [
+        {
+          subscribe: {
+            channel: "$pubsub",
+            params: {
+              stream_name: "presento"
+            }
+          }
+        },
+        {
+          sleep: {
+            time:1
+          }
+        },
+        {
+          send: {
+            data: {
+              command: "join",
+              identifier: "{\"stream_name\":\"presento\",\"channel\":\"$pubsub\"}",
+              presence: {
+                id: "user_1",
+                info: "Jack"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+]
+
+event_scenario = [
+  {
+    client: {
+      protocol: "action_cable",
+      actions: [
+        {
+          subscribe: {
+            channel: "$pubsub",
+            params: {
+              stream_name: "presento"
+            }
+          }
+        },
+        {
+          receive: {
+            data: {
+              identifier: "{\"stream_name\":\"presento\",\"channel\":\"$pubsub\"}",
+              type: "presence",
+              message: {
+                type: "join",
+                id: "user_1",
+                info: "Jack"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+]
+
+join_thread = Thread.new do
+  cmd = <<~CMD
+    bundle exec wsdirector ws://localhost:8080/cable -i #{join_scenario.to_json}
+  CMD
+
+  run :wsdirector_1, cmd
+end
+
+event_thread = Thread.new do
+  cmd = <<~CMD
+    bundle exec wsdirector ws://localhost:8081/cable -i #{event_scenario.to_json}
+  CMD
+
+  run :wsdirector_2, cmd
+end
+
+[join_thread, event_thread].map(&:join)
+
+join_res = stdout(:wsdirector_1)
+event_res = stdout(:wsdirector_2)
+
+unless join_res.include?("1 clients, 0 failures") and event_res.include?("1 clients, 0 failures")
+  fail "Unexpected scenarios results:\n\tJOIN: #{join_res}\n\tEVENT: #{event_res}"
+end
+
+# Now, let's test the server crash scenario and events reliability
+
+# Keep the first client sleeping for a bit, so we can forcefully restart the server
+join_scenario.first[:client][:actions] << {
+  sleep: {
+    time: 7
+  }
+}
+
+# Second client must receive "leave" event (and do not receive "join")
+event_scenario.first[:client][:actions].pop
+event_scenario.first[:client][:actions] << {
+  sleep: {
+    time: 3
+  }
+}
+
+event_scenario.first[:client][:actions] << {
+  receive: {
+    data: {
+      identifier: "{\"stream_name\":\"presento\",\"channel\":\"$pubsub\"}",
+      type: "presence",
+      message: {
+        type: "leave",
+        id: "user_1"
+      }
+    }
+  }
+}
+
+join_thread = Thread.new do
+  cmd = <<~CMD
+    bundle exec wsdirector ws://localhost:8080/cable -i #{join_scenario.to_json}
+  CMD
+
+  run :wsdirector_1, cmd
+end
+
+event_thread = Thread.new do
+  cmd = <<~CMD
+    bundle exec wsdirector ws://localhost:8081/cable -i #{event_scenario.to_json}
+  CMD
+
+  run :wsdirector_2, cmd
+end
+
+sleep 2
+
+Process.kill(:INT, pid(:anycable_1))
+
+sleep 3
+
+launch :anycable_1,
+  "./dist/anycable-go --public --norpc --broker=redis --pubsub=redis"
+
+wait_tcp 8080
+
+[join_thread, event_thread].map(&:join)
+
+result = stdout(:wsdirector_2)
+
+unless result.include?("1 clients, 0 failures")
+  fail "Unexpected scenario result:\n#{result}"
+end

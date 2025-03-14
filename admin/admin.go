@@ -25,9 +25,10 @@ type App struct {
 
 	node *node.Node
 
-	conf   *Config
-	log    *slog.Logger
-	tracer *logger.Tracer
+	conf    *Config
+	metrics *metrics.Metrics
+	log     *slog.Logger
+	tracer  *logger.Tracer
 
 	mu sync.Mutex
 }
@@ -63,6 +64,7 @@ func NewApp(n *node.Node, m *metrics.Metrics, c *Config, opt ...AdminOption) (*A
 		appnode: n,
 		server:  s,
 		conf:    c,
+		metrics: m,
 	}
 
 	for _, o := range opt {
