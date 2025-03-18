@@ -13,7 +13,7 @@ By default, AnyCable tries to connect to a gRPC server at `localhost:50051`:
 ```sh
 $ anycable-go
 
-2024-03-06 14:09:23.532 INF Starting AnyCable 1.5.0-4f16b99 (with mruby 1.2.0 (2015-11-17)) (pid: 21540, open file limit: 122880, gomaxprocs: 8) nodeid=6VV3mO
+2024-03-06 14:09:23.532 INF Starting AnyCable 1.6.0-4f16b99 (pid: 21540, open file limit: 122880, gomaxprocs: 8) nodeid=6VV3mO
 ...
 2024-03-06 14:09:23.533 INF RPC controller initialized: localhost:50051 (concurrency: 28, impl: grpc, enable_tls: false, proto_versions: v1) nodeid=6VV3mO context=rpc
 ```
@@ -33,7 +33,7 @@ To connect to an HTTP RPC server, you must specify the `--rpc_host` (or `ANYCABL
 ```sh
 $ anycable-go --rpc_host=http://localhost:3000/_anycable
 
-2024-03-06 14:21:37.231 INF Starting AnyCable 1.5.0-4f16b99 (with mruby 1.2.0 (2015-11-17)) (pid: 26540, open file limit: 122880, gomaxprocs: 8) nodeid=VkaKtV
+2024-03-06 14:21:37.231 INF Starting AnyCable 1.6.0-4f16b99 (pid: 26540, open file limit: 122880, gomaxprocs: 8) nodeid=VkaKtV
 ...
 2024-03-06 14:21:37.232 INF RPC controller initialized: http://localhost:3000/_anycable (concurrency: 28, impl: http, enable_tls: false, proto_versions: v1) nodeid=VkaKtV context=rpc
 ```

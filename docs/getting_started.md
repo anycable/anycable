@@ -38,7 +38,7 @@ After installation, you can run AnyCable as follows:
 ```sh
 $ anycable-go
 
-2024-03-06 13:38:07.545 INF Starting AnyCable 1.5.0-4f16b99 (with mruby 1.2.0 (2015-11-17)) (pid: 8289, open file limit: 122880, gomaxprocs: 8) nodeid=hj2mXN
+2024-03-06 13:38:07.545 INF Starting AnyCable 1.6.0-4f16b99 (pid: 8289, open file limit: 122880, gomaxprocs: 8) nodeid=hj2mXN
 ...
 2024-03-06 13:38:56.490 INF RPC controller initialized: localhost:50051 (concurrency: 28, impl: grpc, enable_tls: false, proto_versions: v1) nodeid=FlCtwf context=rpc
 ```
@@ -66,7 +66,7 @@ Thus, to run AnyCable real-time server in an insecure standalone mode, use the f
 ```sh
 $ anycable-go --public
 
-2024-03-06 14:00:12.549 INF Starting AnyCable 1.5.0-4f16b99 (with mruby 1.2.0 (2015-11-17)) (pid: 17817, open file limit: 122880, gomaxprocs: 8) nodeid=wAhWDB
+2024-03-06 14:00:12.549 INF Starting AnyCable 1.6.0-4f16b99 (pid: 17817, open file limit: 122880, gomaxprocs: 8) nodeid=wAhWDB
 2024-03-06 14:00:12.549 WRN Server is running in the public mode nodeid=wAhWDB
 ...
 ```

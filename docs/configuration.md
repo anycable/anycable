@@ -274,7 +274,7 @@ You can also specify the path to the configuration file using the `--config-path
 ```sh
 $ anycable-go --config-path=/path/to/anycable.toml
 
-2024-10-07 17:52:37.139 INF Starting AnyCable 1.5.4-87217bb (pid: 80235, open file limit: 122880, gomaxprocs: 8) nodeid=BzeSHV
+2024-10-07 17:52:37.139 INF Starting AnyCable 1.6.0-87217bb (pid: 80235, open file limit: 122880, gomaxprocs: 8) nodeid=BzeSHV
 2024-10-07 17:52:37.139 INF Using configuration from file: ./path/to/anycable.toml nodeid=BzeSHV
 ```
 

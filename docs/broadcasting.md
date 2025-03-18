@@ -39,7 +39,7 @@ Every request MUST include an "Authorization" header with the `Bearer <broadcast
 # Run AnyCable
 $ anycable-go --broadcast_key=my-secret-key
 
-2024-03-06 10:35:39.296 INF Starting AnyCable 1.5.0-a7aa9b4 (with mruby 1.2.0 (2015-11-17)) (pid: 57260, open file limit: 122880, gomaxprocs: 8) nodeid=uE3mZ7
+2024-03-06 10:35:39.296 INF Starting AnyCable 1.6.0-a7aa9b4 (pid: 57260, open file limit: 122880, gomaxprocs: 8) nodeid=uE3mZ7
 ...
 2024-03-06 10:35:39.297 INF Accept broadcast requests at http://localhost:8080/_broadcast (authorization required) nodeid=uE3mZ7 context=broadcast provider=http
 

@@ -1,10 +1,8 @@
 # Change log
 
-## master
+## 1.6.0 (2025-03-18)
 
 - Fix bug when unsubscribing different stream from the same channel ([@amree][])
-
-## 1.6.0-dev
 
 - Refactor WebSocket message writing to use queues instead of channels to better handle slow clients. ([@palkan][])
 
