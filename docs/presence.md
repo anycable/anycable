@@ -98,6 +98,8 @@ The full documentation could be found [here](https://docs.anycable.io/edge/rails
 
 ## Presence for Hotwire
 
+> Read more in the ["Simple Declarative Presence for Hotwire apps with AnyCable"](https://evilmartians.com/chronicles/simple-declarative-presence-for-hotwire-apps-with-anycable) blog post.
+
 For Hotwire applications, our `@anycable/turbo-stream` package (>= 0.8.0) provides a custom `<turbo-cable-presence-source>` element to add presence information on the page without needing to write any custom client-side code.
 
 The complete documentation is coming soon; for now, you can check out this [example](https://github.com/anycable/anycasts_demo/pull/17).
