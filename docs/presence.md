@@ -24,7 +24,7 @@ If you use AnyCable Pro, you can also use the Redis broker:
 anycable-go --broker=redis
 ```
 
-**NOTE:** Redis broker is the only broker that works in the cluster mode.
+**NOTE:** Redis broker is the only broker that works in the cluster mode. **Redis 7.4+ is required** for Redis-backed presence to work.
 
 Now, you can use the presence API in your application. For example, using [AnyCable JS client](https://github.com/anycable/anycable-client):
 
