@@ -156,8 +156,8 @@ To use Redis broker, you need to provide the `--broker` option with the `redis` 
 ```sh
 $ anycable-go --broker=redis
 
- INFO 2023-07-08T00:46:55.491Z context=main Starting AnyCable 1.4.0-pro-eed05bc (with mruby 1.2.0 (2015-11-17)) (pid: 78585, open file limit: 122880, gomaxprocs: 8, netpoll: true)
- INFO 2023-07-08T00:46:55.492Z context=main Using Redis broker at localhost:6379 (history limit: 100, history ttl: 300s, sessions ttl: 300s)
+ INFO 2023-07-08T00:46:55.491Z context=main Starting AnyCable 1.6.0-pro-eed05bc (with mruby 1.2.0 (2015-11-17)) (pid: 78585, open file limit: 122880, gomaxprocs: 8, netpoll: true)
+ INFO 2023-07-08T00:46:55.492Z context=main Using Redis broker at localhost:6379 (history limit: 100, history ttl: 300s, sessions ttl: 300s, presence ttl: 15s)
  ...
 ```
 
@@ -192,6 +192,8 @@ $N_{streams}$ — number of unique streams (see the `broadcast_streams_num` metr
 $N_{clients}$ — total number of sessions (see the `clients_num` metrics)
 
 Note that the session cache size depends on the number of subscriptions and channel states, so could vary.
+
+Similarly, presence cache stored in Redis heavily depends on the size of a presence information attached to a user-channel pair.
 
 #### Streams history expiration
 

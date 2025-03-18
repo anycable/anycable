@@ -18,7 +18,13 @@ $ anycable-go --presets=broker
 $ anycable-go --broker=memory
 ```
 
-> 🚧 Currently, presence tracking is only supported by the memory broker.
+If you use AnyCable Pro, you can also use the Redis broker:
+
+```sh
+anycable-go --broker=redis
+```
+
+**NOTE:** Redis broker is the only broker that works in the cluster mode.
 
 Now, you can use the presence API in your application. For example, using [AnyCable JS client](https://github.com/anycable/anycable-client):
 
@@ -98,8 +104,8 @@ The complete documentation is coming soon; for now, you can check out this [exam
 
 ## Presence API
 
-> 🚧 Presence REST API is to be implemented. You can only use the presence API via the WebSocket connection.
+> 🚧 Presence REST API is to be implemented. You can only use the presence API via the WebSocket connection. Please, reach out to us if you need to use it and share your use cases.
 
 ## Presence webhooks
 
-> 🚧 Presence webhooks are to be implemented, too.
+> 🚧 Presence webhooks are to be implemented, too. Please, reach out to us if you need to use it and share your use cases.
