@@ -42,3 +42,12 @@ func TestMessageVerifierNotString(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "chat/2023", arr[0])
 }
+
+func TestMessageVerifierEmptyKey(t *testing.T) {
+	verifier := NewMessageVerifier("")
+	example := "ImNoYXQvMjAyMyI=--2b2e054b6413bf3bc7e8bbad2f68962aa2ba19821800ccbd8de6fd7314e8320c"
+
+	_, err := verifier.Verified(example)
+
+	assert.Error(t, err)
+}

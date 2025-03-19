@@ -34,11 +34,7 @@ type Controller struct {
 var _ node.Controller = (*Controller)(nil)
 
 func NewController(key string, resolver StreamResolver, l *slog.Logger) *Controller {
-	var verifier *utils.MessageVerifier
-
-	if key != "" {
-		verifier = utils.NewMessageVerifier(key)
-	}
+	verifier := utils.NewMessageVerifier(key)
 
 	return &Controller{verifier, resolver, l.With("context", "streams")}
 }

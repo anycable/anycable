@@ -90,6 +90,24 @@ func TestStreamsController(t *testing.T) {
 		assert.Nil(t, res.IState)
 	})
 
+	t.Run("Subscribe - signed - no key", func(t *testing.T) {
+		conf := NewConfig()
+		conf.Secret = ""
+		conf.Presence = false
+		subject := NewStreamsController(&conf, slog.Default())
+
+		require.NotNil(t, subject)
+
+		identifier := `{"channel":"$pubsub","signed_stream_name":"` + stream + `"}`
+
+		res, err := subject.Subscribe("42", nil, "name=jack", identifier)
+
+		require.NoError(t, err)
+		require.NotNil(t, res)
+		require.Equal(t, common.FAILURE, res.Status)
+		assert.Equal(t, []string{common.RejectionMessage(identifier)}, res.Transmissions)
+	})
+
 	t.Run("Subscribe - signed - whisper", func(t *testing.T) {
 		conf := NewConfig()
 		conf.Secret = key
