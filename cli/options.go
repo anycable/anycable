@@ -1158,7 +1158,7 @@ func wsCLIFlags(c *config.Config) []cli.Flag {
 
 		&cli.Uint64Flag{
 			Name:        "ws_max_pending_size",
-			Usage:       "Maximum size of the write queue for session before it's considered slow and disconnected (in kB)",
+			Usage:       "Maximum size (in bytes) of the write queue for a session before it's considered slow and disconnected (0 = unlimited)",
 			Value:       c.WS.MaxPendingSize,
 			Destination: &c.WS.MaxPendingSize,
 		},
