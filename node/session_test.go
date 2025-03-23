@@ -223,37 +223,69 @@ func TestMarkDisconnectable(t *testing.T) {
 }
 
 func TestSend__maxPendingSize(t *testing.T) {
-	node := NewMockNode()
-	session := NewMockSession("123", node)
-	session.maxPendingSize = 1
+	sendTestMessages := func(session *Session) {
+		// Lock writing to populate the queue
+		session.wmu.Lock()
 
-	session.Send(&common.Reply{Type: "message", Message: "hello"})
+		// This message is picked up by the writer routine, so it's not part of the queue
+		session.Send(&common.Reply{Type: "message", Message: "test A"})
+		time.Sleep(100 * time.Millisecond)
 
-	msg, err := session.conn.Read()
-	assert.Nil(t, err)
+		// This message stays in the queue, size is 37 bytes (31 boilerplate + 6 message)
+		session.Send(&common.Reply{Type: "message", Message: "test B"})
 
-	assert.Equal(t, `{"type":"message","message":"hello"}`, string(msg))
+		// This message tests the maxPendingSize check
+		session.Send(&common.Reply{Type: "message", Message: "test C"})
+		session.wmu.Unlock()
 
-	// lock writing
-	session.wmu.Lock()
+		// Pop initial non-queued message
+		msg, err := session.conn.Read()
+		assert.Nil(t, err)
+		assert.Equal(t, `{"type":"message","message":"test A"}`, string(msg))
+	}
 
-	session.Send(&common.Reply{Type: "message", Message: strings.Repeat("karavana", 64)})
-	// Make sure the message is picked up the the writer routine
-	time.Sleep(100 * time.Millisecond)
+	t.Run("Disconnect when queue size at least maxPendingSize", func(t *testing.T) {
+		node := NewMockNode()
+		session := NewMockSession("123", node)
+		session.maxPendingSize = 37
 
-	// this one should be dropped
-	session.Send(&common.Reply{Type: "message", Message: strings.Repeat("marivana", 64)})
+		sendTestMessages(session)
 
-	// The queue has already > 1kb of data — we must close the session
-	session.Send(&common.Reply{Type: "message", Message: strings.Repeat("karambas", 64)})
-	session.wmu.Unlock()
+		// Receive slow disconnect notice instead of queued messages
+		msg, err := session.conn.Read()
+		assert.Nil(t, err)
+		assert.Equal(t, `{"type":"disconnect","reason":"too_slow","reconnect":true}`, string(msg))
+	})
 
-	// Read the second message
-	msg, err = session.conn.Read()
-	assert.Nil(t, err)
-	assert.Contains(t, string(msg), "karavana")
-	// must receive only slow disconnect notice
-	msg, err = session.conn.Read()
-	assert.Nil(t, err)
-	assert.Equal(t, `{"type":"disconnect","reason":"too_slow","reconnect":true}`, string(msg))
+	t.Run("Allow when queue size less than maxPendingSize", func(t *testing.T) {
+		node := NewMockNode()
+		session := NewMockSession("123", node)
+		session.maxPendingSize = 38
+
+		sendTestMessages(session)
+
+		// Receive queued messages
+		msg, err := session.conn.Read()
+		assert.Nil(t, err)
+		assert.Equal(t, `{"type":"message","message":"test B"}`, string(msg))
+		msg, err = session.conn.Read()
+		assert.Nil(t, err)
+		assert.Equal(t, `{"type":"message","message":"test C"}`, string(msg))
+	})
+
+	t.Run("Allow when maxPendingSize is 0 (unlimited)", func(t *testing.T) {
+		node := NewMockNode()
+		session := NewMockSession("123", node)
+		session.maxPendingSize = 0
+
+		sendTestMessages(session)
+
+		// Receive queued messages
+		msg, err := session.conn.Read()
+		assert.Nil(t, err)
+		assert.Equal(t, `{"type":"message","message":"test B"}`, string(msg))
+		msg, err = session.conn.Read()
+		assert.Nil(t, err)
+		assert.Equal(t, `{"type":"message","message":"test C"}`, string(msg))
+	})
 }
