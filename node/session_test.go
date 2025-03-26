@@ -230,7 +230,7 @@ func TestSend__maxPendingSize(t *testing.T) {
 		session.Send(&common.Reply{Type: "message", Message: "test A"})
 		time.Sleep(100 * time.Millisecond)
 
-		// This message stays in the queue, size is 37 bytes (31 boilerplate + 6 message)
+		// This message stays in the queue, size is 37 bytes (31 boilerplate + 6 content)
 		session.Send(&common.Reply{Type: "message", Message: "test B"})
 
 		// This message tests the maxPendingSize check
