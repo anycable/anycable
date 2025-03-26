@@ -24,11 +24,6 @@ const (
 	unsubscribeCmd
 )
 
-type clientCommand struct {
-	cmd subscriptionCmd
-	id  string
-}
-
 type subscriptionEntry struct {
 	id string
 }
@@ -65,7 +60,9 @@ type RedisSubscriber struct {
 	subscriptions map[string]*subscriptionEntry
 	subMu         sync.RWMutex
 
-	commandsCh chan (*clientCommand)
+	psClient rueidis.DedicatedClient
+	psMu     sync.RWMutex
+
 	shutdownCh chan struct{}
 
 	log *slog.Logger
@@ -93,7 +90,6 @@ func NewRedisSubscriber(node Handler, config *RedisConfig, l *slog.Logger) (*Red
 		clientOptions:  options,
 		subscriptions:  make(map[string]*subscriptionEntry),
 		log:            l.With("context", "pubsub"),
-		commandsCh:     make(chan *clientCommand, 2),
 		shutdownCh:     make(chan struct{}),
 		trackingEvents: false,
 		events:         make(map[string]subscriptionCmd),
@@ -146,7 +142,14 @@ func (s *RedisSubscriber) Subscribe(stream string) {
 	entry := s.subscriptions[stream]
 	s.subMu.Unlock()
 
-	s.commandsCh <- &clientCommand{cmd: subscribeCmd, id: entry.id}
+	client := s.pubsubClient()
+	if client == nil {
+		return
+	}
+
+	ctx := context.Background()
+	s.log.With("channel", entry.id).Debug("subscribing")
+	client.Do(ctx, client.B().Subscribe().Channel(entry.id).Build())
 }
 
 func (s *RedisSubscriber) Unsubscribe(stream string) {
@@ -159,7 +162,14 @@ func (s *RedisSubscriber) Unsubscribe(stream string) {
 	delete(s.subscriptions, stream)
 	s.subMu.Unlock()
 
-	s.commandsCh <- &clientCommand{cmd: unsubscribeCmd, id: stream}
+	client := s.pubsubClient()
+	if client == nil {
+		return
+	}
+
+	ctx := context.Background()
+	s.log.With("channel", stream).Debug("unsubscribing")
+	client.Do(ctx, client.B().Unsubscribe().Channel(stream).Build())
 }
 
 func (s *RedisSubscriber) Broadcast(msg *common.StreamMessage) {
@@ -205,6 +215,13 @@ func (s *RedisSubscriber) initClient() error {
 	s.client = c
 
 	return nil
+}
+
+func (s *RedisSubscriber) pubsubClient() rueidis.DedicatedClient {
+	s.psMu.RLock()
+	defer s.psMu.RUnlock()
+
+	return s.psClient
 }
 
 func (s *RedisSubscriber) runPubSub(done chan (error)) {
@@ -254,6 +271,10 @@ func (s *RedisSubscriber) runPubSub(done chan (error)) {
 		},
 	})
 
+	s.psMu.Lock()
+	s.psClient = client
+	s.psMu.Unlock()
+
 	s.resubscribe(client)
 
 	for {
@@ -269,17 +290,6 @@ func (s *RedisSubscriber) runPubSub(done chan (error)) {
 		case <-s.shutdownCh:
 			s.log.Debug("close pub/sub channel")
 			return
-		case entry := <-s.commandsCh:
-			ctx := context.Background()
-
-			switch entry.cmd {
-			case subscribeCmd:
-				s.log.With("channel", entry.id).Debug("subscribing")
-				client.Do(ctx, client.B().Subscribe().Channel(entry.id).Build())
-			case unsubscribeCmd:
-				s.log.With("channel", entry.id).Debug("unsubscribing")
-				client.Do(ctx, client.B().Unsubscribe().Channel(entry.id).Build())
-			}
 		}
 	}
 }
@@ -289,6 +299,10 @@ func (s *RedisSubscriber) maybeReconnect(done chan (error)) {
 		done <- errors.New("failed to reconnect to Redis: attempts exceeded") //nolint:stylecheck
 		return
 	}
+
+	s.psMu.Lock()
+	s.psClient = nil
+	s.psMu.Unlock()
 
 	s.clientMu.RLock()
 	if s.client != nil {
