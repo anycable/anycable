@@ -1,7 +1,6 @@
 package node
 
 import (
-	"strings"
 	"sync"
 	"testing"
 	"time"
