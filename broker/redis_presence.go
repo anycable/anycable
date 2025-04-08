@@ -3,6 +3,7 @@ package broker
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -35,19 +36,41 @@ func (b *RedisBroker) PresenceAdd(stream string, sid string, pid string, info in
 	}
 
 	ctx := context.Background()
-	key := stream
+
+	sessionKey := redisSessionPresencePrefix + sid
+
+	currentUserID, err := client.Do(ctx, client.B().Hget().Key(sessionKey).Field(stream).Build()).ToString()
+
+	if err == nil && currentUserID != "" && currentUserID != pid {
+		return nil, fmt.Errorf("Session already has presence for this stream with different user ID")
+	}
+
+	key := b.toKey(redisPresencePrefix, stream)
+	userKey := b.toKey(redisUserPresencePrefix, stream, pid)
+
 	ttl := fmt.Sprintf("%d", b.conf.PresenceTTL)
 	infoJSON := string(utils.ToJSON(info))
 
-	res := b.presence.addPresenceScript.Exec(ctx, client, []string{key}, []string{sid, pid, ttl, infoJSON})
+	addResult := b.presence.addPresenceScript.Exec(ctx, client, []string{key, userKey}, []string{sid, pid, ttl, infoJSON})
 
-	if res.Error() != nil {
-		return nil, errorx.Decorate(res.Error(), "failed to store presence in Redis")
+	if addResult.Error() != nil {
+		return nil, errorx.Decorate(addResult.Error(), "failed to store presence in Redis")
 	}
 
 	b.presence.add(sid, stream, pid)
 
-	newPresence, err := res.ToInt64()
+	err = client.Do(ctx, client.B().Hset().Key(sessionKey).FieldValue().FieldValue(stream, pid).Build()).Error()
+	if err != nil {
+		return nil, errorx.Decorate(err, "failed to store session presence in Redis")
+	}
+
+	cleanupTTL := b.conf.PresenceTTL * 10
+	err = client.Do(ctx, client.B().Expire().Key(sessionKey).Seconds(cleanupTTL).Build()).Error()
+	if err != nil {
+		return nil, errorx.Decorate(err, "failed to set session presence TTL in Redis")
+	}
+
+	newPresence, err := addResult.ToInt64()
 
 	if err != nil {
 		return nil, errorx.Decorate(err, "failed to parse presence result from Redis response")
@@ -77,24 +100,37 @@ func (b *RedisBroker) PresenceRemove(stream string, sid string) (*common.Presenc
 		return nil, err
 	}
 
+	pid := b.presence.get(sid, stream)
+	if pid == "" {
+		return nil, errors.New("presence not found")
+	}
+
 	ctx := context.Background()
-	key := stream
+	key := b.toKey(redisPresencePrefix, stream)
+	userKey := b.toKey(redisUserPresencePrefix, stream, pid)
 
-	res := b.presence.removePresenceScript.Exec(ctx, client, []string{key}, []string{sid})
+	removeResult := b.presence.removePresenceScript.Exec(ctx, client, []string{key, userKey}, []string{sid, pid})
 
-	if res.Error() != nil {
-		return nil, errorx.Decorate(res.Error(), "failed to remove presence from Redis")
+	if removeResult.Error() != nil {
+		return nil, errorx.Decorate(removeResult.Error(), "failed to remove presence from Redis")
 	}
 
 	b.presence.remove(sid, stream)
 
-	pid, err := res.ToString()
+	sessionKey := redisSessionPresencePrefix + sid
+
+	err = client.Do(ctx, client.B().Hdel().Key(sessionKey).Field(stream).Build()).Error()
+	if err != nil {
+		return nil, errorx.Decorate(err, "failed to delete session presence in Redis")
+	}
+
+	lastPresence, err := removeResult.ToInt64()
 
 	if err != nil {
 		return nil, errorx.Decorate(err, "failed to parse presence result from Redis response")
 	}
 
-	if pid != "" {
+	if lastPresence > 0 {
 		ev := &common.PresenceEvent{
 			Type: common.PresenceLeaveType,
 			ID:   pid,
@@ -125,7 +161,7 @@ func (b *RedisBroker) PresenceInfo(stream string, opts ...PresenceInfoOption) (*
 	info := common.NewPresenceInfo()
 
 	ctx := context.Background()
-	key := redisPresencePrefix + stream
+	key := b.toKey(redisPresencePrefix, stream)
 
 	if !b.keyExists(ctx, key) {
 		return info, nil
@@ -183,13 +219,34 @@ func (b *RedisBroker) TouchPresence(sid string) error {
 	}
 
 	ctx := context.Background()
-	key := sid
-	ttl := fmt.Sprintf("%d", b.conf.PresenceTTL)
+	sessionKey := redisSessionPresencePrefix + sid
 
-	res := b.presence.touchPresenceScript.Exec(ctx, client, []string{key}, []string{ttl})
+	cleanupTTL := b.conf.PresenceTTL * 10
+	err = client.Do(ctx, client.B().Expire().Key(sessionKey).Seconds(cleanupTTL).Build()).Error()
+	if err != nil {
+		return errorx.Decorate(err, "failed to update session expiration")
+	}
 
-	if res.Error() != nil {
-		return errorx.Decorate(res.Error(), "failed to store presence in Redis")
+	// Get all stream-id pairs from the sessionPresenceKey
+	res := client.Do(ctx, client.B().Hgetall().Key(sessionKey).Build())
+
+	pairs, err := res.AsStrMap()
+	if err != nil {
+		return errorx.Decorate(err, "failed to get session presence")
+	}
+
+	// Touch each stream-id pair to keep the presence alive
+	for stream, pid := range pairs {
+		key := b.toKey(redisPresencePrefix, stream)
+		userKey := b.toKey(redisUserPresencePrefix, stream, pid)
+
+		ttl := fmt.Sprintf("%d", b.conf.PresenceTTL)
+
+		res := b.presence.touchPresenceScript.Exec(ctx, client, []string{key, userKey}, []string{sid, pid, ttl})
+
+		if res.Error() != nil {
+			return errorx.Decorate(res.Error(), "failed to touch presence")
+		}
 	}
 
 	b.presence.touch(sid)
@@ -205,11 +262,12 @@ func (b *RedisBroker) MaybeExpirePresence(sid string, stream string, pid string)
 	}
 
 	ctx := context.Background()
-	key := stream
+	key := b.toKey(redisPresencePrefix, stream)
+	userKey := b.toKey(redisUserPresencePrefix, stream, pid)
 
 	b.log.Debug("check presence expiration", "sid", sid, "pid", pid, "stream", stream)
 
-	res := b.presence.expirePresenceScript.Exec(ctx, client, []string{key}, []string{sid, pid})
+	res := b.presence.expirePresenceScript.Exec(ctx, client, []string{key, userKey}, []string{sid, pid})
 
 	if res.Error() != nil {
 		return errorx.Decorate(res.Error(), "failed to store presence in Redis")
@@ -370,6 +428,27 @@ func (rp *redisPresence) handleInvalidateTask(fields map[string]string) error {
 }
 
 func (rp *redisPresence) invalidationLoop() {
+	rp.bro.keyMu.RLock()
+	cluster := rp.bro.clusterMode
+	rp.bro.keyMu.RUnlock()
+
+	client, err := rp.bro.Client()
+	if err != nil {
+		rp.bro.log.Debug("failed to get redis client", "error", err)
+		return
+	}
+
+	if cluster {
+		nodeClients := client.Nodes()
+		for _, nodeClient := range nodeClients {
+			go rp.nodeInvalidationLoop(nodeClient, client)
+		}
+	} else {
+		rp.nodeInvalidationLoop(client, client)
+	}
+}
+
+func (rp *redisPresence) nodeInvalidationLoop(client rueidis.Client, clusterClient rueidis.Client) {
 	nextCursor := "0"
 
 	for {
@@ -377,55 +456,87 @@ func (rp *redisPresence) invalidationLoop() {
 		case <-rp.stopCtx.Done():
 			return
 		case <-time.After(invalidationCooldownMS * time.Millisecond):
-			client, err := rp.bro.Client()
-			if err != nil {
-				rp.bro.log.Debug("failed to get redis client", "error", err)
-				continue
-			}
-
 			ctx := context.Background()
 
-			// expiration for an alive session must be between 2 and 3 ttl (since we touch it with 3*ttl)
+			// expiration for an alive session must be between 2 and 3 ttl from its deadline (since we touch it with 10*ttl)
 			deadline := time.Now().UnixMilli() + (rp.bro.conf.PresenceTTL * 9000)
 			deadlineStr := fmt.Sprintf("%d", deadline)
 
 			rp.bro.log.Debug("invalidate sessions", "deadline", deadline, "cursor", nextCursor)
 
-			res := rp.invalidatePresenceScript.Exec(ctx, client, []string{invalidationStream}, []string{nextCursor, fmt.Sprintf("%d", invalidationScanStep), deadlineStr})
+			invalidationResult := rp.invalidatePresenceScript.Exec(ctx, client, []string{}, []string{nextCursor, fmt.Sprintf("%d", invalidationScanStep), deadlineStr})
 
-			if res.Error() != nil {
-				rp.bro.log.Error("failed to invalidate presence", "error", res.Error())
+			if invalidationResult.Error() != nil {
+				rp.bro.log.Error("failed to invalidate presence", "error", invalidationResult.Error())
 				return
 			}
 
-			nextStep, err := res.ToArray()
+			nextStep, err := invalidationResult.ToArray()
 
 			if err != nil {
-				rp.bro.log.Error("failed to parse invalidation result", "error", res.Error())
+				rp.bro.log.Error("failed to parse invalidation result", "error", invalidationResult.Error())
 				return
 			}
 
 			nextCursor, err = nextStep[0].ToString()
 
 			if err != nil {
-				rp.bro.log.Error("failed to parse next cursor", "error", res.Error())
+				rp.bro.log.Error("failed to parse next cursor", "error", invalidationResult.Error())
 				return
 			}
 
-			expiredCount, err := nextStep[1].ToInt64()
+			expiredKeys, err := nextStep[1].ToArray()
 
 			if err != nil {
-				rp.bro.log.Error("failed to parse expired count", "error", err)
+				rp.bro.log.Error("failed to parse expired keys", "error", err)
 				return
+			}
+
+			for _, keyMsg := range expiredKeys {
+				key, err := keyMsg.ToString()
+				if err != nil {
+					rp.bro.log.Error("failed to parse key", "error", err)
+					continue
+				}
+				rp.invalidateSession(clusterClient, key, invalidationStream)
 			}
 
 			if nextCursor == "0" {
-				rp.bro.log.Debug("sessions invalidation completed", "count", expiredCount)
+				rp.bro.log.Debug("sessions invalidation completed", "count", len(expiredKeys))
 				return
 			} else {
-				rp.bro.log.Debug("sessions invalidation in progress", "count", expiredCount)
+				rp.bro.log.Debug("sessions invalidation in progress", "count", len(expiredKeys))
 			}
 		}
+	}
+}
+
+func (rp *redisPresence) invalidateSession(client rueidis.Client, sessionKey string, queue string) {
+	ctx := context.Background()
+	streamIdPairs, err := client.Do(ctx, client.B().Hgetall().Key(sessionKey).Build()).AsStrMap()
+	if err != nil {
+		rp.bro.log.Error("failed to get session presence info", "error", err)
+		return
+	}
+
+	for stream, userID := range streamIdPairs {
+		err = client.Do(ctx, client.B().Xadd().Key(queue).Id("*").
+			FieldValue().
+			FieldValue("key", sessionKey).
+			FieldValue("stream", stream).
+			FieldValue("user_id", userID).
+			Build()).Error()
+
+		if err != nil {
+			rp.bro.log.Error("failed to add invalidation task", "error", err)
+			return
+		}
+	}
+
+	err = client.Do(ctx, client.B().Del().Key(sessionKey).Build()).Error()
+	if err != nil {
+		rp.bro.log.Error("failed to delete key", "error", err)
+		return
 	}
 }
 
@@ -441,6 +552,17 @@ func (rp *redisPresence) add(sid string, stream string, pid string) {
 	}
 
 	rp.sessions[sid].streams[stream] = pid
+}
+
+func (rp *redisPresence) get(sid string, stream string) string {
+	rp.smu.Lock()
+	defer rp.smu.Unlock()
+
+	if session, ok := rp.sessions[sid]; ok {
+		return session.streams[stream]
+	}
+
+	return ""
 }
 
 func (rp *redisPresence) touch(sid string) {

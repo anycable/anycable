@@ -1,14 +1,12 @@
 -- This script is responsible for adding a message to the cache.
 -- A separate key is used to store the current position in the stream.
 -- A separate stream is used to store timestamps for positions (used by HistorySince).
-local streamId = KEYS[1]
+local streamKey = KEYS[1]
+local posKey = KEYS[2]
+local tsKey = KEYS[3]
 local payload = ARGV[1]
 local historyLimit = ARGV[2]
 local historyTTL = ARGV[3]
-
-local streamKey = "$ac:s:" .. streamId
-local posKey = "$ac:spos:" .. streamId
-local tsKey = "$ac:sts:" .. streamId
 
 local pos = redis.call("incr", posKey)
 local posTTL = tonumber(historyTTL) * 10

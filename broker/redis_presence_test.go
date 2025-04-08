@@ -99,7 +99,7 @@ func TestRedisBroker_Presence(t *testing.T) {
 	}), "presence user with user_id and name:Jack not found: %s", info.Records)
 
 	// Now let's check that leave works
-	ev, err = broker2.PresenceRemove("a", "s1")
+	ev, err = broker.PresenceRemove("a", "s1")
 	require.NoError(t, err)
 	assert.Nil(t, ev)
 
@@ -110,8 +110,9 @@ func TestRedisBroker_Presence(t *testing.T) {
 
 	assert.Equal(t, 2, info.Total)
 
-	ev, err = broker.PresenceRemove("a", "s2")
+	ev, err = broker2.PresenceRemove("a", "s2")
 	require.NoError(t, err)
+	require.NotNil(t, ev)
 	assert.Equal(t, "user_1", ev.ID)
 
 	presenter.AssertNumberOfCalls(t, "HandleLeave", 1)
@@ -186,7 +187,7 @@ func TestRedisBroker_Presence_expiration(t *testing.T) {
 	info, err = broker.PresenceInfo("a")
 	require.NoError(t, err)
 
-	assert.Equal(t, 1, info.Total)
+	require.Equal(t, 1, info.Total)
 	assert.Equal(t, "user_1", info.Records[0].ID)
 	assert.Equal(t, "jack", info.Records[0].Info)
 

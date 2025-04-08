@@ -28,9 +28,11 @@ type RedisBroker struct {
 	tracker     *StreamsTracker
 	presence    *redisPresence
 
-	rconf    *rconfig.RedisConfig
-	client   rueidis.Client
-	clientMu sync.RWMutex
+	rconf       *rconfig.RedisConfig
+	client      rueidis.Client
+	clusterMode bool
+	clientMu    sync.RWMutex
+	keyMu       sync.RWMutex
 
 	epoch     string
 	addScript *rueidis.Lua
@@ -39,10 +41,11 @@ type RedisBroker struct {
 }
 
 const (
-	redisSessionsPrefix = "$ac:se:"
-	redisStreamPrefix   = "$ac:s:"
-	redisStreamTsPrefix = "$ac:sts:"
-	redisEpochKey       = "$ac:e"
+	redisSessionsPrefix        = "$ac:se:"
+	redisStreamPrefix          = "$ac:s:"
+	redisStreamPosPrefix       = "$ac:sp:"
+	redisStreamTimestampPrefix = "$ac:st:"
+	redisEpochKey              = "$ac:e"
 )
 
 //go:embed redis/add_message.lua
@@ -91,6 +94,16 @@ func (b *RedisBroker) Start(done chan (error)) error {
 	b.epoch = epoch
 
 	b.log.Debug("broker epoch", "epoch", b.epoch)
+
+	mode := b.client.Mode()
+
+	b.log.Debug("Redis client mode", "mode", mode)
+
+	if b.client.Mode() == rueidis.ClientModeCluster {
+		b.keyMu.Lock()
+		b.clusterMode = true
+		b.keyMu.Unlock()
+	}
 
 	b.addScript = rueidis.NewLuaScript(addToStreamSource)
 	if err := b.presence.Start(); err != nil {
@@ -192,7 +205,7 @@ func (b *RedisBroker) HistoryFrom(stream string, epoch string, offset uint64) ([
 	b.clientMu.RUnlock()
 
 	ctx := context.Background()
-	key := redisStreamPrefix + stream
+	key := b.toKey(redisStreamPrefix, stream)
 	start := "(" + fmt.Sprintf("%d", offset)
 
 	if !b.keyExists(ctx, key) {
@@ -237,7 +250,7 @@ func (b *RedisBroker) HistorySince(stream string, ts int64) ([]common.StreamMess
 	}
 
 	ctx := context.Background()
-	key := redisStreamTsPrefix + stream
+	key := b.toKey(redisStreamTimestampPrefix, stream)
 	// Redis uses milliseconds as message IDs
 	start := fmt.Sprintf("%d", ts*1000)
 
@@ -412,18 +425,28 @@ func (b *RedisBroker) Reset() error {
 		return fmt.Errorf("failed to retrieve keys: %v", err)
 	}
 
-	keys := []string{}
+	if b.clusterMode {
+		for _, msg := range msgs {
+			key, _ := msg.ToString()
 
-	for _, msg := range msgs {
-		key, _ := msg.ToString()
-		keys = append(keys, key)
-	}
+			if kerr := c.Do(ctx, c.B().Del().Key(key).Build()).Error(); kerr != nil {
+				return errorx.Decorate(kerr, "failed to delete key")
+			}
+		}
+	} else {
+		keys := []string{}
 
-	res := c.Do(context.Background(), c.B().Del().Key(keys...).Build())
-	err = res.Error()
+		for _, msg := range msgs {
+			key, _ := msg.ToString()
+			keys = append(keys, key)
+		}
 
-	if err != nil {
-		return errorx.Decorate(err, "failed to delete keys")
+		res := c.Do(context.Background(), c.B().Del().Key(keys...).Build())
+		err = res.Error()
+
+		if err != nil {
+			return errorx.Decorate(err, "failed to delete keys")
+		}
 	}
 
 	epoch, err := b.calculateEpoch()
@@ -448,7 +471,7 @@ func (b *RedisBroker) calculateEpoch() (string, error) {
 	for i, resp := range b.client.DoMulti(ctx,
 		b.client.B().Set().Key(key).Value(maybeNewEpoch).Nx().Build(),
 		b.client.B().Expire().Key(key).Seconds(ttl).Build(),
-		b.client.B().Get().Key(redisEpochKey).Build(),
+		b.client.B().Get().Key(key).Build(),
 	) {
 		if err := resp.Error(); err != nil && !rueidis.IsRedisNil(err) {
 			return "", errorx.Decorate(err, "failed to calculate epoch")
@@ -470,11 +493,14 @@ func (b *RedisBroker) add(stream string, data string) (uint64, error) {
 	}
 
 	ctx := context.Background()
-	key := stream
+	streamKey := b.toKey(redisStreamPrefix, stream)
+	posKey := b.toKey(redisStreamPosPrefix, stream)
+	tsKey := b.toKey(redisStreamTimestampPrefix, stream)
+
 	ttl := fmt.Sprintf("%d", b.conf.HistoryTTL)
 	limit := fmt.Sprintf("%d", b.conf.HistoryLimit)
 
-	res := b.addScript.Exec(ctx, client, []string{key}, []string{data, limit, ttl})
+	res := b.addScript.Exec(ctx, client, []string{streamKey, posKey, tsKey}, []string{data, limit, ttl})
 
 	if res.Error() != nil {
 		return 0, errorx.Decorate(res.Error(), "failed to add message to Redis stream")
@@ -514,6 +540,23 @@ func (b *RedisBroker) Client() (rueidis.Client, error) {
 	}
 
 	return b.client, nil
+}
+
+func (b *RedisBroker) toKey(prefix string, id string, suffixes ...string) string {
+	b.keyMu.RLock()
+	defer b.keyMu.RUnlock()
+
+	if b.clusterMode {
+		id = fmt.Sprintf("{%s}", id)
+	}
+
+	id = fmt.Sprintf("%s:%s", prefix, id)
+
+	for _, suffix := range suffixes {
+		id = fmt.Sprintf("%s:%s", id, suffix)
+	}
+
+	return id
 }
 
 // Consider in future releases, if we need to trim everlasting streams
