@@ -22,7 +22,7 @@ require (
 	github.com/mitchellh/go-mruby v0.0.0-20200315023956-207cedc21542
 	github.com/nats-io/nats.go v1.40.1
 	github.com/posthog/posthog-go v1.4.1
-	github.com/redis/rueidis v1.0.56
+	github.com/redis/rueidis v1.0.57
 	github.com/smira/go-statsd v1.3.4
 	github.com/stretchr/testify v1.10.0
 	github.com/urfave/cli/v2 v2.27.6
@@ -62,7 +62,7 @@ require (
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
 	golang.org/x/crypto v0.36.0 // indirect
-	golang.org/x/sys v0.31.0 // indirect
+	golang.org/x/sys v0.32.0 // indirect
 	golang.org/x/text v0.23.0 // indirect
 	google.golang.org/protobuf v1.36.6
 	gopkg.in/yaml.v3 v3.0.1 // indirect

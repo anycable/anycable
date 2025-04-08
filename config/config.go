@@ -92,7 +92,7 @@ func NewConfig() Config {
 		Streams:              streams.NewConfig(),
 	}
 
-	return config
+	return config // nolint:govet
 }
 
 func (c *Config) LoadFromFile() error {
@@ -116,7 +116,7 @@ func (c *Config) LoadFromFile() error {
 	return nil
 }
 
-func (c Config) ToToml() string {
+func (c *Config) ToToml() string {
 	var result strings.Builder
 
 	result.WriteString("# AnyCable server configuration.\n# Read more at https://docs.anycable.io/anycable-go/configuration\n\n")

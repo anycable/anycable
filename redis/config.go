@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/redis/rueidis"
@@ -33,6 +34,8 @@ type RedisConfig struct {
 	hosts []string
 	// Sentinel Master host to connect
 	sentinelMaster string
+
+	mu sync.RWMutex
 }
 
 // NewRedisConfig builds a new config for Redis pubsub
@@ -49,18 +52,30 @@ func NewRedisConfig() RedisConfig {
 }
 
 func (config *RedisConfig) IsCluster() bool {
+	config.mu.RLock()
+	defer config.mu.RUnlock()
+
 	return len(config.hosts) > 1 && !config.IsSentinel()
 }
 
 func (config *RedisConfig) IsSentinel() bool {
+	config.mu.RLock()
+	defer config.mu.RUnlock()
+
 	return config.Sentinels != "" || config.sentinelMaster != ""
 }
 
 func (config *RedisConfig) Hostnames() []string {
+	config.mu.RLock()
+	defer config.mu.RUnlock()
+
 	return config.hosts
 }
 
 func (config *RedisConfig) Hostname() string {
+	config.mu.RLock()
+	defer config.mu.RUnlock()
+
 	if config.IsSentinel() {
 		return config.sentinelMaster
 	} else {
@@ -79,8 +94,10 @@ func (config *RedisConfig) ToRueidisOptions() (options *rueidis.ClientOption, er
 		return nil, err
 	}
 
-	config.hosts = options.InitAddress
+	config.mu.Lock()
+	config.hosts = append([]string{}, options.InitAddress...)
 	config.sentinelMaster = options.Sentinel.MasterSet
+	config.mu.Unlock()
 
 	options.Dialer.KeepAlive = time.Duration(config.KeepalivePingInterval) * time.Second
 
@@ -96,6 +113,9 @@ func (config *RedisConfig) ToRueidisOptions() (options *rueidis.ClientOption, er
 }
 
 func (config *RedisConfig) parseSentinels() (*rueidis.ClientOption, error) {
+	config.mu.RLock()
+	defer config.mu.RUnlock()
+
 	sentinelMaster, err := url.Parse(config.URL)
 
 	if err != nil {
@@ -113,7 +133,10 @@ func (config *RedisConfig) parseSentinels() (*rueidis.ClientOption, error) {
 	return options, nil
 }
 
-func (config RedisConfig) ToToml() string {
+func (config *RedisConfig) ToToml() string {
+	config.mu.RLock()
+	defer config.mu.RUnlock()
+
 	var result strings.Builder
 
 	result.WriteString("# Redis instance URL or master name in case of sentinels usage\n")

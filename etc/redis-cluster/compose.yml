@@ -1,0 +1,31 @@
+# To run this cluster:
+# 1. Start containers: docker-compose up -d
+# 2. Create cluster: docker compose exec redis1 redis-cli --cluster create redis1:6380 redis2:6381 redis3:6382 --cluster-yes
+#
+# Connect using REDIS_URL:
+# REDIS_URL=redis://localhost:6380,redis://localhost:6381,redis://localhost:6382
+version: '3'
+services:
+  redis1:
+    image: redis:7.4
+    command: redis-server --port 6380 --cluster-enabled yes --cluster-node-timeout 5000 --protected-mode no
+    ports:
+      - 6380:6380
+    networks:
+      - redis-net
+  redis2:
+    image: redis:7.4
+    command: redis-server --port 6381 --cluster-enabled yes --cluster-node-timeout 5000 --protected-mode no
+    ports:
+      - 6381:6381
+    networks:
+      - redis-net
+  redis3:
+    image: redis:7.4
+    command: redis-server --port 6382 --cluster-enabled yes --cluster-node-timeout 5000 --protected-mode no
+    ports:
+      - 6382:6382
+    networks:
+      - redis-net
+networks:
+  redis-net:

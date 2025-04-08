@@ -195,5 +195,5 @@ func TestRedisConfig__ToToml(t *testing.T) {
 	_, err := toml.Decode(tomlStr, &config2)
 	require.NoError(t, err)
 
-	assert.Equal(t, config, config2)
+	assert.Equal(t, config, config2) // nolint:govet
 }
