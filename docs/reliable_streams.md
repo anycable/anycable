@@ -92,7 +92,7 @@ There are several configuration options to control how to store messages and ses
 
 - `--history_limit`: Max number of messages to keep in the stream's history. Default: `100`.
 - `--history_ttl`: Max time to keep messages in the stream's history. Default: `300s`.
-- `--sessions_ttl`: Max time to keep sessions in the cache. Default: `300s`.
+- `--sessions_ttl`: Max time to keep sessions in the cache. Default: `300s`. Setting `sessions_ttl` to zero disables sessions cache.
 
 Currently, the configuration is global. We plan to add support for granular (per-stream) settings in the following releases.
 
