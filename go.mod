@@ -9,7 +9,6 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fullstorydev/grpchan v1.1.1
 	github.com/go-chi/chi/v5 v5.2.1
-	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/gomodule/redigo v1.9.2
 	github.com/google/gops v0.3.28
@@ -37,6 +36,7 @@ replace github.com/mitchellh/go-mruby => ./vendorlib/go-mruby
 
 require (
 	github.com/BurntSushi/toml v1.5.0
+	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/sony/gobreaker v1.0.0
 )
 

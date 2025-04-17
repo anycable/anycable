@@ -1,13 +1,14 @@
 package identity
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/url"
 	"strings"
 
 	"github.com/anycable/anycable-go/common"
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 const (
@@ -124,12 +125,10 @@ func (i *JWTIdentifier) Identify(sid string, env *common.SessionEnv) (*common.Co
 	})
 
 	if err != nil {
-		if ve, ok := err.(*jwt.ValidationError); ok {
-			if ve.Errors&(jwt.ValidationErrorExpired) != 0 {
-				i.log.Debug("token has expired")
+		if errors.Is(err, jwt.ErrTokenExpired) {
+			i.log.Debug("token has expired")
 
-				return expiredResponse(), nil
-			}
+			return expiredResponse(), nil
 		}
 
 		i.log.Debug("invalid token", "error", err)
