@@ -6,7 +6,7 @@ on:
 
 jobs:
   upload_binaries:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     env:
       GO111MODULE: on
       CGO_ENABLED: "0"
