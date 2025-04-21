@@ -1,5 +1,9 @@
 # Change log
 
+## 1.6.1 (2025-04-17)
+
+- Upgrade dependencies.
+
 ## 1.6.0 (2025-03-18)
 
 - Fix bug when unsubscribing different stream from the same channel ([@amree][])
