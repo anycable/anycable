@@ -9,15 +9,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Extract Pro source code
         run: |
           make dist/anycable-source
       - name: Push to releases repo
-        uses: JamesIves/github-pages-deploy-action@4.0.0
-        with:
-          repository-name: anycable/anycable-pro-source-releases
-          branch: master
-          folder: dist/anycable-source
-          clean: true
-          force: true
-          token: ${{ secrets.SOURCE_RELEASES_ACCESS_TOKEN }}
+        env:
+          GH_TOKEN: ${{ secrets.SOURCE_RELEASES_ACCESS_TOKEN }}
+        run: |
+          gh repo clone https://github.com/anycable/anycable-pro-source-releases dist/anycable-pro-source-releases
+          cd dist/anycable-pro-source-releases
+          cp -r ../anycable-source/* .
+          git config --global user.email "anycable@evilmartians.com"
+          git config --global user.name "AnyCable Pro"
+          gh auth setup-git
+          git add -A
+          git commit -m "Update pro source code (from ${{ github.sha }})"
+          git push -f origin master
