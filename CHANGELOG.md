@@ -1,5 +1,7 @@
 # Change log
 
+- Enable Redis pub/sub if Redis is configured or used by other components. ([@palkan][])
+
 ## 1.6.1 (2025-04-17)
 
 - Upgrade dependencies.

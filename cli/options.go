@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -243,6 +244,18 @@ Use disconnect_mode=never instead.`)
 		fmt.Println(`DEPRECATION WARNING: disconnect_timeout option is deprecated
 and will be removed in the next major release of anycable-go.
 Use shutdown_timeout instead.`)
+	}
+
+	// Various computed/dependent configuration settings.
+	// We need a fresh instance of the config to see if the value has been changed.
+	defaults := config.NewConfig()
+
+	// If REDIS_URL is available or redisx broadcast adapter or redis broker is used
+	// and no pubsub configured, enable Redis pub/sub.
+	if (c.PubSubAdapter == defaults.PubSubAdapter) && ((c.Redis.URL != defaults.Redis.URL) ||
+		slices.Contains(c.BroadcastAdapters, "redisx") ||
+		(c.Broker.Adapter == "redis")) {
+		c.PubSubAdapter = "redis"
 	}
 
 	// Propagate allowed origins to all the components
