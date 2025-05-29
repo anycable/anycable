@@ -898,6 +898,12 @@ func (s *Session) handleNoPong() {
 	s.Disconnect("No Pong", ws.CloseNormalClosure)
 }
 
+func (s *Session) handleClientPing(msg *common.Message) error {
+	s.Log.Debug("ping received")
+	s.Send(&common.Reply{Type: common.PongType})
+	return nil
+}
+
 func (s *Session) handleTimerEvent(ev timerEvent) {
 	if s.IsClosed() {
 		return
