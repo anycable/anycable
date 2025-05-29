@@ -172,6 +172,8 @@ func (n *Node) HandleCommand(s *Session, msg *common.Message) (err error) {
 
 	switch msg.Command {
 	case "pong":
+	case "ping":
+		err = s.handleClientPing(msg)
 	case "subscribe":
 		_, err = n.Subscribe(s, msg)
 	case "unsubscribe":

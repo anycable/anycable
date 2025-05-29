@@ -72,7 +72,7 @@ func (c *Controller) Subscribe(sid string, env *common.SessionEnv, ids string, i
 
 	var stream string
 
-	if request.StreamName != "" {
+	if request.SignedStreamName == "" {
 		stream = request.StreamName
 
 		c.log.With("identifier", identifier).Debug("unsigned", "stream", stream)
@@ -158,15 +158,17 @@ func NewStreamsController(conf *Config, l *slog.Logger) *Controller {
 			return nil, err
 		}
 
-		if !allowPublic && request.StreamName != "" {
+		publicStream := request.StreamName != "" && request.SignedStreamName == ""
+
+		if !allowPublic && publicStream {
 			return nil, errors.New("public streams are not allowed")
 		}
 
-		if whispers || (request.StreamName != "") {
+		if whispers || publicStream {
 			request.whisper = true
 		}
 
-		if presence || (request.StreamName != "") {
+		if presence || publicStream {
 			request.presence = true
 		}
 

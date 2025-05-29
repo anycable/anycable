@@ -22,6 +22,7 @@ import (
 	"github.com/anycable/anycable-go/mrb"
 	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/pubsub"
+	"github.com/anycable/anycable-go/pusher"
 	"github.com/anycable/anycable-go/router"
 	"github.com/anycable/anycable-go/server"
 	"github.com/anycable/anycable-go/sse"
@@ -470,6 +471,34 @@ func (r *Runner) defaultSSEHandler(n *node.Node, ctx context.Context, c *config.
 	handler := sse.SSEHandler(n, ctx, &extractor, &c.SSE, r.log)
 
 	return handler, nil
+}
+
+func (r *Runner) pusherWebsocketHandler(n *node.Node, c *config.Config) http.Handler {
+	extractor := server.DefaultHeadersExtractor{Headers: c.RPC.ProxyHeaders, Cookies: c.RPC.ProxyCookies}
+	if c.JWT.Enabled() {
+		extractor.AuthHeader = c.JWT.HeaderKey()
+	}
+	return ws.WebsocketHandler(nil, &extractor, &c.WS, r.log, func(wsc *websocket.Conn, info *server.RequestInfo, callback func()) error {
+		wrappedConn := ws.NewConnection(wsc)
+		encoder := pusher.NewEncoder()
+		opts := []node.SessionOption{
+			node.WithEncoder(encoder),
+			// Pusher uses client-to-server pings
+			node.WithPingInterval(0),
+		}
+
+		session := node.NewSession(n, wrappedConn, info.URL, info.Headers, info.UID, opts...)
+
+		sid := session.GetID()
+		n.Authenticated(session, `{"sid":"`+sid+`"}`)
+
+		session.Send(&common.Reply{
+			Type: common.WelcomeType,
+			Sid:  sid,
+		})
+
+		return session.Serve(callback)
+	})
 }
 
 func (r *Runner) initMRuby() string {

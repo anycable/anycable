@@ -56,6 +56,7 @@ func IsExtendedActionCableProtocol(protocol string) bool {
 const (
 	WelcomeType    = "welcome"
 	PingType       = "ping"
+	PongType       = "pong"
 	DisconnectType = "disconnect"
 	ConfirmedType  = "confirm_subscription"
 	RejectedType   = "reject_subscription"
