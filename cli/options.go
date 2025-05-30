@@ -118,6 +118,7 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 	flags = append(flags, statsdCLIFlags(&c)...)
 	flags = append(flags, embeddedNatsCLIFlags(&c, &enatsRoutes, &enatsGateways)...)
 	flags = append(flags, sseCLIFlags(&c)...)
+	flags = append(flags, pusherCLIFlags(&c)...)
 	flags = append(flags, miscCLIFlags(&c, &presets)...)
 
 	app := &cli.App{
@@ -460,6 +461,7 @@ const (
 	miscCategoryDescription          = "MISC:"
 	brokerCategoryDescription        = "BROKER:"
 	sseCategoryDescription           = "SERVER-SENT EVENTS:"
+	pusherCategoryDescription        = "PUSHER:"
 
 	envPrefix = "ANYCABLE_"
 )
@@ -1338,6 +1340,17 @@ func signedStreamsCLIFlags(c *config.Config, turboRailsKey *string, cableReadyKe
 			Usage:       "[DEPRECATED] Enable Cable Ready fastlane without stream names signing",
 			Destination: cableReadyCleartext,
 			Hidden:      true,
+		},
+	})
+}
+
+// Pusher flags
+func pusherCLIFlags(c *config.Config) []cli.Flag {
+	return withDefaults(pusherCategoryDescription, []cli.Flag{
+		&cli.StringFlag{
+			Name:        "pusher_app_key",
+			Usage:       "Pusher clients public app key",
+			Destination: &c.Pusher.AppKey,
 		},
 	})
 }

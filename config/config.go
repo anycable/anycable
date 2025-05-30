@@ -15,6 +15,7 @@ import (
 	nconfig "github.com/anycable/anycable-go/nats"
 	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/pubsub"
+	"github.com/anycable/anycable-go/pusher"
 	rconfig "github.com/anycable/anycable-go/redis"
 	"github.com/anycable/anycable-go/rpc"
 	"github.com/anycable/anycable-go/server"
@@ -58,6 +59,7 @@ type Config struct {
 	EmbeddedNats         enats.Config               `toml:"embedded_nats"`
 	SSE                  sse.Config                 `toml:"sse"`
 	Streams              streams.Config             `toml:"streams"`
+	Pusher               pusher.Config              `toml:"pusher"`
 
 	ConfigFilePath string
 }
@@ -90,6 +92,7 @@ func NewConfig() Config {
 		EmbeddedNats:         enats.NewConfig(),
 		SSE:                  sse.NewConfig(),
 		Streams:              streams.NewConfig(),
+		Pusher:               pusher.NewConfig(),
 	}
 
 	return config // nolint:govet
@@ -202,6 +205,9 @@ func (c *Config) ToToml() string {
 
 	result.WriteString("# SSE configuration\n[sse]\n")
 	result.WriteString(c.SSE.ToToml())
+
+	result.WriteString("# Pusher compatibility configuration\n[pusher]\n")
+	result.WriteString(c.Pusher.ToToml())
 
 	result.WriteString("# Redis configuration\n[redis]\n")
 	result.WriteString(c.Redis.ToToml())

@@ -24,6 +24,8 @@ end
 require "socket"
 require "time"
 require "json"
+require "uri"
+require "net/http"
 
 require "active_support/message_verifier"
 
@@ -182,6 +184,26 @@ class BenchRunner
 
   def at_exit(&block)
     teardowns << block
+  end
+
+  def broadcast(stream, data, url: "http://localhost:8090/_broadcast", key: nil)
+    uri = URI.parse(url)
+    headers = {
+      "Content-Type": "application/json"
+    }
+    if key
+      headers["Authorization"] = "Bearer #{key}"
+    end
+
+    data = {stream: stream, data: data.to_json}
+    http = Net::HTTP.new(uri.host, uri.port)
+    request = Net::HTTP::Post.new(uri.request_uri, headers)
+    request.body = data.to_json
+    response = http.request(request)
+
+    if response.code != "201"
+      fail "Broadcast returned unexpected status: #{response.code}"
+    end
   end
 
   private
