@@ -18,7 +18,9 @@ $ anycable-go
 2024-03-06 14:09:23.533 INF RPC controller initialized: localhost:50051 (concurrency: 28, impl: grpc, enable_tls: false, proto_versions: v1) nodeid=6VV3mO context=rpc
 ```
 
-You can change this setting by providing `--rpc_host` option or `ANYCABLE_RPC_HOST` env variable.
+When having multiple RPC servers, we recommend using gRPC's built-in DNS-based client-side load balancing. For that, you must explicitly specify the `dns:///` scheme for the RPC host parameter. You can also specify a fixed list RPC services to use, e.g., `--rpc_host=grpc-list://rpc1.example.com:50051,rpc2.example.com:50051`. See more in the [load balancing docs](/deployment/load_balancing).
+
+In addition to using the `--rpc_host` option, you can use the `ANYCABLE_RPC_HOST` env variable.
 
 [AnyCable Ruby][anycable-ruby] library comes with AnyCable gRPC server out-of-the-box.
 

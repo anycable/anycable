@@ -576,7 +576,7 @@ func defaultDialer(conf *Config, l *slog.Logger) (pb.RPCClient, ClientHelper, er
 		PermitWithoutStream: true,             // send pings even without active streams
 	}
 
-	const grpcServiceConfig = `{"loadBalancingPolicy":"round_robin"}`
+	const grpcServiceConfig = `{"loadBalancingConfig": [{"round_robin":{}}]}`
 
 	state := &grpcClientHelper{log: l.With("impl", "grpc")}
 

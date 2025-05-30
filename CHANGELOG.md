@@ -1,5 +1,7 @@
 # Change log
 
+- Support providing multiple gRPC hosts via the custom `grpc-list://` scheme. ([@palkan][])
+
 - Add basic Pusher protocol support. ([@palkan][])
 
 - Enable Redis pub/sub if Redis is configured or used by other components. ([@palkan][])
