@@ -1,0 +1,63 @@
+launch :anycable,
+  "./dist/anycable-go --pusher_app_key=my-test-id --public_streams"
+
+wait_tcp 8080
+
+scenario = [
+  {
+    receive: {
+      "data>" => {
+        event: "pusher:connection_established"
+      }
+    }
+  },
+  {
+    send: {
+      data: {
+        event: "pusher:subscribe",
+        data: {
+          channel: "test-pusher-channel",
+          auth: ""
+        }
+      }
+    }
+  },
+  {
+    receive: {
+      "data>" => {
+        event: "pusher_internal:subscription_succeeded"
+      }
+    }
+  },
+  {
+    receive: {
+      "data>" => {
+        event: "test-event",
+        channel: "test-pusher-channel"
+      }
+    }
+  }
+]
+
+TEST_COMMAND = <<~CMD
+  bundle exec wsdirector ws://localhost:8080/app/my-test-id -i #{scenario.to_json}
+CMD
+
+q = Queue.new
+Thread.new do
+  run :wsdirector, TEST_COMMAND
+  q.push(nil)
+end
+
+# Wait a bit to ensure connection and subscription
+sleep 3
+
+broadcast("test-pusher-channel", {event: "test-event", data: {"message":"Hello from Pusha"}})
+
+q.pop
+
+result = stdout(:wsdirector)
+
+unless result.include?("1 clients, 0 failures")
+  fail "Unexpected scenario result:\n#{result}"
+end

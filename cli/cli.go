@@ -202,6 +202,14 @@ func (r *Runner) Run() error {
 		wsServer.SetupHandler(path, handler)
 	}
 
+	if r.config.Pusher.Enabled() {
+		pusherPath := fmt.Sprintf("/app/%s", r.config.Pusher.AppKey)
+		pusherHandler := r.pusherWebsocketHandler(appNode, r.config)
+		wsServer.SetupHandler(pusherPath, pusherHandler)
+
+		r.log.Info(fmt.Sprintf("Handle Pusher WebSocket connections at %s%s", wsServer.Address(), pusherPath))
+	}
+
 	wsServer.SetupHandler(r.config.Server.HealthPath, http.HandlerFunc(server.HealthHandler))
 	r.log.Info(fmt.Sprintf("Handle health requests at %s%s", wsServer.Address(), r.config.Server.HealthPath))
 
@@ -489,6 +497,7 @@ func (r *Runner) pusherWebsocketHandler(n *node.Node, c *config.Config) http.Han
 
 		session := node.NewSession(n, wrappedConn, info.URL, info.Headers, info.UID, opts...)
 
+		// TODO: Support `pusher:signing` event
 		sid := session.GetID()
 		n.Authenticated(session, `{"sid":"`+sid+`"}`)
 
