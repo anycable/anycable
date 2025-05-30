@@ -52,11 +52,8 @@ func (s *GracefulSignals) Listen() {
 }
 
 func (s *GracefulSignals) listen() {
-	for { // nolint:gosimple
-		select {
-		case <-s.ch:
-			s.exec()
-		}
+	for range s.ch {
+		s.exec()
 	}
 }
 

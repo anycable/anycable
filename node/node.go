@@ -1045,7 +1045,7 @@ func (n *Node) disconnectAll(ctx context.Context) {
 
 	sessions := n.hub.Sessions()
 
-	var scheduler disconnectScheduler // nolint:gosimple
+	var scheduler disconnectScheduler
 
 	scheduler = &noopScheduler{ctx}
 

@@ -185,7 +185,7 @@ func (s *LegacyRedisBroadcaster) keepalive(done chan (error)) {
 		s.reconnectAttempt++
 
 		if s.reconnectAttempt >= s.maxReconnectAttempts {
-			done <- errors.New("Redis reconnect attempts exceeded") //nolint:stylecheck
+			done <- errors.New("Redis reconnect attempts exceeded")
 			return
 		}
 

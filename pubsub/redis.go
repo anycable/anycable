@@ -296,7 +296,7 @@ func (s *RedisSubscriber) runPubSub(done chan (error)) {
 
 func (s *RedisSubscriber) maybeReconnect(done chan (error)) {
 	if s.reconnectAttempt >= s.config.Redis.MaxReconnectAttempts {
-		done <- errors.New("failed to reconnect to Redis: attempts exceeded") //nolint:stylecheck
+		done <- errors.New("failed to reconnect to Redis: attempts exceeded")
 		return
 	}
 

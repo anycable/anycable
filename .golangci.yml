@@ -1,35 +1,53 @@
-# See: https://golangci-lint.run/usage/linters/
-
-issues:
-  exclude-dirs:
-    - "tmp"
-    - "vendor"
-
+version: "2"
 linters:
   enable:
     - decorder
     - errname
     - gocritic
-    - gofmt
     - gosec
-    - govet
     - grouper
     - misspell
-    - stylecheck
-    - tenv
+    - staticcheck
     - unconvert
-
-linters-settings:
-  govet:
-    enable-all: true
-    disable:
-      - fieldalignment
-
-  gosec:
-    severity: medium
-    confidence: medium
-    excludes:
-      - G115
-
-  stylecheck:
-    checks: ["all", "-ST1005", "-ST1003"]
+  settings:
+    gosec:
+      excludes:
+        - G115
+      severity: medium
+      confidence: medium
+    govet:
+      disable:
+        - fieldalignment
+      enable-all: true
+    staticcheck:
+      checks:
+        - all
+        - -ST1003
+        - -ST1005
+        - -QF1001
+        - -QF1003
+        - -S1021
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - tmp
+      - vendor
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+  exclusions:
+    generated: lax
+    paths:
+      - tmp
+      - vendor
+      - third_party$
+      - builtin$
+      - examples$

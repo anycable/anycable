@@ -54,7 +54,7 @@ func (ms *memstream) insert(data string, offset uint64, t time.Time) (uint64, er
 	ms.mu.Lock()
 	defer ms.mu.Unlock()
 
-	if t == (time.Time{}) {
+	if t.Equal(time.Time{}) {
 		t = time.Now()
 	}
 
