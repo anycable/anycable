@@ -1,8 +1,17 @@
 name: Publish AnyCable+ Docker image
 on:
-  release:
-    types: [published]
   workflow_dispatch:
+    inputs:
+      tag:
+        type: choice
+        description: Pro image tag
+        options:
+          - edge
+          - latest
+        default: edge
+  workflow_run:
+    workflows:
+      - Publish PRO Docker images
 
 jobs:
   push_to_fly:
@@ -24,16 +33,21 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
           flyctl auth docker
-      - name: Pull Pro image
+      - name: Pull latest Pro image
+        if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' }}
         run: |
-          docker pull ghcr.io/anycable/anycable-go-pro:edge
+          docker pull ghcr.io/anycable/anycable-go-pro:latest
+      - name: Push latest Pro image to Fly
+        if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' }}
+        run: |
+          docker image tag ghcr.io/anycable/anycable-go-pro:latest registry.fly.io/anycable-saaqs:anycable-go-pro-latest
+          docker push registry.fly.io/anycable-saaqs:anycable-go-pro-latest
+      - name: Pull edge Pro image
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          docker pull ghcr.io/anycable/anycable-go-pro:${{ github.event.inputs.tag }}
       - name: Push Edge Pro image to Fly
         if: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
-          docker image tag ghcr.io/anycable/anycable-go-pro:edge registry.fly.io/anycable-saaqs:anycable-go-pro-edge
+          docker image tag ghcr.io/anycable/anycable-go-pro:${{ github.event.inputs.tag }} registry.fly.io/anycable-saaqs:anycable-go-pro-edge
           docker push registry.fly.io/anycable-saaqs:anycable-go-pro-edge
-      - name: Push latest Pro image to Fly
-        if: ${{ github.event_name == 'release' }}
-        run: |
-          docker image tag ghcr.io/anycable/anycable-go-pro:edge registry.fly.io/anycable-saaqs:anycable-go-pro-latest
-          docker push registry.fly.io/anycable-saaqs:anycable-go-pro-latest
