@@ -45,7 +45,8 @@ const (
 	redisStreamPrefix          = "$ac:s:"
 	redisStreamPosPrefix       = "$ac:sp:"
 	redisStreamTimestampPrefix = "$ac:st:"
-	redisEpochKey              = "$ac:e"
+	redisEpochPrefix           = "$ac"
+	redisEpochKey              = "e"
 )
 
 //go:embed redis/add_message.lua
@@ -398,7 +399,7 @@ func (b *RedisBroker) SetEpoch(val string) error {
 	defer b.clientMu.RUnlock()
 
 	ctx := context.Background()
-	key := redisEpochKey
+	key := b.toKey(redisEpochPrefix, redisEpochKey)
 
 	resp := b.client.Do(ctx, b.client.B().Set().Key(key).Value(val).Build())
 
@@ -465,7 +466,7 @@ func (b *RedisBroker) calculateEpoch() (string, error) {
 	maybeNewEpoch, _ := nanoid.Nanoid(4)
 
 	ttl := 10 * int64(math.Max(float64(b.conf.HistoryTTL), float64(b.conf.SessionsTTL)))
-	key := redisEpochKey
+	key := b.toKey(redisEpochPrefix, redisEpochKey)
 	ctx := context.Background()
 
 	for i, resp := range b.client.DoMulti(ctx,
@@ -493,6 +494,7 @@ func (b *RedisBroker) add(stream string, data string) (uint64, error) {
 	}
 
 	ctx := context.Background()
+	epochKey := b.toKey(redisEpochPrefix, redisEpochKey)
 	streamKey := b.toKey(redisStreamPrefix, stream)
 	posKey := b.toKey(redisStreamPosPrefix, stream)
 	tsKey := b.toKey(redisStreamTimestampPrefix, stream)
@@ -500,7 +502,7 @@ func (b *RedisBroker) add(stream string, data string) (uint64, error) {
 	ttl := fmt.Sprintf("%d", b.conf.HistoryTTL)
 	limit := fmt.Sprintf("%d", b.conf.HistoryLimit)
 
-	res := b.addScript.Exec(ctx, client, []string{streamKey, posKey, tsKey}, []string{data, limit, ttl})
+	res := b.addScript.Exec(ctx, client, []string{streamKey, posKey, tsKey, epochKey}, []string{data, limit, ttl})
 
 	if res.Error() != nil {
 		return 0, errorx.Decorate(res.Error(), "failed to add message to Redis stream")

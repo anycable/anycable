@@ -4,6 +4,7 @@
 local streamKey = KEYS[1]
 local posKey = KEYS[2]
 local tsKey = KEYS[3]
+local epochKey = KEYS[4]
 local payload = ARGV[1]
 local historyLimit = ARGV[2]
 local historyTTL = ARGV[3]
@@ -11,6 +12,9 @@ local historyTTL = ARGV[3]
 local pos = redis.call("incr", posKey)
 local posTTL = tonumber(historyTTL) * 10
 redis.call("expire", posKey, posTTL)
+
+local epochTTL = tonumber(historyTTL) * 10
+redis.call("expire", epochKey, epochTTL)
 
 local maxlen = historyLimit
 

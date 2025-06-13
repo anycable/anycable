@@ -1,0 +1,215 @@
+launch :rpc, "bundle exec anyt --only-rpc",
+ env: {"ANYCABLE_BROADCAST_ADAPTER" => "http"}
+wait_tcp 50051
+
+launch :anycable_1,
+  "./dist/anycable-go --port 8080 --broker=redis --history_ttl=1 --sessions_ttl=1 --http_broadcast_port=8090"
+
+sleep 1
+
+launch :anycable_2,
+  "./dist/anycable-go --port 8081 --broker=redis --history_ttl=1 --sessions_ttl=1 --http_broadcast_port=8081"
+
+wait_tcp 8080
+wait_tcp 8081
+
+# Let's wait for epoch to be propagated to all nodes
+sleep 2
+
+# We need to obtain epoch first
+epoch_scenario = [
+  {
+    client: {
+      protocol: "action_cable",
+      actions: [
+        {
+          subscribe: {
+            channel: "BenchmarkChannel"
+          }
+        },
+        {
+          perform: {
+            channel: "BenchmarkChannel",
+            action: "broadcast",
+            data: {
+              message: "hello"
+            }
+          }
+        },
+        {
+          receive: {
+            channel: "BenchmarkChannel",
+            "data>": {
+              message: "hello",
+              action: "broadcast",
+            },
+            stream_id: "all",
+            print: true
+          }
+        }
+      ]
+    }
+  }
+]
+
+result = nil
+
+retrying(delay: 2) do
+  run :wsdirector, "bundle exec wsdirector ws://localhost:8080/cable -i #{epoch_scenario.to_json}"
+
+  result = stdout(:wsdirector)
+
+  if result !~ /1 clients, 0 failures/
+    fail "Unexpected scenario result:\n#{result}"
+  end
+end
+
+epoch = result.match(/"epoch":"([^"]+)"/)[1]
+offset = result.match(/"offset":(\d+)/)[1].to_i
+
+if epoch.nil? || epoch.empty?
+  fail "Epoch is missing"
+end
+
+# Run scenario multiple times to check that the epoch persists,
+# so history requests do not fail. To keep the history stream alive,
+# we broadcast to it regularly
+Thread.new do
+  loop do
+    offset += 1
+
+    Kernel.sleep 0.5
+    break unless processes.fetch(:anycable_1).alive?
+    broadcast("all", {message: "keepalive", offset: offset})
+  end
+end
+
+2.times do
+  # Sleep for 10x more time than the highest TTL—that's the default epoch TTL
+  sleep 10
+
+  # restart the second server
+  stop(:anycable_2)
+  sleep 1
+  launch :anycable_2,
+    "./dist/anycable-go --port 8081 --broker=redis --history_ttl=1 --sessions_ttl=1 --http_broadcast_port=8081"
+  wait_tcp 8081
+
+  scenario = [
+    {
+      client: {
+        protocol: "action_cable",
+        name: "publisher",
+        actions: [
+          {
+            subscribe: {
+              channel: "BenchmarkChannel"
+            }
+          },
+          "wait_all",
+          {
+            perform: {
+              channel: "BenchmarkChannel",
+              action: "broadcast",
+              data: {
+                message: "hello"
+              }
+            }
+          },
+          {
+            receive: {
+              channel: "BenchmarkChannel",
+              "data>": {
+                message: "hello",
+                action: "broadcast",
+              },
+              stream_id: "all",
+              epoch: epoch
+            }
+          },
+          {
+            receive: {
+              channel: "BenchmarkChannel",
+              data: {
+                message: "hello",
+                action: "broadcastResult"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      client: {
+        protocol: "action_cable",
+        name: "subscriber",
+        multiplier: ":scale",
+        connection_options: {
+          url: "http://localhost:8081/cable"
+        },
+        ignore: ["keepalive", "ping"],
+        actions: [
+          {
+            send: {
+              data: {
+                command: "subscribe",
+                identifier: {channel: "BenchmarkChannel"}.to_json,
+                history: {
+                  streams: {
+                    all: {
+                      offset: offset,
+                      epoch: epoch
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            receive: {
+              data: {
+                type: "confirm_subscription",
+                identifier: {channel: "BenchmarkChannel"}.to_json,
+              }
+            }
+          },
+          {
+            receive: {
+              data: {
+                type: "confirm_history",
+                identifier: {channel: "BenchmarkChannel"}.to_json,
+              }
+            }
+          },
+          "wait_all",
+          {
+            receive: {
+              channel: "BenchmarkChannel",
+              "data>": {
+                message: "hello",
+                action: "broadcast"
+              },
+              stream_id: "all",
+              epoch: epoch
+            }
+          }
+        ]
+      }
+    }
+  ]
+
+  test_command = <<~CMD
+    bundle exec wsdirector ws://localhost:8080/cable -i #{scenario.to_json} -s 2 -vv
+  CMD
+
+  retrying(delay: 2) do
+    run :wsdirector, test_command
+
+    result = stdout(:wsdirector)
+
+    unless result.include?("Group publisher: 1 clients, 0 failures") &&
+      result.include?("Group subscriber: 2 clients, 0 failures")
+      fail "Unexpected scenario result:\n#{result}"
+    end
+  end
+end
