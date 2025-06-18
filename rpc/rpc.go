@@ -302,7 +302,7 @@ func (c *Controller) Shutdown() error {
 	}
 
 	// Wait for active connections
-	_, err := c.retry("", func() (interface{}, error) {
+	_, err := c.retry("", func(ctx context.Context) (interface{}, error) {
 		busy := c.busy()
 
 		if busy > 0 {
@@ -326,8 +326,8 @@ func (c *Controller) Authenticate(sid string, env *common.SessionEnv) (*common.C
 
 	defer c.barrier.Release()
 
-	op := func() (interface{}, error) {
-		ctx, cancel := c.newRequestContext(sid)
+	op := func(ctx context.Context) (interface{}, error) {
+		ctx, cancel := c.newRequestContext(ctx, sid)
 		defer cancel()
 
 		return c.client.Connect(ctx, protocol.NewConnectMessage(env))
@@ -362,8 +362,8 @@ func (c *Controller) Subscribe(sid string, env *common.SessionEnv, id string, ch
 
 	defer c.barrier.Release()
 
-	op := func() (interface{}, error) {
-		ctx, cancel := c.newRequestContext(sid)
+	op := func(ctx context.Context) (interface{}, error) {
+		ctx, cancel := c.newRequestContext(ctx, sid)
 		defer cancel()
 
 		return c.client.Command(
@@ -385,8 +385,8 @@ func (c *Controller) Unsubscribe(sid string, env *common.SessionEnv, id string, 
 
 	defer c.barrier.Release()
 
-	op := func() (interface{}, error) {
-		ctx, cancel := c.newRequestContext(sid)
+	op := func(ctx context.Context) (interface{}, error) {
+		ctx, cancel := c.newRequestContext(ctx, sid)
 		defer cancel()
 
 		return c.client.Command(
@@ -408,8 +408,8 @@ func (c *Controller) Perform(sid string, env *common.SessionEnv, id string, chan
 
 	defer c.barrier.Release()
 
-	op := func() (interface{}, error) {
-		ctx, cancel := c.newRequestContext(sid)
+	op := func(ctx context.Context) (interface{}, error) {
+		ctx, cancel := c.newRequestContext(ctx, sid)
 		defer cancel()
 
 		return c.client.Command(
@@ -431,8 +431,8 @@ func (c *Controller) Disconnect(sid string, env *common.SessionEnv, id string, s
 
 	defer c.barrier.Release()
 
-	op := func() (interface{}, error) {
-		ctx, cancel := c.newRequestContext(sid)
+	op := func(ctx context.Context) (interface{}, error) {
+		ctx, cancel := c.newRequestContext(ctx, sid)
 		defer cancel()
 
 		return c.client.Disconnect(
@@ -487,25 +487,31 @@ func (c *Controller) busy() int {
 	return c.barrier.BusyCount()
 }
 
-func (c *Controller) retry(sid string, callback func() (interface{}, error)) (res interface{}, err error) {
-	retryAge := int64(0)
+func (c *Controller) retry(sid string, callback func(context.Context) (interface{}, error)) (res interface{}, err error) {
 	attempt := 0
 	wasExhausted := false
-	invokeTimeout := c.commandTimeout.Milliseconds()
+	var ctx context.Context
+
+	if c.commandTimeout > 0 {
+		ctx_, cancel := context.WithTimeout(
+			context.Background(),
+			c.commandTimeout,
+		)
+		ctx = ctx_
+		defer cancel()
+	} else {
+		ctx = context.Background()
+	}
 
 	for {
 		if stErr := c.clientState.Ready(); stErr != nil {
 			return nil, stErr
 		}
 
-		res, err = callback()
+		res, err = callback(ctx)
 
 		if err == nil {
 			return res, nil
-		}
-
-		if retryAge > invokeTimeout {
-			return nil, err
 		}
 
 		st, ok := status.FromError(err)
@@ -542,11 +548,13 @@ func (c *Controller) retry(sid string, callback func() (interface{}, error)) (re
 		delayMS := int64(math.Pow(2, float64(attempt))) * interval
 		delay := time.Duration(delayMS)
 
-		retryAge += delayMS
-
 		c.metrics.CounterIncrement(metricsRPCRetries)
 
-		time.Sleep(delay * time.Millisecond)
+		select {
+		case <-time.After(delay * time.Millisecond):
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
 
 		attempt++
 	}
@@ -554,11 +562,11 @@ func (c *Controller) retry(sid string, callback func() (interface{}, error)) (re
 
 func noopCancel() {}
 
-func (c *Controller) newRequestContext(sessionID string) (ctx context.Context, cancel context.CancelFunc) {
+func (c *Controller) newRequestContext(parentCtx context.Context, sessionID string) (ctx context.Context, cancel context.CancelFunc) {
 	if c.requestTimeout > 0 {
-		ctx, cancel = context.WithTimeout(context.Background(), c.requestTimeout)
+		ctx, cancel = context.WithTimeout(parentCtx, c.requestTimeout)
 	} else {
-		ctx = context.Background()
+		ctx = parentCtx
 		cancel = noopCancel
 	}
 
