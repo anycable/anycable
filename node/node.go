@@ -37,6 +37,7 @@ const (
 
 	metricsWritePoolPendingNum = "write_pool_pending_num"
 	metricsReadPoolPendingNum  = "read_pool_pending_num"
+	metricsReadPoolErrorsTotal = "read_pool_errors_total"
 
 	metricsFailedAuths             = "failed_auths_total"
 	metricsReceivedMsg             = "client_msg_total"

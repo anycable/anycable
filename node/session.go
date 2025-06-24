@@ -163,8 +163,9 @@ type Session struct {
 	writeTimeout   time.Duration
 	maxPendingSize atomic.Uint64
 
-	readPool  *utils.GoPool
-	writePool *utils.GoPool
+	readPool        *utils.GoPool
+	writePool       *utils.GoPool
+	readWaitTimeout time.Duration
 
 	// Mutex for activating SendMessages worker
 	wrmu            sync.Mutex
@@ -314,6 +315,7 @@ func NewSession(node *Node, conn Connection, url string, headers *map[string]str
 
 	session.readPool = node.readPool
 	session.writePool = node.writePool
+	session.readWaitTimeout = time.Duration(node.config.ReadQueueTimeout) * time.Millisecond
 
 	ctx := node.log.With("sid", session.uid)
 
@@ -531,13 +533,13 @@ ADD:
 		}
 
 		s.metrics.GaugeIncrement(metricsReadPoolPendingNum)
-		s.readPool.Schedule(func() {
+		rerr := s.readPool.ScheduleTimeout(s.readWaitTimeout, func() {
 			s.metrics.GaugeDecrement(metricsReadPoolPendingNum)
-
 			wsconn := s.conn.Descriptor()
 			message, op, rerr := wsutil.ReadClientData(wsconn)
 			if op == gobwas.OpClose {
 				s.Log.Debug("WebSocket closed", "error", rerr)
+				poller.Stop(desc) // nolint:errcheck
 				s.disconnectNow("Read closed", ws.CloseNormalClosure)
 				return
 			}
@@ -556,6 +558,11 @@ ADD:
 			}
 			poller.Resume(desc) // nolint:errcheck
 		})
+
+		if rerr != nil {
+			s.metrics.CounterIncrement(metricsReadPoolErrorsTotal)
+			s.Log.Error("failed to process incoming message", "err", rerr)
+		}
 	})
 
 	// There could be a race condition when we haven't removed the closed

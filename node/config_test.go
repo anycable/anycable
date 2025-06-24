@@ -14,6 +14,7 @@ func TestConfig_ToToml(t *testing.T) {
 	conf.HubGopoolSize = 100
 	conf.PingTimestampPrecision = "ns"
 	conf.ShutdownDisconnectPoolSize = 1024
+	conf.ReadQueueTimeout = 5000
 
 	tomlStr := conf.ToToml()
 
@@ -22,6 +23,7 @@ func TestConfig_ToToml(t *testing.T) {
 	assert.Contains(t, tomlStr, "ping_timestamp_precision = \"ns\"")
 	assert.Contains(t, tomlStr, "# pong_timeout = 6")
 	assert.Contains(t, tomlStr, "shutdown_disconnect_gopool_size = 1024")
+	assert.Contains(t, tomlStr, "read_queue_timeout = 5000")
 
 	// Round-trip test
 	conf2 := NewConfig()

@@ -1361,6 +1361,14 @@ func wsCLIFlags(c *config.Config) []cli.Flag {
 		},
 
 		&cli.IntFlag{
+			Name:        "read_queue_timeout",
+			Usage:       "The max delay before processing incoming messages in the read pool (milliseconds)",
+			Value:       c.App.ReadQueueTimeout,
+			Destination: &c.App.ReadQueueTimeout,
+			Hidden:      true,
+		},
+
+		&cli.IntFlag{
 			Name:        "write_gopool_size",
 			Usage:       "The size of the goroutine pool to write client messages",
 			Value:       c.App.WriteGopoolSize,
