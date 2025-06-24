@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"time"
@@ -99,6 +100,14 @@ func NewHTTPService(c *Config) (*HTTPService, error) {
 			failureRatio := float64(counts.TotalFailures) / float64(counts.Requests)
 			return counts.Requests >= 10 && failureRatio >= 0.8
 		},
+		OnStateChange: func(name string, from gobreaker.State, to gobreaker.State) {
+			log := slog.With("context", "cb", "name", name)
+			if to == gobreaker.StateOpen {
+				log.Warn("circuit breaker is open")
+			} else if to == gobreaker.StateClosed {
+				log.Info("circuit breaker is closed")
+			}
+		},
 	})
 
 	return &HTTPService{conf: c, client: client, baseURL: baseURL, cb: cb}, nil
@@ -159,18 +168,23 @@ func (s *HTTPService) Command(ctx context.Context, r *pb.CommandMessage) (*pb.Co
 }
 
 func (s *HTTPService) performRequest(ctx context.Context, path string, payload []byte) ([]byte, error) {
-	cbCallback, err := s.cb.Allow()
-
-	if err != nil {
-		return nil, err
-	}
-
 	url := s.baseURL.JoinPath(path).String()
 
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(payload))
 	if err != nil {
 		return nil, err
 	}
+
+	cbCallback, err := s.cb.Allow()
+
+	if err != nil {
+		return nil, err
+	}
+
+	var cbSuccess bool
+	defer func() {
+		cbCallback(cbSuccess)
+	}()
 
 	req.Header.Set("Content-Type", "application/json")
 
@@ -192,11 +206,10 @@ func (s *HTTPService) performRequest(ctx context.Context, path string, payload [
 			return nil, status.Error(codes.DeadlineExceeded, "request timeout")
 		}
 
-		cbCallback(false)
 		return nil, status.Error(codes.Unavailable, err.Error())
 	}
 
-	cbCallback(true)
+	cbSuccess = true
 
 	defer res.Body.Close()
 
