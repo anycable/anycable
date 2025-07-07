@@ -110,6 +110,8 @@ func WithDefaultSubscriber() Option {
 		switch c.PubSubAdapter {
 		case "":
 			return pubsub.NewLegacySubscriber(h), nil
+		case "none":
+			return pubsub.NewLegacySubscriber(h), nil
 		case "redis":
 			return pubsub.NewRedisSubscriber(h, &c.RedisPubSub, l)
 		case "nats":
@@ -159,7 +161,7 @@ func WithWebSocketEndpoint(path string, fn websocketHandler) Option {
 // WithDefaultBroker is an Option to set Runner broker to default broker from config
 func WithDefaultBroker() Option {
 	return WithBroker(func(br broker.Broadcaster, pr broker.Presenter, c *config.Config, l *slog.Logger) (broker.Broker, error) {
-		if c.Broker.Adapter == "" {
+		if c.Broker.Adapter == "" || c.Broker.Adapter == "none" {
 			return broker.NewLegacyBroker(br), nil
 		}
 
