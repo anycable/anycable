@@ -15,4 +15,4 @@ jobs:
       api_key: ${{ secrets.TRIEVE_API_KEY }}
       dataset: ${{ secrets.TRIEVE_DATASET }}
     with:
-      latest_version: "v1.5"
+      latest_version: "v1.6"
