@@ -20,6 +20,8 @@ import (
 )
 
 // Executor handles incoming commands (messages)
+//
+//go:generate mockery --name Executor --output "../node_mocks" --outpkg node_mocks
 type Executor interface {
 	HandleCommand(*Session, *common.Message) error
 	Disconnect(*Session) error

@@ -3,6 +3,7 @@ package pusher
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/encoders"
@@ -11,6 +12,8 @@ import (
 )
 
 const encoderID = "pusher7"
+
+const ChannelName = "$pusher"
 
 // See https://pusher.com/docs/channels/library_auth_reference/pusher-websockets-protocol/
 const (
@@ -26,6 +29,8 @@ const (
 	UnsubscribeType = "pusher:unsubscribe"
 	// Server sends this message with channel data
 	EventType = "pusher:event"
+	// Client events (whispers) start with the "client-" prefix
+	ClientTypePrefix = "client-"
 	// Ping/pong for keepalive
 	PingType = "pusher:ping"
 	PongType = "pusher:pong"
@@ -51,6 +56,12 @@ type PusherSubscriptionData struct {
 type PusherSubscriptionEvent struct {
 	Event string                  `json:"event"`
 	Data  *PusherSubscriptionData `json:"data"`
+}
+
+type PusherClientEvent struct {
+	Event   string      `json:"event"`
+	Channel string      `json:"channel"`
+	Data    interface{} `json:"data"`
 }
 
 type PusherConnectionData struct {
@@ -221,7 +232,7 @@ func (pusher *Encoder) Decode(raw []byte) (*common.Message, error) {
 		if err := json.Unmarshal(raw, subEvent); err != nil {
 			return nil, err
 		}
-		msg.Identifier = channelToIdentifier(subEvent.Data.Channel, subEvent.Data.Auth)
+		msg.Identifier = channelToIdentifier(subEvent.Data.Channel)
 
 		if pusherMsg.Event == SubscribeType {
 			msg.Command = "subscribe"
@@ -232,6 +243,16 @@ func (pusher *Encoder) Decode(raw []byte) (*common.Message, error) {
 		if subEvent.Data != nil {
 			msg.Data = subEvent.Data
 		}
+	}
+
+	if strings.HasPrefix(pusherMsg.Event, "client-") {
+		clientEvent := &PusherClientEvent{}
+		if err := json.Unmarshal(raw, clientEvent); err != nil {
+			return nil, err
+		}
+		msg.Identifier = channelToIdentifier(clientEvent.Channel)
+		msg.Command = "whisper"
+		msg.Data = clientEvent
 	}
 
 	if pusherMsg.Event == PingType {
@@ -251,28 +272,26 @@ func (pusher *Encoder) Decode(raw []byte) (*common.Message, error) {
 
 func identifierToChannel(id string) (string, error) {
 	msg := struct {
-		Channel    string `json:"channel"`
-		StreamName string `json:"stream_name"`
+		Channel string `json:"channel"`
+		Stream  string `json:"stream"`
 	}{}
 
 	if err := json.Unmarshal([]byte(id), &msg); err != nil {
 		return "", err
 	}
 
-	// TODO: Add a separate Pusher channel class
-	if msg.Channel != "$pubsub" {
+	if msg.Channel != ChannelName {
 		return "", fmt.Errorf("invalid channel name: %s", msg.Channel)
 	}
 
-	return msg.StreamName, nil
+	return msg.Stream, nil
 }
 
-func channelToIdentifier(channel string, signedChannel string) string {
+func channelToIdentifier(channel string) string {
 	msg := struct {
-		Channel          string `json:"channel"`
-		StreamName       string `json:"stream_name"`
-		SignedStreamName string `json:"signed_stream_name,omitempty"`
-	}{Channel: "$pubsub", StreamName: channel, SignedStreamName: signedChannel}
+		Channel    string `json:"channel"`
+		StreamName string `json:"stream"`
+	}{Channel: ChannelName, StreamName: channel}
 
 	return string(utils.ToJSON(msg))
 }

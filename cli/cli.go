@@ -207,6 +207,11 @@ func (r *Runner) Run() error {
 		pusherHandler := r.pusherWebsocketHandler(appNode, r.config)
 		wsServer.SetupHandler(pusherPath, pusherHandler)
 
+		err := r.Router().Route(pusher.ChannelName, pusher.NewController(&r.config.Pusher, r.log))
+		if err != nil {
+			return errorx.Decorate(err, "failed to initialize Pusher WebSocket handler")
+		}
+
 		r.log.Info(fmt.Sprintf("Handle Pusher WebSocket connections at %s%s", wsServer.Address(), pusherPath))
 	}
 
@@ -486,11 +491,16 @@ func (r *Runner) pusherWebsocketHandler(n *node.Node, c *config.Config) http.Han
 	if c.JWT.Enabled() {
 		extractor.AuthHeader = c.JWT.HeaderKey()
 	}
+
+	verifier := pusher.NewVerifier(c.Pusher.AppKey, c.Pusher.Secret)
+	executor := pusher.NewExecutor(n, verifier)
+
 	return ws.WebsocketHandler(nil, &extractor, &c.WS, r.log, func(wsc *websocket.Conn, info *server.RequestInfo, callback func()) error {
 		wrappedConn := ws.NewConnection(wsc)
 		encoder := pusher.NewEncoder()
 		opts := []node.SessionOption{
 			node.WithEncoder(encoder),
+			node.WithExecutor(executor),
 			// Pusher uses client-to-server pings
 			node.WithPingInterval(0),
 		}
