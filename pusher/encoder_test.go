@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const identifier = "{\"channel\":\"$pubsub\",\"stream_name\":\"pucha\"}"
-const privateIdentifier = "{\"channel\":\"$pubsub\",\"stream_name\":\"private-party\",\"signed_stream_name\":\"signed-private-party\"}"
+const identifier = "{\"channel\":\"$pusher\",\"stream\":\"pucha\"}"
+const privateIdentifier = "{\"channel\":\"$pusher\",\"stream\":\"private-party\"}"
 
 func TestPusherEncode(t *testing.T) {
 	coder := NewEncoder()
@@ -240,8 +240,27 @@ func TestPusherDecode(t *testing.T) {
 		assert.Equal(t, "pong", actual.Command)
 	})
 
+	t.Run("client event", func(t *testing.T) {
+		msg := []byte("{\"event\":\"client-message\",\"data\":{\"text\":\"hello\"},\"channel\":\"private-party\"}")
+		actual, err := coder.Decode(msg)
+
+		payload := &PusherClientEvent{
+			Event:   "client-message",
+			Channel: "private-party",
+			Data: map[string]interface{}{
+				"text": "hello",
+			},
+		}
+
+		assert.NoError(t, err)
+		require.NotNil(t, actual)
+		assert.Equal(t, "whisper", actual.Command)
+		assert.Equal(t, privateIdentifier, actual.Identifier)
+		assert.Equal(t, payload, actual.Data)
+	})
+
 	t.Run("custom event", func(t *testing.T) {
-		msg := []byte("{\"event\":\"client-message\",\"data\":{\"channel\":\"test-channel\",\"text\":\"hello\"}}")
+		msg := []byte("{\"event\":\"custom-message\",\"data\":{\"channel\":\"test-channel\",\"text\":\"hello\"}}")
 
 		actual, err := coder.Decode(msg)
 

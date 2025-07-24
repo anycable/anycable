@@ -378,6 +378,10 @@ Use broadcast_key instead.`)
 		if c.RPC.Secret == "" {
 			c.RPC.SecretBase = c.Secret
 		}
+
+		if c.Pusher.Secret == "" {
+			c.Pusher.Secret = c.Secret
+		}
 	}
 
 	// Nullify none secrets
@@ -399,6 +403,10 @@ Use broadcast_key instead.`)
 
 	if c.HTTPBroadcast.Secret == "none" {
 		c.HTTPBroadcast.Secret = ""
+	}
+
+	if c.Pusher.Secret == "none" {
+		c.Pusher.Secret = ""
 	}
 
 	// Configure default HTTP port
@@ -1351,6 +1359,11 @@ func pusherCLIFlags(c *config.Config) []cli.Flag {
 			Name:        "pusher_app_key",
 			Usage:       "Pusher clients public app key",
 			Destination: &c.Pusher.AppKey,
+		},
+		&cli.StringFlag{
+			Name:        "pusher_secret",
+			Usage:       "Pusher secret",
+			Destination: &c.Pusher.Secret,
 		},
 	})
 }

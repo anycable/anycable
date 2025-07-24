@@ -1,5 +1,5 @@
 launch :anycable,
-  "./dist/anycable-go --pusher_app_key=my-test-id --public_streams"
+  "./dist/anycable-go --pusher_app_key=my-test-id --public_streams --pusher_secret=oaugc1"
 
 wait_tcp 8080
 
