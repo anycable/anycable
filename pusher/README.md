@@ -26,11 +26,27 @@ Let's consider a `pusher:subscribe` command as an example:
 
 ### Broadcast Flow
 
-1. AnyCable creates a `common.Reply` struct:
+AnyCable supports handling Pusher events at `/app/:id/events`:
+
+1. Application sends a POST request:
+
+```json
+{"name":"notification","channels":["user-notifications"],"data":"{\"title\":\"New message\",\"body\":\"You have mail\"}"}
+```
+
+1. AnyCable translates it into a broadcast message:
+
+```json
+{
+  "stream": "user-notifications",
+  "data": "{\"event\":\"notification\",\"data\":\"\\\"{\\\"title\\\":\\\"New message\\\",\\\"body\\\":\\\"You have mail\\\"}\\\"\"}"
+}
+```
+
+3. Under the hood, AnyCable creates a `common.Reply` struct:
 
 ```go
 common.Reply{
-	Type: common.BroadcastType,
 	Identifier: `{"channel":"$pusher","stream_name":"user-notifications"}`,
 	Message: map[string]interface{}{
 		"event": "notification",

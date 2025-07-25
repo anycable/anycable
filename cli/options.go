@@ -1365,6 +1365,11 @@ func pusherCLIFlags(c *config.Config) []cli.Flag {
 			Usage:       "Pusher secret",
 			Destination: &c.Pusher.Secret,
 		},
+		&cli.StringFlag{
+			Name:        "pusher_auth_key",
+			Usage:       "Pusher auth key",
+			Destination: &c.Pusher.AuthKey,
+		},
 	})
 }
 

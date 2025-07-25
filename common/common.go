@@ -371,9 +371,9 @@ type StreamMessage struct {
 	Meta   *StreamMessageMetadata `json:"meta,omitempty"`
 
 	// Offset is the position of this message in the stream
-	Offset uint64
+	Offset uint64 `json:"-"`
 	// Epoch is the uniq ID of the current storage state
-	Epoch string
+	Epoch string `json:"-"`
 }
 
 func (sm *StreamMessage) LogValue() slog.Value {

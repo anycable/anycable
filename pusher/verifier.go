@@ -42,3 +42,17 @@ func (v *Verifier) verifyString(input string, signature string) bool {
 
 	return hmac.Equal([]byte(calculated_auth), []byte(signature))
 }
+
+func (v *Verifier) Verify(input string, signature string) bool {
+	h := hmac.New(sha256.New, []byte(v.key))
+	h.Write([]byte(input))
+	calculated_signature := hex.EncodeToString(h.Sum(nil))
+
+	return hmac.Equal([]byte(calculated_signature), []byte(signature))
+}
+
+func (v *Verifier) Sign(input string) string {
+	h := hmac.New(sha256.New, []byte(v.key))
+	h.Write([]byte(input))
+	return hex.EncodeToString(h.Sum(nil))
+}
