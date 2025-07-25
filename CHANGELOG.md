@@ -1,5 +1,9 @@
 # Change log
 
+- Support handling Pusher broadcasts (_events_). ([@palkan][])
+
+- Better Pusher protocol compatibility. ([@palkan][])
+
 ## 1.6.2 (2025-05-30)
 
 - Support providing multiple gRPC hosts via the custom `grpc-list://` scheme. ([@palkan][])
