@@ -26,6 +26,7 @@ require "time"
 require "json"
 require "uri"
 require "net/http"
+require "fileutils"
 
 require "active_support/message_verifier"
 
