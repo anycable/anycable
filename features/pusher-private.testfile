@@ -1,15 +1,15 @@
 launch :anycable,
-  "./dist/anycable-go --pusher_app_key=my-test-id --public_streams --pusher_secret=oaugc1"
+  "./dist/anycable-go --pusher_app_id=my-test-id --pusher_app_key=ballard --public_streams --pusher_secret=oaugc1"
 
 wait_tcp 8080
 
 require "json"
 require "openssl"
 
-def pusher_signature(app_id, key, str)
+def pusher_signature(app_key, secret, str)
   digest = OpenSSL::Digest::SHA256.new
-  signature = OpenSSL::HMAC.hexdigest(digest, key, str)
-  "#{app_id}:#{signature}"
+  signature = OpenSSL::HMAC.hexdigest(digest, secret, str)
+  "#{app_key}:#{signature}"
 end
 
 scenario = [
@@ -18,7 +18,7 @@ scenario = [
       name: "publisher",
       connection_options: {
         headers: {
-          "x-request-id" => "push-123"
+          "x-request-id" => "2025.1234"
         }
       },
       actions: [
@@ -35,7 +35,7 @@ scenario = [
               event: "pusher:subscribe",
               data: {
                 channel: "private-test",
-                auth: pusher_signature("my-test-id", "oaugc1", "push-123:private-test")
+                auth: pusher_signature("ballard", "oaugc1", "2025.1234:private-test")
               }
             }
           }
@@ -69,7 +69,7 @@ scenario = [
       name: "subscriber",
       connection_options: {
         headers: {
-          "x-request-id" => "push-234"
+          "x-request-id" => "2025.4343"
         }
       },
       actions: [
@@ -86,7 +86,7 @@ scenario = [
               event: "pusher:subscribe",
               data: {
                 channel: "private-test",
-                auth: pusher_signature("my-test-id", "oaugc1", "push-234:private-test")
+                auth: pusher_signature("ballard", "oaugc1", "2025.4343:private-test")
               }
             }
           }
@@ -118,7 +118,7 @@ scenario = [
 ]
 
 TEST_COMMAND = <<~CMD
-  bundle exec wsdirector ws://localhost:8080/app/my-test-id -i #{scenario.to_json}
+  bundle exec wsdirector ws://localhost:8080/app/ballard -i #{scenario.to_json}
 CMD
 
 run :wsdirector, TEST_COMMAND

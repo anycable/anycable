@@ -1,15 +1,15 @@
 launch :anycable,
-  "./dist/anycable-go --pusher_app_key=my-test-id --public_streams --pusher_secret=oaugc1 --broker=memory"
+  "./dist/anycable-go --pusher_app_id=my-test-id --pusher_app_key=ballard --public_streams --pusher_secret=oaugc1 --broker=memory"
 
 wait_tcp 8080
 
 require "json"
 require "openssl"
 
-def pusher_signature(app_id, key, str)
+def pusher_signature(app_key, secret, str)
   digest = OpenSSL::Digest::SHA256.new
-  signature = OpenSSL::HMAC.hexdigest(digest, key, str)
-  "#{app_id}:#{signature}"
+  signature = OpenSSL::HMAC.hexdigest(digest, secret, str)
+  "#{app_key}:#{signature}"
 end
 
 scenario = [
@@ -18,7 +18,7 @@ scenario = [
       name: "first",
       connection_options: {
         headers: {
-          "x-request-id" => "push-123"
+          "x-request-id" => "2025.123"
         }
       },
       actions: [
@@ -35,7 +35,7 @@ scenario = [
               event: "pusher:subscribe",
               data: {
                 channel: "presence-test",
-                auth: pusher_signature("my-test-id", "oaugc1", "push-123:presence-test:#{{user_id: "312", user_info: {name: "Vova"}}.to_json}"),
+                auth: pusher_signature("ballard", "oaugc1", "2025.123:presence-test:#{{user_id: "312", user_info: {name: "Vova"}}.to_json}"),
                 channel_data: {user_id: "312", user_info: {name: "Vova"}}.to_json
               }
             }
@@ -70,7 +70,7 @@ scenario = [
       name: "second",
       connection_options: {
         headers: {
-          "x-request-id" => "push-234"
+          "x-request-id" => "2025.321"
         }
       },
       actions: [
@@ -90,7 +90,7 @@ scenario = [
               event: "pusher:subscribe",
               data: {
                 channel: "presence-test",
-                auth: pusher_signature("my-test-id", "oaugc1", "push-234:presence-test:#{{user_id: "42", user_info: {name: "Lolo"}}.to_json}"),
+                auth: pusher_signature("ballard", "oaugc1", "2025.321:presence-test:#{{user_id: "42", user_info: {name: "Lolo"}}.to_json}"),
                 channel_data: {user_id: "42", user_info: {name: "Lolo"}}.to_json
               }
             }
@@ -110,7 +110,7 @@ scenario = [
 ]
 
 TEST_COMMAND = <<~CMD
-  bundle exec wsdirector ws://localhost:8080/app/my-test-id -i #{scenario.to_json}
+  bundle exec wsdirector ws://localhost:8080/app/ballard -i #{scenario.to_json}
 CMD
 
 run :wsdirector, TEST_COMMAND

@@ -29,6 +29,7 @@ type PusherEvent struct {
 	Channels []string `json:"channels,omitempty"`
 	Channel  string   `json:"channel,omitempty"`
 	SocketID string   `json:"socket_id,omitempty"`
+	Info     string   `json:"info,omitempty"`
 }
 
 type PusherBroadcast struct {
@@ -118,6 +119,8 @@ func (b *Broadcaster) Handler(w http.ResponseWriter, r *http.Request) {
 		channels = append(channels, pusherEvent.Channels...)
 	}
 
+	b.log.Debug("event received", "event", pusherEvent.Name, "channels", channels, "info", pusherEvent.Info)
+
 	for _, channel := range channels {
 		msg := common.StreamMessage{
 			Stream: channel,
@@ -137,5 +140,7 @@ func (b *Broadcaster) Handler(w http.ResponseWriter, r *http.Request) {
 		b.handler.HandleBroadcast(utils.ToJSON(msg))
 	}
 
+	// Respond with an empty JSON hash; currently, Info is not supported
 	w.WriteHeader(200)
+	w.Write([]byte("{}")) // nolint: errcheck
 }

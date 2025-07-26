@@ -19,8 +19,8 @@ import (
 func TestHttpHandler(t *testing.T) {
 	handler := &mocks.Handler{}
 	config := NewConfig()
-	config.AppKey = "my-app-key"
-	config.AuthKey = "secret"
+	config.AppID = "my-app-key"
+	config.AppKey = "secret"
 	config.Secret = "test-push"
 
 	verifier := NewVerifier("my-app-key", "test-push")
@@ -38,7 +38,7 @@ func TestHttpHandler(t *testing.T) {
 	)
 
 	t.Run("Handles broadcasts", func(t *testing.T) {
-		authParams := "auth_key=" + config.AuthKey +
+		authParams := "auth_key=" + config.AppKey +
 			"&auth_timestamp=" + strconv.FormatInt(time.Now().Unix(), 10) +
 			"&auth_version=1.0" +
 			"&body_md5=" + fmt.Sprintf("%x", payloadMD5)
@@ -68,7 +68,7 @@ func TestHttpHandler(t *testing.T) {
 	})
 
 	t.Run("Rejects when authorization data is incorrect", func(t *testing.T) {
-		authParams := "auth_key=" + config.AuthKey +
+		authParams := "auth_key=" + config.AppKey +
 			"&body_md5=" + fmt.Sprintf("%x", payloadMD5) +
 			"&auth_version=1.0" +
 			"&auth_timestamp=" + strconv.FormatInt(time.Now().Unix(), 10)

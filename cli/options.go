@@ -264,6 +264,9 @@ Use shutdown_timeout instead.`)
 	c.SSE.AllowedOrigins = c.Server.AllowedOrigins
 	c.HTTPBroadcast.CORSHosts = c.Server.AllowedOrigins
 
+	c.Pusher.AddCORSHeaders = c.HTTPBroadcast.AddCORSHeaders
+	c.Pusher.CORSHosts = c.HTTPBroadcast.CORSHosts
+
 	// Propagate Redis and NATS configs to components
 	if c.RedisBroadcast.Redis == nil {
 		c.RedisBroadcast.Redis = &c.Redis
@@ -1356,9 +1359,9 @@ func signedStreamsCLIFlags(c *config.Config, turboRailsKey *string, cableReadyKe
 func pusherCLIFlags(c *config.Config) []cli.Flag {
 	return withDefaults(pusherCategoryDescription, []cli.Flag{
 		&cli.StringFlag{
-			Name:        "pusher_app_key",
-			Usage:       "Pusher clients public app key",
-			Destination: &c.Pusher.AppKey,
+			Name:        "pusher_app_id",
+			Usage:       "Pusher application ID",
+			Destination: &c.Pusher.AppID,
 		},
 		&cli.StringFlag{
 			Name:        "pusher_secret",
@@ -1366,9 +1369,9 @@ func pusherCLIFlags(c *config.Config) []cli.Flag {
 			Destination: &c.Pusher.Secret,
 		},
 		&cli.StringFlag{
-			Name:        "pusher_auth_key",
-			Usage:       "Pusher auth key",
-			Destination: &c.Pusher.AuthKey,
+			Name:        "pusher_app_key",
+			Usage:       "Pusher application key",
+			Destination: &c.Pusher.AppKey,
 		},
 	})
 }

@@ -215,7 +215,7 @@ func (r *Runner) Run() error {
 
 		r.log.Info(fmt.Sprintf("Handle Pusher WebSocket connections at %s%s", wsServer.Address(), pusherPath))
 
-		pusherEventsPath := fmt.Sprintf("/app/%s/events", r.config.Pusher.AppKey)
+		pusherEventsPath := fmt.Sprintf("/apps/%s/events", r.config.Pusher.AppID)
 		pusherEventBroadcaster := pusher.NewBroadcaster(appNode, &r.config.Pusher, r.log)
 		wsServer.SetupHandler(pusherEventsPath, http.HandlerFunc(pusherEventBroadcaster.Handler))
 
@@ -513,9 +513,11 @@ func (r *Runner) pusherWebsocketHandler(n *node.Node, c *config.Config) http.Han
 			node.WithPingInterval(0),
 		}
 
-		session := node.NewSession(n, wrappedConn, info.URL, info.Headers, info.UID, opts...)
+		socket_id := pusher.GenerateSocketID(info.UID)
 
-		// TODO: Support `pusher:signing` event
+		session := node.NewSession(n, wrappedConn, info.URL, info.Headers, socket_id, opts...)
+
+		// TODO: Support `pusher:signing` event?
 		sid := session.GetID()
 		n.Authenticated(session, `{"sid":"`+sid+`"}`)
 

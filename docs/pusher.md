@@ -7,11 +7,11 @@ AnyCable supports [Pusher protocol](https://pusher.com/docs/channels/library_aut
 To enable Pusher compatibility mode, you must specify the following parameters:
 
 ```sh
-$ anycable-go --pusher_app_key=my-test-id --pusher_secret=push-secret --pusher_auth_key=push-key
+$ anycable-go --pusher_app_id=my-test-id --pusher_app_key=my-app-key --pusher_secret=push-secret
 
 ...
-2025-07-25 01:01:22.826 INF Handle Pusher WebSocket connections at http://localhost:8080/app/my-test-id nodeid=7PKs0u
-2025-07-25 01:01:22.826 INF Handle Pusher events s at http://localhost:8080/app/my-test-id/events nodeid=7PKs0u
+2025-07-25 01:01:22.826 INF Handle Pusher WebSocket connections at http://localhost:8080/app/my-app-key nodeid=7PKs0u
+2025-07-25 01:01:22.826 INF Handle Pusher events s at http://localhost:8080/apps/my-test-id/events nodeid=7PKs0u
 
 ```
 
