@@ -511,6 +511,11 @@ func (r *Runner) pusherWebsocketHandler(n *node.Node, c *config.Config) http.Han
 			node.WithExecutor(executor),
 			// Pusher uses client-to-server pings
 			node.WithPingInterval(0),
+			// Enable presence timers
+			node.WithKeepaliveIntervals(
+				0,
+				time.Duration(r.config.Broker.PresenceTTL*500)*time.Millisecond,
+			),
 		}
 
 		socket_id := pusher.GenerateSocketID(info.UID)
