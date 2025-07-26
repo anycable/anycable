@@ -19,8 +19,8 @@ Let's consider a `pusher:subscribe` command as an example:
 
 1. **Client sends Pusher JSON message**: Raw WebSocket frame with Pusher protocol format.
 2. **Encoder.Decode()**: Converts Pusher message format to AnyCable's `common.Message`.
-3. **Executor.HandleCommand()**\*: Verifies signature for private and presence channel subsciptions.
-4. **Controller.Subscribe**: Configure the subscription details (whispering, presence, etc.)
+3. **Executor.HandleCommand()**\*: Verifies signature for private and presence channel subscriptions.
+4. **Controller.Subscribe**: Configure the subscription details (whispering, presence, etc.) and manages the presence state.
 
 \* We need the executor wrapper to verify the `auth` payload without keeping it around in the identifier (the only _storage_ we have at the protocol level), because other commands (`unsubscribe`, client events) do not include the auth part.
 

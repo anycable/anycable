@@ -34,6 +34,9 @@ const (
 	// Ping/pong for keepalive
 	PingType = "pusher:ping"
 	PongType = "pusher:pong"
+	// Presence messages
+	MemberAddedType   = "pusher_internal:member_added"
+	MemberRemovedType = "pusher_internal:member_removed"
 	// Error message
 	ErrorType = "pusher:error"
 )
@@ -67,6 +70,11 @@ type PusherClientEvent struct {
 type PusherConnectionData struct {
 	SocketID        string `json:"socket_id"`
 	ActivityTimeout int    `json:"activity_timeout"`
+}
+
+type PusherPresenceData struct {
+	UserId   string      `json:"user_id"`
+	UserInfo interface{} `json:"user_info,omitempty"`
 }
 
 type errorCode = int
@@ -150,10 +158,16 @@ func (pusher *Encoder) Encode(msg encoders.EncodedMessage) (*ws.SentFrame, error
 			return nil, err
 		}
 
+		var data interface{}
+		data = "{}" // empty JSON
+		if r.Message != nil {
+			data = r.Message
+		}
+
 		pusherMsg := PusherMessage{
 			Event:   SubscriptionSucceededType,
 			Channel: channel,
-			Data:    map[string]interface{}{},
+			Data:    data,
 		}
 		return &ws.SentFrame{FrameType: ws.TextFrame, Payload: utils.ToJSON(pusherMsg)}, nil
 	}
@@ -173,6 +187,41 @@ func (pusher *Encoder) Encode(msg encoders.EncodedMessage) (*ws.SentFrame, error
 			Event: ConnectionEstablishedType,
 			Data:  connectionData,
 		}
+		return &ws.SentFrame{FrameType: ws.TextFrame, Payload: utils.ToJSON(pusherMsg)}, nil
+	}
+
+	if r.Type == common.PresenceType {
+		presenceEvent, ok := r.Message.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("failed to encode presence event: %v", r.Message)
+		}
+
+		presenceData := PusherPresenceData{
+			UserId: presenceEvent["id"].(string),
+		}
+
+		var pusherEvent string
+
+		presenceType := presenceEvent["type"].(string)
+
+		if presenceType == common.PresenceJoinType {
+			pusherEvent = MemberAddedType
+			presenceData.UserInfo = presenceEvent["info"]
+		} else if presenceType == common.PresenceLeaveType {
+			pusherEvent = MemberRemovedType
+		}
+
+		channel, err := identifierToChannel(r.Identifier)
+		if err != nil {
+			return nil, err
+		}
+
+		pusherMsg := PusherMessage{
+			Event:   pusherEvent,
+			Data:    string(utils.ToJSON(presenceData)),
+			Channel: channel,
+		}
+
 		return &ws.SentFrame{FrameType: ws.TextFrame, Payload: utils.ToJSON(pusherMsg)}, nil
 	}
 

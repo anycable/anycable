@@ -30,7 +30,9 @@ Below you can find the list of support (and not) features:
 | Public channels | ✅ | |
 | Private channels | ✅ | |
 | Client events | ✅ | |
-| Presence channels | ⚙️ | In the works |
+| Presence channels | ✅ | |
+| Authentication (`pusher:signin`) |❓| What is if for? |
+| Watchlist Events | ❌ | Not planned |
 | Webhooks | ❌ | Not planned yet |
 | `POST /events` | ✅ |  |
 | `POST /batch_events` | ⚙️ | Can be added if needed |

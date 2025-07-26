@@ -22,15 +22,15 @@ func TestVerifyChannel(t *testing.T) {
 func TestVerifyPresenceChannel(t *testing.T) {
 	v := NewVerifier("278d425bdf160c739803", "7ad3773142a6692b25b8")
 
-	assert.True(t, v.VerifyPresenceChannel("1234.1234", "presence-foobar", "{\"user_id\":10,\"user_info\":{\"name\":\"Mr. Channels\"}}", "278d425bdf160c739803:31935e7d86dba64c2a90aed31fdc61869f9b22ba9d8863bba239c03ca481bc80"))
+	assert.True(t, v.VerifyPresenceChannel("1234.1234", "presence-foobar", "{\"user_id\":\"10\",\"user_info\":{\"name\":\"Mr. Channels\"}}", "278d425bdf160c739803:4c6d8fc42a207ba96a0779844171b0bb819d96ffceef9609f5cce596ab17a800"))
 	// signature mismatch
-	assert.False(t, v.VerifyPresenceChannel("1234.1234", "presence-foobar", "{\"user_id\":10,\"user_info\":{\"name\":\"Mr. Channels\"}}", "278d425bdf160c739803:aed3695da2ffd16931f457e338e6c9f2921fa133ce7dac49f529792be6304cdd"))
+	assert.False(t, v.VerifyPresenceChannel("1234.1234", "presence-foobar", "{\"user_id\":\"10\",\"user_info\":{\"name\":\"Mr. Channels\"}}", "278d425bdf160c739803:aed3695da2ffd16931f457e338e6c9f2921fa133ce7dac49f529792be6304cdd"))
 	// channel mismatch
-	assert.False(t, v.VerifyPresenceChannel("1234.1234", "presence-foobaz", "{\"user_id\":10,\"user_info\":{\"name\":\"Mr. Channels\"}}", "278d425bdf160c739803:31935e7d86dba64c2a90aed31fdc61869f9b22ba9d8863bba239c03ca481bc80"))
+	assert.False(t, v.VerifyPresenceChannel("1234.1234", "presence-foobaz", "{\"user_id\":\"10\",\"user_info\":{\"name\":\"Mr. Channels\"}}", "278d425bdf160c739803:4c6d8fc42a207ba96a0779844171b0bb819d96ffceef9609f5cce596ab17a800"))
 	// socket mismatch
-	assert.False(t, v.VerifyPresenceChannel("1234.4321", "presence-foobar", "{\"user_id\":10,\"user_info\":{\"name\":\"Mr. Channels\"}}", "278d425bdf160c739803:31935e7d86dba64c2a90aed31fdc61869f9b22ba9d8863bba239c03ca481bc80"))
+	assert.False(t, v.VerifyPresenceChannel("1234.4321", "presence-foobar", "{\"user_id\":\"10\",\"user_info\":{\"name\":\"Mr. Channels\"}}", "278d425bdf160c739803:4c6d8fc42a207ba96a0779844171b0bb819d96ffceef9609f5cce596ab17a800"))
 	// data mismatch
-	assert.False(t, v.VerifyPresenceChannel("1234.1234", "presence-foobar", "{\"id\":10,\"user_info\":{\"name\":\"Mr. Channels\"}}", "278d425bdf160c739803:31935e7d86dba64c2a90aed31fdc61869f9b22ba9d8863bba239c03ca481bc80"))
+	assert.False(t, v.VerifyPresenceChannel("1234.1234", "presence-foobar", "{\"id\":\"10\",\"user_info\":{\"name\":\"Mr. Channels\"}}", "278d425bdf160c739803:4c6d8fc42a207ba96a0779844171b0bb819d96ffceef9609f5cce596ab17a800"))
 }
 
 func TestVerifyUser(t *testing.T) {

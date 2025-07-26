@@ -1,0 +1,123 @@
+launch :anycable,
+  "./dist/anycable-go --pusher_app_key=my-test-id --public_streams --pusher_secret=oaugc1 --broker=memory"
+
+wait_tcp 8080
+
+require "json"
+require "openssl"
+
+def pusher_signature(app_id, key, str)
+  digest = OpenSSL::Digest::SHA256.new
+  signature = OpenSSL::HMAC.hexdigest(digest, key, str)
+  "#{app_id}:#{signature}"
+end
+
+scenario = [
+  {
+    client: {
+      name: "first",
+      connection_options: {
+        headers: {
+          "x-request-id" => "push-123"
+        }
+      },
+      actions: [
+        {
+          receive: {
+            "data>" => {
+              event: "pusher:connection_established"
+            }
+          }
+        },
+        {
+          send: {
+            data: {
+              event: "pusher:subscribe",
+              data: {
+                channel: "presence-test",
+                auth: pusher_signature("my-test-id", "oaugc1", "push-123:presence-test:#{{user_id: "312", user_info: {name: "Vova"}}.to_json}"),
+                channel_data: {user_id: "312", user_info: {name: "Vova"}}.to_json
+              }
+            }
+          }
+        },
+        {
+          receive: {
+            "data>" => {
+              event: "pusher_internal:subscription_succeeded",
+              data: %({"presence":{"count":1,"ids":["312"],"hash":{"312":{"name":"Vova"}}}})
+
+            }
+          }
+        },
+        {
+          wait_all: {}
+        },
+        {
+          receive: {
+            "data>" => {
+              event: "pusher_internal:member_added",
+              channel: "presence-test",
+              data: %({"user_id":"42","user_info":{"name":"Lolo"}})
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    client: {
+      name: "second",
+      connection_options: {
+        headers: {
+          "x-request-id" => "push-234"
+        }
+      },
+      actions: [
+        {
+          wait_all: {}
+        },
+        {
+          receive: {
+            "data>" => {
+              event: "pusher:connection_established"
+            }
+          }
+        },
+        {
+          send: {
+            data: {
+              event: "pusher:subscribe",
+              data: {
+                channel: "presence-test",
+                auth: pusher_signature("my-test-id", "oaugc1", "push-234:presence-test:#{{user_id: "42", user_info: {name: "Lolo"}}.to_json}"),
+                channel_data: {user_id: "42", user_info: {name: "Lolo"}}.to_json
+              }
+            }
+          }
+        },
+        {
+          receive: {
+            "data>" => {
+              event: "pusher_internal:subscription_succeeded",
+              data: %({"presence":{"count":2,"ids":["312","42"],"hash":{"312":{"name":"Vova"},"42":{"name":"Lolo"}}}})
+            }
+          }
+        }
+      ]
+    }
+  }
+]
+
+TEST_COMMAND = <<~CMD
+  bundle exec wsdirector ws://localhost:8080/app/my-test-id -i #{scenario.to_json}
+CMD
+
+run :wsdirector, TEST_COMMAND
+
+result = stdout(:wsdirector)
+
+unless result.include?("Group first: 1 clients, 0 failures") &&
+  result.include?("Group second: 1 clients, 0 failures")
+  fail "Unexpected scenario result:\n#{result}"
+end
