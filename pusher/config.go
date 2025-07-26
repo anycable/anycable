@@ -6,9 +6,12 @@ import (
 )
 
 type Config struct {
-	AppKey  string `toml:"app_key"`
-	AuthKey string `toml:"auth_key"`
-	Secret  string `toml:"secret"`
+	// Pusher application ID
+	AppID string `toml:"app_id"`
+	// Pusher application auth key
+	AppKey string `toml:"app_key"`
+	// Pusher secret
+	Secret string `toml:"secret"`
 	// AddCORSHeaders enables adding CORS headers (so you can perform broadcast requests from the browser)
 	// (We mostly need it for Stackblitz)
 	AddCORSHeaders bool
@@ -22,13 +25,20 @@ func NewConfig() Config {
 }
 
 func (c *Config) Enabled() bool {
-	return c.AppKey != ""
+	return c.AppID != "" && c.AppKey != ""
 }
 
 func (c Config) ToToml() string {
 	var result strings.Builder
 
-	result.WriteString("# The public app key for Pusher clients\n")
+	result.WriteString("# Pusher application ID\n")
+	if c.AppID != "" {
+		result.WriteString(fmt.Sprintf("app_id = \"%s\"\n", c.AppID))
+	} else {
+		result.WriteString("# app_id = \"\"\n")
+	}
+
+	result.WriteString("# Pusher application authentication key\n")
 	if c.AppKey != "" {
 		result.WriteString(fmt.Sprintf("app_key = \"%s\"\n", c.AppKey))
 	} else {
@@ -40,13 +50,6 @@ func (c Config) ToToml() string {
 		result.WriteString(fmt.Sprintf("secret = \"%s\"\n", c.Secret))
 	} else {
 		result.WriteString("# secret = \"\"\n")
-	}
-
-	result.WriteString("# The auth key for broadcasting Pusher events\n")
-	if c.AuthKey != "" {
-		result.WriteString(fmt.Sprintf("auth_key = \"%s\"\n", c.AuthKey))
-	} else {
-		result.WriteString("# auth_key = \"\"\n")
 	}
 
 	result.WriteString("\n")

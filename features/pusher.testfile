@@ -1,5 +1,5 @@
 launch :anycable,
-  "./dist/anycable-go --pusher_app_key=my-test-id --public_streams --pusher_secret=oaugc1 --pusher_auth_key=detox"
+  "./dist/anycable-go --pusher_app_id=my-test-id --public_streams --pusher_secret=oaugc1 --pusher_app_key=detox"
 
 wait_tcp 8080
 
@@ -40,7 +40,7 @@ scenario = [
 ]
 
 TEST_COMMAND = <<~CMD
-  bundle exec wsdirector ws://localhost:8080/app/my-test-id -i #{scenario.to_json}
+  bundle exec wsdirector ws://localhost:8080/app/detox -i #{scenario.to_json}
 CMD
 
 q = Queue.new
@@ -68,12 +68,12 @@ def pusher_broadcast(channel, event, data, app_id = "my-test-id", key = "detox",
     "&auth_version=" + auth_version +
     "&body_md5=" + body_md5
 
-  string_to_sign = "POST\n/app/" + app_id + "/events\n" + auth_params
+  string_to_sign = "POST\n/apps/" + app_id + "/events\n" + auth_params
 
   digest = OpenSSL::Digest::SHA256.new
   auth_signature = OpenSSL::HMAC.hexdigest(digest, secret, string_to_sign)
 
-  uri = URI.parse(url + "app/" + app_id + "/events?#{auth_params}&auth_signature=#{auth_signature}")
+  uri = URI.parse(url + "apps/" + app_id + "/events?#{auth_params}&auth_signature=#{auth_signature}")
   headers = {
     "Content-Type": "application/json"
   }
