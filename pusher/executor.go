@@ -32,6 +32,7 @@ func (ex *Executor) HandleCommand(s *node.Session, msg *common.Message) error {
 		if err := ex.verifyPrivateChannel(s, msg); err != nil {
 			s.Log.Debug("pusher authorization failed", "err", err)
 			subscribeMsg.Identifier = channelToIdentifier("")
+			return ex.app.HandleCommand(s, subscribeMsg)
 		}
 
 		return ex.app.HandleCommand(s, subscribeMsg)
@@ -61,6 +62,11 @@ func (ex *Executor) verifyPrivateChannel(s *node.Session, msg *common.Message) e
 
 		if strings.HasPrefix(channel, "presence-") {
 			verified = ex.verifier.VerifyPresenceChannel(s.GetID(), channel, data.ChannelData, data.Auth)
+			if verified {
+				// This information will be used by the controller to trigger the presence join event
+				// Unfortunately, there is no good way to pass through the original Pusher payload
+				s.GetEnv().MergeChannelState(msg.Identifier, &map[string]string{"channel_data": data.ChannelData})
+			}
 		} else {
 			verified = ex.verifier.VerifyChannel(s.GetID(), channel, data.Auth)
 		}

@@ -66,6 +66,7 @@ type Runner struct {
 
 	router  *router.RouterController
 	metrics *metricspkg.Metrics
+	broker  broker.Broker
 
 	telemetryEnabled bool
 	telemetryConfig  *telemetry.Config
@@ -207,7 +208,7 @@ func (r *Runner) Run() error {
 		pusherHandler := r.pusherWebsocketHandler(appNode, r.config)
 		wsServer.SetupHandler(pusherPath, pusherHandler)
 
-		err := r.Router().Route(pusher.ChannelName, pusher.NewController(&r.config.Pusher, r.log))
+		err := r.Router().Route(pusher.ChannelName, pusher.NewController(r.broker, &r.config.Pusher, r.log))
 		if err != nil {
 			return errorx.Decorate(err, "failed to initialize Pusher WebSocket handler")
 		}
@@ -291,6 +292,7 @@ func (r *Runner) runNode() (*node.Node, error) {
 	if appBroker != nil {
 		r.log.Info(appBroker.Announce())
 		appNode.SetBroker(appBroker)
+		r.broker = appBroker
 	}
 
 	disconnector, err := r.disconnectorFactory(appNode, r.config, r.log)

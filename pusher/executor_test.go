@@ -11,6 +11,7 @@ import (
 	"github.com/anycable/anycable-go/mocks"
 	"github.com/anycable/anycable-go/node"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -21,8 +22,8 @@ const (
 	stream             = "private-foobar"
 	signature          = "278d425bdf160c739803:58df8b0c36d6982b82c3ecf6b4662e34fe8c25bba48f5369f135bf843651c3a4"
 	presence_stream    = "presence-foobar"
-	presence_signature = "278d425bdf160c739803:31935e7d86dba64c2a90aed31fdc61869f9b22ba9d8863bba239c03ca481bc80"
-	presence_data      = "{\"user_id\":10,\"user_info\":{\"name\":\"Mr. Channels\"}}"
+	presence_signature = "278d425bdf160c739803:4c6d8fc42a207ba96a0779844171b0bb819d96ffceef9609f5cce596ab17a800"
+	presence_data      = "{\"user_id\":\"10\",\"user_info\":{\"name\":\"Mr. Channels\"}}"
 )
 
 type MockExecutor struct {
@@ -61,10 +62,17 @@ func TestHandleCommand(t *testing.T) {
 	conf := NewConfig()
 	conf.AppKey = app_id
 	conf.Secret = key
-	app := NewMockExecutor(NewController(&conf, slog.Default()))
+	bro := mocks.Broker{}
+	app := NewMockExecutor(NewController(&bro, &conf, slog.Default()))
 	n := NewMockNode()
 	verifier := NewVerifier(app_id, key)
 	executor := NewExecutor(app, verifier)
+
+	bro.On("PresenceInfo", mock.Anything).Return(&common.PresenceInfo{
+		Type:    common.PresenceInfoType,
+		Total:   0,
+		Records: []*common.PresenceEvent{},
+	}, nil)
 
 	t.Run("Subscribe (public)", func(t *testing.T) {
 		conn := mocks.NewMockConnection()
@@ -81,7 +89,7 @@ func TestHandleCommand(t *testing.T) {
 		res, err := conn.Read()
 		require.NoError(t, err)
 
-		assert.Equal(t, `{"event":"pusher_internal:subscription_succeeded","data":{},"channel":"all-chat"}`, string(res))
+		assert.Equal(t, `{"event":"pusher_internal:subscription_succeeded","data":"{}","channel":"all-chat"}`, string(res))
 	})
 
 	t.Run("Subscribe (private)", func(t *testing.T) {
@@ -99,7 +107,7 @@ func TestHandleCommand(t *testing.T) {
 		res, err := conn.Read()
 		require.NoError(t, err)
 
-		assert.Equal(t, `{"event":"pusher_internal:subscription_succeeded","data":{},"channel":"private-foobar"}`, string(res))
+		assert.Equal(t, `{"event":"pusher_internal:subscription_succeeded","data":"{}","channel":"private-foobar"}`, string(res))
 	})
 
 	t.Run("Subscribe (private + failure bad signature)", func(t *testing.T) {
@@ -135,7 +143,7 @@ func TestHandleCommand(t *testing.T) {
 		res, err := conn.Read()
 		require.NoError(t, err)
 
-		assert.Equal(t, `{"event":"pusher_internal:subscription_succeeded","data":{},"channel":"presence-foobar"}`, string(res))
+		assert.Equal(t, `{"event":"pusher_internal:subscription_succeeded","data":"{\"presence\":{\"count\":1,\"ids\":[\"10\"],\"hash\":{\"10\":{\"name\":\"Mr. Channels\"}}}}","channel":"presence-foobar"}`, string(res))
 	})
 }
 

@@ -2,20 +2,21 @@ package encoders
 
 import (
 	"encoding/json"
-	"errors"
 
 	"github.com/anycable/anycable-go/ws"
+	"github.com/joomcode/errorx"
 )
 
 type EncodingCache struct {
 	// Encoder type to encoded message mapping
-	encodedBytes map[string]*ws.SentFrame
+	encodedBytes  map[string]*ws.SentFrame
+	encoderErrors map[string]error
 }
 
 type EncodingFunction = func(EncodedMessage) (*ws.SentFrame, error)
 
 func NewEncodingCache() *EncodingCache {
-	return &EncodingCache{make(map[string]*ws.SentFrame)}
+	return &EncodingCache{make(map[string]*ws.SentFrame), make(map[string]error)}
 }
 
 func (m *EncodingCache) Fetch(
@@ -28,13 +29,14 @@ func (m *EncodingCache) Fetch(
 
 		if err != nil {
 			m.encodedBytes[encoder] = nil
+			m.encoderErrors[encoder] = err
 		} else {
 			m.encodedBytes[encoder] = b
 		}
 	}
 
 	if b := m.encodedBytes[encoder]; b == nil {
-		return nil, errors.New("Encoding failed")
+		return nil, errorx.Decorate(m.encoderErrors[encoder], "encoding failed")
 	} else {
 		return b, nil
 	}

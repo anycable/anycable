@@ -529,7 +529,7 @@ func (s *Session) Send(msg encoders.EncodedMessage) {
 			s.sendFrame(b)
 		}
 	} else {
-		s.Log.Warn("failed to encode message", "data", msg, "error", err)
+		s.Log.Warn("failed to encode message", "data", msg, "type", msg.GetType(), "error", err)
 	}
 }
 
