@@ -103,7 +103,7 @@ func TestPusherEncode(t *testing.T) {
 	t.Run("Welcome", func(t *testing.T) {
 		msg := &common.Reply{Type: common.WelcomeType, Sid: "lu2007"}
 
-		expected := `{"event":"pusher:connection_established","data":{"socket_id":"lu2007","activity_timeout":30}}`
+		expected := `{"event":"pusher:connection_established","data":"{\"socket_id\":\"lu2007\",\"activity_timeout\":30}"}`
 
 		actual, err := coder.Encode(msg)
 
@@ -176,7 +176,7 @@ func TestPusherEncodeTransmission(t *testing.T) {
 
 	t.Run("welcome", func(t *testing.T) {
 		msg := `{"type":"welcome","sid":"lu2007"}`
-		expected := `{"event":"pusher:connection_established","data":{"socket_id":"lu2007","activity_timeout":30}}`
+		expected := `{"event":"pusher:connection_established","data":"{\"socket_id\":\"lu2007\",\"activity_timeout\":30}"}`
 
 		actual, err := coder.EncodeTransmission(msg)
 

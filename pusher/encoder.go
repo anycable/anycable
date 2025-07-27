@@ -185,7 +185,7 @@ func (pusher *Encoder) Encode(msg encoders.EncodedMessage) (*ws.SentFrame, error
 		}
 		pusherMsg := PusherMessage{
 			Event: ConnectionEstablishedType,
-			Data:  connectionData,
+			Data:  string(utils.ToJSON(connectionData)),
 		}
 		return &ws.SentFrame{FrameType: ws.TextFrame, Payload: utils.ToJSON(pusherMsg)}, nil
 	}
