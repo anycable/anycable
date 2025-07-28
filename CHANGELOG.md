@@ -1,5 +1,7 @@
 # Change log
 
+## 1.6.3 (2025-07-28)
+
 - Support handling Pusher broadcasts (_events_). ([@palkan][])
 
 - Better Pusher protocol compatibility. ([@palkan][])
