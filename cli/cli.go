@@ -526,6 +526,8 @@ func (r *Runner) pusherWebsocketHandler(n *node.Node, c *config.Config) http.Han
 		sid := session.GetID()
 		n.Authenticated(session, `{"sid":"`+sid+`"}`)
 
+		session.MarkDisconnectable(false)
+
 		session.Send(&common.Reply{
 			Type: common.WelcomeType,
 			Sid:  sid,
