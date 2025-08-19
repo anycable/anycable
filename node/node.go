@@ -1288,6 +1288,7 @@ func (n *Node) registerMetrics() {
 
 	n.metrics.RegisterGauge(metricsReadPoolPendingNum, "The number of tasks pending in the read pool")
 	n.metrics.RegisterGauge(metricsWritePoolPendingNum, "The number of tasks pending in the write pool")
+	n.metrics.RegisterCounter(metricsReadPoolErrorsTotal, "The number of dropped incoming message due to the read pool being out of capacity")
 
 	n.metrics.RegisterCounter(metricsFailedAuths, "The total number of failed authentication attempts")
 	n.metrics.RegisterCounter(metricsRejectedClients, "The total number of client connections rejected because the server was overloaded")

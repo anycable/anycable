@@ -1,0 +1,97 @@
+launch :rpc, "bundle exec anyt --only-rpc"
+wait_tcp 50051
+
+launch :anycable, "./dist/anycable-go --netpoll_enabled=true --write_gopool_size=1 --read_gopool_size=1 --read_queue_timeout=1000 --metrics_rotate_interval=3 --metrics_log --metrics_log_filter=rpc_call_total,rpc_error_total,read_pool_errors_total --disable_disconnect",
+  capture_output: true
+wait_tcp 8080
+
+scenario = [
+  {
+    client: {
+      protocol: "action_cable",
+      name: "first",
+      actions: [
+        {
+          subscribe: {
+            channel: "BenchmarkChannel"
+          }
+        },
+        "wait_all",
+        {
+          perform: {
+            channel: "BenchmarkChannel",
+            action: "echo",
+            data: {
+              message: "hello",
+              delay: 2
+            }
+          }
+        },
+        {
+          receive: {
+            channel: "BenchmarkChannel",
+            action: "echo",
+            data: {
+              message: "hello",
+              delay: 2
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    client: {
+      protocol: "action_cable",
+      name: "second",
+      actions: [
+        {
+          subscribe: {
+            channel: "BenchmarkChannel"
+          }
+        },
+        "wait_all",
+        {
+          sleep: {
+            time: 0.1
+          }
+        },
+        {
+          perform: {
+            channel: "BenchmarkChannel",
+            action: "echo",
+            data: {
+              message: "hello",
+              delay: 2
+            }
+          }
+        }
+      ]
+    }
+  }
+]
+
+TEST_COMMAND = <<~CMD
+  bundle exec wsdirector ws://localhost:8080/cable -i #{scenario.to_json}
+CMD
+
+run :wsdirector, TEST_COMMAND
+
+result = stdout(:wsdirector)
+
+unless result.include?("Group first: 1 clients, 0 failures")
+  fail "Unexpected scenario result:\n#{result}"
+end
+
+# Wait for metrics to be logged
+sleep 3
+
+stop :anycable
+
+logs = stdout(:anycable)
+
+puts logs
+
+if logs !~ /rpc_call_total=5/ || logs !~ /read_pool_errors_total=1/
+  fail "Expected metrics logs not found:\n#{logs}"
+end

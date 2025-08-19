@@ -561,7 +561,7 @@ ADD:
 
 		if rerr != nil {
 			s.metrics.CounterIncrement(metricsReadPoolErrorsTotal)
-			s.Log.Error("failed to process incoming message", "err", rerr)
+			s.Log.Error("failed to read incoming message", "err", rerr, "timeout", s.readWaitTimeout)
 		}
 	})
 
