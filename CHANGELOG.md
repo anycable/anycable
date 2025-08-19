@@ -1,5 +1,7 @@
 # Change log
 
+- Allow using native WebSocket ping/pong for keepalive. ([@palkan][])
+
 ## 1.6.3 (2025-07-28)
 
 - Support handling Pusher broadcasts (_events_). ([@palkan][])

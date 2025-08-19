@@ -158,6 +158,7 @@ type Session struct {
 
 	pingInterval           time.Duration
 	pingTimestampPrecision string
+	sendNativePing         bool
 
 	pongTimeout      time.Duration
 	presenceInterval time.Duration
@@ -279,6 +280,7 @@ func NewSession(node *Node, conn Connection, url string, headers *map[string]str
 	session.broker = node.broker
 	session.pingInterval = time.Duration(node.config.PingInterval) * time.Second
 	session.pingTimestampPrecision = node.config.PingTimestampPrecision
+	session.sendNativePing = node.config.EnableNativePing
 	session.uid = uid
 
 	ctx := node.log.With("sid", session.uid)
@@ -780,6 +782,11 @@ func (s *Session) sendPing() {
 		err = s.writeFrameWithDeadline(b, deadline)
 	}
 
+	if s.sendNativePing {
+		deadline := time.Now().Add(s.pingInterval / 2)
+		err = s.conn.WritePing(deadline)
+	}
+
 	if err != nil {
 		s.Disconnect("Ping failed", ws.CloseAbnormalClosure)
 		return
@@ -882,6 +889,10 @@ func (s *Session) resetPong() {
 
 	s.timers.pongDeadline += s.pongTimeout.Nanoseconds()
 	s.timers.schedule()
+}
+
+func (s *Session) HandleNativePong() {
+	s.resetPong()
 }
 
 func (s *Session) handleNoPong() {

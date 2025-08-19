@@ -29,6 +29,8 @@ type Config struct {
 	PingTimestampPrecision string `toml:"ping_timestamp_precision"`
 	// For how long to wait for pong message before disconnecting (seconds)
 	PongTimeout int `toml:"pong_timeout"`
+	// Send native pings (e.g., WebSocket ping frames) along with application-level pings to keepalive clients using custom protocols
+	EnableNativePing bool `toml:"enable_native_ping"`
 	// For how long to wait for disconnect callbacks to be processed before exiting (seconds)
 	ShutdownTimeout int `toml:"shutdown_timeout"`
 }
@@ -60,6 +62,13 @@ func (c Config) ToToml() string {
 		result.WriteString("# pong_timeout = 6\n")
 	} else {
 		result.WriteString(fmt.Sprintf("pong_timeout = %d\n", c.PongTimeout))
+	}
+
+	result.WriteString("# Enable native ping/pong mechanism (e.g., WebSocket PING/PONG frames)")
+	if c.EnableNativePing {
+		result.WriteString("# enable_native_ping = true\n")
+	} else {
+		result.WriteString("enable_native_ping = true\n")
 	}
 
 	result.WriteString("# Define when to invoke Disconnect RPC callback\n")

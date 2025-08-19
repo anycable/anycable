@@ -78,6 +78,10 @@ func (c *Connection) WriteBinary(msg []byte, deadline time.Time) error {
 	return errors.New("unsupported")
 }
 
+func (c *Connection) WritePing(deadline time.Time) error {
+	return nil
+}
+
 func (c *Connection) Context() context.Context {
 	return c.ctx
 }

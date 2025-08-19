@@ -53,6 +53,10 @@ func (ws Connection) WriteBinary(msg []byte, deadline time.Time) error {
 	return w.Close()
 }
 
+func (ws Connection) WritePing(deadline time.Time) error {
+	return ws.conn.WriteControl(websocket.PingMessage, nil, deadline)
+}
+
 func (ws Connection) Read() ([]byte, error) {
 	_, message, err := ws.conn.ReadMessage()
 	return message, err

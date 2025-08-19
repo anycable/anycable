@@ -21,6 +21,10 @@ func (conn MockConnection) WriteBinary(msg []byte, deadline time.Time) error {
 	return nil
 }
 
+func (conn MockConnection) WritePing(deadline time.Time) error {
+	return nil
+}
+
 func (conn MockConnection) Read() ([]byte, error) {
 	timer := time.After(100 * time.Millisecond)
 

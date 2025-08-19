@@ -1222,6 +1222,13 @@ func pingCLIFlags(c *config.Config) []cli.Flag {
 			Value:       c.App.PongTimeout,
 			Destination: &c.App.PongTimeout,
 		},
+
+		&cli.BoolFlag{
+			Name:        "enable_native_pings",
+			Usage:       `Send native pings (e.g., WebSocket ping frames) along with application-level pings to keepalive clients using custom protocols`,
+			Value:       c.App.EnableNativePing,
+			Destination: &c.App.EnableNativePing,
+		},
 	})
 }
 

@@ -63,6 +63,7 @@ type AppNode interface {
 type Connection interface {
 	Write(msg []byte, deadline time.Time) error
 	WriteBinary(msg []byte, deadline time.Time) error
+	WritePing(deadline time.Time) error
 	Read() ([]byte, error)
 	Close(code int, reason string)
 }

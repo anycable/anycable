@@ -480,6 +480,11 @@ func (r *Runner) defaultWebSocketHandler(n *node.Node, c *config.Config, l *slog
 			}
 		}
 
+		wsc.SetPongHandler(func(appData string) error {
+			session.HandleNativePong()
+			return nil
+		})
+
 		return session.Serve(callback)
 	}), nil
 }

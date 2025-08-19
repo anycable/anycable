@@ -36,6 +36,10 @@ func (r *Runner) sessionOptionsFromProtocol(protocol string) []node.SessionOptio
 		}
 	}
 
+	if r.config.App.EnableNativePing && r.config.App.PongTimeout > 0 {
+		opts = append(opts, node.WithPongTimeout(time.Duration(r.config.App.PongTimeout)*time.Second))
+	}
+
 	return opts
 }
 
