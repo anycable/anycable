@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"math/rand"
 	"net"
@@ -536,25 +537,53 @@ ADD:
 		rerr := s.readPool.ScheduleTimeout(s.readWaitTimeout, func() {
 			s.metrics.GaugeDecrement(metricsReadPoolPendingNum)
 			wsconn := s.conn.Descriptor()
-			message, op, rerr := wsutil.ReadClientData(wsconn)
-			if op == gobwas.OpClose {
-				s.Log.Debug("WebSocket closed", "error", rerr)
-				poller.Stop(desc) // nolint:errcheck
-				s.disconnectNow("Read closed", ws.CloseNormalClosure)
-				return
-			}
+			reader := wsutil.NewReader(wsconn, gobwas.StateServerSide)
+			for {
+				hdr, rerr := reader.NextFrame()
+				if rerr != nil {
+					if hdr.OpCode == gobwas.OpClose {
+						s.Log.Debug("WebSocket closed", "error", rerr)
+						poller.Stop(desc) // nolint:errcheck
+						s.disconnectNow("Read closed", ws.CloseNormalClosure)
+						return
+					}
+					s.Log.Debug("WebSocket read frame failed", "error", rerr)
+					poller.Stop(desc) // nolint:errcheck
+					desc.Close()
+					s.disconnectNow("Read error", ws.CloseAbnormalClosure)
+					callback()
+					return
+				}
 
-			if rerr != nil {
-				s.Log.Debug("WebSocket read failed", "error", rerr)
-				poller.Stop(desc) // nolint:errcheck
-				desc.Close()
-				s.disconnectNow("Read error", ws.CloseAbnormalClosure)
-				callback()
-				return
-			}
+				if hdr.OpCode == gobwas.OpClose {
+					s.Log.Debug("WebSocket closed", "error", rerr)
+					poller.Stop(desc) // nolint:errcheck
+					s.disconnectNow("Read closed", ws.CloseNormalClosure)
+					return
+				}
 
-			if message != nil {
-				s.ReadMessage(message) // nolint:errcheck
+				if hdr.OpCode == gobwas.OpPong {
+					s.HandleNativePong()
+				}
+
+				if hdr.OpCode == gobwas.OpText || hdr.OpCode == gobwas.OpBinary {
+					message := make([]byte, hdr.Length)
+					_, rerr = reader.Read(message)
+					if rerr != nil && !errors.Is(rerr, io.EOF) {
+						s.Log.Debug("WebSocket read message failed", "error", rerr)
+						poller.Stop(desc) // nolint:errcheck
+						desc.Close()
+						s.disconnectNow("Read error", ws.CloseAbnormalClosure)
+						callback()
+						return
+					}
+					s.ReadMessage(message) // nolint:errcheck
+				}
+
+				if !hdr.Fin {
+					continue
+				}
+				break
 			}
 			poller.Resume(desc) // nolint:errcheck
 		})
