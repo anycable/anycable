@@ -33,6 +33,8 @@ type Config struct {
 	EnableNativePing bool `toml:"enable_native_ping"`
 	// For how long to wait for disconnect callbacks to be processed before exiting (seconds)
 	ShutdownTimeout int `toml:"shutdown_timeout"`
+	// For how long to sleep before shutting down
+	ShutdownDelay int `toml:"shutdown_delay"`
 }
 
 // NewConfig builds a new config
