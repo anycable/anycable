@@ -69,7 +69,7 @@ func main() {
 	go http.ListenAndServe(":8080", nil) // nolint:errcheck,gosec
 
 	// Graceful shutdown (to ensure AnyCable sends disconnect notices)
-	s := utils.NewGracefulSignals(10 * time.Second)
+	s := utils.NewGracefulSignals(10*time.Second, 0)
 	ch := make(chan error, 1)
 
 	s.HandleForceTerminate(func() {

@@ -16,6 +16,7 @@ type GracefulSignals struct {
 	handlers              []signalHandler
 	forceTerminateHandler func()
 	timeout               time.Duration
+	delay                 time.Duration
 	executed              bool
 
 	ch chan os.Signal
@@ -23,9 +24,10 @@ type GracefulSignals struct {
 }
 
 // Create new GracefulSignals struct.
-func NewGracefulSignals(timeout time.Duration) *GracefulSignals {
+func NewGracefulSignals(timeout time.Duration, delay time.Duration) *GracefulSignals {
 	return &GracefulSignals{
 		timeout:               timeout,
+		delay:                 delay,
 		forceTerminateHandler: func() { os.Exit(0) },
 		handlers:              make([]signalHandler, 0),
 		ch:                    make(chan os.Signal, 1),
@@ -91,6 +93,13 @@ func (s *GracefulSignals) exec() {
 			s.forceTerminateHandler()
 		}
 	}()
+
+	if s.delay != 0 {
+		select {
+		case <-timeoutCtx.Done():
+		case <-time.After(s.delay):
+		}
+	}
 
 	handlers := s.handlers[:] // nolint:gocritic
 	s.mu.Unlock()
