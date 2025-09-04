@@ -568,6 +568,13 @@ func serverCLIFlags(c *config.Config, path *string) []cli.Flag {
 			Hidden:      true,
 		},
 
+		&cli.IntFlag{
+			Name:        "shutdown_delay",
+			Usage:       "Sleep time before shutting down (in seconds)",
+			Value:       c.App.ShutdownDelay,
+			Destination: &c.App.ShutdownDelay,
+		},
+
 		&cli.StringFlag{
 			Name:   "node_id",
 			Usage:  "Unique node identifier",
