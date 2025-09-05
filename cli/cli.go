@@ -245,6 +245,12 @@ func (r *Runner) Run() error {
 
 	// We MUST first stop the server (=stop accepting new connections), then gracefully disconnect active clients
 	r.shutdownables = append([]Shutdownable{wsServer}, r.shutdownables...)
+
+	if r.config.App.ShutdownDelay > 0 {
+		sleeper := utils.NewSleeper(time.Duration(r.config.App.ShutdownDelay) * time.Second)
+		r.shutdownables = append([]Shutdownable{sleeper}, r.shutdownables...)
+	}
+
 	r.setupSignalHandlers()
 
 	// Wait for an error (or none)
@@ -605,10 +611,7 @@ func (r *Runner) announceGoPools() {
 }
 
 func (r *Runner) setupSignalHandlers() {
-	s := utils.NewGracefulSignals(
-		time.Duration(r.config.App.ShutdownTimeout)*time.Second,
-		time.Duration(r.config.App.ShutdownDelay)*time.Second,
-	)
+	s := utils.NewGracefulSignals(time.Duration(r.config.App.ShutdownTimeout) * time.Second)
 
 	s.HandleForceTerminate(func() {
 		r.log.Warn("Immediate termination requested. Stopped")
