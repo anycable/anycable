@@ -2,8 +2,6 @@ module github.com/anycable/anycable-go
 
 go 1.23.12
 
-toolchain go1.23.12
-
 require (
 	github.com/FZambia/sentinel v1.1.1
 	github.com/davecgh/go-spew v1.1.1 // indirect
