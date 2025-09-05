@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"math/rand"
 	"net"
@@ -18,12 +17,8 @@ import (
 	"github.com/anycable/anycable-go/encoders"
 	"github.com/anycable/anycable-go/logger"
 	"github.com/anycable/anycable-go/metrics"
-	"github.com/anycable/anycable-go/netpoll"
 	"github.com/anycable/anycable-go/utils"
 	"github.com/anycable/anycable-go/ws"
-
-	gobwas "github.com/gobwas/ws"
-	"github.com/gobwas/ws/wsutil"
 )
 
 // Executor handles incoming commands (messages)
@@ -164,6 +159,9 @@ type Session struct {
 	writeTimeout   time.Duration
 	maxPendingSize atomic.Uint64
 
+	readQueue *utils.Queue[[]byte]
+
+	pollPool        *utils.GoPool
 	readPool        *utils.GoPool
 	writePool       *utils.GoPool
 	readWaitTimeout time.Duration
@@ -172,6 +170,11 @@ type Session struct {
 	wrmu            sync.Mutex
 	workerRunning   bool
 	workerScheduled bool
+
+	// Mutex for activating ReadMessages worker
+	rmu                 sync.Mutex
+	readWorkerRunning   bool
+	readWorkerScheduled bool
 
 	timers *SessionTimers
 
@@ -293,6 +296,7 @@ func BuildSession(conn Connection, env *common.SessionEnv) *Session {
 		env:           env,
 		subscriptions: NewSubscriptionState(),
 		writeQueue:    utils.NewQueue[*ws.SentFrame](16),
+		readQueue:     utils.NewQueue[[]byte](8),
 		writeTimeout:  2 * time.Second,
 		closeCtx:      ctx,
 		closeCancel:   cancel,
@@ -314,6 +318,7 @@ func NewSession(node *Node, conn Connection, url string, headers *map[string]str
 	session.sendNativePing = node.config.EnableNativePing
 	session.uid = uid
 
+	session.pollPool = node.pollPool
 	session.readPool = node.readPool
 	session.writePool = node.writePool
 	session.readWaitTimeout = time.Duration(node.config.ReadQueueTimeout) * time.Millisecond
@@ -491,120 +496,6 @@ func (s *Session) Serve(callback func()) error {
 	}()
 
 	return nil
-}
-
-// ServeWithPoll register the connection within a netpoll and subscribes to Read/Close events
-func (s *Session) ServeWithPoll(poller netpoll.Poller, callback func()) error {
-	wsConn := s.conn.(*ws.Connection)
-
-	fd := wsConn.Fd()
-
-	// Connection has been already closed
-	if fd < 0 {
-		return nil
-	}
-
-	desc, err := netpoll.HandleReadOnce(fd)
-
-	if err != nil {
-		return err
-	}
-
-	s.Log.Debug("adding descriptor to poller")
-
-	retried := false
-
-ADD:
-	err = poller.Start(desc, func(ev netpoll.Event) {
-		if ev&(netpoll.EventReadHup|netpoll.EventHup) != 0 {
-			poller.Stop(desc) // nolint:errcheck
-			desc.Close()
-
-			if ev&(netpoll.EventErr) != 0 {
-				s.Log.Debug("descriptor closed with error")
-				s.metrics.CounterIncrement(metricsAbnormalSocketClosure)
-				s.cleanup()
-			} else {
-				s.Log.Debug("descriptor closed", "event", ev)
-				s.disconnectNow("Closed", ws.CloseNormalClosure)
-			}
-
-			callback()
-			return
-		}
-
-		s.metrics.GaugeIncrement(metricsReadPoolPendingNum)
-		rerr := s.readPool.ScheduleTimeout(s.readWaitTimeout, func() {
-			s.metrics.GaugeDecrement(metricsReadPoolPendingNum)
-			wsconn := s.conn.Descriptor()
-			reader := wsutil.NewReader(wsconn, gobwas.StateServerSide)
-			for {
-				hdr, rerr := reader.NextFrame()
-				if rerr != nil {
-					if hdr.OpCode == gobwas.OpClose {
-						s.Log.Debug("WebSocket closed", "error", rerr)
-						poller.Stop(desc) // nolint:errcheck
-						s.disconnectNow("Read closed", ws.CloseNormalClosure)
-						return
-					}
-					s.Log.Debug("WebSocket read frame failed", "error", rerr)
-					poller.Stop(desc) // nolint:errcheck
-					desc.Close()
-					s.disconnectNow("Read error", ws.CloseAbnormalClosure)
-					callback()
-					return
-				}
-
-				if hdr.OpCode == gobwas.OpClose {
-					s.Log.Debug("WebSocket closed", "error", rerr)
-					poller.Stop(desc) // nolint:errcheck
-					s.disconnectNow("Read closed", ws.CloseNormalClosure)
-					return
-				}
-
-				if hdr.OpCode == gobwas.OpPong {
-					s.HandleNativePong()
-				}
-
-				if hdr.OpCode == gobwas.OpText || hdr.OpCode == gobwas.OpBinary {
-					message := make([]byte, hdr.Length)
-					_, rerr = reader.Read(message)
-					if rerr != nil && !errors.Is(rerr, io.EOF) {
-						s.Log.Debug("WebSocket read message failed", "error", rerr)
-						poller.Stop(desc) // nolint:errcheck
-						desc.Close()
-						s.disconnectNow("Read error", ws.CloseAbnormalClosure)
-						callback()
-						return
-					}
-					s.ReadMessage(message) // nolint:errcheck
-				}
-
-				if !hdr.Fin {
-					continue
-				}
-				break
-			}
-			poller.Resume(desc) // nolint:errcheck
-		})
-
-		if rerr != nil {
-			s.metrics.CounterIncrement(metricsReadPoolErrorsTotal)
-			s.Log.Error("failed to read incoming message", "err", rerr, "timeout", s.readWaitTimeout)
-		}
-	})
-
-	// There could be a race condition when we haven't removed the closed
-	// socket from the poller; in this case, we force-remove it and try adding
-	// the descriptor again
-	if err == netpoll.ErrRegistered && !retried {
-		retried = true
-		s.Log.Debug("retried to add fd")
-		poller.Stop(desc) // nolint:errcheck
-		goto ADD
-	}
-
-	return err
 }
 
 // SendMessages waits for incoming messages and send them to the client connection
@@ -1032,6 +923,8 @@ func (s *Session) resetPong() {
 }
 
 func (s *Session) HandleNativePong() {
+	s.Log.Warn("received native pong")
+
 	s.resetPong()
 }
 

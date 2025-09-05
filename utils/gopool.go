@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"fmt"
 	"time"
 )
@@ -64,18 +65,25 @@ func (p *GoPool) Size() int {
 
 // Schedule schedules task to be executed over pool's workers.
 func (p *GoPool) Schedule(task func()) {
-	p.schedule(task, nil) // nolint:errcheck
+	p.schedule(context.Background(), task) // nolint:errcheck
+}
+
+// ScheduleContext schedules task to be executed over pool's workers with a given context
+func (p *GoPool) ScheduleContext(ctx context.Context, task func()) error {
+	return p.schedule(ctx, task) // nolint:errcheck
 }
 
 // ScheduleTimeout schedules task to be executed over pool's workers.
 // It returns ErrScheduleTimeout when no free workers met during given timeout.
 func (p *GoPool) ScheduleTimeout(timeout time.Duration, task func()) error {
-	return p.schedule(task, time.After(timeout))
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	return p.schedule(ctx, task)
 }
 
-func (p *GoPool) schedule(task func(), timeout <-chan time.Time) error {
+func (p *GoPool) schedule(ctx context.Context, task func()) error {
 	select {
-	case <-timeout:
+	case <-ctx.Done():
 		return ErrScheduleTimeout
 	case p.work <- task:
 		return nil

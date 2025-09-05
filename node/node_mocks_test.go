@@ -34,6 +34,7 @@ func NewMockSession(uid string, node *Node, opts ...SessionOption) *Session {
 	session.uid = uid
 	session.Log = slog.With("sid", uid)
 	session.readPool = node.readPool
+	session.pollPool = node.pollPool
 	session.writePool = node.writePool
 
 	session.SetIdentifiers(uid)
