@@ -1,8 +1,6 @@
 module github.com/anycable/anycable-go
 
-go 1.23.0
-
-toolchain go1.23.1
+go 1.23.12
 
 require (
 	github.com/FZambia/sentinel v1.1.1

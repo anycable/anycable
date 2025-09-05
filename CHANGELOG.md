@@ -1,5 +1,9 @@
 # Change log
 
+## 1.6.5 (2025-09-05)
+
+- Update go to 1.23.12. ([@jmthomas][])
+
 ## 1.6.4 (2025-08-19)
 
 - Support using native WebSocket ping/pong for keepalive. ([@palkan][])
