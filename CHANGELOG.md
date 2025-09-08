@@ -1,8 +1,10 @@
 # Change log
 
-## 1.6.5 (2025-09-05)
+## 1.6.5 (2025-09-08)
 
 - Update go to 1.23.12. ([@jmthomas][])
+
+- Added `--shutdown_delay` option to postpone the graceful shutdown process (useful when using AWS ALB to let it unregister the service before we stop accepting requests).
 
 ## 1.6.4 (2025-08-19)
 
