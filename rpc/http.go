@@ -83,6 +83,7 @@ func NewHTTPService(c *Config) (*HTTPService, error) {
 
 	client := &http.Client{
 		Transport: &http.Transport{TLSClientConfig: tlsConfig},
+		Timeout:   time.Duration(c.RequestTimeout * int(time.Millisecond)),
 	}
 
 	baseURL, err := url.Parse(c.Host)
