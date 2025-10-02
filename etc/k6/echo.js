@@ -4,9 +4,11 @@
 import { check, sleep, fail } from "k6";
 import cable from "k6/x/cable";
 import { randomIntBetween } from "https://jslib.k6.io/k6-utils/1.1.0/index.js";
-import { Trend } from "k6/metrics";
+import { Trend, Counter } from "k6/metrics";
 
 let commandTrend = new Trend("command_duration", true);
+let echosSent = new Counter("echos_sent");
+let echosReceived = new Counter("echos_received");
 
 let config = __ENV;
 
@@ -43,7 +45,6 @@ export default function () {
       fail("connection failed");
     }
   } catch (err) {
-    console.error(err)
     return
   }
 
@@ -60,17 +61,17 @@ export default function () {
       fail("failed to subscribe");
     }
   } catch (err) {
-    console.error(err)
     return
   }
 
   for (let i = 0; i < 10; i++) {
     let start = Date.now();
-    channel.perform("echo", { ts: start, content: `hello from ${__VU} numero ${i+1}` });
+    channel.perform("echo", { delay: randomIntBetween(2, 4), ts: start, content: `hello from ${__VU} numero ${i+1}` });
+    echosSent.add(1);
 
     sleep(randomIntBetween(5, 10) / 100);
 
-    let incoming = channel.receiveAll(1);
+    let incoming = channel.receiveAll(5);
 
     for(let message of incoming) {
       let received = message.__timestamp__ || Date.now();
@@ -78,6 +79,7 @@ export default function () {
       if (message.action == "echo") {
         let ts = message.ts;
         commandTrend.add(received - ts);
+        echosReceived.add(1);
       }
     }
 
