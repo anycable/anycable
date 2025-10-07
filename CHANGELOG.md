@@ -1,5 +1,7 @@
 # Change log
 
+## 1.6.6 (2025-10-07)
+
 - Prevent legacy Redis broadcaster and pub/sub from sharing the same channel. ([@palkan][])
 
 ## 1.6.5 (2025-09-08)
