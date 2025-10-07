@@ -1,5 +1,7 @@
 # Change log
 
+- Prevent legacy Redis broadcaster and pub/sub from sharing the same channel. ([@palkan][])
+
 ## 1.6.5 (2025-09-08)
 
 - Update go to 1.23.12. ([@jmthomas][])

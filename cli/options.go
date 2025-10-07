@@ -284,6 +284,15 @@ Use shutdown_timeout instead.`)
 		c.RedisPubSub.Redis = &c.Redis
 	}
 
+	// Ensure pubsub and broadcaster channels are not the same
+	// when redis pub/sub broadcaster is enabled
+	if slices.Contains(c.BroadcastAdapters, "redis") &&
+		c.RedisPubSub.Channel == c.LegacyRedisBroadcast.Channel {
+
+		fmt.Println(`WARNING: Same Redis channel is provided for broadcaster and pub/sub components, updating the latter one automatically`)
+		c.RedisPubSub.Channel = fmt.Sprintf("%s-int", c.RedisPubSub.Channel)
+	}
+
 	if c.NATSPubSub.NATS == nil {
 		c.NATSPubSub.NATS = &c.NATS
 	}

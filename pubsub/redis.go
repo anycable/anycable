@@ -242,9 +242,9 @@ func (s *RedisSubscriber) runPubSub(done chan (error)) {
 		OnSubscription: func(m rueidis.PubSubSubscription) {
 			if m.Kind == "subscribe" && m.Channel == s.config.Channel {
 				if s.reconnectAttempt > 0 {
-					s.log.Info("reconnected")
+					s.log.With("channel", m.Channel).Info("reconnected")
 				} else {
-					s.log.Info("connected")
+					s.log.With("channel", m.Channel).Info("connected")
 				}
 				s.reconnectAttempt = 0
 			}

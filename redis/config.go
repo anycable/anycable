@@ -15,8 +15,6 @@ type RedisConfig struct {
 	// Redis instance URL or master name in case of sentinels usage
 	// or list of URLs if cluster usage
 	URL string `toml:"url"`
-	// Internal channel name for node-to-node broadcasting
-	InternalChannel string `toml:"internal_channel"`
 	// List of Redis Sentinel addresses
 	Sentinels string `toml:"sentinels"`
 	// Redis Sentinel discovery interval (seconds)
@@ -43,7 +41,6 @@ func NewRedisConfig() RedisConfig {
 	return RedisConfig{
 		KeepalivePingInterval:     30,
 		URL:                       "redis://localhost:6379",
-		InternalChannel:           "__anycable_internal__",
 		SentinelDiscoveryInterval: 30,
 		TLSVerify:                 false,
 		MaxReconnectAttempts:      5,
@@ -142,9 +139,6 @@ func (config *RedisConfig) ToToml() string {
 	result.WriteString("# Redis instance URL or master name in case of sentinels usage\n")
 	result.WriteString("# or list of URLs if cluster usage\n")
 	result.WriteString(fmt.Sprintf("url = \"%s\"\n", config.URL))
-
-	result.WriteString("# Channel name for pub/sub (node-to-node)\n")
-	result.WriteString(fmt.Sprintf("internal_channel = \"%s\"\n", config.InternalChannel))
 
 	result.WriteString("# Sentinel addresses (comma-separated list)\n")
 	result.WriteString(fmt.Sprintf("sentinels = \"%s\"\n", config.Sentinels))
