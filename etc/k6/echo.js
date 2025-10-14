@@ -14,6 +14,7 @@ let config = __ENV;
 
 let url = config.CABLE_URL || "ws://localhost:8080/cable";
 let channelName = (config.CHANNEL_ID || 'BenchmarkChannel');
+let echoDelay = (config.ECHO_DELAY || '0') | 0;
 
 export const options = {
   scenarios: {
@@ -66,7 +67,13 @@ export default function () {
 
   for (let i = 0; i < 10; i++) {
     let start = Date.now();
-    channel.perform("echo", { delay: randomIntBetween(2, 4), ts: start, content: `hello from ${__VU} numero ${i+1}` });
+    let payload = { ts: start, content: `hello from ${__VU} numero ${i + 1}` };
+
+    if (echoDelay) {
+      payload.delay = randomIntBetween(echoDelay - 1, echoDelay + 1);
+    }
+
+    channel.perform("echo", payload);
     echosSent.add(1);
 
     sleep(randomIntBetween(5, 10) / 100);

@@ -342,9 +342,18 @@ func (n *Node) Authenticate(s *Session, options ...AuthOption) (*common.ConnectR
 		if restored {
 			return &common.ConnectResult{Status: common.SUCCESS}, nil
 		}
+
+		if s.IsClosed() {
+			return nil, nil
+		}
 	}
 
 	res, err := n.controller.Authenticate(s.GetID(), s.env)
+
+	if s.IsClosed() {
+		s.Log.Debug("skip authenticate result: closed")
+		return nil, nil
+	}
 
 	s.Log.Debug("controller authenticate", "response", res, "err", err)
 
@@ -380,6 +389,10 @@ func (n *Node) Authenticate(s *Session, options ...AuthOption) (*common.ConnectR
 // Mark session as authenticated and register it with a hub.
 // Useful when you perform authentication manually, not using a controller.
 func (n *Node) Authenticated(s *Session, ids string) {
+	if s.IsClosed() {
+		return
+	}
+
 	s.SetIdentifiers(ids)
 	s.Connected = true
 	n.hub.AddSession(s)
@@ -402,6 +415,11 @@ func (n *Node) TryRestoreSession(s *Session) (restored bool) {
 
 	if cached_session == nil {
 		s.Log.Debug("session not found in cache", "old_sid", prev_sid)
+		return false
+	}
+
+	if s.IsClosed() {
+		s.Log.Debug("skip restore result: closed")
 		return false
 	}
 
@@ -452,6 +470,11 @@ func (n *Node) Subscribe(s *Session, msg *common.Message) (*common.CommandResult
 	}
 
 	res, err := n.controller.Subscribe(s.GetID(), s.env, s.GetIdentifiers(), msg.Identifier)
+
+	if s.IsClosed() {
+		s.Log.Debug("skip subscribe result: closed")
+		return nil, nil
+	}
 
 	s.Log.Debug("controller subscribe", "response", res, "err", err)
 
@@ -509,6 +532,11 @@ func (n *Node) Unsubscribe(s *Session, msg *common.Message) (*common.CommandResu
 	}
 
 	res, err := n.controller.Unsubscribe(s.GetID(), s.env, s.GetIdentifiers(), msg.Identifier)
+
+	if s.IsClosed() {
+		s.Log.Debug("skip unsubscribe result: closed")
+		return nil, nil
+	}
 
 	s.Log.Debug("controller unsubscribe", "response", res, "err", err)
 
@@ -572,6 +600,11 @@ func (n *Node) Perform(s *Session, msg *common.Message) (*common.CommandResult, 
 
 	res, err := n.controller.Perform(s.GetID(), s.env, s.GetIdentifiers(), msg.Identifier, data)
 
+	if s.IsClosed() {
+		s.Log.Debug("skip perform result: closed")
+		return nil, nil
+	}
+
 	s.Log.Debug("controller perform", "response", res, "err", err)
 
 	if err != nil {
@@ -613,6 +646,11 @@ func (n *Node) History(s *Session, msg *common.Message) error {
 	}
 
 	backlog, err := n.retreiveHistory(&history, subscriptionStreams)
+
+	if s.IsClosed() {
+		s.Log.Debug("skip history result: closed")
+		return nil
+	}
 
 	if err != nil {
 		s.Send(&common.Reply{
@@ -737,6 +775,11 @@ func (n *Node) Presence(s *Session, msg *common.Message) error {
 	}
 
 	info, err := n.broker.PresenceInfo(stream, broker.WithPresenceInfoOptions(options))
+
+	if s.IsClosed() {
+		s.Log.Debug("skip presence result: closed")
+		return nil
+	}
 
 	if err != nil {
 		s.Send(&common.Reply{

@@ -1,5 +1,7 @@
 # Change log
 
+- Fixed race conditions in session registration. ([@palkan][])
+
 ## 1.6.6 (2025-10-07)
 
 - Prevent legacy Redis broadcaster and pub/sub from sharing the same channel. ([@palkan][])
