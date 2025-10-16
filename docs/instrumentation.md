@@ -24,7 +24,7 @@ The `clients_uniq_num` shows the current number of unique _connection identifier
 
 One the useful derivative of these two metrics is the `clients_uniq_num` / `clients_num` ratio. If it's much less than 1 and is decreasing, that could be an indicator of an improper connection managements at the client side (e.g., creating a _client_ per a component mount or a Turbo navigation instead of re-using a singleton).
 
-### `rpc_call_total`, `rpc_error_total`, `rpc_retries_total`, `rpc_timeouts_total`, `rpc_pending_num`
+### `rpc_call_total`, `rpc_error_total`, `rpc_retries_total`, `rpc_timeouts_total`, `rpc_pending_num`, etc
 
 These are the vital metrics of the RPC communication channel.
 
@@ -33,6 +33,8 @@ The `rpc_error_total` describes the number of failed RPC calls. This is the actu
 The `rpc_retries_total` describes the number of retried RPC calls. Retries could happen if the RPC server is exhausted or unavailable (no network connectivity). The former indicates that **concurrency settings for RPC and anycable-go went out of sync** (see [here](./configuration.md)).
 
 The `rpc_timeouts_total` shows the number of timed out RPC requests. Use this metric to tune the RPC timeout settings (`--rpc_request_timeout`).
+
+The `rpc_canceled_total` shows the number of RPC calls that were discarded due to the initiator (the connection) being terminated. Higher values could indicate either misbehaving clients (connecting, subscribing and disconnecting too quickly) or lack of RPC capacity to process all incoming commands (in this case, it should correlate with timeouts).
 
 The `rpc_pending_num` is the **key latency metrics** of AnyCable-Go. We limit the number of concurrent RPC requests (to prevent the RPC server exhaustion and retries). If the number of pending requests grows (which means we can not keep up with the rate of incoming messages), you should consider either tuning concurrency settings or scale up your cluster.
 
