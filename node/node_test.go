@@ -640,7 +640,7 @@ func TestPresence(t *testing.T) {
 		defer node.hub.RemoveSession(session)
 
 		controller.
-			On("Subscribe", "24", mock.Anything, "24", "test_channel").
+			On("Subscribe", mock.Anything, "24", mock.Anything, "24", "test_channel").
 			Return(&common.CommandResult{
 				Status:        common.SUCCESS,
 				Transmissions: []string{`{"type":"confirm","identifier":"test_channel"}`},
@@ -686,7 +686,7 @@ func TestPresence(t *testing.T) {
 		session.subscriptions.AddChannel("subscribed_channel")
 
 		controller.
-			On("Perform", "24", mock.Anything, "24", "subscribed_channel", `{"action":"follow"}`).
+			On("Perform", mock.Anything, "24", mock.Anything, "24", "subscribed_channel", `{"action":"follow"}`).
 			Return(&common.CommandResult{
 				Status:  common.SUCCESS,
 				Streams: []string{"test_presence"},
@@ -729,7 +729,7 @@ func TestPresence(t *testing.T) {
 		session.subscriptions.AddChannel("subscribed_channel")
 
 		controller.
-			On("Perform", "25", mock.Anything, "25", "subscribed_channel", `{"action":"follow"}`).
+			On("Perform", mock.Anything, "25", mock.Anything, "25", "subscribed_channel", `{"action":"follow"}`).
 			Return(&common.CommandResult{
 				Status:  common.SUCCESS,
 				Streams: []string{"test_presence"},
@@ -775,7 +775,7 @@ func TestPresence(t *testing.T) {
 		session.GetEnv().MergeChannelState("test_channel", &state)
 
 		controller.
-			On("Unsubscribe", "25", mock.Anything, "25", "test_channel").
+			On("Unsubscribe", mock.Anything, "25", mock.Anything, "25", "test_channel").
 			Return(&common.CommandResult{
 				Status: common.SUCCESS,
 			}, nil)

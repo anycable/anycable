@@ -1,6 +1,7 @@
 package pusher
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -38,7 +39,7 @@ func (e *MockExecutor) HandleCommand(s *node.Session, msg *common.Message) (err 
 	var res *common.CommandResult
 
 	if msg.Command == "subscribe" {
-		res, err = e.ctrl.Subscribe(s.GetID(), s.GetEnv(), s.GetIdentifiers(), msg.Identifier)
+		res, err = e.ctrl.Subscribe(context.Background(), s.GetID(), s.GetEnv(), s.GetIdentifiers(), msg.Identifier)
 	}
 
 	if res != nil {

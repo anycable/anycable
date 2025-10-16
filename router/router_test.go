@@ -1,6 +1,7 @@
 package router
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -19,13 +20,13 @@ func TestRouterControllerWithoutRoutes(t *testing.T) {
 	t.Run("Authenticate", func(t *testing.T) {
 		expected := &common.ConnectResult{Identifier: "test_ids", Transmissions: []string{"{\"type\":\"welcome\"}"}, Status: common.SUCCESS}
 
-		controller.On("Authenticate", "2022", env).Return(expected, nil)
+		controller.On("Authenticate", context.Background(), "2022", env).Return(expected, nil)
 
-		res, err := subject.Authenticate("2022", env)
+		res, err := subject.Authenticate(context.Background(), "2022", env)
 
 		assert.NoError(t, err)
 		assert.Equal(t, expected, res)
-		controller.AssertCalled(t, "Authenticate", "2022", env)
+		controller.AssertCalled(t, "Authenticate", context.Background(), "2022", env)
 	})
 
 	t.Run("Start", func(t *testing.T) {
@@ -46,13 +47,13 @@ func TestRouterControllerWithoutRoutes(t *testing.T) {
 
 	t.Run("Disconnect", func(t *testing.T) {
 		expectedErr := errors.New("foo")
-		controller.On("Disconnect", "42", env, "name=jack", []string{"chat"}).Return(expectedErr)
+		controller.On("Disconnect", context.Background(), "42", env, "name=jack", []string{"chat"}).Return(expectedErr)
 
-		err := subject.Disconnect("42", env, "name=jack", []string{"chat"})
+		err := subject.Disconnect(context.Background(), "42", env, "name=jack", []string{"chat"})
 
 		assert.Equal(t, expectedErr, err)
 
-		controller.AssertCalled(t, "Disconnect", "42", env, "name=jack", []string{"chat"})
+		controller.AssertCalled(t, "Disconnect", context.Background(), "42", env, "name=jack", []string{"chat"})
 	})
 }
 
@@ -74,72 +75,72 @@ func TestRouterControllerWithRoutes(t *testing.T) {
 	t.Run("Subscribe (channel with params)", func(t *testing.T) {
 		channel := "{\"channel\":\"ChatChannel\",\"id\":\"42\"}"
 
-		controller.On("Subscribe", "42", env, "name=jack", channel).Return(nil, errors.New("Shouldn't be called"))
-		chatController.On("Subscribe", "42", env, "name=jack", channel).Return(chatResult, nil)
+		controller.On("Subscribe", context.Background(), "42", env, "name=jack", channel).Return(nil, errors.New("Shouldn't be called"))
+		chatController.On("Subscribe", context.Background(), "42", env, "name=jack", channel).Return(chatResult, nil)
 
-		res, err := subject.Subscribe("42", env, "name=jack", channel)
+		res, err := subject.Subscribe(context.Background(), "42", env, "name=jack", channel)
 
 		require.NoError(t, err)
 		assert.Equal(t, chatResult, res)
 	})
 
 	t.Run("Subscribe (fallback)", func(t *testing.T) {
-		controller.On("Subscribe", "42", env, "name=jack", "fallback").Return(commandResult, nil)
+		controller.On("Subscribe", context.Background(), "42", env, "name=jack", "fallback").Return(commandResult, nil)
 
-		res, err := subject.Subscribe("42", env, "name=jack", "fallback")
+		res, err := subject.Subscribe(context.Background(), "42", env, "name=jack", "fallback")
 
 		require.NoError(t, err)
 		assert.Equal(t, commandResult, res)
 
-		controller.AssertCalled(t, "Subscribe", "42", env, "name=jack", "fallback")
+		controller.AssertCalled(t, "Subscribe", context.Background(), "42", env, "name=jack", "fallback")
 	})
 
 	t.Run("Subscribe (pass)", func(t *testing.T) {
 		channel := "{\"channel\":\"ChatChannel\",\"id\":\"2021\"}"
 
-		controller.On("Subscribe", "42", env, "name=jack", channel).Return(commandResult, nil)
-		chatController.On("Subscribe", "42", env, "name=jack", channel).Return(nil, nil)
+		controller.On("Subscribe", context.Background(), "42", env, "name=jack", channel).Return(commandResult, nil)
+		chatController.On("Subscribe", context.Background(), "42", env, "name=jack", channel).Return(nil, nil)
 
-		res, err := subject.Subscribe("42", env, "name=jack", channel)
+		res, err := subject.Subscribe(context.Background(), "42", env, "name=jack", channel)
 
 		require.NoError(t, err)
 		assert.Equal(t, commandResult, res)
 
-		controller.AssertCalled(t, "Subscribe", "42", env, "name=jack", channel)
+		controller.AssertCalled(t, "Subscribe", context.Background(), "42", env, "name=jack", channel)
 	})
 
 	t.Run("Unsubscribe (fallback)", func(t *testing.T) {
-		controller.On("Unsubscribe", "42", env, "name=jack", "fallback").Return(commandResult, nil)
+		controller.On("Unsubscribe", context.Background(), "42", env, "name=jack", "fallback").Return(commandResult, nil)
 
-		res, err := subject.Unsubscribe("42", env, "name=jack", "fallback")
+		res, err := subject.Unsubscribe(context.Background(), "42", env, "name=jack", "fallback")
 
 		require.NoError(t, err)
 		assert.Equal(t, commandResult, res)
 
-		controller.AssertCalled(t, "Unsubscribe", "42", env, "name=jack", "fallback")
+		controller.AssertCalled(t, "Unsubscribe", context.Background(), "42", env, "name=jack", "fallback")
 	})
 
 	t.Run("Unsubscribe (pass)", func(t *testing.T) {
 		channel := "{\"channel\":\"ChatChannel\",\"id\":\"2021\"}"
 
-		controller.On("Unsubscribe", "42", env, "name=jack", channel).Return(commandResult, nil)
-		chatController.On("Unsubscribe", "42", env, "name=jack", channel).Return(nil, nil)
+		controller.On("Unsubscribe", context.Background(), "42", env, "name=jack", channel).Return(commandResult, nil)
+		chatController.On("Unsubscribe", context.Background(), "42", env, "name=jack", channel).Return(nil, nil)
 
-		res, err := subject.Unsubscribe("42", env, "name=jack", channel)
+		res, err := subject.Unsubscribe(context.Background(), "42", env, "name=jack", channel)
 
 		require.NoError(t, err)
 		assert.Equal(t, commandResult, res)
 
-		controller.AssertCalled(t, "Unsubscribe", "42", env, "name=jack", channel)
+		controller.AssertCalled(t, "Unsubscribe", context.Background(), "42", env, "name=jack", channel)
 	})
 
 	t.Run("Unsubscribe (channel with params)", func(t *testing.T) {
 		channel := "{\"channel\":\"ChatChannel\",\"id\":\"42\"}"
 
-		controller.On("Unsubscribe", "42", env, "name=jack", channel).Return(nil, errors.New("Shouldn't be called"))
-		chatController.On("Unsubscribe", "42", env, "name=jack", channel).Return(chatResult, nil)
+		controller.On("Unsubscribe", context.Background(), "42", env, "name=jack", channel).Return(nil, errors.New("Shouldn't be called"))
+		chatController.On("Unsubscribe", context.Background(), "42", env, "name=jack", channel).Return(chatResult, nil)
 
-		res, err := subject.Unsubscribe("42", env, "name=jack", channel)
+		res, err := subject.Unsubscribe(context.Background(), "42", env, "name=jack", channel)
 
 		require.NoError(t, err)
 		assert.Equal(t, chatResult, res)
@@ -148,37 +149,37 @@ func TestRouterControllerWithRoutes(t *testing.T) {
 	t.Run("Perform (channel w/o params)", func(t *testing.T) {
 		channel := "{\"channel\":\"EchoChannel\"}"
 
-		controller.On("Perform", "42", env, "name=jack", channel, "ping").Return(nil, errors.New("Shouldn't be called"))
-		echoController.On("Perform", "42", env, "name=jack", channel, "ping").Return(echoResult, nil)
+		controller.On("Perform", context.Background(), "42", env, "name=jack", channel, "ping").Return(nil, errors.New("Shouldn't be called"))
+		echoController.On("Perform", context.Background(), "42", env, "name=jack", channel, "ping").Return(echoResult, nil)
 
-		res, err := subject.Perform("42", env, "name=jack", channel, "ping")
+		res, err := subject.Perform(context.Background(), "42", env, "name=jack", channel, "ping")
 
 		require.NoError(t, err)
 		assert.Equal(t, echoResult, res)
 	})
 
 	t.Run("Perform (fallback)", func(t *testing.T) {
-		controller.On("Perform", "42", env, "name=jack", "fallback", "ping").Return(commandResult, nil)
+		controller.On("Perform", context.Background(), "42", env, "name=jack", "fallback", "ping").Return(commandResult, nil)
 
-		res, err := subject.Perform("42", env, "name=jack", "fallback", "ping")
+		res, err := subject.Perform(context.Background(), "42", env, "name=jack", "fallback", "ping")
 
 		require.NoError(t, err)
 		assert.Equal(t, commandResult, res)
 
-		controller.AssertCalled(t, "Perform", "42", env, "name=jack", "fallback", "ping")
+		controller.AssertCalled(t, "Perform", context.Background(), "42", env, "name=jack", "fallback", "ping")
 	})
 
 	t.Run("Perform (pass)", func(t *testing.T) {
 		channel := "{\"channel\":\"EchoChannel\"}"
 
-		controller.On("Perform", "42", env, "name=jack", channel, "pass").Return(commandResult, nil)
-		echoController.On("Perform", "42", env, "name=jack", channel, "pass").Return(nil, nil)
+		controller.On("Perform", context.Background(), "42", env, "name=jack", channel, "pass").Return(commandResult, nil)
+		echoController.On("Perform", context.Background(), "42", env, "name=jack", channel, "pass").Return(nil, nil)
 
-		res, err := subject.Perform("42", env, "name=jack", channel, "pass")
+		res, err := subject.Perform(context.Background(), "42", env, "name=jack", channel, "pass")
 
 		require.NoError(t, err)
 		assert.Equal(t, commandResult, res)
 
-		controller.AssertCalled(t, "Perform", "42", env, "name=jack", channel, "pass")
+		controller.AssertCalled(t, "Perform", context.Background(), "42", env, "name=jack", channel, "pass")
 	})
 }

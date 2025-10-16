@@ -1,5 +1,7 @@
 # Change log
 
+- Discard pending or cancel in-progress RPC calls on session termination. ([@palkan][])
+
 - Fixed race conditions in session registration. ([@palkan][])
 
 ## 1.6.6 (2025-10-07)

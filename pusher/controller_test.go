@@ -1,6 +1,7 @@
 package pusher
 
 import (
+	"context"
 	"log/slog"
 	"testing"
 
@@ -32,7 +33,7 @@ func TestPusherController(t *testing.T) {
 	t.Run("Subscribe private (success)", func(t *testing.T) {
 		channel := `{"channel":"$pusher","stream":"private-party"}`
 
-		res, err := ctrl.Subscribe("1234.1234", env, "name=jack", channel)
+		res, err := ctrl.Subscribe(context.Background(), "1234.1234", env, "name=jack", channel)
 
 		require.NoError(t, err)
 		require.NotNil(t, res)
@@ -51,7 +52,7 @@ func TestPusherController(t *testing.T) {
 			"channel_data": `{"user_id":"b4","user_info":{"name":"bob"}}`,
 		})
 
-		res, err := ctrl.Subscribe("1234.1234", env, "name=jack", channel)
+		res, err := ctrl.Subscribe(context.Background(), "1234.1234", env, "name=jack", channel)
 
 		confirmationMsg := &common.Reply{
 			Type:       common.ConfirmedType,
@@ -76,7 +77,7 @@ func TestPusherController(t *testing.T) {
 	t.Run("Subscribe private (failure)", func(t *testing.T) {
 		channel := `{"channel":"$pusher","stream":""}`
 
-		res, err := ctrl.Subscribe("1234.1234", env, "name=jack", channel)
+		res, err := ctrl.Subscribe(context.Background(), "1234.1234", env, "name=jack", channel)
 
 		require.NoError(t, err)
 		require.NotNil(t, res)
@@ -87,7 +88,7 @@ func TestPusherController(t *testing.T) {
 	t.Run("Subscribe public (success)", func(t *testing.T) {
 		channel := `{"channel":"$pusher","stream":"all-chat"}`
 
-		res, err := ctrl.Subscribe("1234.1234", env, "name=jack", channel)
+		res, err := ctrl.Subscribe(context.Background(), "1234.1234", env, "name=jack", channel)
 
 		require.NoError(t, err)
 		require.NotNil(t, res)
@@ -101,7 +102,7 @@ func TestPusherController(t *testing.T) {
 	t.Run("Unsubscribe", func(t *testing.T) {
 		channel := `{"channel":"$pusher","stream":"private-party"}`
 
-		res, err := ctrl.Unsubscribe("1234.1234", env, "name=jack", channel)
+		res, err := ctrl.Unsubscribe(context.Background(), "1234.1234", env, "name=jack", channel)
 
 		require.NoError(t, err)
 		require.NotNil(t, res)
