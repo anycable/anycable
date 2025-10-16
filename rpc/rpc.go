@@ -44,6 +44,7 @@ const (
 	metricsRPCRetries      = "rpc_retries_total"
 	metricsRPCFailures     = "rpc_error_total"
 	metricsRPCTimeouts     = "rpc_timeout_total"
+	metricsRPCCanceled     = "rpc_canceled_total"
 	metricsRPCPending      = "rpc_pending_num"
 	metricsRPCCapacity     = "rpc_capacity_num"
 	metricsGRPCActiveConns = "grpc_active_conn_num"
@@ -176,6 +177,7 @@ func NewController(metrics metrics.Instrumenter, config *Config, l *slog.Logger)
 	metrics.RegisterCounter(metricsRPCRetries, "The total number of RPC call retries")
 	metrics.RegisterCounter(metricsRPCFailures, "The total number of failed RPC calls")
 	metrics.RegisterCounter(metricsRPCTimeouts, "The total number of RPC call that timed out")
+	metrics.RegisterCounter(metricsRPCCanceled, "The total number of canceled RPC calls")
 	metrics.RegisterGauge(metricsRPCPending, "The number of pending RPC calls")
 
 	capacity := config.Concurrency
@@ -302,7 +304,7 @@ func (c *Controller) Shutdown() error {
 	}
 
 	// Wait for active connections
-	_, err := c.retry("", func(ctx context.Context) (interface{}, error) {
+	_, err := c.retry(context.Background(), "", func(ctx context.Context) (interface{}, error) {
 		busy := c.busy()
 
 		if busy > 0 {
@@ -319,12 +321,17 @@ func (c *Controller) Shutdown() error {
 }
 
 // Authenticate performs Connect RPC call
-func (c *Controller) Authenticate(sid string, env *common.SessionEnv) (*common.ConnectResult, error) {
+func (c *Controller) Authenticate(sctx context.Context, sid string, env *common.SessionEnv) (*common.ConnectResult, error) {
 	c.metrics.GaugeIncrement(metricsRPCPending)
 	c.barrier.Acquire()
 	c.metrics.GaugeDecrement(metricsRPCPending)
 
 	defer c.barrier.Release()
+
+	if sctx.Err() != nil {
+		c.metrics.CounterIncrement(metricsRPCCanceled)
+		return nil, nil
+	}
 
 	op := func(ctx context.Context) (interface{}, error) {
 		ctx, cancel := c.newRequestContext(ctx, sid)
@@ -335,7 +342,12 @@ func (c *Controller) Authenticate(sid string, env *common.SessionEnv) (*common.C
 
 	c.metrics.CounterIncrement(metricsRPCCalls)
 
-	response, err := c.retry(sid, op)
+	response, err := c.retry(sctx, sid, op)
+
+	if errors.Is(err, context.Canceled) {
+		c.metrics.CounterIncrement(metricsRPCCanceled)
+		return nil, nil
+	}
 
 	if err != nil {
 		c.metrics.CounterIncrement(metricsRPCFailures)
@@ -355,12 +367,17 @@ func (c *Controller) Authenticate(sid string, env *common.SessionEnv) (*common.C
 }
 
 // Subscribe performs Command RPC call with "subscribe" command
-func (c *Controller) Subscribe(sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error) {
+func (c *Controller) Subscribe(sctx context.Context, sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error) {
 	c.metrics.GaugeIncrement(metricsRPCPending)
 	c.barrier.Acquire()
 	c.metrics.GaugeDecrement(metricsRPCPending)
 
 	defer c.barrier.Release()
+
+	if sctx.Err() != nil {
+		c.metrics.CounterIncrement(metricsRPCCanceled)
+		return nil, nil
+	}
 
 	op := func(ctx context.Context) (interface{}, error) {
 		ctx, cancel := c.newRequestContext(ctx, sid)
@@ -372,18 +389,23 @@ func (c *Controller) Subscribe(sid string, env *common.SessionEnv, id string, ch
 		)
 	}
 
-	response, err := c.retry(sid, op)
+	response, err := c.retry(sctx, sid, op)
 
 	return c.parseCommandResponse(sid, response, err)
 }
 
 // Unsubscribe performs Command RPC call with "unsubscribe" command
-func (c *Controller) Unsubscribe(sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error) {
+func (c *Controller) Unsubscribe(sctx context.Context, sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error) {
 	c.metrics.GaugeIncrement(metricsRPCPending)
 	c.barrier.Acquire()
 	c.metrics.GaugeDecrement(metricsRPCPending)
 
 	defer c.barrier.Release()
+
+	if sctx.Err() != nil {
+		c.metrics.CounterIncrement(metricsRPCCanceled)
+		return nil, nil
+	}
 
 	op := func(ctx context.Context) (interface{}, error) {
 		ctx, cancel := c.newRequestContext(ctx, sid)
@@ -395,18 +417,23 @@ func (c *Controller) Unsubscribe(sid string, env *common.SessionEnv, id string, 
 		)
 	}
 
-	response, err := c.retry(sid, op)
+	response, err := c.retry(sctx, sid, op)
 
 	return c.parseCommandResponse(sid, response, err)
 }
 
 // Perform performs Command RPC call with "perform" command
-func (c *Controller) Perform(sid string, env *common.SessionEnv, id string, channel string, data string) (*common.CommandResult, error) {
+func (c *Controller) Perform(sctx context.Context, sid string, env *common.SessionEnv, id string, channel string, data string) (*common.CommandResult, error) {
 	c.metrics.GaugeIncrement(metricsRPCPending)
 	c.barrier.Acquire()
 	c.metrics.GaugeDecrement(metricsRPCPending)
 
 	defer c.barrier.Release()
+
+	if sctx.Err() != nil {
+		c.metrics.CounterIncrement(metricsRPCCanceled)
+		return nil, nil
+	}
 
 	op := func(ctx context.Context) (interface{}, error) {
 		ctx, cancel := c.newRequestContext(ctx, sid)
@@ -418,18 +445,23 @@ func (c *Controller) Perform(sid string, env *common.SessionEnv, id string, chan
 		)
 	}
 
-	response, err := c.retry(sid, op)
+	response, err := c.retry(sctx, sid, op)
 
 	return c.parseCommandResponse(sid, response, err)
 }
 
 // Disconnect performs disconnect RPC call
-func (c *Controller) Disconnect(sid string, env *common.SessionEnv, id string, subscriptions []string) error {
+func (c *Controller) Disconnect(sctx context.Context, sid string, env *common.SessionEnv, id string, subscriptions []string) error {
 	c.metrics.GaugeIncrement(metricsRPCPending)
 	c.barrier.Acquire()
 	c.metrics.GaugeDecrement(metricsRPCPending)
 
 	defer c.barrier.Release()
+
+	if sctx.Err() != nil {
+		c.metrics.CounterIncrement(metricsRPCCanceled)
+		return nil
+	}
 
 	op := func(ctx context.Context) (interface{}, error) {
 		ctx, cancel := c.newRequestContext(ctx, sid)
@@ -443,7 +475,12 @@ func (c *Controller) Disconnect(sid string, env *common.SessionEnv, id string, s
 
 	c.metrics.CounterIncrement(metricsRPCCalls)
 
-	response, err := c.retry(sid, op)
+	response, err := c.retry(sctx, sid, op)
+
+	if errors.Is(err, context.Canceled) {
+		c.metrics.CounterIncrement(metricsRPCCanceled)
+		return nil
+	}
 
 	if err != nil {
 		c.metrics.CounterIncrement(metricsRPCFailures)
@@ -464,6 +501,11 @@ func (c *Controller) Disconnect(sid string, env *common.SessionEnv, id string, s
 }
 
 func (c *Controller) parseCommandResponse(sid string, response interface{}, err error) (*common.CommandResult, error) {
+	if errors.Is(err, context.Canceled) {
+		c.metrics.CounterIncrement(metricsRPCCanceled)
+		return nil, nil
+	}
+
 	c.metrics.CounterIncrement(metricsRPCCalls)
 
 	if err != nil {
@@ -487,20 +529,17 @@ func (c *Controller) busy() int {
 	return c.barrier.BusyCount()
 }
 
-func (c *Controller) retry(sid string, callback func(context.Context) (interface{}, error)) (res interface{}, err error) {
+func (c *Controller) retry(ctx context.Context, sid string, callback func(context.Context) (interface{}, error)) (res interface{}, err error) {
 	attempt := 0
 	wasExhausted := false
-	var ctx context.Context
 
 	if c.commandTimeout > 0 {
 		ctx_, cancel := context.WithTimeout(
-			context.Background(),
+			ctx,
 			c.commandTimeout,
 		)
 		ctx = ctx_
 		defer cancel()
-	} else {
-		ctx = context.Background()
 	}
 
 	for {
@@ -512,6 +551,10 @@ func (c *Controller) retry(sid string, callback func(context.Context) (interface
 
 		if err == nil {
 			return res, nil
+		}
+
+		if errors.Is(err, context.Canceled) {
+			return nil, err
 		}
 
 		st, ok := status.FromError(err)

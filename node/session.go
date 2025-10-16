@@ -1,6 +1,7 @@
 package node
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -138,7 +139,10 @@ type Session struct {
 	metrics       metrics.Instrumenter
 	env           *common.SessionEnv
 	subscriptions *SubscriptionState
-	closed        bool
+
+	closeCtx    context.Context
+	closeCancel context.CancelFunc
+	closed      bool
 
 	// Defines if we should perform Disconnect RPC for this session
 	disconnectInterest bool
@@ -257,6 +261,7 @@ func WithMaxPendingSize(size uint64) SessionOption {
 
 // BuildSession builds a new Session struct with the required defaults
 func BuildSession(conn Connection, env *common.SessionEnv) *Session {
+	ctx, cancel := context.WithCancel(context.Background())
 	return &Session{
 		conn:          conn,
 		metrics:       metrics.NoopMetrics{},
@@ -264,6 +269,8 @@ func BuildSession(conn Connection, env *common.SessionEnv) *Session {
 		subscriptions: NewSubscriptionState(),
 		writeQueue:    utils.NewQueue[*ws.SentFrame](256),
 		writeTimeout:  2 * time.Second,
+		closeCtx:      ctx,
+		closeCancel:   cancel,
 		closed:        false,
 		Connected:     false,
 		timers:        &SessionTimers{},
@@ -679,6 +686,8 @@ func (s *Session) close() {
 	}
 
 	s.closed = true
+	defer s.closeCancel()
+
 	s.mu.Unlock()
 
 	s.timers.Stop()

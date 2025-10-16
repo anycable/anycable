@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net"
@@ -46,13 +47,13 @@ func TestGRPCIntegration(t *testing.T) {
 
 		rpcCalls := metrics.Counter(metricsRPCCalls).Value()
 
-		res, err := controller.Authenticate("test", &common.SessionEnv{URL: "http://test.cable", Headers: &headers})
+		res, err := controller.Authenticate(context.Background(), "test", &common.SessionEnv{URL: "http://test.cable", Headers: &headers})
 
 		require.NoError(t, err)
 		require.NotNil(t, res)
 		assert.Equal(t, common.SUCCESS, res.Status)
 
-		err = controller.Disconnect("test", &common.SessionEnv{URL: "http://test.cable", Headers: &headers}, "", []string{})
+		err = controller.Disconnect(context.Background(), "test", &common.SessionEnv{URL: "http://test.cable", Headers: &headers}, "", []string{})
 		require.NoError(t, err)
 
 		assert.Equal(t, rpcCalls+2, metrics.Counter(metricsRPCCalls).Value())
@@ -71,7 +72,7 @@ func TestGRPCIntegration(t *testing.T) {
 		rpcTimeouts := metrics.Counter(metricsRPCTimeouts).Value()
 		rpcErrors := metrics.Counter(metricsRPCFailures).Value()
 
-		err = controller.Disconnect("test", &common.SessionEnv{URL: "http://test.cable", Headers: &headers}, "", []string{})
+		err = controller.Disconnect(context.Background(), "test", &common.SessionEnv{URL: "http://test.cable", Headers: &headers}, "", []string{})
 
 		require.Error(t, err, "deadline exceeded")
 
@@ -90,7 +91,7 @@ func TestGRPCIntegration(t *testing.T) {
 		rpcCalls := metrics.Counter(metricsRPCCalls).Value()
 		rpcRetries := metrics.Counter(metricsRPCRetries).Value()
 
-		res, err := controller.Perform("test", &common.SessionEnv{URL: "http://test.cable", Headers: &headers}, "", "test", "data")
+		res, err := controller.Perform(context.Background(), "test", &common.SessionEnv{URL: "http://test.cable", Headers: &headers}, "", "test", "data")
 
 		require.NoError(t, err)
 		require.NotNil(t, res)
@@ -132,7 +133,7 @@ func TestGRPCMultiHost(t *testing.T) {
 	defer controller.Shutdown() //nolint:errcheck
 
 	for i := 0; i < 10; i++ {
-		res, err := controller.Authenticate("test", &common.SessionEnv{URL: "http://test.cable", Headers: &headers})
+		res, err := controller.Authenticate(context.Background(), "test", &common.SessionEnv{URL: "http://test.cable", Headers: &headers})
 
 		require.NoError(t, err)
 		require.NotNil(t, res)

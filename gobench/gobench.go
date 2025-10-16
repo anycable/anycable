@@ -3,6 +3,7 @@
 package gobench
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -52,7 +53,7 @@ func (c *Controller) Shutdown() error {
 }
 
 // Authenticate allows everyone to connect and returns welcome message and rendom ID as identifier
-func (c *Controller) Authenticate(sid string, env *common.SessionEnv) (*common.ConnectResult, error) {
+func (c *Controller) Authenticate(ctx context.Context, sid string, env *common.SessionEnv) (*common.ConnectResult, error) {
 	c.metrics.Counter(metricsCalls).Inc()
 
 	id, err := nanoid.Nanoid()
@@ -72,7 +73,7 @@ func (c *Controller) Authenticate(sid string, env *common.SessionEnv) (*common.C
 }
 
 // Subscribe performs Command RPC call with "subscribe" command
-func (c *Controller) Subscribe(sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error) {
+func (c *Controller) Subscribe(ctx context.Context, sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error) {
 	c.metrics.Counter(metricsCalls).Inc()
 	res := &common.CommandResult{
 		Disconnect:     false,
@@ -84,7 +85,7 @@ func (c *Controller) Subscribe(sid string, env *common.SessionEnv, id string, ch
 }
 
 // Unsubscribe performs Command RPC call with "unsubscribe" command
-func (c *Controller) Unsubscribe(sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error) {
+func (c *Controller) Unsubscribe(ctx context.Context, sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error) {
 	c.metrics.Counter(metricsCalls).Inc()
 	res := &common.CommandResult{
 		Disconnect:     false,
@@ -96,7 +97,7 @@ func (c *Controller) Unsubscribe(sid string, env *common.SessionEnv, id string, 
 }
 
 // Perform performs Command RPC call with "perform" command
-func (c *Controller) Perform(sid string, env *common.SessionEnv, id string, channel string, data string) (res *common.CommandResult, err error) {
+func (c *Controller) Perform(ctx context.Context, sid string, env *common.SessionEnv, id string, channel string, data string) (res *common.CommandResult, err error) {
 	c.metrics.Counter(metricsCalls).Inc()
 
 	var payload map[string]interface{}
@@ -169,7 +170,7 @@ func (c *Controller) Perform(sid string, env *common.SessionEnv, id string, chan
 }
 
 // Disconnect performs disconnect RPC call
-func (c *Controller) Disconnect(sid string, env *common.SessionEnv, id string, subscriptions []string) error {
+func (c *Controller) Disconnect(ctx context.Context, sid string, env *common.SessionEnv, id string, subscriptions []string) error {
 	c.metrics.Counter(metricsCalls).Inc()
 	return nil
 }
