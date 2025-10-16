@@ -1,6 +1,7 @@
 package identity
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -41,98 +42,98 @@ func TestIdentifiableController(t *testing.T) {
 			Status:             common.SUCCESS,
 		}
 
-		controller.On("Authenticate", "2021", env).Return(nil, errors.New("shouldn't be called"))
+		controller.On("Authenticate", context.Background(), "2021", env).Return(nil, errors.New("shouldn't be called"))
 		identifier.On("Identify", "2021", env).Return(expected, nil)
 
-		res, err := subject.Authenticate("2021", env)
+		res, err := subject.Authenticate(context.Background(), "2021", env)
 
 		assert.NoError(t, err)
 		assert.Equal(t, expected, res)
-		controller.AssertNotCalled(t, "Authenticate", "2021", env)
+		controller.AssertNotCalled(t, "Authenticate", context.Background(), "2021", env)
 	})
 
 	t.Run("Authenticate (failure)", func(t *testing.T) {
 		expected := &common.ConnectResult{Status: common.FAILURE}
 
-		controller.On("Authenticate", "2020", env).Return(nil, errors.New("shouldn't be called"))
+		controller.On("Authenticate", context.Background(), "2020", env).Return(nil, errors.New("shouldn't be called"))
 		identifier.On("Identify", "2020", env).Return(expected, nil)
 
-		res, err := subject.Authenticate("2020", env)
+		res, err := subject.Authenticate(context.Background(), "2020", env)
 
 		assert.NoError(t, err)
 		assert.Equal(t, expected, res)
-		controller.AssertNotCalled(t, "Authenticate", "2020", env)
+		controller.AssertNotCalled(t, "Authenticate", context.Background(), "2020", env)
 	})
 
 	t.Run("Authenticate (error)", func(t *testing.T) {
 		expectedErr := errors.New("identifier failed")
 
-		controller.On("Authenticate", "1998", env).Return(nil, errors.New("shouldn't be called"))
+		controller.On("Authenticate", context.Background(), "1998", env).Return(nil, errors.New("shouldn't be called"))
 		identifier.On("Identify", "1998", env).Return(nil, expectedErr)
 
-		res, err := subject.Authenticate("1998", env)
+		res, err := subject.Authenticate(context.Background(), "1998", env)
 
 		assert.Nil(t, res)
 		assert.Equal(t, expectedErr, err)
-		controller.AssertNotCalled(t, "Authenticate", "1998", env)
+		controller.AssertNotCalled(t, "Authenticate", context.Background(), "1998", env)
 
 	})
 
 	t.Run("Authenticate (noop -> passthrough)", func(t *testing.T) {
 		expected := &common.ConnectResult{Identifier: "test_ids", Transmissions: []string{`{"type":"welcome","sid":"2022"}`}, Status: common.SUCCESS}
 
-		controller.On("Authenticate", "2022", env).Return(expected, nil)
+		controller.On("Authenticate", context.Background(), "2022", env).Return(expected, nil)
 		identifier.On("Identify", "2022", env).Return(nil, nil)
 
-		res, err := subject.Authenticate("2022", env)
+		res, err := subject.Authenticate(context.Background(), "2022", env)
 
 		assert.NoError(t, err)
 		assert.Equal(t, expected, res)
-		controller.AssertCalled(t, "Authenticate", "2022", env)
+		controller.AssertCalled(t, "Authenticate", context.Background(), "2022", env)
 	})
 
 	t.Run("Subscribe", func(t *testing.T) {
-		controller.On("Subscribe", "42", env, "name=jack", "chat").Return(commandResult, nil)
+		controller.On("Subscribe", context.Background(), "42", env, "name=jack", "chat").Return(commandResult, nil)
 
-		res, err := subject.Subscribe("42", env, "name=jack", "chat")
+		res, err := subject.Subscribe(context.Background(), "42", env, "name=jack", "chat")
 
 		assert.NoError(t, err)
 		assert.Equal(t, commandResult, res)
 
-		controller.AssertCalled(t, "Subscribe", "42", env, "name=jack", "chat")
+		controller.AssertCalled(t, "Subscribe", context.Background(), "42", env, "name=jack", "chat")
 	})
 
 	t.Run("Unsubscribe", func(t *testing.T) {
-		controller.On("Unsubscribe", "42", env, "name=jack", "chat").Return(commandResult, nil)
+		controller.On("Unsubscribe", context.Background(), "42", env, "name=jack", "chat").Return(commandResult, nil)
 
-		res, err := subject.Unsubscribe("42", env, "name=jack", "chat")
+		res, err := subject.Unsubscribe(context.Background(), "42", env, "name=jack", "chat")
 
 		assert.NoError(t, err)
 		assert.Equal(t, commandResult, res)
 
-		controller.AssertCalled(t, "Unsubscribe", "42", env, "name=jack", "chat")
+		controller.AssertCalled(t, "Unsubscribe", context.Background(), "42", env, "name=jack", "chat")
 	})
 
 	t.Run("Perform", func(t *testing.T) {
-		controller.On("Perform", "42", env, "name=jack", "chat", "ping").Return(commandResult, nil)
+		controller.On("Perform", context.Background(), "42", env, "name=jack", "chat", "ping").Return(commandResult, nil)
 
-		res, err := subject.Perform("42", env, "name=jack", "chat", "ping")
+		res, err := subject.Perform(context.Background(), "42", env, "name=jack", "chat", "ping")
 
 		assert.NoError(t, err)
 		assert.Equal(t, commandResult, res)
 
-		controller.AssertCalled(t, "Perform", "42", env, "name=jack", "chat", "ping")
+		controller.AssertCalled(t, "Perform", context.Background(), "42", env, "name=jack", "chat", "ping")
 	})
 
 	t.Run("Disconnect", func(t *testing.T) {
 		expectedErr := errors.New("foo")
-		controller.On("Disconnect", "42", env, "name=jack", []string{"chat"}).Return(expectedErr)
+		controller.On("Disconnect", context.Background(), "42", env, "name=jack", []string{"chat"}).Return(expectedErr)
 
-		err := subject.Disconnect("42", env, "name=jack", []string{"chat"})
+		err := subject.Disconnect(context.Background(), "42", env, "name=jack", []string{"chat"})
 
 		assert.Equal(t, expectedErr, err)
 
-		controller.AssertCalled(t, "Disconnect", "42", env, "name=jack", []string{"chat"})
+		controller.AssertCalled(t, "Disconnect", context.Background(), "42", env, "name=jack", []string{"chat"})
 	})
 }
 

@@ -1,6 +1,7 @@
 package streams
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -47,11 +48,11 @@ func (c *Controller) Shutdown() error {
 	return nil
 }
 
-func (c *Controller) Authenticate(sid string, env *common.SessionEnv) (*common.ConnectResult, error) {
+func (c *Controller) Authenticate(ctx context.Context, sid string, env *common.SessionEnv) (*common.ConnectResult, error) {
 	return nil, nil
 }
 
-func (c *Controller) Subscribe(sid string, env *common.SessionEnv, ids string, identifier string) (*common.CommandResult, error) {
+func (c *Controller) Subscribe(ctx context.Context, sid string, env *common.SessionEnv, ids string, identifier string) (*common.CommandResult, error) {
 	request, err := c.resolver(identifier)
 
 	if err != nil {
@@ -128,7 +129,7 @@ func (c *Controller) Subscribe(sid string, env *common.SessionEnv, ids string, i
 	}, nil
 }
 
-func (c *Controller) Unsubscribe(sid string, env *common.SessionEnv, ids string, identifier string) (*common.CommandResult, error) {
+func (c *Controller) Unsubscribe(ctx context.Context, sid string, env *common.SessionEnv, ids string, identifier string) (*common.CommandResult, error) {
 	return &common.CommandResult{
 		Status:         common.SUCCESS,
 		Transmissions:  []string{},
@@ -137,11 +138,11 @@ func (c *Controller) Unsubscribe(sid string, env *common.SessionEnv, ids string,
 	}, nil
 }
 
-func (c *Controller) Perform(sid string, env *common.SessionEnv, ids string, identifier string, data string) (*common.CommandResult, error) {
+func (c *Controller) Perform(ctx context.Context, sid string, env *common.SessionEnv, ids string, identifier string, data string) (*common.CommandResult, error) {
 	return nil, nil
 }
 
-func (c *Controller) Disconnect(sid string, env *common.SessionEnv, ids string, subscriptions []string) error {
+func (c *Controller) Disconnect(ctx context.Context, sid string, env *common.SessionEnv, ids string, subscriptions []string) error {
 	return nil
 }
 

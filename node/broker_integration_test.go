@@ -104,7 +104,7 @@ func sharedIntegrationRestore(t *testing.T, node *Node, controller *mocks.Contro
 	prev_session.startTimers()
 
 	controller.
-		On("Authenticate", sid, prev_session.env).
+		On("Authenticate", mock.Anything, sid, prev_session.env).
 		Return(&common.ConnectResult{
 			Identifier:    ids,
 			Status:        common.SUCCESS,
@@ -123,14 +123,14 @@ func sharedIntegrationRestore(t *testing.T, node *Node, controller *mocks.Contro
 
 	// Subscribe the channels
 	controller.
-		On("Subscribe", sid, prev_session.env, ids, "chat_1").
+		On("Subscribe", mock.Anything, sid, prev_session.env, ids, "chat_1").
 		Return(&common.CommandResult{
 			Status:        common.SUCCESS,
 			Transmissions: []string{`{"type":"confirm","identifier":"chat_1"}`},
 			Streams:       []string{"presence_1", "messages_1"},
 		}, nil)
 	controller.
-		On("Subscribe", sid, prev_session.env, ids, "user_jack").
+		On("Subscribe", mock.Anything, sid, prev_session.env, ids, "user_jack").
 		Return(&common.CommandResult{
 			Status:        common.SUCCESS,
 			Transmissions: []string{`{"type":"confirm","identifier":"user_jack"}`},
@@ -199,8 +199,8 @@ func sharedIntegrationRestore(t *testing.T, node *Node, controller *mocks.Contro
 
 	t.Run("Restore session connection and channels state", func(t *testing.T) {
 		controller.
-			On("Perform", "s21", mock.Anything, ids, "user_jack", "echo").
-			Return(func(sid string, env *common.SessionEnv, ids string, identifier string, data string) *common.CommandResult {
+			On("Perform", mock.Anything, "s21", mock.Anything, ids, "user_jack", "echo").
+			Return(func(ctx context.Context, sid string, env *common.SessionEnv, ids string, identifier string, data string) *common.CommandResult {
 				res := &common.CommandResult{Status: common.SUCCESS}
 				res.Transmissions = []string{
 					fmt.Sprintf("city:%s", env.GetConnectionStateField("city")),
@@ -219,7 +219,7 @@ func sharedIntegrationRestore(t *testing.T, node *Node, controller *mocks.Contro
 
 	t.Run("Not restored when cache expired", func(t *testing.T) {
 		controller.
-			On("Authenticate", "s42", mock.Anything).
+			On("Authenticate", mock.Anything, "s42", mock.Anything).
 			Return(&common.ConnectResult{
 				Identifier:    ids,
 				Status:        common.SUCCESS,
@@ -331,7 +331,7 @@ func sharedIntegrationHistory(t *testing.T, node *Node, controller *mocks.Contro
 		session := requireAuthenticatedSession(t, node, "alice")
 
 		controller.
-			On("Subscribe", "alice", mock.Anything, "alice", "chat_1").
+			On("Subscribe", mock.Anything, "alice", mock.Anything, "alice", "chat_1").
 			Return(&common.CommandResult{
 				Status:        common.SUCCESS,
 				Streams:       []string{"messages_1"},
@@ -360,7 +360,7 @@ func sharedIntegrationHistory(t *testing.T, node *Node, controller *mocks.Contro
 		session := requireAuthenticatedSession(t, node, "bob")
 
 		controller.
-			On("Subscribe", "bob", mock.Anything, "bob", "chat_1").
+			On("Subscribe", mock.Anything, "bob", mock.Anything, "bob", "chat_1").
 			Return(&common.CommandResult{
 				Status:        common.SUCCESS,
 				Streams:       []string{"messages_1", "presence_1"},
@@ -442,7 +442,7 @@ func TestIntegrationPresence_Memory(t *testing.T) {
 
 func sharedIntegrationPresence(t *testing.T, node *Node, controller *mocks.Controller) {
 	controller.
-		On("Subscribe", "sasha", mock.Anything, "sasha", "chat_1").
+		On("Subscribe", mock.Anything, "sasha", mock.Anything, "sasha", "chat_1").
 		Return(&common.CommandResult{
 			Status:        common.SUCCESS,
 			Transmissions: []string{`{"type":"confirm","identifier":"chat_1"}`},
@@ -450,7 +450,7 @@ func sharedIntegrationPresence(t *testing.T, node *Node, controller *mocks.Contr
 			IState:        map[string]string{common.PRESENCE_STREAM_STATE: "presence_1"},
 		}, nil)
 	controller.
-		On("Subscribe", "mia", mock.Anything, "mia", "chat_1").
+		On("Subscribe", mock.Anything, "mia", mock.Anything, "mia", "chat_1").
 		Return(&common.CommandResult{
 			Status:        common.SUCCESS,
 			Transmissions: []string{`{"type":"confirm","identifier":"chat_1"}`},
@@ -458,7 +458,7 @@ func sharedIntegrationPresence(t *testing.T, node *Node, controller *mocks.Contr
 			IState:        map[string]string{common.PRESENCE_STREAM_STATE: "presence_1"},
 		}, nil)
 	controller.
-		On("Unsubscribe", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		On("Unsubscribe", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(&common.CommandResult{
 			Status: common.SUCCESS,
 		}, nil)
@@ -643,7 +643,7 @@ func requireAuthenticatedSession(t *testing.T, node *Node, sid string, opts ...S
 	controller := node.controller.(*mocks.Controller)
 
 	controller.
-		On("Authenticate", sid, session.env).
+		On("Authenticate", mock.Anything, sid, session.env).
 		Return(&common.ConnectResult{
 			Identifier:    sid,
 			Status:        common.SUCCESS,

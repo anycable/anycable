@@ -1,6 +1,7 @@
 package streams
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"testing"
@@ -27,7 +28,7 @@ func TestNewController(t *testing.T) {
 
 		require.NotNil(t, subject)
 
-		res, err := subject.Subscribe("42", nil, "name=jack", "")
+		res, err := subject.Subscribe(context.Background(), "42", nil, "name=jack", "")
 
 		require.Error(t, err)
 		require.NotNil(t, res)
@@ -45,7 +46,7 @@ func TestStreamsController(t *testing.T) {
 
 		require.NotNil(t, subject)
 
-		res, err := subject.Subscribe("42", nil, "name=jack", `{"channel":"$pubsub","stream_name":"chat:2024"}`)
+		res, err := subject.Subscribe(context.Background(), "42", nil, "name=jack", `{"channel":"$pubsub","stream_name":"chat:2024"}`)
 
 		require.NoError(t, err)
 		require.NotNil(t, res)
@@ -62,7 +63,7 @@ func TestStreamsController(t *testing.T) {
 
 		require.NotNil(t, subject)
 
-		res, err := subject.Subscribe("42", nil, "name=jack", `{"channel":"$pubsub","stream_name":"chat:2024"}`)
+		res, err := subject.Subscribe(context.Background(), "42", nil, "name=jack", `{"channel":"$pubsub","stream_name":"chat:2024"}`)
 
 		require.Error(t, err)
 		require.NotNil(t, res)
@@ -79,7 +80,7 @@ func TestStreamsController(t *testing.T) {
 
 		identifier := `{"channel":"$pubsub","signed_stream_name":"` + stream + `"}`
 
-		res, err := subject.Subscribe("42", nil, "name=jack", identifier)
+		res, err := subject.Subscribe(context.Background(), "42", nil, "name=jack", identifier)
 
 		require.NoError(t, err)
 		require.NotNil(t, res)
@@ -100,7 +101,7 @@ func TestStreamsController(t *testing.T) {
 
 		identifier := `{"channel":"$pubsub","signed_stream_name":"` + stream + `"}`
 
-		res, err := subject.Subscribe("42", nil, "name=jack", identifier)
+		res, err := subject.Subscribe(context.Background(), "42", nil, "name=jack", identifier)
 
 		require.NoError(t, err)
 		require.NotNil(t, res)
@@ -119,7 +120,7 @@ func TestStreamsController(t *testing.T) {
 
 		identifier := `{"channel":"$pubsub","signed_stream_name":"` + stream + `"}`
 
-		res, err := subject.Subscribe("42", nil, "name=jack", identifier)
+		res, err := subject.Subscribe(context.Background(), "42", nil, "name=jack", identifier)
 
 		require.NoError(t, err)
 		require.NotNil(t, res)
@@ -138,7 +139,7 @@ func TestTurboController(t *testing.T) {
 	t.Run("Subscribe (success)", func(t *testing.T) {
 		channel := fmt.Sprintf("{\"channel\":\"Turbo::StreamsChannel\",\"signed_stream_name\":\"%s\"}", stream)
 
-		res, err := subject.Subscribe("42", env, "name=jack", channel)
+		res, err := subject.Subscribe(context.Background(), "42", env, "name=jack", channel)
 
 		require.NoError(t, err)
 		require.NotNil(t, res)
@@ -151,7 +152,7 @@ func TestTurboController(t *testing.T) {
 	t.Run("Subscribe (failure)", func(t *testing.T) {
 		channel := fmt.Sprintf("{\"channel\":\"Turbo::StreamsChannel\",\"signed_stream_name\":\"%s\"}", "fake_id")
 
-		res, err := subject.Subscribe("42", env, "name=jack", channel)
+		res, err := subject.Subscribe(context.Background(), "42", env, "name=jack", channel)
 
 		require.NoError(t, err)
 		require.NotNil(t, res)
@@ -163,7 +164,7 @@ func TestTurboController(t *testing.T) {
 		signed := "WyJjaGF0LzIwMjMiLDE2ODUwMjQwMTdd--5b6661024d4c463c4936cd1542bc9a7672dd8039ac407d0b6c901697190e8aeb"
 		channel := fmt.Sprintf("{\"channel\":\"Turbo::StreamsChannel\",\"signed_stream_name\":\"%s\"}", signed)
 
-		res, err := subject.Subscribe("42", env, "name=jack", channel)
+		res, err := subject.Subscribe(context.Background(), "42", env, "name=jack", channel)
 
 		require.NoError(t, err)
 		require.NotNil(t, res)
@@ -174,7 +175,7 @@ func TestTurboController(t *testing.T) {
 	t.Run("Unsubscribe", func(t *testing.T) {
 		channel := fmt.Sprintf("{\"channel\":\"Turbo::StreamsChannel\",\"signed_stream_name\":\"%s\"}", stream)
 
-		res, err := subject.Unsubscribe("42", env, "name=jack", channel)
+		res, err := subject.Unsubscribe(context.Background(), "42", env, "name=jack", channel)
 
 		require.NoError(t, err)
 		require.NotNil(t, res)
@@ -192,7 +193,7 @@ func TestCableReadyController(t *testing.T) {
 	t.Run("Subscribe (success)", func(t *testing.T) {
 		channel := fmt.Sprintf("{\"channel\":\"CableReady::Stream\",\"identifier\":\"%s\"}", stream)
 
-		res, err := subject.Subscribe("42", env, "name=jack", channel)
+		res, err := subject.Subscribe(context.Background(), "42", env, "name=jack", channel)
 
 		require.NoError(t, err)
 		require.NotNil(t, res)
@@ -205,7 +206,7 @@ func TestCableReadyController(t *testing.T) {
 	t.Run("Subscribe (failure)", func(t *testing.T) {
 		channel := fmt.Sprintf("{\"channel\":\"CableReady::Stream\",\"identifier\":\"%s\"}", "fake_id")
 
-		res, err := subject.Subscribe("42", env, "name=jack", channel)
+		res, err := subject.Subscribe(context.Background(), "42", env, "name=jack", channel)
 
 		require.NoError(t, err)
 		require.NotNil(t, res)
@@ -217,7 +218,7 @@ func TestCableReadyController(t *testing.T) {
 		signed := "WyJjaGF0LzIwMjMiLDE2ODUwMjQwMTdd--5b6661024d4c463c4936cd1542bc9a7672dd8039ac407d0b6c901697190e8aeb"
 		channel := fmt.Sprintf("{\"channel\":\"CableReady::Stream\",\"identifier\":\"%s\"}", signed)
 
-		res, err := subject.Subscribe("42", env, "name=jack", channel)
+		res, err := subject.Subscribe(context.Background(), "42", env, "name=jack", channel)
 
 		require.NoError(t, err)
 		require.NotNil(t, res)
@@ -228,7 +229,7 @@ func TestCableReadyController(t *testing.T) {
 	t.Run("Unsubscribe", func(t *testing.T) {
 		channel := fmt.Sprintf("{\"channel\":\"CableReady::Stream\",\"identifier\":\"%s\"}", stream)
 
-		res, err := subject.Unsubscribe("42", env, "name=jack", channel)
+		res, err := subject.Unsubscribe(context.Background(), "42", env, "name=jack", channel)
 
 		require.NoError(t, err)
 		require.NotNil(t, res)

@@ -82,7 +82,7 @@ func TestSSEHandler(t *testing.T) {
 		Return(nil)
 
 	controller.
-		On("Disconnect", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		On("Disconnect", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(nil)
 
 	t.Run("headers", func(t *testing.T) {
@@ -134,7 +134,7 @@ func TestSSEHandler(t *testing.T) {
 		defer assertNoSessions(t, appNode)
 
 		controller.
-			On("Authenticate", "sid-fail", mock.Anything).
+			On("Authenticate", mock.Anything, "sid-fail", mock.Anything).
 			Return(&common.ConnectResult{
 				Status:        common.FAILURE,
 				Transmissions: []string{`{"type":"disconnect"}`},
@@ -159,7 +159,7 @@ func TestSSEHandler(t *testing.T) {
 		defer assertNoSessions(t, appNode)
 
 		controller.
-			On("Authenticate", "sid-gut", mock.Anything).
+			On("Authenticate", mock.Anything, "sid-gut", mock.Anything).
 			Return(&common.ConnectResult{
 				Identifier:    "se2023",
 				Status:        common.SUCCESS,
@@ -167,7 +167,7 @@ func TestSSEHandler(t *testing.T) {
 			}, nil)
 
 		controller.
-			On("Subscribe", "sid-gut", mock.Anything, "se2023", "chat_1").
+			On("Subscribe", mock.Anything, "sid-gut", mock.Anything, "se2023", "chat_1").
 			Return(&common.CommandResult{
 				Status:        common.SUCCESS,
 				Transmissions: []string{`{"type":"confirm","identifier":"chat_1"}`},
@@ -211,7 +211,7 @@ func TestSSEHandler(t *testing.T) {
 		defer assertNoSessions(t, appNode)
 
 		controller.
-			On("Authenticate", "sid-turbo", mock.Anything).
+			On("Authenticate", mock.Anything, "sid-turbo", mock.Anything).
 			Return(&common.ConnectResult{
 				Identifier:    "se2023",
 				Status:        common.SUCCESS,
@@ -221,7 +221,7 @@ func TestSSEHandler(t *testing.T) {
 		turbo_identifier := `{"channel":"Turbo::StreamsChannel","signed_stream_name":"chat_1"}`
 
 		controller.
-			On("Subscribe", "sid-turbo", mock.Anything, "se2023", turbo_identifier).
+			On("Subscribe", mock.Anything, "sid-turbo", mock.Anything, "se2023", turbo_identifier).
 			Return(&common.CommandResult{
 				Status:        common.SUCCESS,
 				Transmissions: []string{`{"type":"confirm","identifier":"turbo_1"}`},
@@ -259,7 +259,7 @@ func TestSSEHandler(t *testing.T) {
 		defer assertNoSessions(t, appNode)
 
 		controller.
-			On("Authenticate", "sid-public-stream", mock.Anything).
+			On("Authenticate", mock.Anything, "sid-public-stream", mock.Anything).
 			Return(&common.ConnectResult{
 				Identifier:    "se2024",
 				Status:        common.SUCCESS,
@@ -269,7 +269,7 @@ func TestSSEHandler(t *testing.T) {
 		identifier := `{"channel":"$pubsub","stream_name":"chat_1"}`
 
 		controller.
-			On("Subscribe", "sid-public-stream", mock.Anything, "se2024", identifier).
+			On("Subscribe", mock.Anything, "sid-public-stream", mock.Anything, "se2024", identifier).
 			Return(&common.CommandResult{
 				Status:        common.SUCCESS,
 				Transmissions: []string{`{"type":"confirm","identifier":"chat_1"}`},
@@ -307,7 +307,7 @@ func TestSSEHandler(t *testing.T) {
 		defer assertNoSessions(t, appNode)
 
 		controller.
-			On("Authenticate", "sid-signed-stream", mock.Anything).
+			On("Authenticate", mock.Anything, "sid-signed-stream", mock.Anything).
 			Return(&common.ConnectResult{
 				Identifier:    "se2024",
 				Status:        common.SUCCESS,
@@ -317,7 +317,7 @@ func TestSSEHandler(t *testing.T) {
 		identifier := `{"channel":"$pubsub","signed_stream_name":"secretto"}`
 
 		controller.
-			On("Subscribe", "sid-signed-stream", mock.Anything, "se2024", identifier).
+			On("Subscribe", mock.Anything, "sid-signed-stream", mock.Anything, "se2024", identifier).
 			Return(&common.CommandResult{
 				Status:        common.SUCCESS,
 				Transmissions: []string{`{"type":"confirm","identifier":"secret_chat_1"}`},
@@ -355,7 +355,7 @@ func TestSSEHandler(t *testing.T) {
 		defer assertNoSessions(t, appNode)
 
 		controller.
-			On("Authenticate", "sid-reject", mock.Anything).
+			On("Authenticate", mock.Anything, "sid-reject", mock.Anything).
 			Return(&common.ConnectResult{
 				Identifier:    "se2034",
 				Status:        common.SUCCESS,
@@ -363,7 +363,7 @@ func TestSSEHandler(t *testing.T) {
 			}, nil)
 
 		controller.
-			On("Subscribe", "sid-reject", mock.Anything, "se2034", `{"channel":"room_1"}`).
+			On("Subscribe", mock.Anything, "sid-reject", mock.Anything, "se2034", `{"channel":"room_1"}`).
 			Return(&common.CommandResult{
 				Status:        common.FAILURE,
 				Transmissions: []string{`{"type":"reject","identifier":"room_1"}`},
@@ -387,7 +387,7 @@ func TestSSEHandler(t *testing.T) {
 		require.Equal(t, http.StatusBadRequest, w.Code)
 		assert.Empty(t, w.Body.String())
 
-		controller.AssertCalled(t, "Subscribe", "sid-reject", mock.Anything, "se2034", `{"channel":"room_1"}`)
+		controller.AssertCalled(t, "Subscribe", mock.Anything, "sid-reject", mock.Anything, "se2034", `{"channel":"room_1"}`)
 	})
 
 	t.Run("GET request without channel or identifier", func(t *testing.T) {
@@ -404,7 +404,7 @@ func TestSSEHandler(t *testing.T) {
 		defer assertNoSessions(t, appNode)
 
 		controller.
-			On("Authenticate", "sid-gut-raw", mock.Anything).
+			On("Authenticate", mock.Anything, "sid-gut-raw", mock.Anything).
 			Return(&common.ConnectResult{
 				Identifier:    "se2023",
 				Status:        common.SUCCESS,
@@ -412,7 +412,7 @@ func TestSSEHandler(t *testing.T) {
 			}, nil)
 
 		controller.
-			On("Subscribe", "sid-gut-raw", mock.Anything, "se2023", "chat_1").
+			On("Subscribe", mock.Anything, "sid-gut-raw", mock.Anything, "se2023", "chat_1").
 			Return(&common.CommandResult{
 				Status:        common.SUCCESS,
 				Transmissions: []string{`{"type":"confirm","identifier":"chat_1"}`},
@@ -451,7 +451,7 @@ func TestSSEHandler(t *testing.T) {
 		defer assertNoSessions(t, appNode)
 
 		controller.
-			On("Authenticate", "sid-post-no-op", mock.Anything).
+			On("Authenticate", mock.Anything, "sid-post-no-op", mock.Anything).
 			Return(&common.ConnectResult{
 				Identifier:    "se2023-09-06",
 				Status:        common.SUCCESS,
@@ -495,7 +495,7 @@ func TestSSEHandler(t *testing.T) {
 		defer assertNoSessions(t, appNode)
 
 		controller.
-			On("Authenticate", "sid-post", mock.Anything).
+			On("Authenticate", mock.Anything, "sid-post", mock.Anything).
 			Return(&common.ConnectResult{
 				Identifier:    "se2023-09-06",
 				Status:        common.SUCCESS,
@@ -503,7 +503,7 @@ func TestSSEHandler(t *testing.T) {
 			}, nil)
 
 		controller.
-			On("Subscribe", "sid-post", mock.Anything, "se2023-09-06", "chat_1").
+			On("Subscribe", mock.Anything, "sid-post", mock.Anything, "se2023-09-06", "chat_1").
 			Return(&common.CommandResult{
 				Status:        common.SUCCESS,
 				Transmissions: []string{`{"type":"confirm","identifier":"chat_1"}`},
@@ -511,7 +511,7 @@ func TestSSEHandler(t *testing.T) {
 			}, nil)
 
 		controller.
-			On("Subscribe", "sid-post", mock.Anything, "se2023-09-06", "presence_1").
+			On("Subscribe", mock.Anything, "sid-post", mock.Anything, "se2023-09-06", "presence_1").
 			Return(&common.CommandResult{
 				Status:        common.SUCCESS,
 				Transmissions: []string{`{"type":"confirm","identifier":"presence_1"}`},

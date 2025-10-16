@@ -1,6 +1,7 @@
 package identity
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/anycable/anycable-go/common"
@@ -58,7 +59,7 @@ func (c *IdentifiableController) Shutdown() error {
 	return c.controller.Shutdown()
 }
 
-func (c *IdentifiableController) Authenticate(sid string, env *common.SessionEnv) (*common.ConnectResult, error) {
+func (c *IdentifiableController) Authenticate(ctx context.Context, sid string, env *common.SessionEnv) (*common.ConnectResult, error) {
 	res, err := c.identifier.Identify(sid, env)
 
 	if err != nil {
@@ -67,7 +68,7 @@ func (c *IdentifiableController) Authenticate(sid string, env *common.SessionEnv
 
 	// Passthrough
 	if res == nil {
-		return c.controller.Authenticate(sid, env)
+		return c.controller.Authenticate(ctx, sid, env)
 	}
 
 	if res.CState == nil {
@@ -79,19 +80,19 @@ func (c *IdentifiableController) Authenticate(sid string, env *common.SessionEnv
 	return res, err
 }
 
-func (c *IdentifiableController) Subscribe(sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error) {
-	return c.controller.Subscribe(sid, env, id, channel)
+func (c *IdentifiableController) Subscribe(ctx context.Context, sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error) {
+	return c.controller.Subscribe(ctx, sid, env, id, channel)
 }
 
-func (c *IdentifiableController) Unsubscribe(sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error) {
-	return c.controller.Unsubscribe(sid, env, id, channel)
+func (c *IdentifiableController) Unsubscribe(ctx context.Context, sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error) {
+	return c.controller.Unsubscribe(ctx, sid, env, id, channel)
 }
 
-func (c *IdentifiableController) Perform(sid string, env *common.SessionEnv, id string, channel string, data string) (*common.CommandResult, error) {
-	return c.controller.Perform(sid, env, id, channel, data)
+func (c *IdentifiableController) Perform(ctx context.Context, sid string, env *common.SessionEnv, id string, channel string, data string) (*common.CommandResult, error) {
+	return c.controller.Perform(ctx, sid, env, id, channel, data)
 }
-func (c *IdentifiableController) Disconnect(sid string, env *common.SessionEnv, id string, subscriptions []string) error {
-	return c.controller.Disconnect(sid, env, id, subscriptions)
+func (c *IdentifiableController) Disconnect(ctx context.Context, sid string, env *common.SessionEnv, id string, subscriptions []string) error {
+	return c.controller.Disconnect(ctx, sid, env, id, subscriptions)
 }
 
 func actionCableWelcomeMessage(sid string) string {

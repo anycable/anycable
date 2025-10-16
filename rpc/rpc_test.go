@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -51,11 +52,10 @@ func NewTestController() *Controller {
 }
 
 func TestAuthenticate(t *testing.T) {
-	controller := NewTestController()
-	client := mocks.RPCClient{}
-	controller.client = &client
-
 	t.Run("Success", func(t *testing.T) {
+		controller := NewTestController()
+		client := mocks.RPCClient{}
+		controller.client = &client
 		url := "/cable-test"
 		headers := map[string]string{"cookie": "token=secret;"}
 
@@ -79,6 +79,9 @@ func TestAuthenticate(t *testing.T) {
 	})
 
 	t.Run("Failure", func(t *testing.T) {
+		controller := NewTestController()
+		client := mocks.RPCClient{}
+		controller.client = &client
 		url := "/cable-test"
 		headers := map[string]string{"cookie": "token=invalid;"}
 
@@ -102,6 +105,9 @@ func TestAuthenticate(t *testing.T) {
 	})
 
 	t.Run("Error", func(t *testing.T) {
+		controller := NewTestController()
+		client := mocks.RPCClient{}
+		controller.client = &client
 		url := "/cable-test"
 		headers := map[string]string{"cookie": "token=exceptional;"}
 
@@ -124,6 +130,9 @@ func TestAuthenticate(t *testing.T) {
 	})
 
 	t.Run("Canceled before RPC", func(t *testing.T) {
+		controller := NewTestController()
+		client := mocks.RPCClient{}
+		controller.client = &client
 		url := "/cancel-cables"
 		headers := make(map[string]string)
 
@@ -146,6 +155,9 @@ func TestAuthenticate(t *testing.T) {
 	})
 
 	t.Run("Canceled during RPC", func(t *testing.T) {
+		controller := NewTestController()
+		client := mocks.RPCClient{}
+		controller.client = &client
 		url := "/cancel-cables-2"
 		headers := make(map[string]string)
 
@@ -155,14 +167,13 @@ func TestAuthenticate(t *testing.T) {
 
 		canceledCtx, cancel := context.WithCancel(context.Background())
 
-		var ctxErr error
-
 		client.On("Connect", mock.Anything,
 			&expectedReq).Return(
-			nil, ctxErr).Run(func(args mock.Arguments) {
-			cancel()
-			ctxErr = canceledCtx.Err()
-		})
+			nil,
+			func(ctx context.Context, req *pb.ConnectionRequest, opts ...grpc.CallOption) error {
+				cancel()
+				return canceledCtx.Err()
+			})
 
 		res, err := controller.Authenticate(canceledCtx, "42", &common.SessionEnv{URL: url, Headers: &headers})
 		assert.Nil(t, err)

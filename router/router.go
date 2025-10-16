@@ -1,6 +1,7 @@
 package router
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -54,16 +55,16 @@ func (c *RouterController) Shutdown() error {
 	return c.controller.Shutdown()
 }
 
-func (c *RouterController) Authenticate(sid string, env *common.SessionEnv) (*common.ConnectResult, error) {
-	return c.controller.Authenticate(sid, env)
+func (c *RouterController) Authenticate(ctx context.Context, sid string, env *common.SessionEnv) (*common.ConnectResult, error) {
+	return c.controller.Authenticate(ctx, sid, env)
 }
 
-func (c *RouterController) Subscribe(sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error) {
+func (c *RouterController) Subscribe(ctx context.Context, sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error) {
 	channelName := extractChannel(channel)
 
 	if channelName != "" {
 		if handler, ok := c.routes[channelName]; ok {
-			res, err := handler.Subscribe(sid, env, id, channel)
+			res, err := handler.Subscribe(ctx, sid, env, id, channel)
 
 			if res != nil || err != nil {
 				return res, err
@@ -71,15 +72,15 @@ func (c *RouterController) Subscribe(sid string, env *common.SessionEnv, id stri
 		}
 	}
 
-	return c.controller.Subscribe(sid, env, id, channel)
+	return c.controller.Subscribe(ctx, sid, env, id, channel)
 }
 
-func (c *RouterController) Unsubscribe(sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error) {
+func (c *RouterController) Unsubscribe(ctx context.Context, sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error) {
 	channelName := extractChannel(channel)
 
 	if channelName != "" {
 		if handler, ok := c.routes[channelName]; ok {
-			res, err := handler.Unsubscribe(sid, env, id, channel)
+			res, err := handler.Unsubscribe(ctx, sid, env, id, channel)
 
 			if res != nil || err != nil {
 				return res, err
@@ -87,15 +88,15 @@ func (c *RouterController) Unsubscribe(sid string, env *common.SessionEnv, id st
 		}
 	}
 
-	return c.controller.Unsubscribe(sid, env, id, channel)
+	return c.controller.Unsubscribe(ctx, sid, env, id, channel)
 }
 
-func (c *RouterController) Perform(sid string, env *common.SessionEnv, id string, channel string, data string) (*common.CommandResult, error) {
+func (c *RouterController) Perform(ctx context.Context, sid string, env *common.SessionEnv, id string, channel string, data string) (*common.CommandResult, error) {
 	channelName := extractChannel(channel)
 
 	if channelName != "" {
 		if handler, ok := c.routes[channelName]; ok {
-			res, err := handler.Perform(sid, env, id, channel, data)
+			res, err := handler.Perform(ctx, sid, env, id, channel, data)
 
 			if res != nil || err != nil {
 				return res, err
@@ -103,10 +104,10 @@ func (c *RouterController) Perform(sid string, env *common.SessionEnv, id string
 		}
 	}
 
-	return c.controller.Perform(sid, env, id, channel, data)
+	return c.controller.Perform(ctx, sid, env, id, channel, data)
 }
-func (c *RouterController) Disconnect(sid string, env *common.SessionEnv, id string, subscriptions []string) error {
-	return c.controller.Disconnect(sid, env, id, subscriptions)
+func (c *RouterController) Disconnect(ctx context.Context, sid string, env *common.SessionEnv, id string, subscriptions []string) error {
+	return c.controller.Disconnect(ctx, sid, env, id, subscriptions)
 }
 
 func extractChannel(identifier string) string {
