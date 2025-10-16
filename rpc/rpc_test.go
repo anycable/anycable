@@ -70,7 +70,7 @@ func TestAuthenticate(t *testing.T) {
 				Env:           &pb.EnvResponse{Cstate: map[string]string{"_s_": "test-session"}},
 			}, nil)
 
-		res, err := controller.Authenticate("42", &common.SessionEnv{URL: url, Headers: &headers})
+		res, err := controller.Authenticate(context.Background(), "42", &common.SessionEnv{URL: url, Headers: &headers})
 		assert.Nil(t, err)
 		assert.Equal(t, []string{"welcome"}, res.Transmissions)
 		assert.Equal(t, "user=john", res.Identifier)
@@ -93,7 +93,7 @@ func TestAuthenticate(t *testing.T) {
 				ErrorMsg:      "Authentication failed",
 			}, nil)
 
-		res, err := controller.Authenticate("42", &common.SessionEnv{URL: url, Headers: &headers})
+		res, err := controller.Authenticate(context.Background(), "42", &common.SessionEnv{URL: url, Headers: &headers})
 		assert.Nil(t, err)
 		assert.Equal(t, []string{"unauthorized"}, res.Transmissions)
 		assert.Equal(t, "", res.Identifier)
@@ -114,13 +114,61 @@ func TestAuthenticate(t *testing.T) {
 				ErrorMsg: "Exception",
 			}, nil)
 
-		res, err := controller.Authenticate("42", &common.SessionEnv{URL: url, Headers: &headers})
+		res, err := controller.Authenticate(context.Background(), "42", &common.SessionEnv{URL: url, Headers: &headers})
 		assert.NotNil(t, err)
 		assert.Error(t, err, "Exception")
 		assert.Nil(t, res.Transmissions)
 		assert.Equal(t, "", res.Identifier)
 		assert.Nil(t, res.CState)
 		assert.Empty(t, res.Broadcasts)
+	})
+
+	t.Run("Canceled before RPC", func(t *testing.T) {
+		url := "/cancel-cables"
+		headers := make(map[string]string)
+
+		canceledCtx, cancel := context.WithCancel(context.Background())
+		// cancel right away
+		cancel()
+
+		expectedReq := pb.ConnectionRequest{
+			Env: &pb.Env{Url: url, Headers: headers},
+		}
+		client.On("Connect", mock.Anything,
+			&expectedReq).Return(
+			nil, canceledCtx.Err())
+
+		res, err := controller.Authenticate(canceledCtx, "42", &common.SessionEnv{URL: url, Headers: &headers})
+		assert.Nil(t, err)
+		assert.Nil(t, res)
+
+		client.AssertNotCalled(t, "Connect", mock.Anything, &expectedReq)
+	})
+
+	t.Run("Canceled during RPC", func(t *testing.T) {
+		url := "/cancel-cables-2"
+		headers := make(map[string]string)
+
+		expectedReq := pb.ConnectionRequest{
+			Env: &pb.Env{Url: url, Headers: headers},
+		}
+
+		canceledCtx, cancel := context.WithCancel(context.Background())
+
+		var ctxErr error
+
+		client.On("Connect", mock.Anything,
+			&expectedReq).Return(
+			nil, ctxErr).Run(func(args mock.Arguments) {
+			cancel()
+			ctxErr = canceledCtx.Err()
+		})
+
+		res, err := controller.Authenticate(canceledCtx, "42", &common.SessionEnv{URL: url, Headers: &headers})
+		assert.Nil(t, err)
+		assert.Nil(t, res)
+
+		client.AssertCalled(t, "Connect", mock.Anything, &expectedReq)
 	})
 }
 
@@ -151,6 +199,7 @@ func TestPerform(t *testing.T) {
 			}, nil)
 
 		res, err := controller.Perform(
+			context.Background(),
 			"42",
 			&common.SessionEnv{URL: url, Headers: &headers, ConnectionState: &cstate},
 			"ids", "test_channel", "hello",
@@ -188,6 +237,7 @@ func TestPerform(t *testing.T) {
 			}, nil)
 
 		res, err := controller.Perform(
+			context.Background(),
 			"42",
 			&common.SessionEnv{URL: url, Headers: &headers, ConnectionState: &cstate},
 			"ids", "test_channel", "fail",
@@ -223,6 +273,7 @@ func TestPerform(t *testing.T) {
 			}, nil)
 
 		res, err := controller.Perform(
+			context.Background(),
 			"42",
 			&common.SessionEnv{URL: url, Headers: &headers, ConnectionState: &cstate},
 			"ids", "test_channel", "exception",
@@ -260,6 +311,7 @@ func TestPerform(t *testing.T) {
 			}, nil)
 
 		res, err := controller.Perform(
+			context.Background(),
 			"42",
 			&common.SessionEnv{URL: url, Headers: &headers, ConnectionState: &cstate},
 			"ids", "test_channel", "stop_stream",
@@ -299,6 +351,7 @@ func TestPerform(t *testing.T) {
 			}, nil)
 
 		res, err := controller.Perform(
+			context.Background(),
 			"42",
 			&common.SessionEnv{URL: url, Headers: &headers, ChannelStates: &channels},
 			"ids", "test_channel", "channel_state",
@@ -342,6 +395,7 @@ func TestPerform(t *testing.T) {
 			}, nil)
 
 		res, err := controller.Perform(
+			context.Background(),
 			"42",
 			&common.SessionEnv{URL: url, Headers: &headers, ChannelStates: &channels},
 			"ids", "test_channel", "channel_state",
@@ -386,6 +440,7 @@ func TestSubscribe(t *testing.T) {
 			}, nil)
 
 		res, err := controller.Subscribe(
+			context.Background(),
 			"42",
 			&common.SessionEnv{URL: url, Headers: &headers, ConnectionState: &cstate},
 			"ids", "test_channel",
@@ -420,6 +475,7 @@ func TestSubscribe(t *testing.T) {
 			}, nil)
 
 		res, err := controller.Subscribe(
+			context.Background(),
 			"42",
 			&common.SessionEnv{URL: url, Headers: &headers, ConnectionState: &cstate},
 			"ids", "fail_channel",
@@ -451,6 +507,7 @@ func TestSubscribe(t *testing.T) {
 			}, nil)
 
 		res, err := controller.Subscribe(
+			context.Background(),
 			"42",
 			&common.SessionEnv{URL: url, Headers: &headers, ConnectionState: &cstate},
 			"ids", "error_channel",
@@ -485,6 +542,7 @@ func TestSubscribe(t *testing.T) {
 			}, nil)
 
 		res, err := controller.Subscribe(
+			context.Background(),
 			"42",
 			&common.SessionEnv{URL: url, Headers: &headers, ConnectionState: &cstate},
 			"ids", "test_channel",
@@ -530,6 +588,7 @@ func TestDisconnect(t *testing.T) {
 			}, nil)
 
 		err := controller.Disconnect(
+			context.Background(),
 			"42",
 			&common.SessionEnv{URL: url, Headers: &headers, ConnectionState: &cstate, ChannelStates: &channels},
 			"ids",
@@ -566,7 +625,7 @@ func TestCustomDialFun(t *testing.T) {
 				Env:           &pb.EnvResponse{Cstate: map[string]string{"_s_": "test-session"}},
 			}, nil)
 
-		res, err := controller.Authenticate("42", &common.SessionEnv{URL: url, Headers: &headers})
+		res, err := controller.Authenticate(context.Background(), "42", &common.SessionEnv{URL: url, Headers: &headers})
 		require.Nilf(t, err, "Error: %v", err)
 		assert.Equal(t, []string{"welcome"}, res.Transmissions)
 		assert.Equal(t, "user=john", res.Identifier)

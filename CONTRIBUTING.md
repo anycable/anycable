@@ -30,3 +30,11 @@ We use [golangci-lint](https://golangci-lint.run) to lint Go source code:
 ```sh
 make lint
 ```
+
+### Adding mocks with Mockery
+
+We use Mockery v2, the following version should work:
+
+```
+go install github.com/vektra/mockery/v2@v2
+```

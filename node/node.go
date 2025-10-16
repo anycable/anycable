@@ -348,10 +348,14 @@ func (n *Node) Authenticate(s *Session, options ...AuthOption) (*common.ConnectR
 		}
 	}
 
-	res, err := n.controller.Authenticate(s.GetID(), s.env)
+	res, err := n.controller.Authenticate(s.closeCtx, s.GetID(), s.env)
 
 	if s.IsClosed() {
 		s.Log.Debug("skip authenticate result: closed")
+		return nil, nil
+	}
+
+	if res == nil && err == nil {
 		return nil, nil
 	}
 
@@ -469,10 +473,14 @@ func (n *Node) Subscribe(s *Session, msg *common.Message) (*common.CommandResult
 		return nil, fmt.Errorf("already subscribed to %s", msg.Identifier)
 	}
 
-	res, err := n.controller.Subscribe(s.GetID(), s.env, s.GetIdentifiers(), msg.Identifier)
+	res, err := n.controller.Subscribe(s.closeCtx, s.GetID(), s.env, s.GetIdentifiers(), msg.Identifier)
 
 	if s.IsClosed() {
 		s.Log.Debug("skip subscribe result: closed")
+		return nil, nil
+	}
+
+	if res == nil && err == nil {
 		return nil, nil
 	}
 
@@ -531,10 +539,14 @@ func (n *Node) Unsubscribe(s *Session, msg *common.Message) (*common.CommandResu
 		return nil, fmt.Errorf("unknown subscription: %s", msg.Identifier)
 	}
 
-	res, err := n.controller.Unsubscribe(s.GetID(), s.env, s.GetIdentifiers(), msg.Identifier)
+	res, err := n.controller.Unsubscribe(s.closeCtx, s.GetID(), s.env, s.GetIdentifiers(), msg.Identifier)
 
 	if s.IsClosed() {
 		s.Log.Debug("skip unsubscribe result: closed")
+		return nil, nil
+	}
+
+	if res == nil && err == nil {
 		return nil, nil
 	}
 
@@ -598,10 +610,14 @@ func (n *Node) Perform(s *Session, msg *common.Message) (*common.CommandResult, 
 		return nil, fmt.Errorf("perform data must be a string, got %v", msg.Data)
 	}
 
-	res, err := n.controller.Perform(s.GetID(), s.env, s.GetIdentifiers(), msg.Identifier, data)
+	res, err := n.controller.Perform(s.closeCtx, s.GetID(), s.env, s.GetIdentifiers(), msg.Identifier, data)
 
 	if s.IsClosed() {
 		s.Log.Debug("skip perform result: closed")
+		return nil, nil
+	}
+
+	if res == nil && err == nil {
 		return nil, nil
 	}
 
@@ -888,6 +904,7 @@ func (n *Node) DisconnectNow(s *Session) error {
 	s.Log.Debug("disconnect", "ids", ids, "url", s.env.URL, "headers", s.env.Headers, "subscriptions", sessionSubscriptions)
 
 	err := n.controller.Disconnect(
+		context.Background(),
 		s.GetID(),
 		s.env,
 		ids,

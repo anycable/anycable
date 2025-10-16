@@ -1,6 +1,7 @@
 package mocks
 
 import (
+	context "context"
 	"errors"
 
 	"github.com/anycable/anycable-go/common"
@@ -23,7 +24,7 @@ func (c *MockController) Start() error {
 // Authenticate emulates authentication process:
 // - if path is equal to "failure" then authentication failed
 // - otherwise returns value of headers['id'] as identifier
-func (c *MockController) Authenticate(sid string, env *common.SessionEnv) (*common.ConnectResult, error) {
+func (c *MockController) Authenticate(ctx context.Context, sid string, env *common.SessionEnv) (*common.ConnectResult, error) {
 	if env.URL == "/failure" {
 		return &common.ConnectResult{Status: common.FAILURE, Transmissions: []string{"unauthorized"}}, nil
 	}
@@ -46,7 +47,7 @@ func (c *MockController) Authenticate(sid string, env *common.SessionEnv) (*comm
 // - if channel is equal to "disconnect" then returns result with disconnect set to true
 // - if channel is equal to "stream" then add "stream" to result.Streams
 // - otherwise returns success result with one transmission equal to sid
-func (c *MockController) Subscribe(sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error) {
+func (c *MockController) Subscribe(ctx context.Context, sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error) {
 	if channel == "error" {
 		return nil, errors.New("Subscription Failure")
 	}
@@ -71,7 +72,7 @@ func (c *MockController) Subscribe(sid string, env *common.SessionEnv, id string
 }
 
 // Unsubscribe returns command result
-func (c *MockController) Unsubscribe(sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error) {
+func (c *MockController) Unsubscribe(ctx context.Context, sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error) {
 	if channel == "failure" {
 		return nil, errors.New("Unsubscription Failure")
 	}
@@ -82,7 +83,7 @@ func (c *MockController) Unsubscribe(sid string, env *common.SessionEnv, id stri
 }
 
 // Perform return result with Transmissions containing data (i.e. emulates "echo" action)
-func (c *MockController) Perform(sid string, env *common.SessionEnv, id string, channel string, data string) (*common.CommandResult, error) {
+func (c *MockController) Perform(ctx context.Context, sid string, env *common.SessionEnv, id string, channel string, data string) (*common.CommandResult, error) {
 	if channel == "failure" {
 		return nil, errors.New("Perform Failure")
 	}
@@ -113,7 +114,7 @@ func (c *MockController) Perform(sid string, env *common.SessionEnv, id string, 
 }
 
 // Disconnect method stub
-func (c *MockController) Disconnect(sid string, env *common.SessionEnv, id string, subscriptions []string) error {
+func (c *MockController) Disconnect(ctx context.Context, sid string, env *common.SessionEnv, id string, subscriptions []string) error {
 	return nil
 }
 
