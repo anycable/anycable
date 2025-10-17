@@ -1,5 +1,7 @@
 # Change log
 
+- More granular memory usage metrics. ([@palkan][])
+
 - Discard pending or cancel in-progress RPC calls on session termination. ([@palkan][])
 
 - Fixed race conditions in session registration. ([@palkan][])

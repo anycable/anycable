@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
 	"runtime"
 	"sync"
 	"time"
@@ -23,6 +24,11 @@ import (
 const (
 	metricsGoroutines      = "goroutines_num"
 	metricsMemSys          = "mem_sys_bytes"
+	metricsHeapSys         = "heap_sys_bytes"
+	metricsStackSys        = "stack_sys_bytes"
+	metricsHeapAlloc       = "heap_alloc_total"
+	metricsHeapIdle        = "heap_idle_bytes"
+	metricsHeapReleased    = "heap_released_bytes"
 	metricsClientsNum      = "clients_num"
 	metricsUniqClientsNum  = "clients_uniq_num"
 	metricsStreamsNum      = "broadcast_streams_num"
@@ -1158,12 +1164,23 @@ func (n *Node) collectStats() {
 	}
 }
 
+var DetailedMemMetrics = os.Getenv("ANYCABLE_MEMORY_METRICS") == "1"
+
 func (n *Node) collectStatsOnce() {
 	n.metrics.GaugeSet(metricsGoroutines, uint64(runtime.NumGoroutine()))
 
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 	n.metrics.GaugeSet(metricsMemSys, m.Sys)
+
+	if DetailedMemMetrics {
+		n.metrics.GaugeSet(metricsHeapSys, m.HeapSys)
+		n.metrics.GaugeSet(metricsStackSys, m.StackSys)
+
+		n.metrics.GaugeSet(metricsHeapAlloc, m.HeapAlloc)
+		n.metrics.GaugeSet(metricsHeapIdle, m.HeapIdle)
+		n.metrics.GaugeSet(metricsHeapReleased, m.HeapReleased)
+	}
 
 	n.metrics.GaugeSet(metricsClientsNum, uint64(n.hub.Size()))
 	n.metrics.GaugeSet(metricsUniqClientsNum, uint64(n.hub.UniqSize()))
@@ -1174,6 +1191,14 @@ func (n *Node) collectStatsOnce() {
 func (n *Node) registerMetrics() {
 	n.metrics.RegisterGauge(metricsGoroutines, "The number of Go routines")
 	n.metrics.RegisterGauge(metricsMemSys, "The total bytes of memory obtained from the OS")
+
+	if DetailedMemMetrics {
+		n.metrics.RegisterGauge(metricsHeapSys, "The total bytes of heap memory obtained from the OS")
+		n.metrics.RegisterGauge(metricsStackSys, "The total bytes of stack memory obtained from the OS")
+		n.metrics.RegisterGauge(metricsHeapAlloc, "The number of allocated heap objects")
+		n.metrics.RegisterGauge(metricsHeapIdle, "The total bytes of idle heap memory")
+		n.metrics.RegisterGauge(metricsHeapReleased, "The total bytes of heap memory released")
+	}
 
 	n.metrics.RegisterGauge(metricsClientsNum, "The number of active clients")
 	n.metrics.RegisterGauge(metricsUniqClientsNum, "The number of unique clients (with respect to connection identifiers)")

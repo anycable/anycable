@@ -64,6 +64,12 @@ The `goroutines_num` metrics is meant for debugging Go routines leak purposes. T
 
 The total bytes of memory obtained from the OS (according to [`runtime.MemStats.Sys`](https://golang.org/pkg/runtime/#MemStats)).
 
+You can also enabled detailed memory usage metrics by providing the `ANYCABLE_MEMORY_METRICS=1` environment variable. That would add additional metrics as in the example below:
+
+```
+heap_alloc_total=2226352 heap_idle_bytes=4104192 heap_released_bytes=4104192 heap_sys_bytes=7569408 mem_sys_bytes=13912328stack_sys_bytes=819200
+```
+
 ## Prometheus
 
 To enable a HTTP endpoint to serve [Prometheus](https://prometheus.io)-compatible metrics (disabled by default) you must specify `--metrics_http` option (e.g. `--metrics_http="/metrics"`).
