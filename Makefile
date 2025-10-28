@@ -125,6 +125,9 @@ run-gobench:
 run-embedded:
 	go run -ldflags $(LD_FLAGS) -tags "mrb gops" ./cmd/embedded-cable/main.go
 
+run-docker:
+	docker run --rm -p 8080:8080 -v $(PWD)/dist:/app -w /app --entrypoint ./anycable-go-linux-arm64 anycable/anycable-go:$(subst v,,$(VERSION))
+
 # https://protobuf.dev/getting-started/gotutorial/
 bin/protoc-gen-go:
 	@test -x $$(go env GOPATH)/bin/protoc-gen-go || \
