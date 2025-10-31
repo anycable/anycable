@@ -746,9 +746,11 @@ func (n *Node) Whisper(s *Session, msg *common.Message) error {
 		return nil
 	}
 
+	payload := string(utils.ToJSON(msg.Data))
+
 	broadcast := &common.StreamMessage{
 		Stream: stream,
-		Data:   string(utils.ToJSON(msg.Data)),
+		Data:   payload,
 		Meta: &common.StreamMessageMetadata{
 			ExcludeSocket: s.GetID(),
 			Transient:     true,

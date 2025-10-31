@@ -306,6 +306,24 @@ func TestWhisper(t *testing.T) {
 		assert.Nil(t, msg)
 		assert.Error(t, err, "Session hasn't received any messages")
 	})
+
+	t.Run("whispering data as object", func(t *testing.T) {
+		session.env.MergeChannelState("test_channel", &map[string]string{common.WHISPER_STREAM_STATE: "test_whisper"})
+
+		err := node.Whisper(session, &common.Message{Identifier: "test_channel", Data: map[string]interface{}{"msg": "test"}})
+		assert.Nil(t, err)
+
+		expected := `{"identifier":"test_channel_2","message":{"msg":"test"}}`
+
+		msg, err := session2.conn.Read()
+		assert.NoError(t, err)
+		assert.Equal(t, expected, string(msg))
+
+		// Sender do not receive the message
+		msg, err = session.conn.Read()
+		assert.Nil(t, msg)
+		assert.Error(t, err, "Session hasn't received any messages")
+	})
 }
 
 func TestStreamSubscriptionRaceConditions(t *testing.T) {
