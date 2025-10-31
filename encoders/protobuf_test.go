@@ -126,4 +126,17 @@ func TestProtobufEncoder(t *testing.T) {
 		assert.Equal(t, "bc", actual.History.Streams["test_stream"].Epoch)
 		assert.EqualValues(t, 32, actual.History.Streams["test_stream"].Offset)
 	})
+
+	t.Run(".Decode whisper", func(t *testing.T) {
+		command := &pb.Message{Command: pb.Command_whisper, Identifier: "test_channel", Data: `{"msg":"hello"}`}
+		msg, _ := proto.Marshal(command)
+
+		actual, err := coder.Decode(msg)
+
+		assert.NoError(t, err)
+		assert.Equal(t, actual.Command, "whisper")
+		assert.Equal(t, actual.Identifier, "test_channel")
+		assert.Equal(t, actual.Data, `{"msg":"hello"}`)
+	})
+
 }

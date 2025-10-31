@@ -22,6 +22,7 @@ enum Command {
   message = 3;
   history = 4;
   pong = 5;
+  whisper = 6;
 }
 
 message StreamHistoryRequest {
