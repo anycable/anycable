@@ -953,9 +953,8 @@ func (s *Session) encodeMessage(msg encoders.EncodedMessage) (*ws.SentFrame, err
 	if cm, ok := msg.(*encoders.CachedEncodedMessage); ok {
 		return cm.Fetch(
 			s.encoder.ID(),
-			func(m encoders.EncodedMessage) (*ws.SentFrame, error) {
-				return s.encoder.Encode(m)
-			})
+			s.encoder.Encode,
+		)
 	}
 
 	return s.encoder.Encode(msg)

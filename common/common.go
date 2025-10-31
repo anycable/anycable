@@ -407,7 +407,7 @@ func (sm *StreamMessage) ToReplyFor(identifier string) *Reply {
 
 	stream := ""
 
-	// Only include stream if offset/epovh is present
+	// Only include stream if offset/epoch is present
 	if sm.Epoch != "" {
 		stream = sm.Stream
 	}
