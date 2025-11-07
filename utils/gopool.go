@@ -33,7 +33,7 @@ func AllPools() []*GoPool {
 // Start size defaults to 20% of the max size but not greater than 1024.
 // Queue size defaults to 50% of the max size.
 func NewGoPool(name string, size int) *GoPool {
-	queue := min(size/2, 1)
+	queue := max(size/2, 1)
 
 	spawn := min(max(size/5, 1), 1024)
 
@@ -44,7 +44,7 @@ func NewGoPool(name string, size int) *GoPool {
 		work: make(chan func(), queue),
 	}
 
-	for i := 0; i < spawn; i++ {
+	for range spawn {
 		p.sem <- struct{}{}
 		go p.worker(func() {})
 	}
