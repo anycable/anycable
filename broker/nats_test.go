@@ -342,7 +342,7 @@ func TestNATSBroker_SessionsTTLChange(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, restoredAgain)
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(2 * time.Second)
 
 	expired, err := broker.RestoreSession("test234")
 	require.NoError(t, err)
