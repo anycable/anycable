@@ -32,7 +32,7 @@ jobs:
           bundler-cache: true
       - name: Build mruby
         run: bash -c '(cd vendor/github.com/mitchellh/go-mruby && MRUBY_CONFIG=../../../../../../etc/build_config.rb make libmruby.a)'
-      - uses: actions/setup-go@v4
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
       - name: Set VERSION (if any)

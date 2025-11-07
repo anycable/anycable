@@ -1,5 +1,7 @@
 # Change log
 
+- Upgrade to Go 1.25. ([@palkan][])
+
 - More granular memory usage metrics. ([@palkan][])
 
 - Discard pending or cancel in-progress RPC calls on session termination. ([@palkan][])

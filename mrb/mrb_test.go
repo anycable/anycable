@@ -1,5 +1,4 @@
 //go:build (darwin && mrb) || (linux && mrb)
-// +build darwin,mrb linux,mrb
 
 package mrb
 

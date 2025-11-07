@@ -223,8 +223,9 @@ gen-ssl:
 	openssl req -new -x509 -sha256 -key tmp/ssl/server.key -out tmp/ssl/server.crt -days 3650
 
 bin/golangci-lint:
-	@test -x $$(go env GOPATH)/bin/golangci-lint || \
-		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v2.1.6
+	@test -x $$(go env GOPATH)/bin/golangci-lint && \
+		($$(go env GOPATH)/bin/golangci-lint version | grep 2.6.1) || \
+		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v2.6.1
 
 lint: bin/golangci-lint
 	$$(go env GOPATH)/bin/golangci-lint run
