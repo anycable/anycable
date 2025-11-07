@@ -1122,17 +1122,20 @@ func (n *Node) disconnectAll(ctx context.Context) {
 
 	wg.Add(len(sessions))
 
-	for _, s := range sessions {
-		s := s.(*Session)
-		pool.Schedule(func() {
-			if scheduler.Continue() {
-				if s.IsConnected() {
-					s.DisconnectWithMessage(disconnectMessage, common.SERVER_RESTART_REASON)
+	// Avoid blocking when pool is overflown
+	go func() {
+		for _, s := range sessions {
+			s := s.(*Session)
+			pool.Schedule(func() {
+				defer wg.Done()
+				if scheduler.Continue() {
+					if s.IsConnected() {
+						s.DisconnectWithMessage(disconnectMessage, common.SERVER_RESTART_REASON)
+					}
 				}
-				wg.Done()
-			}
-		})
-	}
+			})
+		}
+	}()
 
 	done := make(chan struct{})
 
