@@ -482,13 +482,13 @@ func (n *Node) Subscribe(s *Session, msg *common.Message) (*common.CommandResult
 	res, err := n.controller.Subscribe(s.closeCtx, s.GetID(), s.env, s.GetIdentifiers(), msg.Identifier)
 
 	if s.IsClosed() {
-		s.smu.Lock()
+		s.smu.Unlock()
 		s.Log.Debug("skip subscribe result: closed")
 		return nil, nil
 	}
 
 	if res == nil && err == nil {
-		s.smu.Lock()
+		s.smu.Unlock()
 		return nil, nil
 	}
 
@@ -498,7 +498,7 @@ func (n *Node) Subscribe(s *Session, msg *common.Message) (*common.CommandResult
 
 	if err != nil { // nolint: gocritic
 		if res == nil || res.Status == common.ERROR {
-			s.smu.Lock()
+			s.smu.Unlock()
 			return nil, errorx.Decorate(err, "subscribe failed for %s", msg.Identifier)
 		}
 	} else if res.Status == common.SUCCESS {
