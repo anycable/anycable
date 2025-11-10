@@ -15,6 +15,7 @@ let config = __ENV;
 let url = config.CABLE_URL || "ws://localhost:8080/cable";
 let channelName = (config.CHANNEL_ID || 'BenchmarkChannel');
 let echoDelay = (config.ECHO_DELAY || '0') | 0;
+let sampleEchoDelay = (config.SAMPLE_ECHO_DELAY || '0') | 0;
 
 export const options = {
   scenarios: {
@@ -59,7 +60,15 @@ export default function () {
         "successful subscription": (obj) => obj,
       })
     ) {
-      fail("failed to subscribe");
+      // retry one more time
+      channel = client.subscribe(channelName);
+      if (
+        !check(channel, {
+          "successful subscription (2nd attempt)": (obj) => obj,
+        })
+      ) {
+        fail("failed to subscribe");
+      }
     }
   } catch (err) {
     return
@@ -69,8 +78,8 @@ export default function () {
     let start = Date.now();
     let payload = { ts: start, content: `hello from ${__VU} numero ${i + 1}` };
 
-    if (echoDelay) {
-      payload.delay = randomIntBetween(echoDelay - 1, echoDelay + 1);
+    if (echoDelay && randomIntBetween(0, 100) >= sampleEchoDelay) {
+      payload.delay = (randomIntBetween(75, 125) / 100) * echoDelay;
     }
 
     channel.perform("echo", payload);
