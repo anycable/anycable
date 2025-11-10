@@ -1,5 +1,9 @@
 # Change log
 
+## 1.6.7 (2025-11-10)
+
+- Fixed session mutex leakage caused by RPC Subscribe application-level errors. ([@palkan][])
+
 - Upgrade to Go 1.25. ([@palkan][])
 
 - More granular memory usage metrics. ([@palkan][])
