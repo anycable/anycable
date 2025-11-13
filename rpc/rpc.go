@@ -532,6 +532,7 @@ func (c *Controller) busy() int {
 func (c *Controller) retry(ctx context.Context, sid string, callback func(context.Context) (interface{}, error)) (res interface{}, err error) {
 	attempt := 0
 	wasExhausted := false
+	var lastSeenErr error
 
 	if c.commandTimeout > 0 {
 		ctx_, cancel := context.WithTimeout(
@@ -554,8 +555,13 @@ func (c *Controller) retry(ctx context.Context, sid string, callback func(contex
 		}
 
 		if errors.Is(err, context.Canceled) {
+			if lastSeenErr != nil {
+				return nil, errorx.Decorate(lastSeenErr, "canceled retrying")
+			}
 			return nil, err
 		}
+
+		lastSeenErr = err
 
 		st, ok := status.FromError(err)
 		if !ok {
@@ -596,6 +602,9 @@ func (c *Controller) retry(ctx context.Context, sid string, callback func(contex
 		select {
 		case <-time.After(delay * time.Millisecond):
 		case <-ctx.Done():
+			if lastSeenErr != nil {
+				return nil, errorx.DecorateMany("retry interrupted", ctx.Err(), lastSeenErr)
+			}
 			return nil, ctx.Err()
 		}
 

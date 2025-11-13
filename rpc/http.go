@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/anycable/anycable-go/logger"
@@ -205,6 +206,11 @@ func (s *HTTPService) performRequest(ctx context.Context, path string, payload [
 	if err != nil {
 		if ctx.Err() != nil {
 			return nil, status.Error(codes.DeadlineExceeded, "request timeout")
+		}
+
+		// handle TLS errors
+		if strings.Contains(err.Error(), "tls:") {
+			return nil, status.Error(codes.Unauthenticated, err.Error())
 		}
 
 		return nil, status.Error(codes.Unavailable, err.Error())
