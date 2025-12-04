@@ -384,6 +384,57 @@ func TestDisconnect(t *testing.T) {
 
 		assert.Equal(t, 0, node.disconnector.Size(), "Expected disconnect to have 0 tasks in a queue")
 	})
+
+	t.Run("Non-resumeable session unsubscribes from broker streams", func(t *testing.T) {
+		mockBroker := &mocks.Broker{}
+		node.SetBroker(mockBroker)
+
+		session := NewMockSession("2", node)
+		node.hub.AddSession(session)
+
+		session.subscriptions.AddChannel("test_channel_1")
+		session.subscriptions.AddChannelStream("test_channel_1", "stream1")
+		session.subscriptions.AddChannelStream("test_channel_1", "stream2")
+
+		session.subscriptions.AddChannel("test_channel_2")
+		session.subscriptions.AddChannelStream("test_channel_2", "stream3")
+
+		session.resumeInterval = 0
+
+		mockBroker.On("TouchPresence", mock.Anything).Return(nil)
+		mockBroker.On("Unsubscribe", "stream1").Return("stream1")
+		mockBroker.On("Unsubscribe", "stream2").Return("stream2")
+		mockBroker.On("Unsubscribe", "stream3").Return("stream3")
+
+		err := node.Disconnect(session)
+		require.NoError(t, err)
+
+		mockBroker.AssertCalled(t, "Unsubscribe", "stream1")
+		mockBroker.AssertCalled(t, "Unsubscribe", "stream2")
+		mockBroker.AssertCalled(t, "Unsubscribe", "stream3")
+		mockBroker.AssertNumberOfCalls(t, "Unsubscribe", 3)
+	})
+
+	t.Run("Resumeable session does not unsubscribe from broker streams", func(t *testing.T) {
+		mockBroker := &mocks.Broker{}
+		node.SetBroker(mockBroker)
+
+		session := NewMockSession("3", node)
+		node.hub.AddSession(session)
+
+		session.subscriptions.AddChannel("test_channel")
+		session.subscriptions.AddChannelStream("test_channel", "stream1")
+
+		session.resumeInterval = 300 * time.Second
+
+		mockBroker.On("TouchSession", mock.Anything).Return(nil)
+		mockBroker.On("TouchPresence", mock.Anything).Return(nil)
+
+		err := node.Disconnect(session)
+		require.NoError(t, err)
+
+		mockBroker.AssertNotCalled(t, "Unsubscribe", mock.Anything)
+	})
 }
 
 func TestHistory(t *testing.T) {

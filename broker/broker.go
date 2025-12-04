@@ -127,6 +127,7 @@ func (s *StreamsTracker) Remove(name string) (isLast bool) {
 		return true
 	}
 
+	s.store[name]--
 	return false
 }
 
