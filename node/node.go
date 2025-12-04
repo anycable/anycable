@@ -886,6 +886,9 @@ func (n *Node) ExecuteRemoteCommand(msg *common.RemoteCommandMessage) {
 func (n *Node) Disconnect(s *Session) error {
 	if s.IsResumeable() {
 		n.broker.TouchSession(s.GetID()) // nolint:errcheck
+	} else {
+		// For non-resumeable sessions, unsubscribe from all streams to clean up broker subscriptions
+		n.unsubscribeSessionStreams(s)
 	}
 
 	n.broker.TouchPresence(s.GetID()) // nolint:errcheck
@@ -907,6 +910,23 @@ func (n *Node) Disconnect(s *Session) error {
 	}
 
 	return nil
+}
+
+// unsubscribeSessionStreams unsubscribes session from all streams in the broker
+func (n *Node) unsubscribeSessionStreams(s *Session) {
+	s.smu.Lock()
+	allStreams := s.subscriptions.ToMap()
+	s.smu.Unlock()
+
+	for _, streams := range allStreams {
+		for _, stream := range streams {
+			n.broker.Unsubscribe(stream)
+		}
+	}
+
+	if len(allStreams) > 0 {
+		s.Log.Debug("unsubscribed from broker streams", "channels", len(allStreams))
+	}
 }
 
 // DisconnectNow execute disconnect on controller
