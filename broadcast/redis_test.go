@@ -90,7 +90,7 @@ func TestRedisBroadcaster(t *testing.T) {
 		json.Unmarshal(data, &msg) // nolint: errcheck
 
 		broadcasts <- msg
-	})
+	}).Return(nil)
 
 	t.Run("Handles broadcasts", func(t *testing.T) {
 		broadcaster := NewRedisBroadcaster(handler, &config, slog.Default())

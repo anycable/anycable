@@ -42,7 +42,7 @@ func TestHttpHandler(t *testing.T) {
 	handler.On(
 		"HandleBroadcast",
 		payload,
-	)
+	).Return(nil)
 
 	t.Run("Handles broadcasts", func(t *testing.T) {
 		req, err := http.NewRequest("POST", "/", strings.NewReader(string(payload)))

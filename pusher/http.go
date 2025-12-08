@@ -137,7 +137,7 @@ func (b *Broadcaster) Handler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		b.handler.HandleBroadcast(utils.ToJSON(msg))
+		b.handler.HandleBroadcast(utils.ToJSON(msg)) // nolint:errcheck
 	}
 
 	// Respond with an empty JSON hash; currently, Info is not supported

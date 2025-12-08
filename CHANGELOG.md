@@ -1,5 +1,7 @@
 # Change log
 
+- Fix shutdown race conditions between a broadcaster and a broker. ([@palkan][])
+
 ## 1.6.7 (2025-11-10)
 
 - Fixed session mutex leakage caused by RPC Subscribe application-level errors. ([@palkan][])

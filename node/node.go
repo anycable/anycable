@@ -209,13 +209,13 @@ func (n *Node) HandleCommand(s *Session, msg *common.Message) (err error) {
 }
 
 // HandleBroadcast parses incoming broadcast message, record it and re-transmit to other nodes
-func (n *Node) HandleBroadcast(raw []byte) {
+func (n *Node) HandleBroadcast(raw []byte) error {
 	msg, err := common.PubSubMessageFromJSON(raw)
 
 	if err != nil {
 		n.metrics.CounterIncrement(metricsUnknownBroadcast)
 		n.log.Warn("failed to parse pubsub message", "data", logger.CompactValue(raw), "error", err)
-		return
+		return nil
 	}
 
 	n.metrics.CounterIncrement(metricsPublications)
@@ -223,16 +223,20 @@ func (n *Node) HandleBroadcast(raw []byte) {
 	switch v := msg.(type) {
 	case common.StreamMessage:
 		n.log.Debug("handle broadcast message", "payload", &v)
-		n.broker.HandleBroadcast(&v)
+		return n.broker.HandleBroadcast(&v)
 	case []*common.StreamMessage:
 		n.log.Debug("handle batch-broadcast message", "payload", &v)
 		for _, el := range v {
-			n.broker.HandleBroadcast(el)
+			if batchErr := n.broker.HandleBroadcast(el); batchErr != nil {
+				return errorx.Decorate(batchErr, "failed to broadcast batch")
+			}
 		}
 	case common.RemoteCommandMessage:
 		n.log.Debug("handle remote command", "command", &v)
-		n.broker.HandleCommand(&v)
+		return n.broker.HandleCommand(&v)
 	}
+
+	return nil
 }
 
 // HandlePubSub parses incoming pubsub message and broadcast it to all clients (w/o using a broker)
@@ -763,9 +767,11 @@ func (n *Node) Whisper(s *Session, msg *common.Message) error {
 		},
 	}
 
-	n.broker.HandleBroadcast(broadcast)
-
-	s.Log.Debug("whispered", "stream", stream)
+	if err := n.broker.HandleBroadcast(broadcast); err != nil {
+		s.Log.Debug("whispered", "stream", stream)
+	} else {
+		s.Log.Error("failed to whisper", "stream", stream, "err", err)
+	}
 
 	return nil
 }
@@ -988,7 +994,7 @@ func (n *Node) HandleLeave(stream string, msg *common.PresenceEvent) {
 }
 
 func (n *Node) broadcastPresenceEvent(stream string, msg *common.PresenceEvent) {
-	n.broker.HandleBroadcast(&common.StreamMessage{
+	n.broker.HandleBroadcast(&common.StreamMessage{ // nolint:errcheck
 		Stream: stream,
 		Data:   string(utils.ToJSON(msg)),
 		Meta: &common.StreamMessageMetadata{
@@ -1073,7 +1079,7 @@ func (n *Node) handleCallReply(s *Session, reply *common.CallResult) bool {
 
 	if reply.Broadcasts != nil {
 		for _, broadcast := range reply.Broadcasts {
-			n.broker.HandleBroadcast(broadcast)
+			n.broker.HandleBroadcast(broadcast) // nolint:errcheck
 		}
 	}
 

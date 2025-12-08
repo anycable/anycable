@@ -298,7 +298,7 @@ func (s *Streamer) handleRange(messages []rueidis.XRangeEntry) {
 				s.log.Error("failed to ack message", "error", ackErr)
 			}
 		} else {
-			s.log.Error("stream handler failed", "error", err)
+			s.log.Error("Redis stream handler failed", "error", err)
 		}
 	}
 }

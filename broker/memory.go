@@ -291,7 +291,7 @@ func (b *Memory) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func (b *Memory) HandleBroadcast(msg *common.StreamMessage) {
+func (b *Memory) HandleBroadcast(msg *common.StreamMessage) (err error) {
 	if msg.Meta != nil && msg.Meta.Transient {
 		b.broadcaster.Broadcast(msg)
 		return
@@ -303,10 +303,13 @@ func (b *Memory) HandleBroadcast(msg *common.StreamMessage) {
 	msg.Offset = offset
 
 	b.broadcaster.Broadcast(msg)
+
+	return
 }
 
-func (b *Memory) HandleCommand(msg *common.RemoteCommandMessage) {
+func (b *Memory) HandleCommand(msg *common.RemoteCommandMessage) (err error) {
 	b.broadcaster.BroadcastCommand(msg)
+	return
 }
 
 // Registring streams (for granular pub/sub)

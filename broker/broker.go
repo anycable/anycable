@@ -39,8 +39,8 @@ type Broker interface {
 
 	Announce() string
 
-	HandleBroadcast(msg *common.StreamMessage)
-	HandleCommand(msg *common.RemoteCommandMessage)
+	HandleBroadcast(msg *common.StreamMessage) error
+	HandleCommand(msg *common.RemoteCommandMessage) error
 
 	// Registers the stream and returns its (short) unique identifier
 	Subscribe(stream string) string
@@ -159,14 +159,17 @@ func (LegacyBroker) Announce() string {
 	return "Using no-op (legacy) broker"
 }
 
-func (b *LegacyBroker) HandleBroadcast(msg *common.StreamMessage) {
+func (b *LegacyBroker) HandleBroadcast(msg *common.StreamMessage) error {
 	if b.tracker.Has(msg.Stream) {
 		b.broadcaster.Broadcast(msg)
 	}
+
+	return nil
 }
 
-func (b *LegacyBroker) HandleCommand(msg *common.RemoteCommandMessage) {
+func (b *LegacyBroker) HandleCommand(msg *common.RemoteCommandMessage) error {
 	b.broadcaster.BroadcastCommand(msg)
+	return nil
 }
 
 // Registring streams (for granular pub/sub)

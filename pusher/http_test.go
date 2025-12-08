@@ -35,7 +35,7 @@ func TestHttpHandler(t *testing.T) {
 	handler.On(
 		"HandleBroadcast",
 		broadcastPayload,
-	)
+	).Return(nil)
 
 	t.Run("Handles broadcasts", func(t *testing.T) {
 		authParams := "auth_key=" + config.AppKey +

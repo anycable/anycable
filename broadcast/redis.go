@@ -109,10 +109,8 @@ func (s *RedisBroadcaster) Shutdown(ctx context.Context) error {
 func (s *RedisBroadcaster) handleMessage(message map[string]string) error {
 	if payload, pok := message["payload"]; pok {
 		s.log.Debug("received broadcast")
-		s.node.HandleBroadcast([]byte(payload))
+		return s.node.HandleBroadcast([]byte(payload))
 	} else {
 		return errors.New("missing payload field")
 	}
-
-	return nil
 }

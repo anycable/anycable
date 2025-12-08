@@ -311,34 +311,35 @@ func (n *NATS) writeEpoch(val string) {
 	}
 }
 
-func (n *NATS) HandleBroadcast(msg *common.StreamMessage) {
+func (n *NATS) HandleBroadcast(msg *common.StreamMessage) error {
 	if msg.Meta != nil && msg.Meta.Transient {
 		n.broadcaster.Broadcast(msg)
-		return
+		return nil
 	}
 
 	err := n.Ready(jetstreamReadyTimeout)
 	if err != nil {
 		n.log.Debug("JetStream is not ready yet to publish messages, add to backlog")
 		n.backlogAdd(msg)
-		return
+		return nil
 	}
 
 	offset, err := n.add(msg.Stream, msg.Data)
 
 	if err != nil {
-		n.log.Error("failed to add message to JetStream Stream", "stream", msg.Stream, "error", err)
-		return
+		return errorx.Decorate(err, "failed to add message to JetStream Stream: stream=%s", msg.Stream)
 	}
 
 	msg.Epoch = n.Epoch()
 	msg.Offset = offset
 
 	n.broadcaster.Broadcast(msg)
+	return nil
 }
 
-func (n *NATS) HandleCommand(msg *common.RemoteCommandMessage) {
+func (n *NATS) HandleCommand(msg *common.RemoteCommandMessage) error {
 	n.broadcaster.BroadcastCommand(msg)
+	return nil
 }
 
 func (n *NATS) Subscribe(stream string) string {
@@ -981,7 +982,7 @@ func (n *NATS) backlogFlush() {
 	defer n.backlogMu.Unlock()
 
 	for _, msg := range n.broadcastBacklog {
-		n.HandleBroadcast(msg)
+		n.HandleBroadcast(msg) // nolint:errcheck
 	}
 
 	n.broadcastBacklog = []*common.StreamMessage{}

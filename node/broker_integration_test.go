@@ -156,10 +156,10 @@ func sharedIntegrationRestore(t *testing.T, node *Node, controller *mocks.Contro
 		`{"type":"confirm","identifier":"user_jack"}`,
 	)
 
-	node.HandleBroadcast([]byte(`{"stream": "messages_1", "data": "Alice: Hey!"}`))
+	require.NoError(t, node.HandleBroadcast([]byte(`{"stream": "messages_1", "data": "Alice: Hey!"}`)))
 	requireReceive(t, prev_session, `{"identifier":"chat_1","message":"Alice: Hey!","stream_id":"messages_1","epoch":"2022","offset":1}`)
 
-	node.HandleBroadcast([]byte(`{"stream": "u_jack", "data": "New message from Alice"}`))
+	require.NoError(t, node.HandleBroadcast([]byte(`{"stream": "u_jack", "data": "New message from Alice"}`)))
 	requireReceive(t, prev_session, `{"identifier":"user_jack","message":"New message from Alice","stream_id":"u_jack","epoch":"2022","offset":1}`)
 
 	// wait before disconnecting to ensure that the session's cache is not expired
@@ -187,13 +187,13 @@ func sharedIntegrationRestore(t *testing.T, node *Node, controller *mocks.Contro
 	require.Contains(t, welcome["restored_ids"], "user_jack")
 
 	t.Run("Restore hub subscriptions", func(t *testing.T) {
-		node.HandleBroadcast([]byte(`{"stream": "messages_1", "data": "Lorenzo: Ciao"}`))
+		require.NoError(t, node.HandleBroadcast([]byte(`{"stream": "messages_1", "data": "Lorenzo: Ciao"}`)))
 		requireReceive(t, session, `{"identifier":"chat_1","message":"Lorenzo: Ciao","stream_id":"messages_1","epoch":"2022","offset":2}`)
 
-		node.HandleBroadcast([]byte(`{"stream": "presence_1", "data": "@lorenzo:join"}`))
+		node.HandleBroadcast([]byte(`{"stream": "presence_1", "data": "@lorenzo:join"}`)) // nolint:errcheck
 		requireReceive(t, session, `{"identifier":"chat_1","message":"@lorenzo:join","stream_id":"presence_1","epoch":"2022","offset":1}`)
 
-		node.HandleBroadcast([]byte(`{"stream": "u_jack", "data": "1:1"}`))
+		node.HandleBroadcast([]byte(`{"stream": "u_jack", "data": "1:1"}`)) // nolint:errcheck
 		requireReceive(t, session, `{"identifier":"user_jack","message":"1:1","stream_id":"u_jack","epoch":"2022","offset":2}`)
 	})
 
@@ -309,23 +309,23 @@ func TestIntegrationHistory_NATS(t *testing.T) {
 }
 
 func sharedIntegrationHistory(t *testing.T, node *Node, controller *mocks.Controller) {
-	node.HandleBroadcast([]byte(`{"stream": "messages_1","data":"Lorenzo: Ciao"}`))
+	node.HandleBroadcast([]byte(`{"stream": "messages_1","data":"Lorenzo: Ciao"}`)) // nolint:errcheck
 
 	// Use sleep to make sure Since option works (and we don't want
 	// to hack broker internals to update stream messages timestamps)
 	time.Sleep(2 * time.Second)
 	ts := time.Now().Unix()
 
-	node.HandleBroadcast([]byte(`{"stream": "messages_1","data":"Flavia: buona sera"}`))
+	node.HandleBroadcast([]byte(`{"stream": "messages_1","data":"Flavia: buona sera"}`)) // nolint:errcheck
 	// Transient messages must not be stored in the history
-	node.HandleBroadcast([]byte(`{"stream": "messages_1","data":"Who's there?","meta":{"transient":true}}`))
-	node.HandleBroadcast([]byte(`{"stream": "messages_1","data":"Mario: ta-dam!"}`))
+	node.HandleBroadcast([]byte(`{"stream": "messages_1","data":"Who's there?","meta":{"transient":true}}`)) // nolint:errcheck
+	node.HandleBroadcast([]byte(`{"stream": "messages_1","data":"Mario: ta-dam!"}`))                         // nolint:errcheck
 
-	node.HandleBroadcast([]byte(`{"stream": "presence_1","data":"1 new notification"}`))
-	node.HandleBroadcast([]byte(`{"stream": "presence_1","data":"2 new notifications"}`))
-	node.HandleBroadcast([]byte(`{"stream": "presence_1","data":"3 new notifications"}`))
-	node.HandleBroadcast([]byte(`{"stream": "presence_1","data":"4 new notifications"}`))
-	node.HandleBroadcast([]byte(`{"stream": "presence_1","data":"100+ new notifications"}`))
+	node.HandleBroadcast([]byte(`{"stream": "presence_1","data":"1 new notification"}`))     // nolint:errcheck
+	node.HandleBroadcast([]byte(`{"stream": "presence_1","data":"2 new notifications"}`))    // nolint:errcheck
+	node.HandleBroadcast([]byte(`{"stream": "presence_1","data":"3 new notifications"}`))    // nolint:errcheck
+	node.HandleBroadcast([]byte(`{"stream": "presence_1","data":"4 new notifications"}`))    // nolint:errcheck
+	node.HandleBroadcast([]byte(`{"stream": "presence_1","data":"100+ new notifications"}`)) // nolint:errcheck
 
 	t.Run("Subscribe with history", func(t *testing.T) {
 		session := requireAuthenticatedSession(t, node, "alice")

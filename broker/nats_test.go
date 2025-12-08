@@ -58,14 +58,14 @@ func TestNATSBroker_HistorySince_expiration(t *testing.T) {
 
 	start := time.Now().Unix() - 10
 
-	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "a"})
-	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "b"})
+	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "a"}) // nolint:errcheck
+	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "b"}) // nolint:errcheck
 
 	// Stream must be expired after 1 second
 	time.Sleep(2 * time.Second)
 
-	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "c"})
-	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "d"})
+	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "c"}) // nolint:errcheck
+	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "d"}) // nolint:errcheck
 
 	history, err := broker.HistorySince("test", start)
 	require.NoError(t, err)
@@ -114,9 +114,9 @@ func TestNATSBroker_HistorySince_with_limit(t *testing.T) {
 
 	start := time.Now().Unix() - 10
 
-	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "a"})
-	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "b"})
-	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "c"})
+	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "a"}) // nolint:errcheck
+	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "b"}) // nolint:errcheck
+	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "c"}) // nolint:errcheck
 
 	history, err := broker.HistorySince("test", start)
 	require.NoError(t, err)
@@ -153,14 +153,14 @@ func TestNATSBroker_HistoryFrom(t *testing.T) {
 	broker.Subscribe("test")
 	defer broker.Unsubscribe("test")
 
-	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "y"})
-	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "z"})
+	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "y"}) // nolint:errcheck
+	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "z"}) // nolint:errcheck
 
-	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "a"})
-	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "b"})
-	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "c"})
-	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "d"})
-	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "e"})
+	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "a"}) // nolint:errcheck
+	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "b"}) // nolint:errcheck
+	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "c"}) // nolint:errcheck
+	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "d"}) // nolint:errcheck
+	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "e"}) // nolint:errcheck
 
 	// We obtain sequence numbers with some offset to ensure that we use sequence numbers
 	// as stream offsets

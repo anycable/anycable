@@ -1022,7 +1022,7 @@ func TestBroadcasting(t *testing.T) {
 	})
 
 	t.Run("HandleBroadcast", func(t *testing.T) {
-		node.HandleBroadcast([]byte(`{"stream":"staind_2023","data":"{\"num\":5,\"title\":\"Out of time\"}"}`))
+		node.HandleBroadcast([]byte(`{"stream":"staind_2023","data":"{\"num\":5,\"title\":\"Out of time\"}"}`)) // nolint:errcheck
 
 		expected := `{"identifier":"music_channel","message":{"num":5,"title":"Out of time"}}`
 
@@ -1036,7 +1036,7 @@ func TestBroadcasting(t *testing.T) {
 	})
 
 	t.Run("HandleBroadcast_Batch", func(t *testing.T) {
-		node.HandleBroadcast([]byte(`[{"stream":"staind_2023","data":"{\"num\":9,\"title\":\"Hate me too\"}"},{"stream":"untest","data":"\"missing\""},{"stream":"staind_2023","data":"{\"num\":10,\"title\":\"Confessions of Fallen\"}"}]`))
+		node.HandleBroadcast([]byte(`[{"stream":"staind_2023","data":"{\"num\":9,\"title\":\"Hate me too\"}"},{"stream":"untest","data":"\"missing\""},{"stream":"staind_2023","data":"{\"num\":10,\"title\":\"Confessions of Fallen\"}"}]`)) // nolint:errcheck
 
 		first := `{"identifier":"music_channel","message":{"num":9,"title":"Hate me too"}}`
 		second := `{"identifier":"music_channel","message":{"num":10,"title":"Confessions of Fallen"}}`

@@ -224,7 +224,9 @@ func (s *HTTPBroadcaster) Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.node.HandleBroadcast(body)
-
-	w.WriteHeader(201)
+	if err = s.node.HandleBroadcast(body); err == nil {
+		w.WriteHeader(201)
+	} else {
+		w.WriteHeader(501)
+	}
 }
