@@ -345,8 +345,6 @@ func (r *Runner) runNode() (*node.Node, error) {
 		}
 	}
 
-	r.shutdownables = append(r.shutdownables, subscriber)
-
 	if r.broadcastersFactory != nil {
 		broadcasters, berr := r.broadcastersFactory(appNode, r.config, r.log)
 
@@ -363,6 +361,9 @@ func (r *Runner) runNode() (*node.Node, error) {
 			r.shutdownables = append(r.shutdownables, broadcaster)
 		}
 	}
+
+	// Ensure subscriber is closing after broadcasters, so no messages are lost in-between
+	r.shutdownables = append(r.shutdownables, subscriber)
 
 	err = controller.Start()
 	if err != nil {
