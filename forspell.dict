@@ -69,3 +69,4 @@ noauth
 jid
 webhooks
 realtime
+Valkey
