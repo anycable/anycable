@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/anycable/anycable-go/common"
+	"github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/server"
 	"github.com/anycable/anycable-go/version"
@@ -14,13 +15,17 @@ import (
 )
 
 // SSEHandler generates a new http handler for SSE connections
-func SSEHandler(n *node.Node, shutdownCtx context.Context, headersExtractor server.HeadersExtractor, config *Config, l *slog.Logger) http.Handler {
+func SSEHandler(n *node.Node, m metrics.Instrumenter, shutdownCtx context.Context, headersExtractor server.HeadersExtractor, config *Config, l *slog.Logger) http.Handler {
 	var allowedHosts []string
 
 	if config.AllowedOrigins == "" {
 		allowedHosts = []string{}
 	} else {
 		allowedHosts = strings.Split(config.AllowedOrigins, ",")
+	}
+
+	if m != nil {
+		m.RegisterGauge(metricsClientsNum, "The number of active SSE clients")
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -120,6 +125,13 @@ func SSEHandler(n *node.Node, shutdownCtx context.Context, headersExtractor serv
 		sessionCtx.Debug("session established")
 
 		shutdownReceived := false
+
+		if m != nil {
+			m.GaugeIncrement(metricsClientsNum)
+			defer func() {
+				m.GaugeDecrement(metricsClientsNum)
+			}()
+		}
 
 		for {
 			select {

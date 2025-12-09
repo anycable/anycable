@@ -32,7 +32,7 @@ func (e *Embedded) WebSocketHandler() (http.Handler, error) {
 // Please, provide your HTTP server's shutdown context to terminate SSE connections gracefully
 // on server shutdown.
 func (e *Embedded) SSEHandler(ctx context.Context) (http.Handler, error) {
-	sseHandler, err := e.r.defaultSSEHandler(e.n, ctx, e.r.config)
+	sseHandler, err := e.r.defaultSSEHandler(e.n, e.r.metrics, ctx, e.r.config)
 
 	if err != nil {
 		return nil, err

@@ -1,5 +1,7 @@
 # Change log
 
+- Add `sse_clients_num` metrics. ([@palkan][])
+
 - Fix shutdown race conditions between a broadcaster and a broker. ([@palkan][])
 
 ## 1.6.7 (2025-11-10)

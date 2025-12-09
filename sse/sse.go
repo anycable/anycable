@@ -23,6 +23,7 @@ const (
 	turboStreamsParam   = "turbo_signed_stream_name"
 	turboStreamsChannel = "Turbo::StreamsChannel"
 	historySinceParam   = "history_since"
+	metricsClientsNum   = "sse_clients_num"
 )
 
 func NewSSESession(n *node.Node, w http.ResponseWriter, r *http.Request, info *server.RequestInfo) (*node.Session, error) {

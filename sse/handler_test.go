@@ -75,7 +75,7 @@ func TestSSEHandler(t *testing.T) {
 
 	headersExtractor := &server.DefaultHeadersExtractor{}
 
-	handler := SSEHandler(appNode, context.Background(), headersExtractor, &conf, slog.Default())
+	handler := SSEHandler(appNode, nil, context.Background(), headersExtractor, &conf, slog.Default())
 
 	controller.
 		On("Shutdown").
@@ -105,7 +105,7 @@ func TestSSEHandler(t *testing.T) {
 		corsConf := NewConfig()
 		corsConf.AllowedOrigins = "*.example.com"
 
-		corsHandler := SSEHandler(appNode, context.Background(), headersExtractor, &corsConf, slog.Default())
+		corsHandler := SSEHandler(appNode, nil, context.Background(), headersExtractor, &corsConf, slog.Default())
 
 		corsHandler.ServeHTTP(w, req)
 
@@ -474,7 +474,7 @@ func TestSSEHandler(t *testing.T) {
 
 		shutdownCtx, shutdownFn := context.WithCancel(context.Background())
 
-		shutdownHandler := SSEHandler(appNode, shutdownCtx, headersExtractor, &conf, slog.Default())
+		shutdownHandler := SSEHandler(appNode, nil, shutdownCtx, headersExtractor, &conf, slog.Default())
 
 		go shutdownHandler.ServeHTTP(sw, req)
 

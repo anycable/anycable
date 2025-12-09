@@ -231,7 +231,7 @@ func (r *Runner) Run() error {
 				wsServer.Address(), r.config.SSE.Path),
 		)
 
-		sseHandler, err := r.defaultSSEHandler(appNode, wsServer.ShutdownCtx(), r.config)
+		sseHandler, err := r.defaultSSEHandler(appNode, r.metrics, wsServer.ShutdownCtx(), r.config)
 
 		if err != nil {
 			return errorx.Decorate(err, "failed to initialize SSE handler")
@@ -496,12 +496,12 @@ func (r *Runner) defaultWebSocketHandler(n *node.Node, c *config.Config, l *slog
 	}), nil
 }
 
-func (r *Runner) defaultSSEHandler(n *node.Node, ctx context.Context, c *config.Config) (http.Handler, error) {
+func (r *Runner) defaultSSEHandler(n *node.Node, m metricspkg.Instrumenter, ctx context.Context, c *config.Config) (http.Handler, error) {
 	extractor := server.DefaultHeadersExtractor{Headers: c.RPC.ProxyHeaders, Cookies: c.RPC.ProxyCookies}
 	if c.JWT.Enabled() {
 		extractor.AuthHeader = c.JWT.HeaderKey()
 	}
-	handler := sse.SSEHandler(n, ctx, &extractor, &c.SSE, r.log)
+	handler := sse.SSEHandler(n, m, ctx, &extractor, &c.SSE, r.log)
 
 	return handler, nil
 }
