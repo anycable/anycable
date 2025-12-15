@@ -174,6 +174,8 @@ type Session struct {
 	// Could be used to store arbitrary data within a session
 	InternalState map[string]interface{}
 	Log           *slog.Logger
+
+	idle bool
 }
 
 type SessionOption = func(*Session)
@@ -259,6 +261,13 @@ func WithMaxPendingSize(size uint64) SessionOption {
 	}
 }
 
+// AsIdleSession marks session as idle and do not launch any timers/routines
+func AsIdleSession() SessionOption {
+	return func(s *Session) {
+		s.idle = true
+	}
+}
+
 // BuildSession builds a new Session struct with the required defaults
 func BuildSession(conn Connection, env *common.SessionEnv) *Session {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -298,9 +307,11 @@ func NewSession(node *Node, conn Connection, url string, headers *map[string]str
 		opt(session)
 	}
 
-	go session.SendMessages()
+	if !session.idle {
+		go session.SendMessages()
 
-	session.startTimers()
+		session.startTimers()
+	}
 
 	return session
 }
@@ -337,7 +348,7 @@ func (s *Session) IsConnected() bool {
 }
 
 func (s *Session) IsResumeable() bool {
-	return s.resumeInterval > 0
+	return s.resumeInterval > 0 && !s.idle
 }
 
 func (s *Session) maybeDisconnectIdle() {
