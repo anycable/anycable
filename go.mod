@@ -41,6 +41,7 @@ require (
 require (
 	github.com/antithesishq/antithesis-sdk-go v0.5.0 // indirect
 	github.com/bufbuild/protocompile v0.14.1 // indirect
+	github.com/durable-streams/durable-streams/packages/client-go v0.1.0 // indirect
 	github.com/google/go-tpm v0.9.6 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/klauspost/compress v1.18.1 // indirect

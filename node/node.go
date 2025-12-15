@@ -409,7 +409,9 @@ func (n *Node) Authenticated(s *Session, ids string) {
 
 	s.SetIdentifiers(ids)
 	s.Connected = true
-	n.hub.AddSession(s)
+	if !s.idle {
+		n.hub.AddSession(s)
+	}
 }
 
 func (n *Node) TryRestoreSession(s *Session) (restored bool) {
