@@ -71,7 +71,7 @@ jobs:
         suffix:
           - arm64
         include:
-          - os: macos-13
+          - os: macos-15-intel
             suffix: amd64
     env:
       GO111MODULE: on
