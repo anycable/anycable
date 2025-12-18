@@ -67,14 +67,14 @@ func TestRedisBroker_HistorySince_expiration(t *testing.T) {
 
 	start := time.Now().Unix() - 10
 
-	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "a"})
-	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "b"})
+	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "a"}) // nolint: errcheck
+	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "b"}) // nolint: errcheck
 
 	// Redis must expire the stream after 1 second
 	time.Sleep(2 * time.Second)
 
-	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "c"})
-	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "d"})
+	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "c"}) // nolint: errcheck
+	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "d"}) // nolint: errcheck
 
 	history, err := broker.HistorySince("test", start)
 	require.NoError(t, err)
@@ -113,9 +113,9 @@ func TestRedisBroker_HistorySince_with_limit(t *testing.T) {
 
 	start := time.Now().Unix() - 10
 
-	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "a"})
-	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "b"})
-	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "c"})
+	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "a"}) // nolint: errcheck
+	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "b"}) // nolint: errcheck
+	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "c"}) // nolint: errcheck
 
 	history, err := broker.HistorySince("test", start)
 	require.NoError(t, err)
@@ -142,11 +142,11 @@ func TestRedisBroker_HistoryFrom(t *testing.T) {
 	defer broker.Shutdown(context.Background()) // nolint: errcheck
 	require.NoError(t, broker.Reset())
 
-	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "a"})
-	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "b"})
-	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "c"})
-	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "d"})
-	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "e"})
+	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "a"}) // nolint: errcheck
+	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "b"}) // nolint: errcheck
+	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "c"}) // nolint: errcheck
+	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "d"}) // nolint: errcheck
+	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "e"}) // nolint: errcheck
 
 	t.Run("With current epoch", func(t *testing.T) {
 		history, err := broker.HistoryFrom("test", broker.Epoch(), 2)

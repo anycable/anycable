@@ -155,13 +155,14 @@ func (b *RedisBroker) HandleBroadcast(msg *common.StreamMessage) error {
 	offset, err := b.add(msg.Stream, msg.Data)
 
 	if err != nil {
-		return errorx.Decorate(err, "failed to add message to Redis stream: stream=%s", msg.Stream)
+		return errorx.Decorate(err, "failed to add message to Redis stream: %s", msg.Stream)
 	}
 
 	msg.Epoch = b.epoch
 	msg.Offset = offset
 
 	b.broadcaster.Broadcast(msg)
+
 	return nil
 }
 
@@ -291,7 +292,7 @@ func (b *RedisBroker) Peak(stream string) (*common.StreamMessage, error) {
 	}
 
 	ctx := context.Background()
-	key := redisStreamPrefix + stream
+	key := b.toKey(redisStreamPrefix, stream)
 
 	res := client.Do(ctx, client.B().Xrevrange().Key(key).End("+").Start("-").Count(1).Build())
 
