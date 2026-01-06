@@ -768,9 +768,9 @@ func (n *Node) Whisper(s *Session, msg *common.Message) error {
 	}
 
 	if err := n.broker.HandleBroadcast(broadcast); err != nil {
-		s.Log.Debug("whispered", "stream", stream)
-	} else {
 		s.Log.Error("failed to whisper", "stream", stream, "err", err)
+	} else {
+		s.Log.Debug("whispered", "stream", stream)
 	}
 
 	return nil
