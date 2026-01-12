@@ -22,6 +22,8 @@ type Config struct {
 	StoreDir         string   `toml:"jetstream_store_dir"`
 	// Seconds to wait for JetStream to become ready (can take a lot of time when connecting to a cluster)
 	JetStreamReadyTimeout int `toml:"jetstream_ready_timeout"`
+	// Maximum message payload size in bytes (default: 1048576 = 1MB)
+	MaxPayload int `toml:"max_payload"`
 }
 
 func (c Config) ToToml() string {
@@ -103,6 +105,13 @@ func (c Config) ToToml() string {
 		result.WriteString(fmt.Sprintf("jetstream_ready_timeout = %d\n", c.JetStreamReadyTimeout))
 	} else {
 		result.WriteString(fmt.Sprintf("# jetstream_ready_timeout = %d\n", c.JetStreamReadyTimeout))
+	}
+
+	result.WriteString("#\n# Maximum message payload size\n#\n")
+	if c.MaxPayload > 0 {
+		result.WriteString(fmt.Sprintf("max_payload = %d\n", c.MaxPayload))
+	} else {
+		result.WriteString("# max_payload = 1048576\n")
 	}
 
 	return result.String()
