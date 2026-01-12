@@ -5,12 +5,10 @@ go 1.25.0
 toolchain go1.25.5
 
 require (
-	github.com/FZambia/sentinel v1.1.1
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fullstorydev/grpchan v1.1.1
 	github.com/go-chi/chi/v5 v5.2.3
 	github.com/golang/protobuf v1.5.4 // indirect
-	github.com/gomodule/redigo v1.9.3
 	github.com/google/gops v0.3.28
 	github.com/gorilla/websocket v1.5.3
 	github.com/hofstadter-io/cinful v1.0.0
