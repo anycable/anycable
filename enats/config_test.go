@@ -24,6 +24,7 @@ func TestConfig_ToToml(t *testing.T) {
 		JetStream:             true,
 		StoreDir:              "/tmp/nats-store",
 		JetStreamReadyTimeout: 30,
+		MaxPayload:            4194304,
 	}
 
 	tomlStr := conf.ToToml()
@@ -42,6 +43,7 @@ func TestConfig_ToToml(t *testing.T) {
 	assert.Contains(t, tomlStr, "jetstream = true")
 	assert.Contains(t, tomlStr, "jetstream_store_dir = \"/tmp/nats-store\"")
 	assert.Contains(t, tomlStr, "jetstream_ready_timeout = 30")
+	assert.Contains(t, tomlStr, "max_payload = 4194304")
 
 	// Round-trip test
 	var conf2 Config
@@ -49,4 +51,15 @@ func TestConfig_ToToml(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, conf, conf2)
+}
+
+func TestConfig_ToToml_DefaultMaxPayload(t *testing.T) {
+	conf := Config{
+		ServiceAddr: "localhost:4222",
+	}
+
+	tomlStr := conf.ToToml()
+
+	// When MaxPayload is 0 (default), it should be commented out
+	assert.Contains(t, tomlStr, "# max_payload = 1048576")
 }

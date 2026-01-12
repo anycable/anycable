@@ -925,6 +925,12 @@ func embeddedNatsCLIFlags(c *config.Config, routes *string, gateways *string) []
 			Destination: &c.EmbeddedNats.Trace,
 			Hidden:      true,
 		},
+
+		&cli.IntFlag{
+			Name:        "enats_max_payload",
+			Usage:       "Maximum message payload size in bytes (default: 1048576 = 1MB)",
+			Destination: &c.EmbeddedNats.MaxPayload,
+		},
 	})
 }
 

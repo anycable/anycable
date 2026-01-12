@@ -132,6 +132,7 @@ func (s *Service) Start() error {
 		Routes:     routes,
 		NoSigs:     true,
 		JetStream:  s.config.JetStream,
+		MaxPayload: int32(s.config.MaxPayload),
 	}
 
 	if s.config.StoreDir != "" {
