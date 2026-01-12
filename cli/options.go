@@ -730,6 +730,24 @@ func redisCLIFlags(c *config.Config) []cli.Flag {
 			Hidden:      true,
 		},
 
+		&cli.StringFlag{
+			Name:        "redis_tls_ca_cert_path",
+			Usage:       "Path to the CA certificate file to verify the Redis server certificate",
+			Destination: &c.Redis.TLSCACertPath,
+		},
+
+		&cli.StringFlag{
+			Name:        "redis_tls_client_cert_path",
+			Usage:       "Path to the client TLS certificate file for mutual TLS with Redis",
+			Destination: &c.Redis.TLSClientCertPath,
+		},
+
+		&cli.StringFlag{
+			Name:        "redis_tls_client_key_path",
+			Usage:       "Path to the client TLS private key file for mutual TLS with Redis",
+			Destination: &c.Redis.TLSClientKeyPath,
+		},
+
 		&cli.BoolFlag{
 			Name:        "redis_disable_cache",
 			Usage:       "Disable client-side caching",

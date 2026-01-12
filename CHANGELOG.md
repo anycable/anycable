@@ -1,5 +1,7 @@
 # Change log
 
+- Add mTLS support for Redis. ([@palkan][])
+
 ## 1.6.8 (2025-12-18)
 
 - Add `sse_clients_num` metrics. ([@palkan][])

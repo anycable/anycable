@@ -1,8 +1,11 @@
 package redis
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"net/url"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -23,6 +26,12 @@ type RedisConfig struct {
 	KeepalivePingInterval int `toml:"keepalive_ping_interval"`
 	// Whether to check server's certificate for validity (in case of rediss:// protocol)
 	TLSVerify bool `toml:"tls_verify"`
+	// Path to CA certificate file to verify Redis server certificate
+	TLSCACertPath string `toml:"tls_ca_cert_path"`
+	// Path to client TLS certificate file for mutual TLS
+	TLSClientCertPath string `toml:"tls_client_cert_path"`
+	// Path to client TLS private key file for mutual TLS
+	TLSClientKeyPath string `toml:"tls_client_key_path"`
 	// Max number of reconnect attempts
 	MaxReconnectAttempts int `toml:"max_reconnect_attempts"`
 	// Disable client-side caching
@@ -80,6 +89,26 @@ func (config *RedisConfig) Hostname() string {
 	}
 }
 
+// TLSClientCertAvailable returns true if both client certificate and key are set
+func (config *RedisConfig) TLSClientCertAvailable() bool {
+	return config.TLSClientCertPath != "" && config.TLSClientKeyPath != ""
+}
+
+// loadCACertPool loads CA certificate pool from file for server verification
+func (config *RedisConfig) loadCACertPool() (*x509.CertPool, error) {
+	caPEM, err := os.ReadFile(config.TLSCACertPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read Redis CA certificate: %w", err)
+	}
+
+	certPool := x509.NewCertPool()
+	if !certPool.AppendCertsFromPEM(caPEM) {
+		return nil, fmt.Errorf("failed to parse Redis CA certificate")
+	}
+
+	return certPool, nil
+}
+
 func (config *RedisConfig) ToRueidisOptions() (options *rueidis.ClientOption, err error) {
 	if config.IsSentinel() {
 		options, err = config.parseSentinels()
@@ -102,6 +131,24 @@ func (config *RedisConfig) ToRueidisOptions() (options *rueidis.ClientOption, er
 
 	if options.TLSConfig != nil {
 		options.TLSConfig.InsecureSkipVerify = !config.TLSVerify
+
+		// Load CA certificate for server verification if configured
+		if config.TLSCACertPath != "" {
+			certPool, err := config.loadCACertPool()
+			if err != nil {
+				return nil, err
+			}
+			options.TLSConfig.RootCAs = certPool
+		}
+
+		// Load client certificate for mutual TLS if configured
+		if config.TLSClientCertAvailable() {
+			cert, err := tls.LoadX509KeyPair(config.TLSClientCertPath, config.TLSClientKeyPath)
+			if err != nil {
+				return nil, fmt.Errorf("failed to load Redis client certificate: %w", err)
+			}
+			options.TLSConfig.Certificates = []tls.Certificate{cert}
+		}
 	}
 
 	options.DisableCache = config.DisableCache
@@ -154,6 +201,27 @@ func (config *RedisConfig) ToToml() string {
 		result.WriteString(fmt.Sprintf("tls_verify = %t\n", config.TLSVerify))
 	} else {
 		result.WriteString("# tls_verify = true\n")
+	}
+
+	result.WriteString("# Path to CA certificate file to verify Redis server\n")
+	if config.TLSCACertPath != "" {
+		result.WriteString(fmt.Sprintf("tls_ca_cert_path = \"%s\"\n", config.TLSCACertPath))
+	} else {
+		result.WriteString("# tls_ca_cert_path = \"/path/to/ca.pem\"\n")
+	}
+
+	result.WriteString("# Path to client TLS certificate file for mutual TLS\n")
+	if config.TLSClientCertPath != "" {
+		result.WriteString(fmt.Sprintf("tls_client_cert_path = \"%s\"\n", config.TLSClientCertPath))
+	} else {
+		result.WriteString("# tls_client_cert_path = \"/path/to/cert.pem\"\n")
+	}
+
+	result.WriteString("# Path to client TLS private key file for mutual TLS\n")
+	if config.TLSClientKeyPath != "" {
+		result.WriteString(fmt.Sprintf("tls_client_key_path = \"%s\"\n", config.TLSClientKeyPath))
+	} else {
+		result.WriteString("# tls_client_key_path = \"/path/to/key.pem\"\n")
 	}
 
 	result.WriteString("# Max number of reconnect attempts\n")

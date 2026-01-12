@@ -121,6 +121,18 @@ Redis channel for broadcasting (default: `"__anycable__"`). When using the `redi
 
 Disable [`CLIENT TRACKING`](https://redis.io/commands/client-tracking/) (it could be blocked by some managed Redis providers).
 
+**--redis_tls_ca_cert_path** (`ANYCABLE_REDIS_TLS_CA_CERT_PATH`)
+
+Path to the CA certificate file to verify the Redis server. This is useful when your Redis server uses a certificate signed by a private CA.
+
+**--redis_tls_client_cert_path** (`ANYCABLE_REDIS_TLS_CLIENT_CERT_PATH`)
+
+Path to the client TLS certificate file for mutual TLS authentication with Redis.
+
+**--redis_tls_client_key_path** (`ANYCABLE_REDIS_TLS_CLIENT_KEY_PATH`)
+
+Path to the client TLS private key file for mutual TLS authentication with Redis.
+
 ## NATS configuration
 
 **--nats_servers** (`ANYCABLE_NATS_SERVERS`)
