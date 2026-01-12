@@ -160,9 +160,7 @@ func (LegacyBroker) Announce() string {
 }
 
 func (b *LegacyBroker) HandleBroadcast(msg *common.StreamMessage) error {
-	if b.tracker.Has(msg.Stream) {
-		b.broadcaster.Broadcast(msg)
-	}
+	b.broadcaster.Broadcast(msg)
 
 	return nil
 }
