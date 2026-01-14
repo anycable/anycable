@@ -119,6 +119,7 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 	flags = append(flags, embeddedNatsCLIFlags(&c, &enatsRoutes, &enatsGateways)...)
 	flags = append(flags, sseCLIFlags(&c)...)
 	flags = append(flags, pusherCLIFlags(&c)...)
+	flags = append(flags, dsCLIFlags(&c)...)
 	flags = append(flags, miscCLIFlags(&c, &presets)...)
 
 	app := &cli.App{
@@ -262,6 +263,7 @@ Use shutdown_timeout instead.`)
 	// Propagate allowed origins to all the components
 	c.WS.AllowedOrigins = c.Server.AllowedOrigins
 	c.SSE.AllowedOrigins = c.Server.AllowedOrigins
+	c.DS.AllowedOrigins = c.Server.AllowedOrigins
 	c.HTTPBroadcast.CORSHosts = c.Server.AllowedOrigins
 
 	c.Pusher.AddCORSHeaders = c.HTTPBroadcast.AddCORSHeaders
@@ -482,6 +484,7 @@ const (
 	brokerCategoryDescription        = "BROKER:"
 	sseCategoryDescription           = "SERVER-SENT EVENTS:"
 	pusherCategoryDescription        = "PUSHER:"
+	dsCategoryDescription            = "DURABLE STREAMS:"
 
 	envPrefix = "ANYCABLE_"
 )
@@ -1472,6 +1475,23 @@ func sseCLIFlags(c *config.Config) []cli.Flag {
 			Usage:       "SSE endpoint path",
 			Value:       c.SSE.Path,
 			Destination: &c.SSE.Path,
+		},
+	})
+}
+
+func dsCLIFlags(c *config.Config) []cli.Flag {
+	return withDefaults(dsCategoryDescription, []cli.Flag{
+		&cli.BoolFlag{
+			Name:        "ds",
+			Usage:       "Enable Durable Streams endpoint",
+			Value:       c.DS.Enabled,
+			Destination: &c.DS.Enabled,
+		},
+		&cli.StringFlag{
+			Name:        "ds_path",
+			Usage:       "Durable Streams endpoint path",
+			Value:       c.DS.Path,
+			Destination: &c.DS.Path,
 		},
 	})
 }
