@@ -4,13 +4,21 @@ package ds
 import (
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/server"
 	"github.com/joomcode/errorx"
 )
+
+// Cursor epoch for CDN collapsing (October 9, 2024 00:00:00 UTC)
+var cursorEpoch = time.Date(2024, 10, 9, 0, 0, 0, 0, time.UTC)
+
+// Cursor interval in seconds (20 seconds per DS spec)
+const cursorInterval = 20
 
 const (
 	// Response header containing the next offset to read from.
@@ -69,6 +77,25 @@ type StreamParams struct {
 	Epoch     string
 	RawOffset string
 	LiveMode  string
+}
+
+// GenerateCursor generates a cursor value for CDN collapsing based on time intervals.
+// Per DS spec §8.1, cursors are interval-based (20-second intervals from epoch).
+// If a client provides a cursor >= current interval, we add jitter to ensure monotonic progression.
+func GenerateCursor(clientCursor string) string {
+	now := time.Now().UTC()
+	currentInterval := int64(now.Sub(cursorEpoch).Seconds() / cursorInterval)
+
+	// If client provided a cursor, ensure we return a strictly greater value
+	if clientCursor != "" {
+		clientInterval, err := strconv.ParseInt(clientCursor, 10, 64)
+		if err == nil && clientInterval >= currentInterval {
+			// Add jitter (1-60 intervals forward) to ensure progression
+			currentInterval = clientInterval + 1 + (now.UnixNano() % 60)
+		}
+	}
+
+	return strconv.FormatInt(currentInterval, 10)
 }
 
 func StreamParamsFromReq(r *http.Request, c *Config) (*StreamParams, error) {

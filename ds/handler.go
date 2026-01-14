@@ -133,14 +133,12 @@ func handleCatchup(brk broker.Broker, w http.ResponseWriter, sp *StreamParams, l
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "public, max-age=60, stale-while-revalidate=300")
 
-	if sp.Cursor != "" {
-		w.Header().Set(StreamCursorHeader, sp.Cursor)
-	}
+	w.Header().Set(StreamCursorHeader, GenerateCursor(sp.Cursor))
 
 	messages, err := fetchHistory(brk, sp)
 	if err != nil {
-		l.Error("failed to fetch history", "error", err)
-		w.WriteHeader(http.StatusBadRequest)
+		l.Debug("failed to fetch history", "error", err)
+		w.WriteHeader(http.StatusGone)
 		return
 	}
 

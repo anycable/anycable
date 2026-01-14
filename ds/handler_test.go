@@ -132,7 +132,7 @@ func TestDSHandler_GET(t *testing.T) {
 		assert.Equal(t, `[{"id":1},{"id":2}]`, w.Body.String())
 	})
 
-	t.Run("catch-up with invalid", func(t *testing.T) {
+	t.Run("catch-up with stale offset", func(t *testing.T) {
 		brk.
 			On("HistoryFrom", "test-stream", "poch", uint64(11)).
 			Return(nil, errors.New("invalid offset"))
@@ -142,7 +142,7 @@ func TestDSHandler_GET(t *testing.T) {
 
 		handler.ServeHTTP(w, req)
 
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusGone, w.Code)
 	})
 
 	t.Run("requires stream path", func(t *testing.T) {
