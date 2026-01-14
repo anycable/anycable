@@ -15,6 +15,7 @@ import (
 	"github.com/anycable/anycable-go/broker"
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/config"
+	"github.com/anycable/anycable-go/ds"
 	"github.com/anycable/anycable-go/enats"
 	"github.com/anycable/anycable-go/identity"
 	"github.com/anycable/anycable-go/logger"
@@ -249,6 +250,23 @@ func (r *Runner) Run() error {
 		}
 
 		wsServer.SetupHandler(r.config.SSE.Path, sseHandler)
+	}
+
+	if r.config.DS.Enabled {
+		dsStreamsPath := fmt.Sprintf("%s/*", r.config.DS.Path)
+
+		r.log.Info(
+			fmt.Sprintf("Handle Durable Streams requests at %s%s",
+				wsServer.Address(), dsStreamsPath),
+		)
+
+		dsHandler, err := r.defaultDSHandler(appNode, r.metrics, wsServer.ShutdownCtx(), r.config)
+
+		if err != nil {
+			return errorx.Decorate(err, "failed to initialize Durable Streams handler")
+		}
+
+		wsServer.SetupHandler(dsStreamsPath, dsHandler)
 	}
 
 	go r.startWSServer(wsServer)
@@ -524,6 +542,16 @@ func (r *Runner) defaultSSEHandler(n *node.Node, m metricspkg.Instrumenter, ctx 
 		extractor.AuthHeader = c.JWT.HeaderKey()
 	}
 	handler := sse.SSEHandler(n, m, ctx, &extractor, &c.SSE, r.log)
+
+	return handler, nil
+}
+
+func (r *Runner) defaultDSHandler(n *node.Node, m metricspkg.Instrumenter, ctx context.Context, c *config.Config) (http.Handler, error) {
+	extractor := server.DefaultHeadersExtractor{Headers: c.RPC.ProxyHeaders, Cookies: c.RPC.ProxyCookies}
+	if c.JWT.Enabled() {
+		extractor.AuthHeader = c.JWT.HeaderKey()
+	}
+	handler := ds.DSHandler(n, r.broker, m, ctx, &extractor, &c.DS, r.log)
 
 	return handler, nil
 }
