@@ -135,6 +135,8 @@ func handleCatchup(brk broker.Broker, w http.ResponseWriter, sp *StreamParams, l
 
 	w.Header().Set(StreamCursorHeader, GenerateCursor(sp.Cursor))
 
+	l.Debug("fetch history", "stream", sp.Path, "offset", sp.RawOffset)
+
 	messages, err := fetchHistory(brk, sp)
 	if err != nil {
 		l.Debug("failed to fetch history", "error", err)
@@ -281,7 +283,7 @@ func handleCatchup(brk broker.Broker, w http.ResponseWriter, sp *StreamParams, l
 // Otherwise uses HistoryFrom with the provided epoch and offset
 func fetchHistory(brk broker.Broker, sp *StreamParams) ([]common.StreamMessage, error) {
 	// Check reserved offsets first
-	if sp.RawOffset == StartOffset {
+	if sp.RawOffset == StartOffset || sp.RawOffset == "0" {
 		return brk.HistorySince(sp.Path, 0)
 	}
 

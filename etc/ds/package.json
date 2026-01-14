@@ -1,0 +1,20 @@
+{
+  "name": "ds-test-client",
+  "version": "1.0.0",
+  "description": "Simple Durable Streams test client for AnyCable",
+  "main": "index.js",
+  "type": "module",
+  "bin": {
+    "ds-client": "./index.js"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@durable-streams/client": "^0.1.0",
+    "boxen": "^8.0.0",
+    "chalk": "^5.3.0",
+    "commander": "^12.0.0",
+    "ora": "^8.0.0"
+  }
+}
