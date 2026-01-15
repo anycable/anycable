@@ -2,7 +2,6 @@ package ds
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -15,11 +14,7 @@ import (
 	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/server"
 	"github.com/anycable/anycable-go/version"
-)
-
-const (
-	defaultLongPollTimeout = 30 * time.Second
-	defaultMaxMessages     = 100
+	"github.com/anycable/anycable-go/ws"
 )
 
 // DSHandler generates a new http handler for Durable Streams connections
@@ -72,37 +67,34 @@ func DSHandler(n *node.Node, brk broker.Broker, m metrics.Instrumenter, shutdown
 			return
 		}
 
-		sessionCtx := l.With("sid", info.UID).With("transport", "ds").With("stream", streamParams.Path)
-		session, err := NewDSSession(n, w, info, streamParams)
-
-		if session == nil && err == nil {
-			sessionCtx.Debug("authentication canceled")
-			// TODO: which status?
-			w.WriteHeader(http.StatusGone)
-			return
-		}
+		// Authenticate and init stream
+		stream, err := NewDSSession(n, w, info, streamParams)
 
 		if err != nil {
-			sessionCtx.Error("failed to authenticate", "err", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		if !session.IsConnected() {
-			sessionCtx.Debug("unauthenticated", "err", err)
+			l.Debug("unauthenticated", "err", err)
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 
-		// Authentication is passed at this point
-		//
+		stream.Session.Log.Debug("session established")
+		defer func() {
+			stream.Session.Log.Debug("session completed")
+			stream.Session.Disconnect("done", ws.CloseNormalClosure)
+		}()
+
 		// TODO: check that stream exists and get the tail offset
 		// (same mechanism as in head)
-		//
-		// TODO: Now we need to authorize access to the stream
+		tail := &common.StreamMessage{}
+
+		// TODO: Now we need to authorize access to the stream (signed streams?)
 
 		if r.Method == http.MethodHead {
-			handleHead(brk, w, streamParams, sessionCtx)
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Cache-Control", "no-store")
+
+			w.Header().Set(StreamOffsetHeader, EncodeOffset(tail.Offset, tail.Epoch))
+
+			w.WriteHeader(http.StatusOK)
 			return
 		}
 
@@ -111,102 +103,53 @@ func DSHandler(n *node.Node, brk broker.Broker, m metrics.Instrumenter, shutdown
 				m.CounterIncrement(metricsRequestsTotal)
 			}
 
-			if streamParams.LiveMode == "" {
-				handleCatchup(brk, w, streamParams, sessionCtx)
+			if streamParams.LiveMode != "sse" {
+				handleHTTP(n, brk, w, stream, tail)
+			} else {
+				// TODO: implement SSE
+				w.WriteHeader(http.StatusNotImplemented)
 			}
 			return
 		}
 	})
 }
 
-func handleHead(brk broker.Broker, w http.ResponseWriter, sp *StreamParams, l *slog.Logger) {
-	// TODO: we currently only support JSON streams
+func handleHTTP(n *node.Node, brk broker.Broker, w http.ResponseWriter, s *Stream, tail *common.StreamMessage) {
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Cache-Control", "no-store")
-
-	// FIXME: we must extend broker interface to allow getting a stream info
-	// For now, we just return "now" as the next offset
-	w.Header().Set(StreamOffsetHeader, "now")
-
-	w.WriteHeader(http.StatusOK)
-}
-
-func handleCatchup(brk broker.Broker, w http.ResponseWriter, sp *StreamParams, l *slog.Logger) {
-	// Set headers for catch-up mode
-	w.Header().Set("Content-Type", "application/json")
+	// TODO: how to distinguish private streams?
 	w.Header().Set("Cache-Control", "public, max-age=60, stale-while-revalidate=300")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
 
-	w.Header().Set(StreamCursorHeader, GenerateCursor(sp.Cursor))
+	w.Header().Set(StreamCursorHeader, s.NextCursor())
 
-	l.Debug("fetch history", "stream", sp.Path, "offset", sp.RawOffset)
+	backlog, err := fetchHistory(brk, s.Params)
 
-	messages, err := fetchHistory(brk, sp)
 	if err != nil {
-		l.Debug("failed to fetch history", "error", err)
+		s.Session.Log.Error("failed to fetch history", "err", err)
+		// Either offset is unreachable or epoch has changed
 		w.WriteHeader(http.StatusGone)
 		return
 	}
 
-	// Limit messages
-	if len(messages) > defaultMaxMessages {
-		messages = messages[:defaultMaxMessages]
+	if len(backlog) > 0 {
+		tail = &backlog[len(backlog)-1]
 	}
 
-	// Encode messages as JSON array
-	var jsonMessages []interface{}
-	for _, msg := range messages {
-		var data interface{}
-		if jerr := json.Unmarshal([]byte(msg.Data), &data); jerr == nil {
-			jsonMessages = append(jsonMessages, data)
-		}
-	}
+	if len(backlog) > 0 || s.Params.LiveMode != "poll" {
+		w.Header().Set(StreamOffsetHeader, EncodeOffset(tail.Offset, tail.Epoch))
+		w.Header().Set(StreamUpToDateHeader, "true")
 
-	if jsonMessages == nil {
-		jsonMessages = []interface{}{}
-	}
+		w.Write(EncodeJSONBatch(backlog)) // nolint: errcheck
 
-	responseData, err := json.Marshal(jsonMessages)
-	if err != nil {
-		l.Error("failed to encode messages", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		w.WriteHeader(http.StatusOK)
 		return
 	}
 
-	// Set offset header
-	var nextOffset uint64
-	var nextEpoch string
-
-	if len(messages) > 0 {
-		lastMsg := messages[len(messages)-1]
-		nextOffset = lastMsg.Offset
-		nextEpoch = lastMsg.Epoch
-	} else {
-		nextOffset = sp.Offset
-		nextEpoch = sp.Epoch
-	}
-
-	w.Header().Set(StreamOffsetHeader, EncodeOffset(nextOffset, nextEpoch))
-
-	if len(messages) < defaultMaxMessages {
-		w.Header().Set(StreamUpToDateHeader, "true")
-	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Write(responseData) // nolint: errcheck
+	// Entering polling
+	// TODO
+	time.Sleep(5 * time.Second)
+	w.WriteHeader(http.StatusNoContent)
 }
-
-// func handleLongPoll(w http.ResponseWriter, r *http.Request, streamPath string, offset uint64, epoch string, cursor string, brk broker.Broker, shutdownCtx context.Context, l *slog.Logger) {
-// 	// Set headers for long-poll mode
-// 	if r.ProtoMajor == 1 {
-// 		w.Header().Set("Connection", "keep-alive")
-// 	}
-// 	w.Header().Set("Content-Type", "application/json")
-// 	w.Header().Set("Cache-Control", "private, max-age=60, stale-while-revalidate=300")
-
-// 	// TODO: Implement actual long-polling with timeout
-// 	// For now, we just do a catch-up read
-// 	handleCatchup(w, streamPath, offset, epoch, cursor, brk, l)
-// }
 
 // func handleSSE(w http.ResponseWriter, r *http.Request, streamPath string, offset uint64, epoch string, cursor string, n *node.Node, brk broker.Broker, session *node.Session, conn *Connection, shutdownCtx context.Context, l *slog.Logger) {
 // 	// Set headers for SSE mode

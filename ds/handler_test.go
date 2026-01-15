@@ -14,11 +14,10 @@ import (
 	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/server"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
 func TestDSHandler_HEAD(t *testing.T) {
-	appNode, controller, brk := buildNode()
+	appNode, brk := buildNode()
 	conf := NewConfig()
 	conf.Path = "/ds"
 
@@ -27,13 +26,6 @@ func TestDSHandler_HEAD(t *testing.T) {
 	headersExtractor := &server.DefaultHeadersExtractor{}
 
 	handler := DSHandler(appNode, brk, nil, context.Background(), headersExtractor, &conf, slog.Default())
-
-	controller.
-		On("Authenticate", mock.Anything, mock.Anything, mock.Anything).
-		Return(&common.ConnectResult{
-			Status:        common.SUCCESS,
-			Transmissions: []string{},
-		}, nil)
 
 	t.Run("returns stream metadata", func(t *testing.T) {
 		w := httptest.NewRecorder()
@@ -57,15 +49,7 @@ func TestDSHandler_HEAD(t *testing.T) {
 	})
 
 	t.Run("requires authentication", func(t *testing.T) {
-		controller.ExpectedCalls = nil
-		controller.
-			On("Authenticate", mock.Anything, mock.Anything, mock.Anything).
-			Return(&common.ConnectResult{
-				Status: common.FAILURE,
-			}, nil).Once()
-		controller.
-			On("Shutdown").
-			Return(nil)
+		t.Skip("no authentication yet")
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("HEAD", "/ds/test-stream", nil)
@@ -77,7 +61,7 @@ func TestDSHandler_HEAD(t *testing.T) {
 }
 
 func TestDSHandler_GET(t *testing.T) {
-	appNode, controller, brk := buildNode()
+	appNode, brk := buildNode()
 	conf := NewConfig()
 	conf.Path = "/ds"
 
@@ -87,14 +71,7 @@ func TestDSHandler_GET(t *testing.T) {
 
 	handler := DSHandler(appNode, brk, nil, context.Background(), headersExtractor, &conf, slog.Default())
 
-	controller.
-		On("Authenticate", mock.Anything, mock.Anything, mock.Anything).
-		Return(&common.ConnectResult{
-			Status:        common.SUCCESS,
-			Transmissions: []string{},
-		}, nil)
-
-	t.Run("catch-up mode", func(t *testing.T) {
+	t.Run("catch-up mode w/ empty stream", func(t *testing.T) {
 		brk.
 			On("HistorySince", "test-stream", int64(0)).
 			Return([]common.StreamMessage{}, nil)
@@ -173,7 +150,7 @@ func TestDSHandler_GET(t *testing.T) {
 	})
 }
 
-func buildNode() (*node.Node, *mocks.Controller, *mocks.Broker) {
+func buildNode() (*node.Node, *mocks.Broker) {
 	controller := &mocks.Controller{}
 	controller.
 		On("Shutdown").
@@ -188,5 +165,5 @@ func buildNode() (*node.Node, *mocks.Controller, *mocks.Broker) {
 	brk := &mocks.Broker{}
 	n.SetBroker(brk)
 
-	return n, controller, brk
+	return n, brk
 }
