@@ -157,7 +157,7 @@ async function fetchMessages(streamUrl, offset) {
 // ============================================================================
 
 async function runCatchupMode(streamUrl) {
-  let currentOffset = "now";
+  let currentOffset = "-1";
 
   const poll = async () => {
     try {
