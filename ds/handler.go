@@ -96,6 +96,9 @@ func DSHandler(n *node.Node, brk broker.Broker, m metrics.Instrumenter, shutdown
 
 		// Authentication is passed at this point
 		//
+		// TODO: check that stream exists and get the tail offset
+		// (same mechanism as in head)
+		//
 		// TODO: Now we need to authorize access to the stream
 
 		if r.Method == http.MethodHead {

@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
@@ -201,6 +202,126 @@ func TestDSIntegration_AuthenticationRequired(t *testing.T) {
 	_, err := stream.Head(ctx)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "401")
+}
+
+func TestDSIntegration_LongPoll(t *testing.T) {
+	ctx := context.Background()
+
+	n, brk, controller, ts := setupIntegrationServer(t)
+	defer ts.Close()
+	defer n.Shutdown(ctx) // nolint: errcheck
+
+	controller.
+		On("Authenticate", mock.Anything, mock.Anything, mock.Anything).
+		Return(&common.ConnectResult{
+			Status:        common.SUCCESS,
+			Transmissions: []string{`{"type":"welcome"}`},
+		}, nil)
+
+	t.Run("should wait for new data with long-poll", func(t *testing.T) {
+		t.Skip("TODO: Long-poll mode is not yet implemented")
+
+		streamName := "longpoll-wait-test"
+		brk.Subscribe(streamName)
+
+		client := durablestreams.NewClient(durablestreams.WithBaseURL(ts.URL))
+		stream := client.Stream("/ds/" + streamName)
+
+		// Get current offset first
+		meta, err := stream.Head(ctx)
+		require.NoError(t, err)
+
+		var receivedData []map[string]interface{}
+		var readErr error
+		var wg sync.WaitGroup
+		wg.Add(1)
+
+		// Start reading in long-poll mode
+		go func() {
+			defer wg.Done()
+
+			readCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			defer cancel()
+
+			it := stream.Read(readCtx,
+				durablestreams.WithOffset(durablestreams.Offset(meta.NextOffset)),
+				durablestreams.WithLive(durablestreams.LiveModeLongPoll),
+			)
+			defer it.Close()
+
+			chunk, err := it.Next()
+			if err != nil {
+				if err != durablestreams.Done {
+					readErr = err
+				}
+				return
+			}
+
+			if len(chunk.Data) > 0 {
+				var messages []map[string]interface{}
+				if jerr := json.Unmarshal(chunk.Data, &messages); jerr == nil {
+					receivedData = messages
+				}
+			}
+		}()
+
+		// Wait a bit for the long-poll to be active
+		time.Sleep(500 * time.Millisecond)
+
+		// Append data while long-poll is waiting
+		err = brk.HandleBroadcast(&common.StreamMessage{
+			Stream: streamName,
+			Data:   `{"msg":"new data"}`,
+		})
+		require.NoError(t, err)
+
+		wg.Wait()
+
+		if readErr != nil {
+			t.Logf("Long-poll read error: %v", readErr)
+		}
+		require.NoError(t, readErr)
+		require.NotEmpty(t, receivedData, "should have received data via long-poll")
+		assert.Equal(t, "new data", receivedData[0]["msg"])
+	})
+
+	t.Run("should return immediately if data already exists", func(t *testing.T) {
+		streamName := "longpoll-immediate-test"
+		brk.Subscribe(streamName)
+
+		// Add data first
+		err := brk.HandleBroadcast(&common.StreamMessage{
+			Stream: streamName,
+			Data:   `{"msg":"existing data"}`,
+		})
+		require.NoError(t, err)
+
+		time.Sleep(50 * time.Millisecond)
+
+		client := durablestreams.NewClient(durablestreams.WithBaseURL(ts.URL))
+		stream := client.Stream("/ds/" + streamName)
+
+		// Read should return existing data immediately (no live mode)
+		startTime := time.Now()
+
+		it := stream.Read(ctx, durablestreams.WithOffset(durablestreams.StartOffset))
+		defer it.Close()
+
+		chunk, err := it.Next()
+		require.NoError(t, err)
+
+		elapsed := time.Since(startTime)
+
+		// Should return quickly (not waiting for timeout)
+		assert.Less(t, elapsed, 2*time.Second, "should return immediately without waiting")
+
+		var messages []map[string]interface{}
+		err = json.Unmarshal(chunk.Data, &messages)
+		require.NoError(t, err)
+
+		require.NotEmpty(t, messages)
+		assert.Equal(t, "existing data", messages[0]["msg"])
+	})
 }
 
 func setupIntegrationServer(t *testing.T) (*node.Node, broker.Broker, *mocks.Controller, *httptest.Server) {
