@@ -70,7 +70,7 @@ func TestEncodeOffset(t *testing.T) {
 		epoch  string
 		want   string
 	}{
-		{"without epoch", 123, "", "123"},
+		{"without epoch", 123, "", "0"},
 		{"with epoch", 123, "epoch1", "123::epoch1"},
 		{"zero offset", 0, "epoch1", "0::epoch1"},
 	}

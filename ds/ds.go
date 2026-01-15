@@ -3,15 +3,14 @@ package ds
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/server"
-	"github.com/joomcode/errorx"
 )
 
 // Cursor epoch for CDN collapsing (October 9, 2024 00:00:00 UTC)
@@ -71,31 +70,14 @@ const (
 )
 
 type StreamParams struct {
-	Path      string
+	// Name is the name of the stream in AnyCable (could differ from Path in the future)
+	Name      string
 	Cursor    string
 	Offset    uint64
 	Epoch     string
-	RawOffset string
 	LiveMode  string
-}
-
-// GenerateCursor generates a cursor value for CDN collapsing based on time intervals.
-// Per DS spec §8.1, cursors are interval-based (20-second intervals from epoch).
-// If a client provides a cursor >= current interval, we add jitter to ensure monotonic progression.
-func GenerateCursor(clientCursor string) string {
-	now := time.Now().UTC()
-	currentInterval := int64(now.Sub(cursorEpoch).Seconds() / cursorInterval)
-
-	// If client provided a cursor, ensure we return a strictly greater value
-	if clientCursor != "" {
-		clientInterval, err := strconv.ParseInt(clientCursor, 10, 64)
-		if err == nil && clientInterval >= currentInterval {
-			// Add jitter (1-60 intervals forward) to ensure progression
-			currentInterval = clientInterval + 1 + (now.UnixNano() % 60)
-		}
-	}
-
-	return strconv.FormatInt(currentInterval, 10)
+	Path      string
+	RawOffset string
 }
 
 func StreamParamsFromReq(r *http.Request, c *Config) (*StreamParams, error) {
@@ -130,8 +112,11 @@ func StreamParamsFromReq(r *http.Request, c *Config) (*StreamParams, error) {
 		return nil, err
 	}
 
+	name := streamPath
+
 	return &StreamParams{
 		Path:      streamPath,
+		Name:      name,
 		Cursor:    cursor,
 		Offset:    offset,
 		Epoch:     epoch,
@@ -140,30 +125,51 @@ func StreamParamsFromReq(r *http.Request, c *Config) (*StreamParams, error) {
 	}, nil
 }
 
-func NewDSSession(n *node.Node, w http.ResponseWriter, info *server.RequestInfo, sp *StreamParams) (*node.Session, error) {
+// Stream represents a durable stream connection be wrapping the corresponding node.Session that also carries
+// the original stream request information.
+type Stream struct {
+	Session *node.Session
+	Params  *StreamParams
+}
+
+// NextCursor generates a cursor value for CDN collapsing based on time intervals.
+// Per DS spec §8.1, cursors are interval-based (20-second intervals from epoch).
+// If a client provides a cursor >= current interval, we add jitter to ensure monotonic progression.
+func (s *Stream) NextCursor() string {
+	now := time.Now().UTC()
+	currentInterval := int64(now.Sub(cursorEpoch).Seconds() / cursorInterval)
+
+	// If client provided a cursor, ensure we return a strictly greater value
+	if s.Params.Cursor != "" {
+		clientInterval, err := strconv.ParseInt(s.Params.Cursor, 10, 64)
+		if err == nil && clientInterval >= currentInterval {
+			// Add jitter (1-60 intervals forward) to ensure progression
+			currentInterval = clientInterval + 1 + (now.UnixNano() % 60)
+		}
+	}
+
+	return strconv.FormatInt(currentInterval, 10)
+}
+
+// NewDSSession creates a node.Session struct to represents a durable stream connection and register it within
+// the AnyCable node. TODO: Integrate JWT authentication.
+func NewDSSession(n *node.Node, w http.ResponseWriter, info *server.RequestInfo, sp *StreamParams) (*Stream, error) {
 	sopts := []node.SessionOption{
 		node.WithEncoder(&Encoder{Cursor: sp.Cursor}),
 	}
 
 	if sp.LiveMode == "" {
-		// Create a temporary session for authentication
-		// Use a dummy connection since we don't need it for non-live modes
-		sopts = append(sopts, node.AsIdleSession())
+		// Create a one-off session that doesn't need to be registered in the pub/sub system.
+		// We need it to provide a common interface for all DS modes.
+		sopts = append(sopts, node.InactiveSession())
 	}
 
 	conn := NewConnection(w)
 	session := node.NewSession(n, conn, info.URL, info.Headers, info.UID, sopts...)
+	session.Log = session.Log.With("ds", sp.Path)
 
-	res, err := n.Authenticate(session)
+	// TODO: add authentication (JWT?)
+	n.Authenticated(session, fmt.Sprintf("ds::%s", session.GetID()))
 
-	// canceled
-	if res == nil && err == nil {
-		return nil, nil
-	}
-
-	if err != nil || res.Status == common.ERROR {
-		return nil, errorx.Decorate(err, "failed to authenticate")
-	}
-
-	return session, nil
+	return &Stream{session, sp}, nil
 }

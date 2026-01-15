@@ -409,7 +409,7 @@ func (n *Node) Authenticated(s *Session, ids string) {
 
 	s.SetIdentifiers(ids)
 	s.Connected = true
-	if !s.idle {
+	if !s.inactive {
 		n.hub.AddSession(s)
 	}
 }
@@ -892,6 +892,10 @@ func (n *Node) ExecuteRemoteCommand(msg *common.RemoteCommandMessage) {
 
 // Disconnect adds session to disconnector queue and unregister session from hub
 func (n *Node) Disconnect(s *Session) error {
+	if s.inactive {
+		return nil
+	}
+
 	if s.IsResumeable() {
 		n.broker.TouchSession(s.GetID()) // nolint:errcheck
 	} else {

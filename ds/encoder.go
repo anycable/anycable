@@ -1,6 +1,7 @@
 package ds
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -22,8 +23,9 @@ const (
 // EncodeOffset encodes offset and epoch into a single opaque offset string
 // Format: <offset>::<epoch> to maintain lexicographic ordering
 func EncodeOffset(offset uint64, epoch string) string {
+	// Empty stream
 	if epoch == "" {
-		return fmt.Sprintf("%d", offset)
+		return "0"
 	}
 	return fmt.Sprintf("%d%s%s", offset, offsetSeparator, epoch)
 }
@@ -47,6 +49,19 @@ func DecodeOffset(offsetStr string) (uint64, string, error) {
 	}
 
 	return offset, epoch, nil
+}
+
+func EncodeJSONBatch(batch []common.StreamMessage) []byte {
+	var buf bytes.Buffer
+	buf.WriteString("[")
+	for i, reply := range batch {
+		if i > 0 {
+			buf.WriteString(",")
+		}
+		buf.Write([]byte(reply.Data))
+	}
+	buf.WriteString("]")
+	return buf.Bytes()
 }
 
 // Encoder is responsible for converting messages to Durable Streams format

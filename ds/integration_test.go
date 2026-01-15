@@ -19,23 +19,15 @@ import (
 	"github.com/anycable/anycable-go/server"
 	durablestreams "github.com/durable-streams/durable-streams/packages/client-go"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
 func TestDSIntegration_Head(t *testing.T) {
 	ctx := context.Background()
 
-	n, _, controller, ts := setupIntegrationServer(t)
+	n, _, ts := setupIntegrationServer(t)
 	defer ts.Close()
 	defer n.Shutdown(ctx) // nolint: errcheck
-
-	controller.
-		On("Authenticate", mock.Anything, mock.Anything, mock.Anything).
-		Return(&common.ConnectResult{
-			Status:        common.SUCCESS,
-			Transmissions: []string{`{"type":"welcome"}`},
-		}, nil)
 
 	client := durablestreams.NewClient(durablestreams.WithBaseURL(ts.URL))
 	stream := client.Stream("/ds/test-stream")
@@ -50,16 +42,9 @@ func TestDSIntegration_Head(t *testing.T) {
 func TestDSIntegration_CatchupRead(t *testing.T) {
 	ctx := context.Background()
 
-	n, brk, controller, ts := setupIntegrationServer(t)
+	n, brk, ts := setupIntegrationServer(t)
 	defer ts.Close()
 	defer n.Shutdown(ctx) // nolint: errcheck
-
-	controller.
-		On("Authenticate", mock.Anything, mock.Anything, mock.Anything).
-		Return(&common.ConnectResult{
-			Status:        common.SUCCESS,
-			Transmissions: []string{`{"type":"welcome"}`},
-		}, nil)
 
 	t.Run("with empty stream", func(t *testing.T) {
 		client := durablestreams.NewClient(durablestreams.WithBaseURL(ts.URL))
@@ -183,18 +168,13 @@ func TestDSIntegration_CatchupRead(t *testing.T) {
 }
 
 func TestDSIntegration_AuthenticationRequired(t *testing.T) {
+	t.Skip("no authentication yet")
+
 	ctx := context.Background()
 
-	n, _, controller, ts := setupIntegrationServer(t)
+	n, _, ts := setupIntegrationServer(t)
 	defer ts.Close()
 	defer n.Shutdown(ctx) // nolint: errcheck
-
-	controller.
-		On("Authenticate", mock.Anything, mock.Anything, mock.Anything).
-		Return(&common.ConnectResult{
-			Status:        common.FAILURE,
-			Transmissions: []string{`{"type":"disconnect"}`},
-		}, nil)
 
 	client := durablestreams.NewClient(durablestreams.WithBaseURL(ts.URL))
 	stream := client.Stream("/ds/test-stream")
@@ -207,16 +187,9 @@ func TestDSIntegration_AuthenticationRequired(t *testing.T) {
 func TestDSIntegration_LongPoll(t *testing.T) {
 	ctx := context.Background()
 
-	n, brk, controller, ts := setupIntegrationServer(t)
+	n, brk, ts := setupIntegrationServer(t)
 	defer ts.Close()
 	defer n.Shutdown(ctx) // nolint: errcheck
-
-	controller.
-		On("Authenticate", mock.Anything, mock.Anything, mock.Anything).
-		Return(&common.ConnectResult{
-			Status:        common.SUCCESS,
-			Transmissions: []string{`{"type":"welcome"}`},
-		}, nil)
 
 	t.Run("should wait for new data with long-poll", func(t *testing.T) {
 		t.Skip("TODO: Long-poll mode is not yet implemented")
@@ -244,15 +217,15 @@ func TestDSIntegration_LongPoll(t *testing.T) {
 			defer cancel()
 
 			it := stream.Read(readCtx,
-				durablestreams.WithOffset(durablestreams.Offset(meta.NextOffset)),
+				durablestreams.WithOffset(meta.NextOffset),
 				durablestreams.WithLive(durablestreams.LiveModeLongPoll),
 			)
 			defer it.Close()
 
-			chunk, err := it.Next()
-			if err != nil {
-				if err != durablestreams.Done {
-					readErr = err
+			chunk, itErr := it.Next()
+			if itErr != nil {
+				if itErr != durablestreams.Done {
+					readErr = itErr
 				}
 				return
 			}
@@ -324,7 +297,7 @@ func TestDSIntegration_LongPoll(t *testing.T) {
 	})
 }
 
-func setupIntegrationServer(t *testing.T) (*node.Node, broker.Broker, *mocks.Controller, *httptest.Server) {
+func setupIntegrationServer(t *testing.T) (*node.Node, broker.Broker, *httptest.Server) {
 	t.Helper()
 
 	config := node.NewConfig()
@@ -362,5 +335,5 @@ func setupIntegrationServer(t *testing.T) (*node.Node, broker.Broker, *mocks.Con
 
 	ts := httptest.NewServer(mux)
 
-	return n, brk, controller, ts
+	return n, brk, ts
 }

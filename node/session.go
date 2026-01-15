@@ -175,7 +175,7 @@ type Session struct {
 	InternalState map[string]interface{}
 	Log           *slog.Logger
 
-	idle bool
+	inactive bool
 }
 
 type SessionOption = func(*Session)
@@ -261,10 +261,10 @@ func WithMaxPendingSize(size uint64) SessionOption {
 	}
 }
 
-// AsIdleSession marks session as idle and do not launch any timers/routines
-func AsIdleSession() SessionOption {
+// InactiveSession marks session as idle and do not launch any timers/routines
+func InactiveSession() SessionOption {
 	return func(s *Session) {
-		s.idle = true
+		s.inactive = true
 	}
 }
 
@@ -307,7 +307,7 @@ func NewSession(node *Node, conn Connection, url string, headers *map[string]str
 		opt(session)
 	}
 
-	if !session.idle {
+	if !session.inactive {
 		go session.SendMessages()
 
 		session.startTimers()
@@ -348,7 +348,7 @@ func (s *Session) IsConnected() bool {
 }
 
 func (s *Session) IsResumeable() bool {
-	return s.resumeInterval > 0 && !s.idle
+	return s.resumeInterval > 0 && !s.inactive
 }
 
 func (s *Session) maybeDisconnectIdle() {
