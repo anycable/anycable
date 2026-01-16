@@ -9,8 +9,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/server"
+	"github.com/anycable/anycable-go/sse"
+	"github.com/anycable/anycable-go/utils"
 )
 
 // Cursor epoch for CDN collapsing (October 9, 2024 00:00:00 UTC)
@@ -60,11 +63,15 @@ const (
 	// Query parameter for echoing cursor (CDN collapsing).
 	CursorQueryParam = "cursor"
 
+	// Modes
+	LongPollMode = "long-poll"
+	SSEMode      = "sse"
+
 	// Metrics
 
 	metricsRequestsTotal = "ds_requests_total"
-	metricsPollTotal     = "ds_poll_clients_total"
-	metricsSSETotal      = "ds_sse_clients_total"
+	metricsPollTotal     = "ds_poll_requests_total"
+	metricsSSETotal      = "ds_sse_requests_total"
 	metricsPollNum       = "ds_poll_clients_num"
 	metricsSSENum        = "ds_sse_clients_num"
 )
@@ -93,7 +100,7 @@ func StreamParamsFromReq(r *http.Request, c *Config) (*StreamParams, error) {
 	liveMode := r.URL.Query().Get(LiveQueryParam)
 	cursor := r.URL.Query().Get(CursorQueryParam)
 
-	if liveMode != "long-poll" && liveMode != "sse" && liveMode != "" {
+	if liveMode != LongPollMode && liveMode != SSEMode && liveMode != "" {
 		return nil, errors.New("invalid live mode")
 	}
 
@@ -125,11 +132,32 @@ func StreamParamsFromReq(r *http.Request, c *Config) (*StreamParams, error) {
 	}, nil
 }
 
+// subscribeIdentifier represents an Action Cable subscription identifier
+// for durable stream subscriptions (pub/sub for now)
+type subscribeIdentifier struct {
+	Channel          string `json:"channel"`
+	StreamName       string `json:"stream_name"`
+	SignedStreamName string `json:"signed_stream_name,omitempty"`
+}
+
+const pubsubChannel = "$pubsub"
+
+func (sp *StreamParams) ToSubscribeCommand() *common.Message {
+	return &common.Message{
+		Command: "subscribe",
+		Identifier: string(utils.ToJSON(subscribeIdentifier{
+			Channel:    pubsubChannel,
+			StreamName: sp.Name,
+		})),
+	}
+}
+
 // Stream represents a durable stream connection be wrapping the corresponding node.Session that also carries
 // the original stream request information.
 type Stream struct {
 	Session *node.Session
 	Params  *StreamParams
+	Conn    node.Connection
 }
 
 // NextCursor generates a cursor value for CDN collapsing based on time intervals.
@@ -154,22 +182,30 @@ func (s *Stream) NextCursor() string {
 // NewDSSession creates a node.Session struct to represents a durable stream connection and register it within
 // the AnyCable node. TODO: Integrate JWT authentication.
 func NewDSSession(n *node.Node, w http.ResponseWriter, info *server.RequestInfo, sp *StreamParams) (*Stream, error) {
-	sopts := []node.SessionOption{
-		node.WithEncoder(&Encoder{Cursor: sp.Cursor}),
-	}
+	sopts := []node.SessionOption{}
+	var conn node.Connection
 
-	if sp.LiveMode == "" {
+	conn = NewPollConnection(w)
+
+	switch sp.LiveMode {
+	case "":
 		// Create a one-off session that doesn't need to be registered in the pub/sub system.
 		// We need it to provide a common interface for all DS modes.
-		sopts = append(sopts, node.InactiveSession())
+		sopts = append(sopts, node.WithEncoder(NoopEncoder{}), node.InactiveSession())
+	case LongPollMode:
+		sopts = append(sopts, node.WithEncoder(&PollEncoder{}))
+	case SSEMode:
+		conn = sse.NewConnection(w)
+		sopts = append(sopts, node.WithEncoder(&SSEEncoder{Cursor: sp.Cursor}))
+	default:
+		return nil, fmt.Errorf("unsupported live mode: %s", sp.LiveMode)
 	}
 
-	conn := NewConnection(w)
 	session := node.NewSession(n, conn, info.URL, info.Headers, info.UID, sopts...)
 	session.Log = session.Log.With("ds", sp.Path)
 
 	// TODO: add authentication (JWT?)
 	n.Authenticated(session, fmt.Sprintf("ds::%s", session.GetID()))
 
-	return &Stream{session, sp}, nil
+	return &Stream{session, sp, conn}, nil
 }

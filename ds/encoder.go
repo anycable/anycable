@@ -2,7 +2,6 @@ package ds
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -14,7 +13,8 @@ import (
 )
 
 const (
-	dsEncoderID     = "ds"
+	dsNoopEncoderID = "dsnull"
+
 	offsetSeparator = "::"
 
 	StartOffset = "-1"
@@ -64,63 +64,23 @@ func EncodeJSONBatch(batch []common.StreamMessage) []byte {
 	return buf.Bytes()
 }
 
-// Encoder is responsible for converting messages to Durable Streams format
-// It supports SSE (event stream) mode only for live streaming
-type Encoder struct {
-	// Cursor to echo back in control messages (for CDN collapsing)
-	Cursor string
+// NoopEncoder is used with one-shot HTTP requests
+// where all messages are controlled by us (not by AnyCable)
+type NoopEncoder struct {
 }
 
-func (Encoder) ID() string {
-	return dsEncoderID
+func (NoopEncoder) ID() string {
+	return dsNoopEncoderID
 }
 
-func (e *Encoder) Encode(msg encoders.EncodedMessage) (*ws.SentFrame, error) {
-	reply, isReply := msg.(*common.Reply)
-
-	if !isReply || reply.Type != "" {
-		// Skip non-data messages
-		return nil, nil
-	}
-
-	// Encode data event
-	dataJSON, err := json.Marshal(reply.Message)
-	if err != nil {
-		return nil, err
-	}
-
-	payload := "event: data\ndata: " + string(dataJSON)
-
-	// Append control event with offset and cursor information
-	if reply.Offset > 0 || reply.Epoch != "" || e.Cursor != "" {
-		control := make(map[string]interface{})
-
-		// Encode offset with epoch
-		if reply.Offset > 0 || reply.Epoch != "" {
-			nextOffset := reply.Offset
-			if reply.StreamID != "" {
-				// For streamed replies, offset is already set correctly
-				nextOffset = reply.Offset + 1
-			}
-			control["streamNextOffset"] = EncodeOffset(nextOffset, reply.Epoch)
-		}
-
-		if e.Cursor != "" {
-			control["streamCursor"] = e.Cursor
-		}
-
-		controlJSON, _ := json.Marshal(control)
-		payload += "\n\nevent: control\ndata: " + string(controlJSON)
-	}
-
-	return &ws.SentFrame{FrameType: ws.TextFrame, Payload: []byte(payload)}, nil
-}
-
-func (e Encoder) EncodeTransmission(raw string) (*ws.SentFrame, error) {
-	// DS doesn't use Action Cable protocol messages
+func (NoopEncoder) Encode(msg encoders.EncodedMessage) (*ws.SentFrame, error) {
 	return nil, nil
 }
 
-func (Encoder) Decode(raw []byte) (*common.Message, error) {
+func (NoopEncoder) EncodeTransmission(raw string) (*ws.SentFrame, error) {
+	return nil, nil
+}
+
+func (NoopEncoder) Decode(raw []byte) (*common.Message, error) {
 	return nil, errors.New("unsupported")
 }

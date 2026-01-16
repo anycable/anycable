@@ -19,13 +19,14 @@ import (
 	"github.com/anycable/anycable-go/server"
 	durablestreams "github.com/durable-streams/durable-streams/packages/client-go"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
 func TestDSIntegration_Head(t *testing.T) {
 	ctx := context.Background()
 
-	n, _, ts := setupIntegrationServer(t)
+	n, _, _, ts := setupIntegrationServer(t)
 	defer ts.Close()
 	defer n.Shutdown(ctx) // nolint: errcheck
 
@@ -42,7 +43,7 @@ func TestDSIntegration_Head(t *testing.T) {
 func TestDSIntegration_CatchupRead(t *testing.T) {
 	ctx := context.Background()
 
-	n, brk, ts := setupIntegrationServer(t)
+	n, brk, _, ts := setupIntegrationServer(t)
 	defer ts.Close()
 	defer n.Shutdown(ctx) // nolint: errcheck
 
@@ -172,7 +173,7 @@ func TestDSIntegration_AuthenticationRequired(t *testing.T) {
 
 	ctx := context.Background()
 
-	n, _, ts := setupIntegrationServer(t)
+	n, _, _, ts := setupIntegrationServer(t)
 	defer ts.Close()
 	defer n.Shutdown(ctx) // nolint: errcheck
 
@@ -187,22 +188,23 @@ func TestDSIntegration_AuthenticationRequired(t *testing.T) {
 func TestDSIntegration_LongPoll(t *testing.T) {
 	ctx := context.Background()
 
-	n, brk, ts := setupIntegrationServer(t)
+	n, brk, controller, ts := setupIntegrationServer(t)
 	defer ts.Close()
 	defer n.Shutdown(ctx) // nolint: errcheck
 
-	t.Run("should wait for new data with long-poll", func(t *testing.T) {
-		t.Skip("TODO: Long-poll mode is not yet implemented")
+	controller.On("Subscribe", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(&common.CommandResult{
+			Status:        common.SUCCESS,
+			Transmissions: []string{`{"type":"confirm","identifier":"chat_1"}`},
+			Streams:       []string{"longpoll-wait-test"},
+		}, nil)
 
+	t.Run("should wait for new data with long-poll", func(t *testing.T) {
 		streamName := "longpoll-wait-test"
 		brk.Subscribe(streamName)
 
 		client := durablestreams.NewClient(durablestreams.WithBaseURL(ts.URL))
 		stream := client.Stream("/ds/" + streamName)
-
-		// Get current offset first
-		meta, err := stream.Head(ctx)
-		require.NoError(t, err)
 
 		var receivedData []map[string]interface{}
 		var readErr error
@@ -213,11 +215,11 @@ func TestDSIntegration_LongPoll(t *testing.T) {
 		go func() {
 			defer wg.Done()
 
-			readCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			readCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
 
 			it := stream.Read(readCtx,
-				durablestreams.WithOffset(meta.NextOffset),
+				durablestreams.WithOffset(durablestreams.StartOffset),
 				durablestreams.WithLive(durablestreams.LiveModeLongPoll),
 			)
 			defer it.Close()
@@ -241,8 +243,10 @@ func TestDSIntegration_LongPoll(t *testing.T) {
 		// Wait a bit for the long-poll to be active
 		time.Sleep(500 * time.Millisecond)
 
+		assert.Equal(t, 1, n.Size())
+
 		// Append data while long-poll is waiting
-		err = brk.HandleBroadcast(&common.StreamMessage{
+		err := brk.HandleBroadcast(&common.StreamMessage{
 			Stream: streamName,
 			Data:   `{"msg":"new data"}`,
 		})
@@ -250,12 +254,12 @@ func TestDSIntegration_LongPoll(t *testing.T) {
 
 		wg.Wait()
 
-		if readErr != nil {
-			t.Logf("Long-poll read error: %v", readErr)
-		}
 		require.NoError(t, readErr)
 		require.NotEmpty(t, receivedData, "should have received data via long-poll")
 		assert.Equal(t, "new data", receivedData[0]["msg"])
+
+		// Ensure the session is removed from the hub
+		assert.Equal(t, 0, n.Size())
 	})
 
 	t.Run("should return immediately if data already exists", func(t *testing.T) {
@@ -277,7 +281,10 @@ func TestDSIntegration_LongPoll(t *testing.T) {
 		// Read should return existing data immediately (no live mode)
 		startTime := time.Now()
 
-		it := stream.Read(ctx, durablestreams.WithOffset(durablestreams.StartOffset))
+		it := stream.Read(ctx,
+			durablestreams.WithOffset(durablestreams.StartOffset),
+			durablestreams.WithLive(durablestreams.LiveModeLongPoll),
+		)
 		defer it.Close()
 
 		chunk, err := it.Next()
@@ -286,7 +293,7 @@ func TestDSIntegration_LongPoll(t *testing.T) {
 		elapsed := time.Since(startTime)
 
 		// Should return quickly (not waiting for timeout)
-		assert.Less(t, elapsed, 2*time.Second, "should return immediately without waiting")
+		assert.Less(t, elapsed, 1*time.Second, "should return immediately without waiting")
 
 		var messages []map[string]interface{}
 		err = json.Unmarshal(chunk.Data, &messages)
@@ -294,10 +301,13 @@ func TestDSIntegration_LongPoll(t *testing.T) {
 
 		require.NotEmpty(t, messages)
 		assert.Equal(t, "existing data", messages[0]["msg"])
+
+		// Ensure the session is removed from the hub
+		assert.Equal(t, 0, n.Size())
 	})
 }
 
-func setupIntegrationServer(t *testing.T) (*node.Node, broker.Broker, *httptest.Server) {
+func setupIntegrationServer(t *testing.T) (*node.Node, broker.Broker, *mocks.Controller, *httptest.Server) {
 	t.Helper()
 
 	config := node.NewConfig()
@@ -326,6 +336,7 @@ func setupIntegrationServer(t *testing.T) (*node.Node, broker.Broker, *httptest.
 
 	dsConfig := NewConfig()
 	dsConfig.Path = "/ds"
+	dsConfig.PollInterval = 3
 
 	headersExtractor := &server.DefaultHeadersExtractor{}
 	handler := DSHandler(n, brk, nil, context.Background(), headersExtractor, &dsConfig, logger)
@@ -335,5 +346,5 @@ func setupIntegrationServer(t *testing.T) (*node.Node, broker.Broker, *httptest.
 
 	ts := httptest.NewServer(mux)
 
-	return n, brk, ts
+	return n, brk, controller, ts
 }
