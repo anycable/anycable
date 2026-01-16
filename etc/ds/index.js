@@ -125,7 +125,7 @@ function printGoodbye() {
 // Stream Fetching
 // ============================================================================
 
-async function fetchMessages(streamUrl, offset) {
+async function fetchMessages(streamUrl, offset, live = false) {
   const spinner = ora({
     text: "Fetching messages...",
     color: "cyan",
@@ -135,7 +135,7 @@ async function fetchMessages(streamUrl, offset) {
     const res = await stream({
       url: streamUrl,
       offset: offset,
-      live: false,
+      live,
     });
 
     const messages = await res.json();
@@ -156,12 +156,12 @@ async function fetchMessages(streamUrl, offset) {
 // Mode Handlers
 // ============================================================================
 
-async function runCatchupMode(streamUrl) {
+async function runCatchupMode(streamUrl, live = false) {
   let currentOffset = "-1";
 
   const poll = async () => {
     try {
-      const result = await fetchMessages(streamUrl, currentOffset);
+      const result = await fetchMessages(streamUrl, currentOffset, live);
 
       if (result.messages.length > 0) {
         printSuccess(result.messages.length, result.offset);
@@ -226,8 +226,8 @@ async function runCatchupMode(streamUrl) {
   }
 }
 
-async function runPollMode(_streamUrl) {
-  printNotImplemented("poll");
+async function runPollMode(streamUrl) {
+  await runCatchupMode(streamUrl, "long-poll");
   process.exit(0);
 }
 

@@ -71,12 +71,12 @@ func DSHandler(n *node.Node, brk broker.Broker, m metrics.Instrumenter, shutdown
 		stream, err := NewDSSession(n, w, info, streamParams)
 
 		if err != nil {
-			l.Debug("unauthenticated", "err", err)
+			l.Warn("unauthenticated", "err", err)
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 
-		stream.Session.Log.Debug("session established")
+		stream.Session.Log.Debug("session established", "mode", stream.Params.LiveMode, "offset", stream.Params.RawOffset)
 		defer func() {
 			stream.Session.Log.Debug("session completed")
 			stream.Session.Disconnect("done", ws.CloseNormalClosure)
@@ -103,8 +103,8 @@ func DSHandler(n *node.Node, brk broker.Broker, m metrics.Instrumenter, shutdown
 				m.CounterIncrement(metricsRequestsTotal)
 			}
 
-			if streamParams.LiveMode != "sse" {
-				handleHTTP(n, brk, w, stream, tail)
+			if streamParams.LiveMode != SSEMode {
+				handleHTTP(n, brk, config, m, w, r, stream, tail, shutdownCtx)
 			} else {
 				// TODO: implement SSE
 				w.WriteHeader(http.StatusNotImplemented)
@@ -114,7 +114,7 @@ func DSHandler(n *node.Node, brk broker.Broker, m metrics.Instrumenter, shutdown
 	})
 }
 
-func handleHTTP(n *node.Node, brk broker.Broker, w http.ResponseWriter, s *Stream, tail *common.StreamMessage) {
+func handleHTTP(n *node.Node, brk broker.Broker, c *Config, m metrics.Instrumenter, w http.ResponseWriter, r *http.Request, s *Stream, tail *common.StreamMessage, shutdownCtx context.Context) {
 	w.Header().Set("Content-Type", "application/json")
 	// TODO: how to distinguish private streams?
 	w.Header().Set("Cache-Control", "public, max-age=60, stale-while-revalidate=300")
@@ -135,20 +135,54 @@ func handleHTTP(n *node.Node, brk broker.Broker, w http.ResponseWriter, s *Strea
 		tail = &backlog[len(backlog)-1]
 	}
 
-	if len(backlog) > 0 || s.Params.LiveMode != "poll" {
+	if len(backlog) > 0 || s.Params.LiveMode != LongPollMode {
 		w.Header().Set(StreamOffsetHeader, EncodeOffset(tail.Offset, tail.Epoch))
 		w.Header().Set(StreamUpToDateHeader, "true")
 
 		w.Write(EncodeJSONBatch(backlog)) // nolint: errcheck
-
-		w.WriteHeader(http.StatusOK)
 		return
 	}
 
-	// Entering polling
-	// TODO
-	time.Sleep(5 * time.Second)
-	w.WriteHeader(http.StatusNoContent)
+	if m != nil {
+		m.CounterIncrement(metricsPollTotal)
+		m.GaugeIncrement(metricsPollNum)
+		defer m.GaugeDecrement(metricsPollNum)
+	}
+
+	_, err = n.Subscribe(s.Session, s.Params.ToSubscribeCommand())
+
+	if err != nil {
+		s.Session.Log.Error("failed to subscribe", "err", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	conn := s.Conn.(*PollConnection)
+	disconnectNotify := r.Context().Done()
+	flushNotify := conn.Context().Done()
+	timeout := c.PollInterval
+
+	shutdownReceived := false
+
+	for {
+		select {
+		case <-shutdownCtx.Done():
+			if !shutdownReceived {
+				shutdownReceived = true
+				s.Session.Log.Debug("server shutdown")
+				conn.Close(http.StatusGone, "Server shutdown")
+			}
+		case <-time.After(time.Duration(timeout) * time.Second):
+			conn.Close(http.StatusNoContent, "No content")
+			return
+		case <-disconnectNotify:
+			s.Session.Log.Debug("polling request terminated")
+			return
+		case <-flushNotify:
+			s.Session.Log.Debug("polling request fulfilled")
+			return
+		}
+	}
 }
 
 // func handleSSE(w http.ResponseWriter, r *http.Request, streamPath string, offset uint64, epoch string, cursor string, n *node.Node, brk broker.Broker, session *node.Session, conn *Connection, shutdownCtx context.Context, l *slog.Logger) {

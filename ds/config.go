@@ -9,15 +9,18 @@ import (
 type Config struct {
 	Enabled bool `toml:"enabled"`
 	// Path is the URL path to handle HTTP requests
-	Path           string `toml:"path"`
+	Path string `toml:"path"`
+	// Poll interval  for live=poll mode (in seconds)
+	PollInterval   int    `toml:"poll_interval"`
 	AllowedOrigins string `toml:"-"`
 }
 
 // NewConfig creates a new Config with default values.
 func NewConfig() Config {
 	return Config{
-		Enabled: false,
-		Path:    "/ds",
+		Enabled:      false,
+		Path:         "/ds",
+		PollInterval: 10,
 	}
 }
 
@@ -34,6 +37,9 @@ func (c Config) ToToml() string {
 
 	result.WriteString("# Durable Streams mount path\n")
 	result.WriteString(fmt.Sprintf("path = \"%s\"\n", c.Path))
+
+	result.WriteString("# Poll interval for live=poll mode (in seconds)\n")
+	result.WriteString(fmt.Sprintf("poll_interval = %d\n", c.PollInterval))
 
 	result.WriteString("\n")
 
