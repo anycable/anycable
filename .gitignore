@@ -45,3 +45,5 @@ Gemfile.lock
 
 /coverage.out
 admin/ui/build
+
+.claude/*.local.*
