@@ -12,6 +12,8 @@ type Config struct {
 	AppKey string `toml:"app_key"`
 	// Pusher secret
 	Secret string `toml:"secret"`
+	// Port for Pusher HTTP API (0 = use the main server port)
+	APIPort int `toml:"api_port"`
 	// AddCORSHeaders enables adding CORS headers (so you can perform broadcast requests from the browser)
 	// (We mostly need it for Stackblitz)
 	AddCORSHeaders bool
@@ -50,6 +52,13 @@ func (c Config) ToToml() string {
 		result.WriteString(fmt.Sprintf("secret = \"%s\"\n", c.Secret))
 	} else {
 		result.WriteString("# secret = \"\"\n")
+	}
+
+	result.WriteString("# Port for Pusher HTTP API (0 = use the main server port)\n")
+	if c.APIPort != 0 {
+		result.WriteString(fmt.Sprintf("api_port = %d\n", c.APIPort))
+	} else {
+		result.WriteString("# api_port = 0\n")
 	}
 
 	result.WriteString("\n")

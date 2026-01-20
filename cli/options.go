@@ -1420,6 +1420,11 @@ func pusherCLIFlags(c *config.Config) []cli.Flag {
 			Usage:       "Pusher application key",
 			Destination: &c.Pusher.AppKey,
 		},
+		&cli.IntFlag{
+			Name:        "pusher_api_port",
+			Usage:       "Port for Pusher HTTP API (0 = use the main server port)",
+			Destination: &c.Pusher.APIPort,
+		},
 	})
 }
 
