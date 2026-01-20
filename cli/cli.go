@@ -215,11 +215,11 @@ func (r *Runner) Run() error {
 
 		r.log.Info(fmt.Sprintf("Handle Pusher WebSocket connections at %s%s", wsServer.Address(), pusherPath))
 
-		pusherEventsPath := fmt.Sprintf("/apps/%s/events", r.config.Pusher.AppID)
-		pusherEventBroadcaster := pusher.NewBroadcaster(appNode, &r.config.Pusher, r.log)
-		wsServer.SetupHandler(pusherEventsPath, http.HandlerFunc(pusherEventBroadcaster.Handler))
+		pusherAPIPath := fmt.Sprintf("/apps/%s/", r.config.Pusher.AppID)
+		pusherRestAPI := pusher.NewRestAPI(appNode, r.broker, &r.config.Pusher, r.log)
+		wsServer.SetupHandler(pusherAPIPath, http.HandlerFunc(pusherRestAPI.Handler))
 
-		r.log.Info(fmt.Sprintf("Handle Pusher events s at %s%s", wsServer.Address(), pusherEventsPath))
+		r.log.Info(fmt.Sprintf("Handle Pusher API requests at %s%s", wsServer.Address(), pusherAPIPath))
 	}
 
 	wsServer.SetupHandler(r.config.Server.HealthPath, http.HandlerFunc(server.HealthHandler))

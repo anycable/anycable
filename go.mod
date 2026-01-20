@@ -47,6 +47,7 @@ require (
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/minio/highwayhash v1.0.3 // indirect
 	github.com/nats-io/jwt/v2 v2.8.0 // indirect
+	github.com/pusher/pusher-http-go/v5 v5.1.1 // indirect
 	golang.org/x/time v0.14.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251103181224-f26f9409b101 // indirect
 )

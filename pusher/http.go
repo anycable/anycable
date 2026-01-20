@@ -5,23 +5,28 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/anycable/anycable-go/broadcast"
+	"github.com/anycable/anycable-go/broker"
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/server"
 	"github.com/anycable/anycable-go/utils"
 )
 
-type Broadcaster struct {
+type RestAPI struct {
 	conf     *Config
 	verifier *Verifier
 	log      *slog.Logger
 	handler  broadcast.Handler
+	broker   broker.Broker
 
 	enableCORS   bool
 	allowedHosts []string
 }
+
+var channelUsersPathPattern = regexp.MustCompile(`/channels/([^/]+)/users$`)
 
 type PusherEvent struct {
 	Name     string   `json:"name"`
@@ -37,38 +42,30 @@ type PusherBroadcast struct {
 	Data  string `json:"data"`
 }
 
-func NewBroadcaster(h broadcast.Handler, c *Config, l *slog.Logger) *Broadcaster {
+func NewRestAPI(h broadcast.Handler, b broker.Broker, c *Config, l *slog.Logger) *RestAPI {
 	verifier := NewVerifier(c.AppKey, c.Secret)
-	b := &Broadcaster{handler: h, verifier: verifier, conf: c, log: l}
+	api := &RestAPI{handler: h, broker: b, verifier: verifier, conf: c, log: l}
 
-	if b.conf.AddCORSHeaders {
-		b.enableCORS = true
-		if b.conf.CORSHosts != "" {
-			b.allowedHosts = strings.Split(b.conf.CORSHosts, ",")
+	if api.conf.AddCORSHeaders {
+		api.enableCORS = true
+		if api.conf.CORSHosts != "" {
+			api.allowedHosts = strings.Split(api.conf.CORSHosts, ",")
 		} else {
-			b.allowedHosts = []string{}
+			api.allowedHosts = []string{}
 		}
 	}
 
-	return b
+	return api
 }
 
-func (b *Broadcaster) Handler(w http.ResponseWriter, r *http.Request) {
-	if b.enableCORS {
-		// Write CORS headers
-		server.WriteCORSHeaders(w, r, b.allowedHosts)
+func (api *RestAPI) Handler(w http.ResponseWriter, r *http.Request) {
+	if api.enableCORS {
+		server.WriteCORSHeaders(w, r, api.allowedHosts)
 
-		// Respond to preflight requests
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
-	}
-
-	if r.Method != "POST" {
-		b.log.Debug("invalid request method", "method", r.Method)
-		w.WriteHeader(422)
-		return
 	}
 
 	// See https://pusher.com/docs/channels/library_auth_reference/rest-api/#worked-authentication-example
@@ -77,27 +74,50 @@ func (b *Broadcaster) Handler(w http.ResponseWriter, r *http.Request) {
 	key := queryParams.Get("auth_key")
 	authTimestamp := queryParams.Get("auth_timestamp")
 	authVersion := queryParams.Get("auth_version")
-	bodyMD5 := queryParams.Get("body_md5")
 	signature := queryParams.Get("auth_signature")
 
-	// Build the string to sign
-	stringToSign := "POST\n" +
-		path + "\n" +
-		"auth_key=" + key +
-		"&auth_timestamp=" + authTimestamp +
-		"&auth_version=" + authVersion +
-		"&body_md5=" + bodyMD5
+	var stringToSign string
 
-	if !b.verifier.Verify(stringToSign, signature) {
-		w.WriteHeader(401)
+	switch r.Method {
+	case http.MethodPost:
+		bodyMD5 := queryParams.Get("body_md5")
+		stringToSign = "POST\n" +
+			path + "\n" +
+			"auth_key=" + key +
+			"&auth_timestamp=" + authTimestamp +
+			"&auth_version=" + authVersion +
+			"&body_md5=" + bodyMD5
+	case http.MethodGet:
+		stringToSign = "GET\n" +
+			path + "\n" +
+			"auth_key=" + key +
+			"&auth_timestamp=" + authTimestamp +
+			"&auth_version=" + authVersion
+	default:
+		api.log.Debug("invalid request method", "method", r.Method)
+		w.WriteHeader(http.StatusUnprocessableEntity)
 		return
 	}
 
+	if !api.verifier.Verify(stringToSign, signature) {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodPost:
+		api.handleEvents(w, r)
+	case http.MethodGet:
+		api.handleGetUsers(w, r)
+	}
+}
+
+func (api *RestAPI) handleEvents(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 
 	if err != nil {
-		b.log.Error("failed to read request body")
-		w.WriteHeader(422)
+		api.log.Error("failed to read request body")
+		w.WriteHeader(http.StatusUnprocessableEntity)
 		return
 	}
 
@@ -106,8 +126,8 @@ func (b *Broadcaster) Handler(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(body, &pusherEvent)
 
 	if err != nil {
-		b.log.Error("failed to parse Pusher event")
-		w.WriteHeader(422)
+		api.log.Error("failed to parse Pusher event")
+		w.WriteHeader(http.StatusUnprocessableEntity)
 		return
 	}
 
@@ -119,7 +139,7 @@ func (b *Broadcaster) Handler(w http.ResponseWriter, r *http.Request) {
 		channels = append(channels, pusherEvent.Channels...)
 	}
 
-	b.log.Debug("event received", "event", pusherEvent.Name, "channels", channels, "info", pusherEvent.Info)
+	api.log.Debug("event received", "event", pusherEvent.Name, "channels", channels, "info", pusherEvent.Info)
 
 	for _, channel := range channels {
 		msg := common.StreamMessage{
@@ -137,10 +157,47 @@ func (b *Broadcaster) Handler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		b.handler.HandleBroadcast(utils.ToJSON(msg)) // nolint:errcheck
+		api.handler.HandleBroadcast(utils.ToJSON(msg)) // nolint:errcheck
 	}
 
-	// Respond with an empty JSON hash; currently, Info is not supported
-	w.WriteHeader(200)
-	w.Write([]byte("{}")) // nolint: errcheck
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("{}")) // nolint:errcheck
+}
+
+func (api *RestAPI) handleGetUsers(w http.ResponseWriter, r *http.Request) {
+	matches := channelUsersPathPattern.FindStringSubmatch(r.URL.Path)
+
+	if len(matches) < 2 {
+		api.log.Debug("invalid path for get users", "path", r.URL.Path)
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	channel := matches[1]
+
+	if !strings.HasPrefix(channel, "presence-") {
+		api.log.Debug("get users is only supported for presence channels", "channel", channel)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	info, err := api.broker.PresenceInfo(channel)
+
+	if err != nil {
+		api.log.Debug("failed to get presence info", "channel", channel, "error", err)
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"users":[]}`)) // nolint:errcheck
+		return
+	}
+
+	users := make([]map[string]string, len(info.Records))
+	for i, record := range info.Records {
+		users[i] = map[string]string{"id": record.ID}
+	}
+
+	response := map[string]interface{}{"users": users}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(utils.ToJSON(response)) // nolint:errcheck
 }
