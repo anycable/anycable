@@ -140,6 +140,8 @@ Thread.new do
 end
 
 user_ids = Set.new
+expected_ids = Set.new(["312", "42"])
+slept = 0
 
 loop do
   sleep 1
@@ -150,8 +152,12 @@ loop do
     user_ids << user["id"]
   end
 
-  break if q.pop(timeout: 0.1)
+  slept += 1
+
+  break if slept > 5 || user_ids.size == 2
 end
+
+q.pop
 
 result = stdout(:wsdirector)
 
@@ -159,8 +165,6 @@ unless result.include?("Group first: 1 clients, 0 failures") &&
   result.include?("Group second: 1 clients, 0 failures")
   fail "Unexpected scenario result:\n#{result}"
 end
-
-expected_ids = Set.new(["312", "42"])
 
 if user_ids != expected_ids
   fail "Channel users fetched over API don't match: #{user_ids} (expected: #{expected_ids})"

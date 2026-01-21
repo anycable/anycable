@@ -70,3 +70,5 @@ jid
 webhooks
 realtime
 Valkey
+Laravel
+Soketi
