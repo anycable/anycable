@@ -80,6 +80,7 @@ curl "http://localhost:8080/apps/my-app-id/channels/presence-my-channel/users?au
 ```
 
 **Notes:**
+
 - This endpoint only works with presence channels (channels prefixed with `presence-`)
 - Returns `400 Bad Request` for non-presence channels
 - Returns an empty list for unknown channels
