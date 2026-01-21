@@ -215,7 +215,7 @@ func (r *Runner) Run() error {
 
 		r.log.Info(fmt.Sprintf("Handle Pusher WebSocket connections at %s%s", wsServer.Address(), pusherPath))
 
-		pusherAPIPath := fmt.Sprintf("/apps/%s/", r.config.Pusher.AppID)
+		pusherAPIPath := fmt.Sprintf("/apps/%s/*", r.config.Pusher.AppID)
 		pusherRestAPI := pusher.NewRestAPI(appNode, r.broker, &r.config.Pusher, r.log)
 
 		if r.config.Pusher.APIPort == 0 {

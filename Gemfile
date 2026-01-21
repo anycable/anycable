@@ -4,6 +4,7 @@ source "https://rubygems.org"
 gem "nats-pure", "< 2.3.0"
 gem "colorize"
 gem "puma"
+gem "pusher"
 
 gem "activesupport", "~> 7.0.0"
 # https://github.com/rails/rails/issues/54263
