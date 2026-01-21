@@ -1,5 +1,7 @@
 # Change log
 
+- Added Pusher's `GET /channels/:channel/users` support. ([@palkan][])
+
 - Add mTLS support for Redis. ([@palkan][])
 
 ## 1.6.8 (2025-12-18)
