@@ -14,6 +14,8 @@ begin
     gem "jwt"
     gem "activesupport", "~> 7.0.0"
     gem "perfect_toml"
+
+    gem "pusher"
   end
 rescue
   raise if retried

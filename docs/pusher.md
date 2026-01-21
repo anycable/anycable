@@ -84,27 +84,23 @@ curl "http://localhost:8080/apps/my-app-id/channels/presence-my-channel/users?au
 - Returns `400 Bad Request` for non-presence channels
 - Returns an empty list for unknown channels
 
-**Example using Pusher Go SDK:**
+**Example using Pusher Ruby SDK:**
 
 ```go
-import "github.com/pusher/pusher-http-go/v5"
+require "pusher"
 
-client := pusher.Client{
-  AppID:   "my-app-id",
-  Key:     "my-app-key",
-  Secret:  "my-secret",
-  Cluster: "mt1",       // Any value works with AnyCable
-  Host:    "localhost:8080",
-}
+client = Pusher::Client.new(
+  app_id: "my-app-id",
+  key: "my-app-key",
+  secret: "my-secret"
+)
 
-users, err := client.GetChannelUsers("presence-my-channel")
-if err != nil {
-  log.Fatal(err)
-}
+# Request the users for a presence channel:
+response = pusher.channel_users("presence-my-channel")
 
-for _, user := range users.List {
-  fmt.Println("User ID:", user.ID)
-}
+response["users"].each do |user|
+  puts "User ID: #{user['id']}"
+end
 ```
 
 ## Client configuration

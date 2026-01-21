@@ -1,7 +1,17 @@
 launch :anycable,
-  "./dist/anycable-go --pusher_app_id=my-test-id --pusher_app_key=ballard --public_streams --pusher_secret=oaugc1 --broker=memory"
+  "./dist/anycable-go --pusher_app_id=my-test-id --pusher_app_key=ballard --public_streams --pusher_secret=oaugc1 --pusher_api_port=8087 --broker=memory"
 
 wait_tcp 8080
+
+pusher_client = Pusher::Client.new(
+  app_id: "my-test-id",
+  key: "detox",
+  secret: "oaugc1",
+  host: "localhost",
+  port: 8087,
+  use_tls: false,
+  scheme: "http"
+)
 
 require "json"
 require "openssl"
@@ -61,6 +71,11 @@ scenario = [
               data: %({"user_id":"42","user_info":{"name":"Lolo"}})
             }
           }
+        },
+        {
+          sleep: {
+            time: 4
+          }
         }
       ]
     }
@@ -103,6 +118,11 @@ scenario = [
               data: %({"presence":{"count":2,"ids":["312","42"],"hash":{"312":{"name":"Vova"},"42":{"name":"Lolo"}}}})
             }
           }
+        },
+        {
+          sleep: {
+            time: 4
+          }
         }
       ]
     }
@@ -113,11 +133,35 @@ TEST_COMMAND = <<~CMD
   bundle exec wsdirector ws://localhost:8080/app/ballard -i #{scenario.to_json}
 CMD
 
-run :wsdirector, TEST_COMMAND
+q = Queue.new
+Thread.new do
+  run :wsdirector, TEST_COMMAND
+  q.push(true)
+end
+
+user_ids = Set.new
+
+loop do
+  sleep 1
+
+  response = pusher_client.channel_users("presence-test")
+
+  response[:users].each do |user|
+    user_ids << user["id"]
+  end
+
+  break if q.pop(timeout: 0.1)
+end
 
 result = stdout(:wsdirector)
 
 unless result.include?("Group first: 1 clients, 0 failures") &&
   result.include?("Group second: 1 clients, 0 failures")
   fail "Unexpected scenario result:\n#{result}"
+end
+
+expected_ids = Set.new(["312", "42"])
+
+if user_ids != expected_ids
+  fail "Channel users fetched over API don't match: #{user_ids} (expected: #{expected_ids})"
 end
