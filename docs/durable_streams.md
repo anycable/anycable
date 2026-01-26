@@ -168,7 +168,7 @@ If public streams are enabled (`--public_streams`), unsigned stream names are al
 Durable Streams requires a [broker](./broker.md) to be configured for message history:
 
 ```sh
-$ anycable-go --ds --broker=memory
+anycable-go --ds --presets=broker
 ```
 
 See [reliable streams](./reliable_streams.md) for more information on broker configuration and cache settings.

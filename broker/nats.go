@@ -483,6 +483,10 @@ func (n *NATS) Reset() error {
 	return nil
 }
 
+func (n *NATS) Peak(stream string) (*common.StreamMessage, error) {
+	return nil, nil
+}
+
 func (n *NATS) PresenceAdd(stream string, sid string, pid string, info interface{}) (*common.PresenceEvent, error) {
 	return nil, errors.New("presence not supported")
 }

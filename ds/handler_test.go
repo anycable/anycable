@@ -31,7 +31,7 @@ func TestDSHandler_HEAD(t *testing.T) {
 
 	handler := DSHandler(appNode, brk, streamCtrl, nil, context.Background(), headersExtractor, &conf, slog.Default())
 
-	t.Run("returns stream metadata", func(t *testing.T) {
+	t.Run("returns stream metadata for unknown stream", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("HEAD", "/ds/test-stream", nil)
 
@@ -40,7 +40,27 @@ func TestDSHandler_HEAD(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 		assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
 		assert.Equal(t, "no-store", w.Header().Get("Cache-Control"))
-		assert.NotEmpty(t, w.Header().Get(StreamOffsetHeader))
+		assert.Equal(t, "0", w.Header().Get(StreamOffsetHeader))
+	})
+
+	t.Run("returns stream metadata for existing stream", func(t *testing.T) {
+		brk.On("Peak", "test-existing-stream").Return(
+			&common.StreamMessage{
+				Epoch:  "a321",
+				Offset: 44,
+			},
+			nil,
+		)
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("HEAD", "/ds/test-existing-stream", nil)
+
+		handler.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
+		assert.Equal(t, "no-store", w.Header().Get("Cache-Control"))
+		assert.Equal(t, "44::a321", w.Header().Get(StreamOffsetHeader))
 	})
 
 	t.Run("requires stream path", func(t *testing.T) {
@@ -201,6 +221,7 @@ func buildNode() (*node.Node, *mocks.Broker, *streams.Controller) {
 	go n.Start() // nolint:errcheck
 
 	brk := &mocks.Broker{}
+	brk.On("Peak", "test-stream").Return(nil, nil)
 	n.SetBroker(brk)
 
 	streamCtrl := streams.NewController("", func(identifier string) (*streams.SubscribeRequest, error) {

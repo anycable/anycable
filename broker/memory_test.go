@@ -125,6 +125,10 @@ func TestMemory_Store(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestMemory_Peak(t *testing.T) {
+
+}
+
 func TestMemstream_filterByOffset(t *testing.T) {
 	ms := &memstream{
 		ttl:   1,

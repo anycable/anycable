@@ -71,6 +71,9 @@ type Broker interface {
 
 	// Marks presence record as still alive
 	TouchPresence(sid string) error
+
+	// Peak returns the current stream position or nil if no stream found
+	Peak(stream string) (*common.StreamMessage, error)
 }
 
 // LocalBroker is a single-node broker that can used to store streams data locally
@@ -196,6 +199,10 @@ func (LegacyBroker) HistoryFrom(stream string, epoch string, offset uint64) ([]c
 }
 
 func (LegacyBroker) HistorySince(stream string, ts int64) ([]common.StreamMessage, error) {
+	return nil, errors.New("history not supported")
+}
+
+func (LegacyBroker) Peak(stream string) (*common.StreamMessage, error) {
 	return nil, errors.New("history not supported")
 }
 

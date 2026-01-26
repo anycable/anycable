@@ -148,6 +148,36 @@ func (_m *Broker) HistorySince(stream string, ts int64) ([]common.StreamMessage,
 	return r0, r1
 }
 
+// Peak provides a mock function with given fields: stream
+func (_m *Broker) Peak(stream string) (*common.StreamMessage, error) {
+	ret := _m.Called(stream)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Peak")
+	}
+
+	var r0 *common.StreamMessage
+	var r1 error
+	if rf, ok := ret.Get(0).(func(string) (*common.StreamMessage, error)); ok {
+		return rf(stream)
+	}
+	if rf, ok := ret.Get(0).(func(string) *common.StreamMessage); ok {
+		r0 = rf(stream)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*common.StreamMessage)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(stream)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // PresenceAdd provides a mock function with given fields: stream, sid, pid, info
 func (_m *Broker) PresenceAdd(stream string, sid string, pid string, info interface{}) (*common.PresenceEvent, error) {
 	ret := _m.Called(stream, sid, pid, info)
