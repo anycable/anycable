@@ -307,6 +307,229 @@ func TestDSIntegration_LongPoll(t *testing.T) {
 	})
 }
 
+func TestDSIntegration_SSE_OffsetRequired(t *testing.T) {
+	ctx := context.Background()
+
+	n, brk, _, ts := setupIntegrationServer(t)
+	defer ts.Close()
+	defer n.Shutdown(ctx) // nolint: errcheck
+
+	streamName := "sse-no-offset-test"
+	brk.Subscribe(streamName)
+
+	resp, err := http.Get(ts.URL + "/ds/" + streamName + "?live=sse")
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestDSIntegration_SSE(t *testing.T) {
+	ctx := context.Background()
+
+	n, brk, controller, ts := setupIntegrationServer(t)
+	defer ts.Close()
+	defer n.Shutdown(ctx) // nolint: errcheck
+
+	t.Run("should return catchup data via SSE with correct metadata", func(t *testing.T) {
+		streamName := "sse-catchup-test"
+		brk.Subscribe(streamName)
+
+		controller.On("Subscribe", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(&common.CommandResult{
+				Status:        common.SUCCESS,
+				Transmissions: []string{`{"type":"confirm","identifier":"chat_1"}`},
+				Streams:       []string{streamName},
+			}, nil).Once()
+
+		err := brk.HandleBroadcast(&common.StreamMessage{
+			Stream: streamName,
+			Data:   `{"id":1,"msg":"hello"}`,
+		})
+		require.NoError(t, err)
+
+		err = brk.HandleBroadcast(&common.StreamMessage{
+			Stream: streamName,
+			Data:   `{"id":2,"msg":"world"}`,
+		})
+		require.NoError(t, err)
+
+		time.Sleep(50 * time.Millisecond)
+
+		client := durablestreams.NewClient(durablestreams.WithBaseURL(ts.URL))
+		stream := client.Stream("/ds/" + streamName)
+
+		it := stream.Read(ctx,
+			durablestreams.WithOffset(durablestreams.StartOffset),
+			durablestreams.WithLive(durablestreams.LiveModeSSE),
+		)
+		defer it.Close()
+
+		chunk, err := it.Next()
+		require.NoError(t, err)
+
+		var messages []map[string]interface{}
+		err = json.Unmarshal(chunk.Data, &messages)
+		require.NoError(t, err)
+
+		assert.Len(t, messages, 2)
+		assert.Equal(t, float64(1), messages[0]["id"])
+		assert.Equal(t, "hello", messages[0]["msg"])
+		assert.Equal(t, float64(2), messages[1]["id"])
+		assert.Equal(t, "world", messages[1]["msg"])
+
+		assert.True(t, chunk.UpToDate, "should be up to date after catchup")
+		assert.NotEmpty(t, chunk.NextOffset, "should have next offset")
+		assert.NotEmpty(t, chunk.Cursor, "should have cursor for CDN collapsing")
+	})
+
+	t.Run("should stream live data via SSE", func(t *testing.T) {
+		streamName := "sse-live-test"
+		brk.Subscribe(streamName)
+
+		controller.On("Subscribe", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(&common.CommandResult{
+				Status:        common.SUCCESS,
+				Transmissions: []string{`{"type":"confirm","identifier":"chat_1"}`},
+				Streams:       []string{streamName},
+			}, nil).Once()
+
+		client := durablestreams.NewClient(durablestreams.WithBaseURL(ts.URL))
+		stream := client.Stream("/ds/" + streamName)
+
+		var receivedData []map[string]interface{}
+		var readErr error
+		var wg sync.WaitGroup
+		wg.Add(1)
+
+		go func() {
+			defer wg.Done()
+
+			readCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			defer cancel()
+
+			it := stream.Read(readCtx,
+				durablestreams.WithOffset(durablestreams.StartOffset),
+				durablestreams.WithLive(durablestreams.LiveModeSSE),
+			)
+			defer it.Close()
+
+			// First chunk is empty catchup
+			chunk, itErr := it.Next()
+			if itErr != nil {
+				if itErr != durablestreams.Done {
+					readErr = itErr
+				}
+				return
+			}
+
+			// If first chunk is empty, wait for the next one (live data)
+			if len(chunk.Data) == 0 || string(chunk.Data) == "[]" {
+				chunk, itErr = it.Next()
+				if itErr != nil {
+					if itErr != durablestreams.Done {
+						readErr = itErr
+					}
+					return
+				}
+			}
+
+			if len(chunk.Data) > 0 {
+				var messages []map[string]interface{}
+				if jerr := json.Unmarshal(chunk.Data, &messages); jerr == nil {
+					receivedData = messages
+				}
+			}
+		}()
+
+		time.Sleep(500 * time.Millisecond)
+
+		assert.Equal(t, 1, n.Size())
+
+		err := brk.HandleBroadcast(&common.StreamMessage{
+			Stream: streamName,
+			Data:   `{"msg":"live data"}`,
+		})
+		require.NoError(t, err)
+
+		wg.Wait()
+
+		require.NoError(t, readErr)
+		require.NotEmpty(t, receivedData, "should have received data via SSE")
+		assert.Equal(t, "live data", receivedData[0]["msg"])
+
+		time.Sleep(100 * time.Millisecond)
+
+		assert.Equal(t, 0, n.Size())
+	})
+
+	t.Run("should support reconnection with last known offset", func(t *testing.T) {
+		streamName := "sse-reconnect-test"
+		brk.Subscribe(streamName)
+
+		controller.On("Subscribe", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(&common.CommandResult{
+				Status:        common.SUCCESS,
+				Transmissions: []string{`{"type":"confirm","identifier":"chat_1"}`},
+				Streams:       []string{streamName},
+			}, nil).Twice() // Called twice: initial connection and reconnection
+
+		err := brk.HandleBroadcast(&common.StreamMessage{
+			Stream: streamName,
+			Data:   `{"id":1,"msg":"message 1"}`,
+		})
+		require.NoError(t, err)
+
+		err = brk.HandleBroadcast(&common.StreamMessage{
+			Stream: streamName,
+			Data:   `{"id":2,"msg":"message 2"}`,
+		})
+		require.NoError(t, err)
+
+		time.Sleep(50 * time.Millisecond)
+
+		client := durablestreams.NewClient(durablestreams.WithBaseURL(ts.URL))
+		stream := client.Stream("/ds/" + streamName)
+
+		it := stream.Read(ctx,
+			durablestreams.WithOffset(durablestreams.StartOffset),
+			durablestreams.WithLive(durablestreams.LiveModeSSE),
+		)
+
+		chunk, err := it.Next()
+		require.NoError(t, err)
+		it.Close()
+
+		lastOffset := chunk.NextOffset
+		require.NotEmpty(t, lastOffset)
+
+		err = brk.HandleBroadcast(&common.StreamMessage{
+			Stream: streamName,
+			Data:   `{"id":3,"msg":"message 3"}`,
+		})
+		require.NoError(t, err)
+
+		time.Sleep(50 * time.Millisecond)
+
+		it2 := stream.Read(ctx,
+			durablestreams.WithOffset(lastOffset),
+			durablestreams.WithLive(durablestreams.LiveModeSSE),
+		)
+		defer it2.Close()
+
+		chunk2, err := it2.Next()
+		require.NoError(t, err)
+
+		var messages []map[string]interface{}
+		err = json.Unmarshal(chunk2.Data, &messages)
+		require.NoError(t, err)
+
+		require.Len(t, messages, 1)
+		assert.Equal(t, float64(3), messages[0]["id"])
+		assert.Equal(t, "message 3", messages[0]["msg"])
+	})
+}
+
 func setupIntegrationServer(t *testing.T) (*node.Node, broker.Broker, *mocks.Controller, *httptest.Server) {
 	t.Helper()
 
