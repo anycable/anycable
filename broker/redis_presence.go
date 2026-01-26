@@ -3,7 +3,6 @@ package broker
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -102,7 +101,7 @@ func (b *RedisBroker) PresenceRemove(stream string, sid string) (*common.Presenc
 
 	pid := b.presence.get(sid, stream)
 	if pid == "" {
-		return nil, errors.New("presence not found")
+		return nil, nil
 	}
 
 	ctx := context.Background()
