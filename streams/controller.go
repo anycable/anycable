@@ -53,57 +53,22 @@ func (c *Controller) Authenticate(ctx context.Context, sid string, env *common.S
 }
 
 func (c *Controller) Subscribe(ctx context.Context, sid string, env *common.SessionEnv, ids string, identifier string) (*common.CommandResult, error) {
-	request, err := c.resolver(identifier)
+	request, stream, err := c.VerifiedStream(identifier)
 
 	if err != nil {
-		return &common.CommandResult{
-			Status:        common.FAILURE,
-			Transmissions: []string{common.RejectionMessage(identifier)},
-		}, errorx.Decorate(err, "invalid identifier")
-	}
-
-	if !request.IsPresent() {
-		err := errors.New("malformed identifier: no stream name or signed stream")
+		c.log.With("identifier", identifier).Debug("subscription failed", "error", err)
 
 		return &common.CommandResult{
-			Status:        common.FAILURE,
-			Transmissions: []string{common.RejectionMessage(identifier)},
-		}, err
+				Status:        common.FAILURE,
+				Transmissions: []string{common.RejectionMessage(identifier)},
+			},
+			err
 	}
 
-	var stream string
-
-	if request.SignedStreamName == "" {
-		stream = request.StreamName
-
-		c.log.With("identifier", identifier).Debug("unsigned", "stream", stream)
+	if request.SignedStreamName != "" {
+		c.log.With("identifier", identifier).Debug("subscribed verified", "stream", stream)
 	} else {
-		verified, err := c.verifier.Verified(request.SignedStreamName)
-
-		if err != nil {
-			c.log.With("identifier", identifier).Debug("verification failed", "stream", request.SignedStreamName, "error", err)
-
-			return &common.CommandResult{
-					Status:        common.FAILURE,
-					Transmissions: []string{common.RejectionMessage(identifier)},
-				},
-				nil
-		}
-
-		var ok bool
-		stream, ok = verified.(string)
-
-		if !ok {
-			c.log.With("identifier", identifier).Debug("verification failed: stream name is not a string", "stream", verified)
-
-			return &common.CommandResult{
-					Status:        common.FAILURE,
-					Transmissions: []string{common.RejectionMessage(identifier)},
-				},
-				nil
-		}
-
-		c.log.With("identifier", identifier).Debug("verified", "stream", stream)
+		c.log.With("identifier", identifier).Debug("", "stream", stream)
 	}
 
 	var state map[string]string
@@ -144,6 +109,41 @@ func (c *Controller) Perform(ctx context.Context, sid string, env *common.Sessio
 
 func (c *Controller) Disconnect(ctx context.Context, sid string, env *common.SessionEnv, ids string, subscriptions []string) error {
 	return nil
+}
+
+func (c *Controller) VerifiedStream(identifier string) (*SubscribeRequest, string, error) {
+	request, err := c.resolver(identifier)
+
+	if err != nil {
+		return nil, "", errorx.Decorate(err, "invalid identifier")
+	}
+
+	if !request.IsPresent() {
+		return nil, "", errors.New("malformed identifier: no stream name or signed stream")
+	}
+
+	var stream string
+
+	if request.SignedStreamName == "" {
+		stream = request.StreamName
+
+		c.log.With("identifier", identifier).Debug("unsigned", "stream", stream)
+	} else {
+		verified, err := c.verifier.Verified(request.SignedStreamName)
+
+		if err != nil {
+			return nil, "", errors.New("verification failed")
+		}
+
+		var ok bool
+		stream, ok = verified.(string)
+
+		if !ok {
+			return nil, "", errors.New("verification failed: stream name is not a string")
+		}
+	}
+
+	return request, stream, nil
 }
 
 func NewStreamsController(conf *Config, l *slog.Logger) *Controller {

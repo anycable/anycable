@@ -14,18 +14,19 @@ import (
 	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/server"
 	"github.com/anycable/anycable-go/sse"
+	"github.com/anycable/anycable-go/streams"
 	"github.com/anycable/anycable-go/version"
 	"github.com/anycable/anycable-go/ws"
 )
 
 // DSHandler generates a new http handler for Durable Streams connections
-func DSHandler(n *node.Node, brk broker.Broker, m metrics.Instrumenter, shutdownCtx context.Context, headersExtractor server.HeadersExtractor, config *Config, l *slog.Logger) http.Handler {
+func DSHandler(n *node.Node, brk broker.Broker, st *streams.Controller, m metrics.Instrumenter, shutdownCtx context.Context, headersExtractor server.HeadersExtractor, c *Config, l *slog.Logger) http.Handler {
 	var allowedHosts []string
 
-	if config.AllowedOrigins == "" {
+	if c.AllowedOrigins == "" {
 		allowedHosts = []string{}
 	} else {
-		allowedHosts = strings.Split(config.AllowedOrigins, ",")
+		allowedHosts = strings.Split(c.AllowedOrigins, ",")
 	}
 
 	if m != nil {
@@ -48,7 +49,7 @@ func DSHandler(n *node.Node, brk broker.Broker, m metrics.Instrumenter, shutdown
 
 		w.Header().Set("X-AnyCable-Version", version.Version())
 
-		streamParams, err := StreamParamsFromReq(r, config)
+		streamParams, err := StreamParamsFromReq(r, c)
 		if err != nil {
 			l.With("transport", "ds").Debug("invalid stream request", "err", err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -69,11 +70,22 @@ func DSHandler(n *node.Node, brk broker.Broker, m metrics.Instrumenter, shutdown
 		}
 
 		// Authenticate and init stream
-		stream, err := NewDSSession(n, w, info, streamParams)
+		stream, err := NewDSSession(n, c, w, info, streamParams)
 
 		if err != nil {
-			l.Warn("unauthenticated", "err", err)
+			l.Debug("unauthenticated", "err", err)
 			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		// Perform stream access check
+		identifier := streamParams.ToSubscribeCommand().Identifier
+
+		if _, _, serr := st.VerifiedStream(identifier); serr != nil {
+			stream.Session.Log.Debug("unauthorized", "err", serr)
+			w.WriteHeader(http.StatusUnauthorized)
+			// Ensure its removed from the node
+			stream.Session.Disconnect("unauthorized", http.StatusUnauthorized)
 			return
 		}
 
@@ -86,8 +98,6 @@ func DSHandler(n *node.Node, brk broker.Broker, m metrics.Instrumenter, shutdown
 		// TODO: check that stream exists and get the tail offset
 		// (same mechanism as in head)
 		tail := &common.StreamMessage{}
-
-		// TODO: Now we need to authorize access to the stream (signed streams?)
 
 		if r.Method == http.MethodHead {
 			w.Header().Set("Content-Type", "application/json")
@@ -105,9 +115,9 @@ func DSHandler(n *node.Node, brk broker.Broker, m metrics.Instrumenter, shutdown
 			}
 
 			if streamParams.LiveMode != SSEMode {
-				handleHTTP(n, brk, config, m, w, r, stream, tail, shutdownCtx)
+				handleHTTP(n, brk, c, m, w, r, stream, tail, shutdownCtx)
 			} else {
-				handleSSE(n, brk, m, w, r, stream, tail, shutdownCtx)
+				handleSSE(n, brk, c, m, w, r, stream, tail, shutdownCtx)
 			}
 			return
 		}
@@ -186,7 +196,7 @@ func handleHTTP(n *node.Node, brk broker.Broker, c *Config, m metrics.Instrument
 	}
 }
 
-func handleSSE(n *node.Node, brk broker.Broker, m metrics.Instrumenter, w http.ResponseWriter, r *http.Request, s *Stream, tail *common.StreamMessage, shutdownCtx context.Context) {
+func handleSSE(n *node.Node, brk broker.Broker, c *Config, m metrics.Instrumenter, w http.ResponseWriter, r *http.Request, s *Stream, tail *common.StreamMessage, shutdownCtx context.Context) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		s.Session.Log.Error("streaming not supported")
@@ -245,6 +255,11 @@ func handleSSE(n *node.Node, brk broker.Broker, m metrics.Instrumenter, w http.R
 
 	disconnectNotify := r.Context().Done()
 	connClosed := conn.Context().Done()
+	timeout := c.SSETTL
+
+	if timeout == 0 {
+		timeout = 60
+	}
 
 	for {
 		select {
@@ -257,6 +272,9 @@ func handleSSE(n *node.Node, brk broker.Broker, m metrics.Instrumenter, w http.R
 			return
 		case <-connClosed:
 			s.Session.Log.Debug("connection closed")
+			return
+		case <-time.After(time.Duration(timeout) * time.Second):
+			conn.Close(http.StatusOK, "No content")
 			return
 		}
 	}

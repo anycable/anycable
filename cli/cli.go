@@ -66,6 +66,7 @@ type Runner struct {
 	websocketEndpoints  map[string]websocketHandler
 
 	router  *router.RouterController
+	streams *streams.Controller
 	metrics *metricspkg.Metrics
 	broker  broker.Broker
 
@@ -551,7 +552,7 @@ func (r *Runner) defaultDSHandler(n *node.Node, m metricspkg.Instrumenter, ctx c
 	if c.JWT.Enabled() {
 		extractor.AuthHeader = c.JWT.HeaderKey()
 	}
-	handler := ds.DSHandler(n, r.broker, m, ctx, &extractor, &c.DS, r.log)
+	handler := ds.DSHandler(n, r.broker, r.streams, m, ctx, &extractor, &c.DS, r.log)
 
 	return handler, nil
 }
@@ -634,6 +635,7 @@ func (r *Runner) defaultRouter() *router.RouterController {
 
 	if r.config.Streams.PubSubChannel != "" {
 		streamController := streams.NewStreamsController(&r.config.Streams, r.log)
+		r.streams = streamController
 		router.Route(r.config.Streams.PubSubChannel, streamController) // nolint:errcheck
 	}
 

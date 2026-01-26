@@ -103,7 +103,7 @@ func TestStreamsController(t *testing.T) {
 
 		res, err := subject.Subscribe(context.Background(), "42", nil, "name=jack", identifier)
 
-		require.NoError(t, err)
+		require.Error(t, err)
 		require.NotNil(t, res)
 		require.Equal(t, common.FAILURE, res.Status)
 		assert.Equal(t, []string{common.RejectionMessage(identifier)}, res.Transmissions)
@@ -154,7 +154,7 @@ func TestTurboController(t *testing.T) {
 
 		res, err := subject.Subscribe(context.Background(), "42", env, "name=jack", channel)
 
-		require.NoError(t, err)
+		require.Error(t, err)
 		require.NotNil(t, res)
 		require.Equal(t, common.FAILURE, res.Status)
 		assert.Equal(t, []string{common.RejectionMessage(channel)}, res.Transmissions)
@@ -166,7 +166,7 @@ func TestTurboController(t *testing.T) {
 
 		res, err := subject.Subscribe(context.Background(), "42", env, "name=jack", channel)
 
-		require.NoError(t, err)
+		require.Error(t, err)
 		require.NotNil(t, res)
 		require.Equal(t, common.FAILURE, res.Status)
 		assert.Equal(t, []string{common.RejectionMessage(channel)}, res.Transmissions)
@@ -208,7 +208,7 @@ func TestCableReadyController(t *testing.T) {
 
 		res, err := subject.Subscribe(context.Background(), "42", env, "name=jack", channel)
 
-		require.NoError(t, err)
+		require.Error(t, err)
 		require.NotNil(t, res)
 		require.Equal(t, common.FAILURE, res.Status)
 		assert.Equal(t, []string{common.RejectionMessage(channel)}, res.Transmissions)
@@ -220,7 +220,7 @@ func TestCableReadyController(t *testing.T) {
 
 		res, err := subject.Subscribe(context.Background(), "42", env, "name=jack", channel)
 
-		require.NoError(t, err)
+		require.Error(t, err)
 		require.NotNil(t, res)
 		require.Equal(t, common.FAILURE, res.Status)
 		assert.Equal(t, []string{common.RejectionMessage(channel)}, res.Transmissions)

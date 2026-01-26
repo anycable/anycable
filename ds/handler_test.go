@@ -2,6 +2,7 @@ package ds
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -13,19 +14,22 @@ import (
 	"github.com/anycable/anycable-go/mocks"
 	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/server"
+	"github.com/anycable/anycable-go/streams"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDSHandler_HEAD(t *testing.T) {
-	appNode, brk := buildNode()
+	appNode, brk, streamCtrl := buildNode()
 	conf := NewConfig()
 	conf.Path = "/ds"
+	conf.SkipAuth = true
 
 	defer appNode.Shutdown(context.Background()) // nolint: errcheck
 
 	headersExtractor := &server.DefaultHeadersExtractor{}
 
-	handler := DSHandler(appNode, brk, nil, context.Background(), headersExtractor, &conf, slog.Default())
+	handler := DSHandler(appNode, brk, streamCtrl, nil, context.Background(), headersExtractor, &conf, slog.Default())
 
 	t.Run("returns stream metadata", func(t *testing.T) {
 		w := httptest.NewRecorder()
@@ -48,11 +52,45 @@ func TestDSHandler_HEAD(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
 
-	t.Run("requires authentication", func(t *testing.T) {
-		t.Skip("no authentication yet")
-
+	t.Run("stream authorization", func(t *testing.T) {
 		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("HEAD", "/ds/test-stream", nil)
+
+		streamCtrl := streams.NewController("", func(identifier string) (*streams.SubscribeRequest, error) {
+			var resolved map[string]string
+
+			err := json.Unmarshal([]byte(identifier), &resolved)
+			require.NoError(t, err)
+
+			assert.Equal(t, "test-stream", resolved["stream_name"])
+
+			if resolved["signed_stream_name"] == "" {
+				return nil, errors.New("signed stream name is missing")
+			} else {
+				assert.Equal(t, "s1t2r3e4a5m", resolved["signed_stream_name"])
+			}
+
+			return &streams.SubscribeRequest{
+				StreamName: resolved["stream_name"],
+			}, nil
+		}, slog.Default())
+
+		handler := DSHandler(appNode, brk, streamCtrl, nil, context.Background(), headersExtractor, &conf, slog.Default())
+
+		req, _ := http.NewRequest("HEAD", "/ds/test-stream?signed=s1t2r3e4a5m", nil)
+		handler.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		w = httptest.NewRecorder()
+		req, _ = http.NewRequest("HEAD", "/ds/test-stream", nil)
+		req.Header.Set("X-Signed", "s1t2r3e4a5m")
+
+		handler.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		w = httptest.NewRecorder()
+		req, _ = http.NewRequest("HEAD", "/ds/test-stream", nil)
 
 		handler.ServeHTTP(w, req)
 
@@ -61,15 +99,15 @@ func TestDSHandler_HEAD(t *testing.T) {
 }
 
 func TestDSHandler_GET(t *testing.T) {
-	appNode, brk := buildNode()
+	appNode, brk, streamCtrl := buildNode()
 	conf := NewConfig()
 	conf.Path = "/ds"
+	conf.SkipAuth = true
 
 	defer appNode.Shutdown(context.Background()) // nolint: errcheck
 
 	headersExtractor := &server.DefaultHeadersExtractor{}
-
-	handler := DSHandler(appNode, brk, nil, context.Background(), headersExtractor, &conf, slog.Default())
+	handler := DSHandler(appNode, brk, streamCtrl, nil, context.Background(), headersExtractor, &conf, slog.Default())
 
 	t.Run("catch-up mode w/ empty stream", func(t *testing.T) {
 		brk.
@@ -150,7 +188,7 @@ func TestDSHandler_GET(t *testing.T) {
 	})
 }
 
-func buildNode() (*node.Node, *mocks.Broker) {
+func buildNode() (*node.Node, *mocks.Broker, *streams.Controller) {
 	controller := &mocks.Controller{}
 	controller.
 		On("Shutdown").
@@ -165,5 +203,11 @@ func buildNode() (*node.Node, *mocks.Broker) {
 	brk := &mocks.Broker{}
 	n.SetBroker(brk)
 
-	return n, brk
+	streamCtrl := streams.NewController("", func(identifier string) (*streams.SubscribeRequest, error) {
+		return &streams.SubscribeRequest{
+			StreamName: "a",
+		}, nil
+	}, slog.Default())
+
+	return n, brk, streamCtrl
 }
