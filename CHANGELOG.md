@@ -1,5 +1,7 @@
 # Change log
 
+- Add Durable Streams (read) support. ([@palkan][])
+
 - Added Pusher's `GET /channels/:channel/users` support. ([@palkan][])
 
 - Add mTLS support for Redis. ([@palkan][])
