@@ -28,13 +28,36 @@ Not planned yet.
 
 ## Authentication and authorization (read path)
 
+AnyCable DS supports two layers of security: **client authentication** and **stream authorization**.
+
+### Client authentication
+
 1. `DSHandler` extracts information via `server.NewRequestInfo` and builds a `Stream` wrapper through `NewDSSession`.
 2. The session is created with mode-specific encoders (`NoopEncoder` for catch-up, `PollEncoder` for long-poll, `SSEEncoder` for SSE) and connection types (`PollConnection` or `sse.Connection`).
-3. Sessions are registered directly via `node.Authenticated()` with a DS-specific identifier (`ds::<session_id>`), bypassing the traditional Action Cable authentication flow.
-4. Non-live (catch-up) requests use `node.InactiveSession()` to avoid hub registration overhead.
-5. Cross-origin access uses `Config.AllowedOrigins`; `server.WriteCORSHeaders` emits CORS headers for both simple and preflight requests.
+3. By default, sessions are authenticated via `node.Authenticate()`, which delegates to the configured authentication mechanism (e.g., JWT, RPC).
+4. When `ds.skip_auth` is enabled, sessions bypass authentication and are registered directly via `node.Authenticated()` with a DS-specific identifier (`ds::<session_id>`).
+5. Non-live (catch-up) requests use `node.InactiveSession()` to avoid hub registration overhead.
+6. Cross-origin access uses `Config.AllowedOrigins`; `server.WriteCORSHeaders` emits CORS headers for both simple and preflight requests.
 
-> ⚠️ **Security Note**: The current implementation does NOT enforce stream-level authorization. Any user can read any stream. JWT authentication integration is planned.
+### Stream authorization
+
+After client authentication, stream-level authorization is enforced:
+
+1. The handler constructs a subscribe command identifier from `StreamParams`, including:
+   - `stream_name`: The stream path from the URL
+   - `signed_stream_name`: Optional signed token from `signed` query param or `X-Signed` header
+2. The `streams.Controller.VerifiedStream()` method validates the identifier:
+   - For signed streams: verifies the cryptographic signature using the configured secret
+   - For public streams: allows access if public streams are enabled
+3. If verification fails, the request is rejected with 401 Unauthorized.
+4. On failure, the session is immediately disconnected to clean up resources.
+
+### Authorization parameters
+
+Clients can provide stream authorization via:
+
+- **Query parameter**: `?signed=<signed_stream_name>`
+- **HTTP header**: `X-Signed: <signed_stream_name>`
 
 ## Read architecture overview
 
@@ -42,26 +65,27 @@ Durable Streams read requests are handled through a thin HTTP façade backed by 
 
 ```text
 Client (DS SDK)
-    |  GET /ds/<stream>?offset=<opaque>&cursor=<token>&live=<mode>
+    |  GET /ds/<stream>?offset=<opaque>&cursor=<token>&live=<mode>&signed=<token>
     v
 DSHandler (HTTP)
-    |-- StreamParamsFromReq -> validate path, offset, live mode
+    |-- StreamParamsFromReq -> validate path, offset, live mode, extract signed token
     |-- NewDSSession -> create Stream with mode-specific encoder/connection
-    |-- node.Authenticated -> register session
+    |-- node.Authenticate (or node.Authenticated if skip_auth) -> authenticate client
+    |-- streams.VerifiedStream -> authorize stream access
     |
     |-- [catch-up] fetchHistory -> broker.HistorySince/HistoryFrom
     |-- [long-poll] node.Subscribe -> wait for message or timeout
-    |-- [sse] (not implemented)
+    |-- [sse] node.Subscribe -> continuous streaming with TTL
     v
 HTTP Response (JSON array body + DS headers)
 ```
 
 ### Read components
 
-- `Config`: toggles DS support, default path `/ds`, poll interval, and optional origin restrictions.
-- `StreamParams`: consolidates the stream path/name, raw/decoded offsets, epoch, cursor, and live mode.
+- `Config`: toggles DS support, default path `/ds`, poll interval, SSE TTL, skip_auth flag, and optional origin restrictions.
+- `StreamParams`: consolidates the stream path/name, signed name, raw/decoded offsets, epoch, cursor, and live mode.
 - `Stream`: wraps `node.Session`, `StreamParams`, and `node.Connection` to represent a durable stream connection.
-- `NewDSSession`: creates the `Stream` with appropriate encoder and connection based on live mode.
+- `NewDSSession`: creates the `Stream` with appropriate encoder and connection based on live mode; handles authentication.
 - `PollConnection`: wraps `http.ResponseWriter` for long-poll mode, converting encoded messages to HTTP response with headers.
 - `NoopEncoder`: used for catch-up requests where message encoding is handled directly.
 - `PollEncoder`: encodes messages with offset prepended for header extraction in long-poll mode.
@@ -73,45 +97,49 @@ HTTP Response (JSON array body + DS headers)
 
 1. Client issues `GET /ds/:stream?offset=...`.
 2. `StreamParamsFromReq` normalizes input, enforces live mode requirements, and decodes offsets.
-3. `NewDSSession` creates a `Stream` with `NoopEncoder` and `InactiveSession()` option.
-4. The handler fetches history via `fetchHistory`.
-5. Messages are truncated to `defaultMaxMessages` (100), decoded into a JSON array, and written as the response body.
-6. `Stream-Next-Offset` is derived from the last message (or echoes the provided offset when no messages are returned).
-7. `Stream-Cursor` is generated via `Stream.NextCursor()` based on time intervals for CDN collapsing.
-8. `Stream-Up-To-Date` signals the end of available history when fewer than 100 messages are returned.
+3. `NewDSSession` creates a `Stream` with `NoopEncoder` and `InactiveSession()` option; authenticates the client.
+4. Handler verifies stream access via `streams.VerifiedStream()`.
+5. The handler fetches history via `fetchHistory`.
+6. Messages are truncated to `defaultMaxMessages` (100), decoded into a JSON array, and written as the response body.
+7. `Stream-Next-Offset` is derived from the last message (or echoes the provided offset when no messages are returned).
+8. `Stream-Cursor` is generated via `Stream.NextCursor()` based on time intervals for CDN collapsing.
+9. `Stream-Up-To-Date` signals the end of available history when fewer than 100 messages are returned.
 
 ## Long-poll request flow
 
 1. Client issues `GET /ds/:stream?offset=<offset>&live=long-poll`.
 2. `StreamParamsFromReq` validates that offset is provided (required for live mode).
-3. `NewDSSession` creates a `Stream` with `PollEncoder` and `PollConnection`.
-4. The handler first attempts catch-up via `fetchHistory`.
-5. If messages exist, they are returned immediately as a JSON array with headers.
-6. If no messages are available:
+3. `NewDSSession` creates a `Stream` with `PollEncoder` and `PollConnection`; authenticates the client.
+4. Handler verifies stream access via `streams.VerifiedStream()`.
+5. The handler first attempts catch-up via `fetchHistory`.
+6. If messages exist, they are returned immediately as a JSON array with headers.
+7. If no messages are available:
    - Session subscribes to the stream via `node.Subscribe` using a pub/sub channel identifier.
    - Handler enters a select loop waiting for:
      - **Message received**: `PollConnection.Write` is triggered, which sets headers and writes the response.
      - **Timeout**: After `poll_interval` seconds (default 10), returns 204 No Content.
      - **Client disconnect**: Request context cancellation terminates the handler.
      - **Server shutdown**: Returns 410 Gone.
-7. `PollEncoder` prepends offset to message data; `PollConnection` parses this to set `Stream-Next-Offset` header.
-8. Response includes single message wrapped in JSON array with `Stream-Up-To-Date: true`.
+8. `PollEncoder` prepends offset to message data; `PollConnection` parses this to set `Stream-Next-Offset` header.
+9. Response includes single message wrapped in JSON array with `Stream-Up-To-Date: true`.
 
 ## SSE request flow
 
 1. Client issues `GET /ds/:stream?offset=<offset>&live=sse`.
 2. `StreamParamsFromReq` validates that offset is provided (required for live mode).
-3. `NewDSSession` creates a `Stream` with `SSEEncoder` and `sse.Connection`.
-4. Handler sets SSE headers (`Content-Type: text/event-stream`, `Cache-Control: no-cache`, etc.).
-5. Handler fetches catchup history via `fetchHistory`.
-6. Catchup data is sent as SSE `event: data` with JSON array payload.
-7. Control event is sent with `streamNextOffset`, `streamCursor`, and `upToDate: true`.
-8. Connection is marked as established (flushes any backlog).
-9. Session subscribes to the stream via `node.Subscribe` for live updates.
-10. Handler enters select loop waiting for:
+3. `NewDSSession` creates a `Stream` with `SSEEncoder` and `sse.Connection`; authenticates the client.
+4. Handler verifies stream access via `streams.VerifiedStream()`.
+5. Handler sets SSE headers (`Content-Type: text/event-stream`, `Cache-Control: no-cache`, etc.).
+6. Handler fetches catchup history via `fetchHistory`.
+7. Catchup data is sent as SSE `event: data` with JSON array payload.
+8. Control event is sent with `streamNextOffset`, `streamCursor`, and `upToDate: true`.
+9. Connection is marked as established (flushes any backlog).
+10. Session subscribes to the stream via `node.Subscribe` for live updates.
+11. Handler enters select loop waiting for:
     - **Client disconnect**: Request context cancellation terminates the handler.
     - **Server shutdown**: Returns and closes connection gracefully.
-11. Live messages are encoded by `SSEEncoder` and written via `sse.Connection`.
+    - **TTL timeout**: After `sse_ttl` seconds (default 60), closes connection with 200 OK.
+12. Live messages are encoded by `SSEEncoder` and written via `sse.Connection`.
 
 ### SSE event format
 
@@ -178,10 +206,9 @@ When returning messages, `Stream-Next-Offset` is set to the offset of the last r
 | Success | 200 OK | Data returned (or empty array for empty streams) |
 | No content (long-poll timeout) | 204 No Content | Poll interval elapsed with no new messages |
 | Invalid request | 400 Bad Request | Malformed offset, missing parameters, invalid live mode |
-| Unauthenticated | 401 Unauthorized | Authentication failed or rejected |
+| Unauthenticated | 401 Unauthorized | Client authentication failed or stream authorization rejected |
 | Stale offset / missing data | 410 Gone | Offset before earliest retained position or stream data unavailable |
 | Server shutdown (long-poll) | 410 Gone | Server is shutting down during long-poll wait |
-| Not implemented | 501 Not Implemented | SSE mode requested (currently unsupported) |
 | Internal error | 500 Internal Server Error | Unexpected server errors |
 
 ## Caching and CDN support
@@ -213,14 +240,16 @@ The following metrics are provided:
 - `ds_requests_total`: total DS GET/HEAD requests.
 - `ds_poll_requests_total`: total long-poll requests initiated.
 - `ds_poll_clients_num`: current number of active long-poll clients waiting.
-- `ds_sse_requests_total`: reserved for SSE tracking (WIP).
-- `ds_sse_clients_num`: reserved for SSE tracking (WIP).
+- `ds_sse_requests_total`: total SSE requests initiated.
+- `ds_sse_clients_num`: current number of active SSE clients connected.
 
 ### Configuration knobs
 
 - `ds.enabled` (default `false`) toggles the handler.
 - `ds.path` sets the mount point (default `/ds`).
+- `ds.skip_auth` (default `false`) disables client authentication, only stream authorization is performed.
 - `ds.poll_interval` sets the long-poll timeout in seconds (default `10`).
+- `ds.sse_ttl` sets the maximum SSE connection lifetime in seconds (default `60`).
 - `AllowedOrigins` governs CORS in CLI/environment settings.
 
 ### Response headers
@@ -235,8 +264,6 @@ The following metrics are provided:
 ### Read roadmap
 
 - Add SSE keepalive support (periodic comment pings) if needed for proxy timeouts.
-- Implement JWT authentication for stream access.
-- Enforce per-stream authorization before history retrieval (signed streams).
 - Wire broker metadata into HEAD responses (`Stream-Next-Offset`, history size, retention info).
 - Emit rich observability (structured logs, per-mode metrics, error counters).
 - Parameterize limits (max messages, payload size) and consider pagination tokens.
