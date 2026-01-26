@@ -3,9 +3,11 @@ package ds
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -17,6 +19,7 @@ import (
 	"github.com/anycable/anycable-go/node"
 	"github.com/anycable/anycable-go/pubsub"
 	"github.com/anycable/anycable-go/server"
+	"github.com/anycable/anycable-go/streams"
 	durablestreams "github.com/durable-streams/durable-streams/packages/client-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -168,21 +171,82 @@ func TestDSIntegration_CatchupRead(t *testing.T) {
 	})
 }
 
-func TestDSIntegration_AuthenticationRequired(t *testing.T) {
-	t.Skip("no authentication yet")
-
+func TestDSIntegration_Authenticate(t *testing.T) {
 	ctx := context.Background()
 
-	n, _, _, ts := setupIntegrationServer(t)
+	n, _, controller, ts := setupIntegrationServer(t)
+
+	// Reset mocks
+	controller.ExpectedCalls = []*mock.Call{}
+	controller.On("Shutdown").Return(nil)
+	controller.
+		On("Authenticate", mock.Anything, "sid-fail", mock.Anything).
+		Return(&common.ConnectResult{
+			Status:        common.FAILURE,
+			Transmissions: []string{`{"type":"disconnect"}`},
+		}, nil)
+	controller.
+		On("Authenticate", mock.Anything, "sid-pass", mock.Anything).
+		Return(&common.ConnectResult{
+			Identifier:    "ds2026",
+			Status:        common.SUCCESS,
+			Transmissions: []string{`{"type":"welcome"}`},
+		}, nil)
+
 	defer ts.Close()
 	defer n.Shutdown(ctx) // nolint: errcheck
 
-	client := durablestreams.NewClient(durablestreams.WithBaseURL(ts.URL))
+	client := durablestreams.NewClient(
+		durablestreams.WithBaseURL(ts.URL),
+	)
 	stream := client.Stream("/ds/test-stream")
 
-	_, err := stream.Head(ctx)
+	_, err := stream.Head(ctx,
+		durablestreams.WithHeadHeaders(map[string]string{
+			"x-request-id": "sid-fail",
+		}))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "401")
+
+	client = durablestreams.NewClient(
+		durablestreams.WithBaseURL(ts.URL),
+	)
+	stream = client.Stream("/ds/test-stream")
+	_, err = stream.Head(ctx,
+		durablestreams.WithHeadHeaders(map[string]string{
+			"x-request-id": "sid-pass",
+		}))
+	require.NoError(t, err)
+}
+
+func TestDSIntegration_StreamAuthorization(t *testing.T) {
+	ctx := context.Background()
+
+	n, _, _, ts := setupIntegrationServer(t)
+
+	defer ts.Close()
+	defer n.Shutdown(ctx) // nolint: errcheck
+
+	client := durablestreams.NewClient(
+		durablestreams.WithBaseURL(ts.URL),
+	)
+	stream := client.Stream("/ds/please-noauth")
+
+	_, err := stream.Head(ctx)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "401")
+
+	it := stream.Read(ctx,
+		durablestreams.WithOffset(durablestreams.StartOffset),
+		durablestreams.WithLive(durablestreams.LiveModeSSE),
+	)
+	_, err = it.Next()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "401")
+
+	time.Sleep(100 * time.Millisecond)
+
+	assert.Equal(t, 0, n.Size())
 }
 
 func TestDSIntegration_LongPoll(t *testing.T) {
@@ -539,6 +603,13 @@ func setupIntegrationServer(t *testing.T) (*node.Node, broker.Broker, *mocks.Con
 
 	controller := &mocks.Controller{}
 	controller.On("Shutdown").Return(nil)
+	controller.
+		On("Authenticate", mock.Anything, mock.Anything, mock.Anything).
+		Return(&common.ConnectResult{
+			Identifier:    "ds2026",
+			Status:        common.SUCCESS,
+			Transmissions: []string{`{"type":"welcome"}`},
+		}, nil)
 
 	logger := slog.Default()
 	n := node.NewNode(&config, node.WithController(controller), node.WithInstrumenter(metrics.NewMetrics(nil, 10, logger)))
@@ -562,7 +633,16 @@ func setupIntegrationServer(t *testing.T) (*node.Node, broker.Broker, *mocks.Con
 	dsConfig.PollInterval = 3
 
 	headersExtractor := &server.DefaultHeadersExtractor{}
-	handler := DSHandler(n, brk, nil, context.Background(), headersExtractor, &dsConfig, logger)
+	streamCtrl := streams.NewController("", func(identifier string) (*streams.SubscribeRequest, error) {
+		if strings.Contains(identifier, "noauth") {
+			return nil, errors.New("unauthenticated")
+		}
+
+		return &streams.SubscribeRequest{
+			StreamName: "a",
+		}, nil
+	}, slog.Default())
+	handler := DSHandler(n, brk, streamCtrl, nil, context.Background(), headersExtractor, &dsConfig, logger)
 
 	mux := http.NewServeMux()
 	mux.Handle("/ds/", handler)

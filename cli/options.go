@@ -1493,6 +1493,24 @@ func dsCLIFlags(c *config.Config) []cli.Flag {
 			Value:       c.DS.Path,
 			Destination: &c.DS.Path,
 		},
+		&cli.BoolFlag{
+			Name:        "ds_skip_auth",
+			Usage:       "Disable client authentication for Durable Streams (only authorize stream access)",
+			Value:       c.DS.SkipAuth,
+			Destination: &c.DS.SkipAuth,
+		},
+		&cli.IntFlag{
+			Name:        "ds_poll_interval",
+			Usage:       "Durable Streams long polling interval (seconds)",
+			Value:       c.DS.PollInterval,
+			Destination: &c.DS.PollInterval,
+		},
+		&cli.IntFlag{
+			Name:        "ds_sse_ttl",
+			Usage:       "Durable Streams SSE connections time-to-live (seconds)",
+			Value:       c.DS.SSETTL,
+			Destination: &c.DS.SSETTL,
+		},
 	})
 }
 

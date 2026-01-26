@@ -64,6 +64,11 @@ const (
 	// Query parameter for echoing cursor (CDN collapsing).
 	CursorQueryParam = "cursor"
 
+	// Signed Stream Name query parameter (for authorization)
+	SignedStreamParam = "signed"
+	// Signed Stream Name header name (for authorization)
+	SignedStreamHeader = "x-signed"
+
 	// Modes
 	LongPollMode = "long-poll"
 	SSEMode      = "sse"
@@ -79,13 +84,14 @@ const (
 
 type StreamParams struct {
 	// Name is the name of the stream in AnyCable (could differ from Path in the future)
-	Name      string
-	Cursor    string
-	Offset    uint64
-	Epoch     string
-	LiveMode  string
-	Path      string
-	RawOffset string
+	Name       string
+	SignedName string
+	Cursor     string
+	Offset     uint64
+	Epoch      string
+	LiveMode   string
+	Path       string
+	RawOffset  string
 }
 
 func StreamParamsFromReq(r *http.Request, c *Config) (*StreamParams, error) {
@@ -120,16 +126,22 @@ func StreamParamsFromReq(r *http.Request, c *Config) (*StreamParams, error) {
 		return nil, err
 	}
 
+	signedName := r.URL.Query().Get(SignedStreamParam)
+	if signedName == "" {
+		signedName = r.Header.Get(SignedStreamHeader)
+	}
+
 	name := streamPath
 
 	return &StreamParams{
-		Path:      streamPath,
-		Name:      name,
-		Cursor:    cursor,
-		Offset:    offset,
-		Epoch:     epoch,
-		RawOffset: offsetStr,
-		LiveMode:  liveMode,
+		Path:       streamPath,
+		Name:       name,
+		SignedName: signedName,
+		Cursor:     cursor,
+		Offset:     offset,
+		Epoch:      epoch,
+		RawOffset:  offsetStr,
+		LiveMode:   liveMode,
 	}, nil
 }
 
@@ -141,14 +153,16 @@ type subscribeIdentifier struct {
 	SignedStreamName string `json:"signed_stream_name,omitempty"`
 }
 
+// TODO: Move this to Config (and inherit from streams.Config)
 const pubsubChannel = "$pubsub"
 
 func (sp *StreamParams) ToSubscribeCommand() *common.Message {
 	return &common.Message{
 		Command: "subscribe",
 		Identifier: string(utils.ToJSON(subscribeIdentifier{
-			Channel:    pubsubChannel,
-			StreamName: sp.Name,
+			Channel:          pubsubChannel,
+			StreamName:       sp.Name,
+			SignedStreamName: sp.SignedName,
 		})),
 	}
 }
@@ -193,7 +207,7 @@ func (s *Stream) NextCursor() string {
 
 // NewDSSession creates a node.Session struct to represents a durable stream connection and register it within
 // the AnyCable node. TODO: Integrate JWT authentication.
-func NewDSSession(n *node.Node, w http.ResponseWriter, info *server.RequestInfo, sp *StreamParams) (*Stream, error) {
+func NewDSSession(n *node.Node, c *Config, w http.ResponseWriter, info *server.RequestInfo, sp *StreamParams) (*Stream, error) {
 	sopts := []node.SessionOption{}
 	var conn node.Connection
 
@@ -219,8 +233,20 @@ func NewDSSession(n *node.Node, w http.ResponseWriter, info *server.RequestInfo,
 	session := node.NewSession(n, conn, info.URL, info.Headers, info.UID, sopts...)
 	session.Log = session.Log.With("ds", sp.Path)
 
-	// TODO: add authentication (JWT?)
-	n.Authenticated(session, fmt.Sprintf("ds::%s", session.GetID()))
+	if c.SkipAuth {
+		session.Log.Debug("skip authentication")
+		n.Authenticated(session, fmt.Sprintf("ds::%s", session.GetID()))
+	} else {
+		res, err := n.Authenticate(session)
+
+		if err != nil {
+			return nil, err
+		}
+
+		if res.Status == common.FAILURE {
+			return nil, fmt.Errorf("authentication rejected")
+		}
+	}
 
 	stream.Session = session
 	stream.Conn = conn
