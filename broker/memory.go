@@ -77,6 +77,18 @@ func (ms *memstream) insert(data string, offset uint64, t time.Time) (uint64, er
 	return ms.offset, nil
 }
 
+func (ms *memstream) peak() uint64 {
+	ms.mu.Lock()
+	defer ms.mu.Unlock()
+
+	if len(ms.data) == 0 {
+		return 0
+	}
+
+	entry := ms.data[len(ms.data)-1]
+	return entry.offset
+}
+
 func (ms *memstream) appendEntry(entry *entry) {
 	ms.data = append(ms.data, entry)
 
@@ -407,6 +419,23 @@ func (b *Memory) Store(name string, data []byte, offset uint64, ts time.Time) (u
 	b.streamsMu.Unlock()
 
 	return stream.insert(string(data), offset, ts)
+}
+
+func (b *Memory) Peak(name string) (*common.StreamMessage, error) {
+	b.streamsMu.Lock()
+	defer b.streamsMu.Unlock()
+
+	if stream, ok := b.streams[name]; ok {
+		offset := stream.peak()
+		// empty
+		if offset == 0 {
+			return nil, nil
+		}
+
+		return &common.StreamMessage{Offset: offset, Epoch: b.epoch}, nil
+	}
+
+	return nil, nil
 }
 
 func (b *Memory) CommitSession(sid string, session Cacheable) error {

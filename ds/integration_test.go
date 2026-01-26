@@ -267,23 +267,38 @@ func TestDSIntegration_LongPoll(t *testing.T) {
 		streamName := "longpoll-wait-test"
 		brk.Subscribe(streamName)
 
+		// Add data first
+		err := brk.HandleBroadcast(&common.StreamMessage{
+			Stream: streamName,
+			Data:   `{"msg":"existing data"}`,
+		})
+		require.NoError(t, err)
+
 		client := durablestreams.NewClient(durablestreams.WithBaseURL(ts.URL))
 		stream := client.Stream("/ds/" + streamName)
 
+		// Get current offset
+		meta, err := stream.Head(ctx)
+		require.NoError(t, err)
+
+		offset := meta.NextOffset
+
 		var receivedData []map[string]interface{}
 		var readErr error
-		var wg sync.WaitGroup
-		wg.Add(1)
+
+		done := make(chan struct{})
 
 		// Start reading in long-poll mode
 		go func() {
-			defer wg.Done()
+			defer func() {
+				done <- struct{}{}
+			}()
 
-			readCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			readCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 			defer cancel()
 
 			it := stream.Read(readCtx,
-				durablestreams.WithOffset(durablestreams.StartOffset),
+				durablestreams.WithOffset(offset),
 				durablestreams.WithLive(durablestreams.LiveModeLongPoll),
 			)
 			defer it.Close()
@@ -310,13 +325,18 @@ func TestDSIntegration_LongPoll(t *testing.T) {
 		assert.Equal(t, 1, n.Size())
 
 		// Append data while long-poll is waiting
-		err := brk.HandleBroadcast(&common.StreamMessage{
+		err = brk.HandleBroadcast(&common.StreamMessage{
 			Stream: streamName,
 			Data:   `{"msg":"new data"}`,
 		})
 		require.NoError(t, err)
 
-		wg.Wait()
+		select {
+		case <-done:
+			break
+		case <-time.After(2 * time.Second):
+			t.Fatal("timeout waiting for long-poll")
+		}
 
 		require.NoError(t, readErr)
 		require.NotEmpty(t, receivedData, "should have received data via long-poll")

@@ -95,9 +95,18 @@ func DSHandler(n *node.Node, brk broker.Broker, st *streams.Controller, m metric
 			stream.Session.Disconnect("done", ws.CloseNormalClosure)
 		}()
 
-		// TODO: check that stream exists and get the tail offset
-		// (same mechanism as in head)
-		tail := &common.StreamMessage{}
+		tail, err := brk.Peak(stream.Params.Name)
+
+		if err != nil {
+			stream.Session.Log.Error("failed to get stream metadata", "err", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		// Unknown stream or no data
+		if tail == nil {
+			tail = &common.StreamMessage{}
+		}
 
 		if r.Method == http.MethodHead {
 			w.Header().Set("Content-Type", "application/json")
