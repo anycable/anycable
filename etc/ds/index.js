@@ -121,6 +121,33 @@ function printGoodbye() {
   console.log(chalk.dim("👋 Goodbye!"));
 }
 
+function waitForEnter() {
+  return new Promise((resolve) => {
+    printPrompt();
+
+    let lineReceived = false;
+
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+      terminal: false,
+    });
+
+    rl.once("line", () => {
+      lineReceived = true;
+      rl.close();
+      resolve();
+    });
+
+    rl.once("close", () => {
+      // Only treat as exit if we didn't receive a line (i.e., Ctrl+C)
+      if (!lineReceived) {
+        resolve("exit");
+      }
+    });
+  });
+};
+
 // ============================================================================
 // Stream Fetching
 // ============================================================================
@@ -185,34 +212,6 @@ async function runCatchupMode(streamUrl, live = false) {
   // Initial fetch
   await poll();
 
-  // Wait for Enter key to fetch more
-  const waitForEnter = () => {
-    return new Promise((resolve) => {
-      printPrompt();
-
-      let lineReceived = false;
-
-      const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout,
-        terminal: false,
-      });
-
-      rl.once("line", () => {
-        lineReceived = true;
-        rl.close();
-        resolve();
-      });
-
-      rl.once("close", () => {
-        // Only treat as exit if we didn't receive a line (i.e., Ctrl+C)
-        if (!lineReceived) {
-          resolve("exit");
-        }
-      });
-    });
-  };
-
   // Main loop
   while (true) {
     const result = await waitForEnter();
@@ -231,9 +230,40 @@ async function runPollMode(streamUrl) {
   process.exit(0);
 }
 
-async function runSseMode(_streamUrl) {
-  printNotImplemented("sse");
-  process.exit(0);
+async function runSseMode(streamUrl) {
+  let currentOffset = "-1";
+
+  const spinner = ora({
+    text: "Streaming messages... (hit ENTER to exit)",
+    color: "cyan",
+  }).start();
+
+  try {
+    const res = await stream({
+      url: streamUrl,
+      offset: currentOffset,
+      live: "sse",
+      json: true
+    });
+
+    let i = 1;
+
+    res.subscribeJson(async (batch) => {
+      console.log(batch);
+      for (const item of batch.items) {
+        printMessage(i++, item);
+      }
+    })
+
+    await waitForEnter();
+    printGoodbye();
+    spinner.stop();
+
+    process.exit(0);
+  } catch (error) {
+    spinner.stop();
+    throw error;
+  }
 }
 
 // ============================================================================

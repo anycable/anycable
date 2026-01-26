@@ -34,9 +34,9 @@ func TestStream_GenerateCursor(t *testing.T) {
 
 		currentCursor := stream.NextCursor()
 
-		params.Cursor = currentCursor
+		anotherStream := &Stream{Params: &StreamParams{Cursor: currentCursor}}
 
-		nextCursor := stream.NextCursor()
+		nextCursor := anotherStream.NextCursor()
 
 		assert.Greater(t, nextCursor, currentCursor)
 	})

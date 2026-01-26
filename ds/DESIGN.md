@@ -17,7 +17,7 @@ Write-side semantics (appends, stream creation/upserts, TTL updates) are intenti
 | HEAD metadata | **Partial** | Responds with JSON content type, cache control, CORS headers, and `Stream-Next-Offset`, which is temporarily set to the placeholder value `now` until broker introspection is exposed. |
 | GET catch-up reads | **Supported** | Fetches up to 100 persisted messages via `broker.HistorySince`/`HistoryFrom`, encodes them as a JSON array, and sets `Stream-Next-Offset`, `Stream-Cursor`, and `Stream-Up-To-Date`. |
 | GET long-poll (`live=long-poll`) | **Supported** | Subscribes to the stream after returning empty catch-up, waits for new messages or timeout (configurable via `poll_interval`, default 10s), returns single message with proper headers. |
-| GET SSE (`live=sse`) | **WIP** | SSE encoder exists, but the handler returns 501 Not Implemented. Full subscription pipeline pending. |
+| GET SSE (`live=sse`) | **Supported** | Full SSE streaming with catchup replay, live updates, and control events. Uses `text/event-stream` content type with proper headers for proxy compatibility. |
 | Cursor support (`Stream-Cursor`) | **Supported** | Server generates time-based cursors for CDN collapsing per DS spec §8.1. Client-provided cursors are used to ensure monotonic progression. |
 | Offset format | **Supported** | Offsets are opaque strings produced by `EncodeOffset` (`<offset>::<epoch>`). Reserved offsets `-1` (`StartOffset`) and `now` are honored by `DecodeOffset`. |
 | Content negotiation | **JSON only** | Only `application/json` streams are supported; other content types return an error. |
@@ -97,15 +97,43 @@ HTTP Response (JSON array body + DS headers)
 7. `PollEncoder` prepends offset to message data; `PollConnection` parses this to set `Stream-Next-Offset` header.
 8. Response includes single message wrapped in JSON array with `Stream-Up-To-Date: true`.
 
-## SSE scaffolding (WIP)
+## SSE request flow
 
-> **Note**: SSE mode support is currently under development.
+1. Client issues `GET /ds/:stream?offset=<offset>&live=sse`.
+2. `StreamParamsFromReq` validates that offset is provided (required for live mode).
+3. `NewDSSession` creates a `Stream` with `SSEEncoder` and `sse.Connection`.
+4. Handler sets SSE headers (`Content-Type: text/event-stream`, `Cache-Control: no-cache`, etc.).
+5. Handler fetches catchup history via `fetchHistory`.
+6. Catchup data is sent as SSE `event: data` with JSON array payload.
+7. Control event is sent with `streamNextOffset`, `streamCursor`, and `upToDate: true`.
+8. Connection is marked as established (flushes any backlog).
+9. Session subscribes to the stream via `node.Subscribe` for live updates.
+10. Handler enters select loop waiting for:
+    - **Client disconnect**: Request context cancellation terminates the handler.
+    - **Server shutdown**: Returns and closes connection gracefully.
+11. Live messages are encoded by `SSEEncoder` and written via `sse.Connection`.
 
-- Query validation ensures `offset` is provided when `live=sse` is specified.
-- `SSEEncoder` is implemented to produce SSE-formatted events with data and control frames.
-- Handler currently returns 501 Not Implemented for SSE requests.
-- `sse.Connection` from the shared SSE package will be used for the connection wrapper.
-- Metrics counters/gauges for SSE mode are registered but not incremented yet.
+### SSE event format
+
+**Data event (catchup or live):**
+```
+event: data
+data:[{"id":1,"msg":"hello"},{"id":2,"msg":"world"}]
+```
+
+**Control event:**
+```
+event: control
+data:{"streamNextOffset":"3::epoch","streamCursor":"12345","upToDate":true}
+```
+
+### SSE headers
+
+- `Content-Type: text/event-stream`
+- `Cache-Control: private, no-cache, no-store, must-revalidate, max-age=0`
+- `X-Content-Type-Options: nosniff`
+- `X-Accel-Buffering: no` (prevents nginx proxy buffering)
+- `Connection: keep-alive` (for HTTP/1.1)
 
 ## Offset semantics
 
@@ -206,7 +234,7 @@ The following metrics are provided:
 
 ### Read roadmap
 
-- Finish the SSE pipeline (subscriptions, initial replay via `SSEEncoder`, disconnect handling, keep-alive).
+- Add SSE keepalive support (periodic comment pings) if needed for proxy timeouts.
 - Implement JWT authentication for stream access.
 - Enforce per-stream authorization before history retrieval (signed streams).
 - Wire broker metadata into HEAD responses (`Stream-Next-Offset`, history size, retention info).

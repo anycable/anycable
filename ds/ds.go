@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/anycable/anycable-go/common"
@@ -158,12 +159,22 @@ type Stream struct {
 	Session *node.Session
 	Params  *StreamParams
 	Conn    node.Connection
+
+	nextCursor string
+	cMu        sync.Mutex
 }
 
 // NextCursor generates a cursor value for CDN collapsing based on time intervals.
 // Per DS spec §8.1, cursors are interval-based (20-second intervals from epoch).
 // If a client provides a cursor >= current interval, we add jitter to ensure monotonic progression.
 func (s *Stream) NextCursor() string {
+	s.cMu.Lock()
+	defer s.cMu.Unlock()
+
+	if s.nextCursor != "" {
+		return s.nextCursor
+	}
+
 	now := time.Now().UTC()
 	currentInterval := int64(now.Sub(cursorEpoch).Seconds() / cursorInterval)
 
@@ -176,7 +187,8 @@ func (s *Stream) NextCursor() string {
 		}
 	}
 
-	return strconv.FormatInt(currentInterval, 10)
+	s.nextCursor = strconv.FormatInt(currentInterval, 10)
+	return s.nextCursor
 }
 
 // NewDSSession creates a node.Session struct to represents a durable stream connection and register it within
@@ -184,6 +196,8 @@ func (s *Stream) NextCursor() string {
 func NewDSSession(n *node.Node, w http.ResponseWriter, info *server.RequestInfo, sp *StreamParams) (*Stream, error) {
 	sopts := []node.SessionOption{}
 	var conn node.Connection
+
+	stream := &Stream{Params: sp}
 
 	conn = NewPollConnection(w)
 
@@ -196,7 +210,8 @@ func NewDSSession(n *node.Node, w http.ResponseWriter, info *server.RequestInfo,
 		sopts = append(sopts, node.WithEncoder(&PollEncoder{}))
 	case SSEMode:
 		conn = sse.NewConnection(w)
-		sopts = append(sopts, node.WithEncoder(&SSEEncoder{Cursor: sp.Cursor}))
+		sseEncoder := &SSEEncoder{Cursor: stream.NextCursor()}
+		sopts = append(sopts, node.WithEncoder(sseEncoder))
 	default:
 		return nil, fmt.Errorf("unsupported live mode: %s", sp.LiveMode)
 	}
@@ -207,5 +222,8 @@ func NewDSSession(n *node.Node, w http.ResponseWriter, info *server.RequestInfo,
 	// TODO: add authentication (JWT?)
 	n.Authenticated(session, fmt.Sprintf("ds::%s", session.GetID()))
 
-	return &Stream{session, sp, conn}, nil
+	stream.Session = session
+	stream.Conn = conn
+
+	return stream, nil
 }
