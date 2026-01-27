@@ -267,12 +267,16 @@ func (api *RestAPI) handleGetUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !api.broker.SupportsPresence() {
+		w.WriteHeader(http.StatusNotImplemented)
+		return
+	}
+
 	info, err := api.broker.PresenceInfo(channel)
 
 	if err != nil {
 		api.log.Debug("failed to get presence info", "channel", channel, "error", err)
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"users":[]}`)) // nolint:errcheck
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 

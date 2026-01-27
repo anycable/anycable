@@ -95,6 +95,105 @@ curl -X POST \
   http://localhost:8080/api/publish
 ```
 
+### GET /presence/:stream/users
+
+Retrieve presence information for a specific stream.
+
+**NOTE:** This endpoint requires [presence](./presence.md) support to be enabled (available when using the Memory or Redis broker).
+
+#### Request
+
+- **Method:** `GET`
+- **Path:** `/api/presence/:stream/users` (or `<api_path>/presence/:stream/users` if custom path is configured)
+- **Authorization:** `Bearer <api-secret>` (when authentication is enabled)
+
+#### URL Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `stream` | string | Yes | The name of the stream to get presence information for |
+
+#### Response
+
+| Status Code | Description |
+|-------------|-------------|
+| `200 OK` | Presence information retrieved successfully |
+| `401 Unauthorized` | Missing or invalid authentication |
+| `404 Not Found` | Invalid path format |
+| `422 Unprocessable Entity` | Invalid request method (non-GET) |
+| `501 Not Implemented` | Presence is not supported by the current broker |
+
+#### Response Body
+
+The response body is a JSON object with the following structure:
+
+```json
+{
+  "type": "info",
+  "total": 2,
+  "records": [
+    {
+      "id": "user-1",
+      "info": { "name": "Alice" }
+    },
+    {
+      "id": "user-2",
+      "info": { "name": "Bob" }
+    }
+  ]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `type` | string | Always `"info"` |
+| `total` | integer | Total number of unique presence records in the stream |
+| `records` | array | List of presence records (omitted if empty) |
+
+Each record in the `records` array contains:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique presence identifier for the user |
+| `info` | object | User-defined presence information |
+
+#### Examples
+
+**Get presence for a stream:**
+
+```sh
+curl -X GET \
+  -H "Authorization: Bearer your-api-secret" \
+  http://localhost:8080/api/presence/chat%2F1/users
+```
+
+**Example response:**
+
+```json
+{
+  "type": "info",
+  "total": 2,
+  "records": [
+    {
+      "id": "user-123",
+      "info": { "name": "Alice", "status": "online" }
+    },
+    {
+      "id": "user-456",
+      "info": { "name": "Bob", "status": "away" }
+    }
+  ]
+}
+```
+
+**Empty stream response:**
+
+```json
+{
+  "total": 0
+}
+```
+
 ## Configuration
 
 The API server can be configured using the following options:

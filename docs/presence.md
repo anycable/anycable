@@ -106,7 +106,7 @@ The complete documentation is coming soon; for now, you can check out this [exam
 
 ## Presence API
 
-> 🚧 Presence REST API is to be implemented. You can only use the presence API via the WebSocket connection. Please, reach out to us if you need to use it and share your use cases.
+You can get the list of currently present users for a stream using our REST API: [documentation](./api.md).
 
 ## Presence webhooks
 

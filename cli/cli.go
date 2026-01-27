@@ -276,7 +276,7 @@ func (r *Runner) Run() error {
 		wsServer.SetupHandler(dsStreamsPath, dsHandler)
 	}
 
-	if err := r.startAPIServer(appNode); err != nil {
+	if err := r.startAPIServer(appNode, r.broker); err != nil {
 		return err
 	}
 
@@ -497,7 +497,7 @@ func (r *Runner) startMetrics(metrics *metricspkg.Metrics) {
 	}
 }
 
-func (r *Runner) startAPIServer(appNode *node.Node) error {
+func (r *Runner) startAPIServer(appNode *node.Node, brk broker.Broker) error {
 	c := r.config
 
 	// API is enabled when:
@@ -520,7 +520,7 @@ func (r *Runner) startAPIServer(appNode *node.Node) error {
 		c.API.Port = c.Server.Port
 	}
 
-	apiServer, err := api.NewServer(&c.API, appNode, r.log)
+	apiServer, err := api.NewServer(&c.API, brk, appNode, r.log)
 	if err != nil {
 		return errorx.Decorate(err, "failed to initialize API server")
 	}

@@ -58,6 +58,8 @@ type Broker interface {
 	// Prevent session cache from expiration
 	TouchSession(sid string) error
 
+	SupportsPresence() bool
+
 	// Adds a new presence record for the stream. Returns true if that's the first
 	// presence record for the presence ID (pid, a unique user presence identifier).
 	PresenceAdd(stream string, sid string, pid string, info interface{}) (*common.PresenceEvent, error)
@@ -216,6 +218,10 @@ func (LegacyBroker) RestoreSession(from string) ([]byte, error) {
 
 func (LegacyBroker) TouchSession(sid string) error {
 	return nil
+}
+
+func (LegacyBroker) SupportsPresence() bool {
+	return false
 }
 
 func (LegacyBroker) PresenceAdd(stream string, sid string, pid string, info interface{}) (*common.PresenceEvent, error) {

@@ -487,6 +487,10 @@ func (n *NATS) Peak(stream string) (*common.StreamMessage, error) {
 	return nil, nil
 }
 
+func (n *NATS) SupportsPresence() bool {
+	return false
+}
+
 func (n *NATS) PresenceAdd(stream string, sid string, pid string, info interface{}) (*common.PresenceEvent, error) {
 	return nil, errors.New("presence not supported")
 }

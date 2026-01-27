@@ -359,6 +359,24 @@ func (_m *Broker) Subscribe(stream string) string {
 	return r0
 }
 
+// SupportsPresence provides a mock function with no fields
+func (_m *Broker) SupportsPresence() bool {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for SupportsPresence")
+	}
+
+	var r0 bool
+	if rf, ok := ret.Get(0).(func() bool); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	return r0
+}
+
 // TouchPresence provides a mock function with given fields: sid
 func (_m *Broker) TouchPresence(sid string) error {
 	ret := _m.Called(sid)
