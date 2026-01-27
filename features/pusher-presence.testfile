@@ -1,5 +1,5 @@
 launch :anycable,
-  "./dist/anycable-go --pusher_app_id=my-test-id --pusher_app_key=ballard --public_streams --pusher_secret=oaugc1 --pusher_api_port=8087 --broker=memory"
+  "./dist/anycable-go --pusher_app_id=my-test-id --pusher_app_key=ballard --public_streams --pusher_secret=oaugc1 --pusher_api_port=8087 --broker=redis"
 
 wait_tcp 8080
 

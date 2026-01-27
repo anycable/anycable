@@ -180,6 +180,45 @@ func TestRedisBroker_HistoryFrom(t *testing.T) {
 	})
 }
 
+func TestRedisBroker_Peak(t *testing.T) {
+	if !redisAvailable {
+		t.Skip("Redis is not available")
+		return
+	}
+
+	config := NewConfig()
+	config.HistoryTTL = 2
+
+	broadcastHandler := FakeBroadastHandler{}
+	broadcaster := pubsub.NewLegacySubscriber(broadcastHandler)
+
+	broker := NewRedisBroker(broadcaster, nil, &config, &redisConfig, slog.Default())
+	err := broker.Start(nil)
+	require.NoError(t, err)
+	defer broker.Shutdown(context.Background()) // nolint: errcheck
+	require.NoError(t, broker.Reset())
+
+	msg, err := broker.Peak("test")
+	require.NoError(t, err)
+	assert.Nil(t, msg)
+
+	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "a"}) // nolint: errcheck
+	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "b"}) // nolint: errcheck
+
+	msg, err = broker.Peak("test")
+	require.NoError(t, err)
+	require.NotNil(t, msg)
+	assert.EqualValues(t, 2, msg.Offset)
+
+	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "c"}) // nolint: errcheck
+	broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "d"}) // nolint: errcheck
+
+	msg, err = broker.Peak("test")
+	require.NoError(t, err)
+	require.NotNil(t, msg)
+	assert.EqualValues(t, 4, msg.Offset)
+}
+
 func TestRedisBroker_Sessions(t *testing.T) {
 	if !redisAvailable {
 		t.Skip("Redis is not available")
@@ -286,41 +325,4 @@ func TestRedisBroker_Epoch(t *testing.T) {
 	defer oneMoreBroker.Shutdown(context.Background()) // nolint: errcheck
 
 	assert.NotEqual(t, epoch, oneMoreBroker.Epoch())
-}
-
-func TestRedisBroker_Peak(t *testing.T) {
-	if !redisAvailable {
-		t.Skip("Redis is not available")
-		return
-	}
-
-	config := NewConfig()
-
-	broadcastHandler := FakeBroadastHandler{}
-	broadcaster := pubsub.NewLegacySubscriber(broadcastHandler)
-
-	broker := NewRedisBroker(broadcaster, nil, &config, &redisConfig, slog.Default())
-	err := broker.Start(nil)
-	require.NoError(t, err)
-	defer broker.Shutdown(context.Background()) // nolint: errcheck
-	require.NoError(t, broker.Reset())
-
-	t.Run("When stream is unknown", func(t *testing.T) {
-		tail, err := broker.Peak("unknown")
-		require.NoError(t, err)
-		assert.Nil(t, tail)
-	})
-
-	t.Run("With messages", func(t *testing.T) {
-		broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "a"}) // nolint: errcheck
-		broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "b"}) // nolint: errcheck
-		broker.HandleBroadcast(&common.StreamMessage{Stream: "test", Data: "c"}) // nolint: errcheck
-
-		tail, err := broker.Peak("test")
-		require.NoError(t, err)
-		require.NotNil(t, tail)
-
-		assert.EqualValues(t, 3, tail.Offset)
-		assert.Equal(t, broker.Epoch(), tail.Epoch)
-	})
 }

@@ -284,7 +284,7 @@ func (b *RedisBroker) HistorySince(stream string, ts int64) ([]common.StreamMess
 	return b.HistoryFrom(stream, b.epoch, offset-1)
 }
 
-func (b *RedisBroker) Peak(stream string) (*common.StreamMessage, error) {
+func (b *RedisBroker) Peak(name string) (*common.StreamMessage, error) {
 	client, err := b.Client()
 
 	if err != nil {
@@ -292,32 +292,38 @@ func (b *RedisBroker) Peak(stream string) (*common.StreamMessage, error) {
 	}
 
 	ctx := context.Background()
-	key := b.toKey(redisStreamPrefix, stream)
+	key := b.toKey(redisStreamPrefix, name)
 
-	res := client.Do(ctx, client.B().Xrevrange().Key(key).End("+").Start("-").Count(1).Build())
+	if !b.keyExists(ctx, key) {
+		return nil, nil
+	}
+
+	res := client.Do(ctx, b.client.B().Xrevrange().Key(key).End("+").Start("-").Count(1).Build())
 
 	if res.Error() != nil {
-		return nil, errorx.Decorate(res.Error(), "failed to get stream tail from Redis")
+		return nil, errorx.Decorate(res.Error(), "failed to get peak from Redis")
 	}
 
 	messages, err := res.AsXRange()
 	if err != nil {
-		return nil, errorx.Decorate(err, "failed to parse stream tail from Redis")
+		return nil, errorx.Decorate(err, "failed to parse peak from Redis")
 	}
 
-	// unknown stream or empty
 	if len(messages) == 0 {
 		return nil, nil
 	}
 
-	parts := strings.SplitN(messages[0].ID, "-", 2)
-	offset, err := strconv.ParseUint(parts[0], 10, 64)
+	msg := messages[0]
+	data := msg.FieldValues["d"]
+	parts := strings.SplitN(msg.ID, "-", 2)
+	id, _ := strconv.ParseUint(parts[0], 10, 64)
 
-	if err != nil {
-		return nil, errorx.Decorate(err, "failed to parse offset from Redis response")
-	}
-
-	return &common.StreamMessage{Stream: stream, Offset: offset, Epoch: b.epoch}, nil
+	return &common.StreamMessage{
+		Stream: name,
+		Data:   data,
+		Offset: id,
+		Epoch:  b.Epoch(),
+	}, nil
 }
 
 func (b *RedisBroker) CommitSession(sid string, session Cacheable) error {
