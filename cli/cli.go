@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/anycable/anycable-go/api"
 	"github.com/anycable/anycable-go/broadcast"
 	"github.com/anycable/anycable-go/broker"
 	"github.com/anycable/anycable-go/common"
@@ -270,6 +271,10 @@ func (r *Runner) Run() error {
 		wsServer.SetupHandler(dsStreamsPath, dsHandler)
 	}
 
+	if err := r.startAPIServer(appNode); err != nil {
+		return err
+	}
+
 	go r.startWSServer(wsServer)
 	go r.metrics.Run() // nolint:errcheck
 
@@ -496,6 +501,53 @@ func (r *Runner) startMetrics(metrics *metricspkg.Metrics) {
 	if err != nil {
 		r.errChan <- fmt.Errorf("!!! Metrics module failed to start !!!\n%v", err)
 	}
+}
+
+func (r *Runner) startAPIServer(appNode *node.Node) error {
+	c := r.config
+
+	// API is enabled when:
+	// - Public mode is active, OR
+	// - Secret is configured (explicit or can be derived), OR
+	// - Non-default port is specified
+	apiEnabled := c.PublicMode || c.API.Port != 0 || c.API.Secret != "" || c.Secret != ""
+
+	if !apiEnabled {
+		return nil
+	}
+
+	// Set up secret derivation from app-level secret if not explicitly configured
+	if c.API.Secret == "" && c.Secret != "" {
+		c.API.SecretBase = c.Secret
+	}
+
+	// If running on the same port as the main server, use that port
+	if c.API.Port == 0 {
+		c.API.Port = c.Server.Port
+	}
+
+	apiServer, err := api.NewServer(&c.API, appNode, r.log)
+	if err != nil {
+		return errorx.Decorate(err, "failed to initialize API server")
+	}
+
+	if err := apiServer.Start(); err != nil {
+		return errorx.Decorate(err, "failed to start API server")
+	}
+
+	go func() {
+		if err := apiServer.Run(); err != nil {
+			r.errChan <- err
+		}
+	}()
+
+	r.shutdownables = append(r.shutdownables, apiServer)
+
+	if !apiServer.Authenticator().IsEnabled() {
+		r.log.Info("API server is running without authentication")
+	}
+
+	return nil
 }
 
 func (r *Runner) defaultDisconnector(n *node.Node, c *config.Config, l *slog.Logger) (node.Disconnector, error) {

@@ -120,6 +120,7 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 	flags = append(flags, sseCLIFlags(&c)...)
 	flags = append(flags, pusherCLIFlags(&c)...)
 	flags = append(flags, dsCLIFlags(&c)...)
+	flags = append(flags, apiCLIFlags(&c)...)
 	flags = append(flags, miscCLIFlags(&c, &presets)...)
 
 	app := &cli.App{
@@ -485,6 +486,7 @@ const (
 	sseCategoryDescription           = "SERVER-SENT EVENTS:"
 	pusherCategoryDescription        = "PUSHER:"
 	dsCategoryDescription            = "DURABLE STREAMS:"
+	apiCategoryDescription           = "API:"
 
 	envPrefix = "ANYCABLE_"
 )
@@ -1510,6 +1512,29 @@ func dsCLIFlags(c *config.Config) []cli.Flag {
 			Usage:       "Durable Streams SSE connections time-to-live (seconds)",
 			Value:       c.DS.SSETTL,
 			Destination: &c.DS.SSETTL,
+		},
+	})
+}
+
+// apiCLIFlags returns CLI flags for API server
+func apiCLIFlags(c *config.Config) []cli.Flag {
+	return withDefaults(apiCategoryDescription, []cli.Flag{
+		&cli.IntFlag{
+			Name:        "api_port",
+			Usage:       "API server port (0 = use main server port)",
+			Value:       c.API.Port,
+			Destination: &c.API.Port,
+		},
+		&cli.StringFlag{
+			Name:        "api_path",
+			Usage:       "API endpoint base path",
+			Value:       c.API.Path,
+			Destination: &c.API.Path,
+		},
+		&cli.StringFlag{
+			Name:        "api_secret",
+			Usage:       "Secret token to authenticate API requests",
+			Destination: &c.API.Secret,
 		},
 	})
 }
