@@ -496,6 +496,10 @@ func (b *Memory) TouchPresence(sid string) error {
 	return nil
 }
 
+func (b *Memory) SupportsPresence() bool {
+	return true
+}
+
 func (b *Memory) PresenceAdd(stream string, sid string, pid string, info interface{}) (*common.PresenceEvent, error) {
 	b.presence.mu.Lock()
 	defer b.presence.mu.Unlock()

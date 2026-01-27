@@ -1,5 +1,7 @@
 # Change log
 
+- Add new REST API with `/publish` and `/presence/:stream/users` methods. ([@palkan][])
+
 - Add Durable Streams (read) support. ([@palkan][])
 
 - Added Pusher's `GET /channels/:channel/users` support. ([@palkan][])

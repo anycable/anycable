@@ -189,3 +189,7 @@ func (s *HTTPServer) Address() string {
 
 	return fmt.Sprintf("%s%s", scheme, s.addr)
 }
+
+func (s *HTTPServer) ServeHTTP(rr http.ResponseWriter, req *http.Request) {
+	s.mux.ServeHTTP(rr, req)
+}
