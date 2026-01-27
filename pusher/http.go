@@ -1,12 +1,16 @@
 package pusher
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/anycable/anycable-go/broadcast"
 	"github.com/anycable/anycable-go/broker"
@@ -14,6 +18,88 @@ import (
 	"github.com/anycable/anycable-go/server"
 	"github.com/anycable/anycable-go/utils"
 )
+
+// Server manages the Pusher HTTP API server
+type Server struct {
+	server *server.HTTPServer
+	api    *RestAPI
+	conf   *Config
+
+	log    *slog.Logger
+	closed bool
+	mu     sync.Mutex
+}
+
+// NewServer creates a new Pusher API server with the given configuration
+func NewServer(h broadcast.Handler, b broker.Broker, c *Config, l *slog.Logger) *Server {
+	api := NewRestAPI(h, b, c, l)
+
+	return &Server{
+		api:  api,
+		conf: c,
+		log:  l.With("context", "pusher"),
+	}
+}
+
+// Start initializes the HTTP server and registers handlers
+func (s *Server) Start() error {
+	srv, err := server.ForPort(strconv.Itoa(s.conf.APIPort))
+	if err != nil {
+		return fmt.Errorf("failed to initialize Pusher API server: %w", err)
+	}
+
+	s.server = srv
+
+	// Register handler
+	apiPath := fmt.Sprintf("/apps/%s/*", s.conf.AppID)
+	s.server.SetupHandler(apiPath, http.HandlerFunc(s.api.Handler))
+
+	return nil
+}
+
+// Run starts the HTTP server (blocking)
+func (s *Server) Run() error {
+	if s.server == nil {
+		return fmt.Errorf("server not initialized, call Start() first")
+	}
+
+	apiPath := fmt.Sprintf("/apps/%s/*", s.conf.AppID)
+	s.log.Info(fmt.Sprintf("Handle Pusher API requests at %s%s", s.server.Address(), apiPath))
+
+	if err := s.server.StartAndAnnounce("Pusher API server"); err != nil {
+		if !s.server.Stopped() {
+			return fmt.Errorf("Pusher API server at %s stopped: %v", s.server.Address(), err)
+		}
+	}
+
+	return nil
+}
+
+// Shutdown gracefully stops the Pusher API server
+func (s *Server) Shutdown(ctx context.Context) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.closed {
+		return nil
+	}
+
+	s.closed = true
+
+	if s.server != nil {
+		return s.server.Shutdown(ctx)
+	}
+
+	return nil
+}
+
+// Address returns the server address (for testing/logging)
+func (s *Server) Address() string {
+	if s.server != nil {
+		return s.server.Address()
+	}
+	return ""
+}
 
 type RestAPI struct {
 	conf     *Config
