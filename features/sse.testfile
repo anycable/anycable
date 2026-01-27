@@ -1,5 +1,7 @@
 launch :anycable,
-  "./dist/anycable-go --sse --public_streams --secret=qwerty --broadcast_adapter=http --presets=broker"
+  "./dist/anycable-go --sse --public_streams --secret=qwerty " \
+  "--api_port=8082 " \
+  "--broadcast_adapter=http --presets=broker"
 
 wait_tcp 8080
 
@@ -18,11 +20,11 @@ url = "http://localhost:8080/events?identifier=#{identifier}"
 
 Event = Struct.new(:type, :data, :id, :retry)
 
-# echo -n 'broadcast-cable' | openssl dgst -sha256 -hmac 'qwerty' | awk '{print $2}'
-BROADCAST_KEY = "42923a28b760e667fc92f7c6123bb07a282822b329dd2ef48e7aee7830d98485"
+# echo -n 'api-cable' | openssl dgst -sha256 -hmac 'qwerty' | awk '{print $2}'
+BROADCAST_KEY = "bdd0244b3664404d03b7d0c2f1b946dc4fc6c13fdcbfa2be62a4a28deb04d096"
 
 def broadcast(stream, data)
-  uri = URI.parse("http://localhost:8080/_broadcast")
+  uri = URI.parse("http://localhost:8082/api/publish")
   header = {
     "Content-Type": "application/json",
     "Authorization": "Bearer #{BROADCAST_KEY}"
