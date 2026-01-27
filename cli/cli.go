@@ -225,14 +225,19 @@ func (r *Runner) Run() error {
 			wsServer.SetupHandler(pusherAPIPath, http.HandlerFunc(pusherRestAPI.Handler))
 			r.log.Info(fmt.Sprintf("Handle Pusher API requests at %s%s", wsServer.Address(), pusherAPIPath))
 		} else {
-			pusherAPIServer, err := server.ForPort(strconv.Itoa(r.config.Pusher.APIPort))
-			if err != nil {
+			pusherAPIServer := pusher.NewServer(appNode, r.broker, &r.config.Pusher, r.log)
+
+			if err := pusherAPIServer.Start(); err != nil {
 				return errorx.Decorate(err, "failed to initialize Pusher API server at port %d", r.config.Pusher.APIPort)
 			}
 
-			pusherAPIServer.SetupHandler(pusherAPIPath, http.HandlerFunc(pusherRestAPI.Handler))
-			r.startHTTPServer(pusherAPIServer, "Pusher API server")
-			r.log.Info(fmt.Sprintf("Handle Pusher API requests at %s%s", pusherAPIServer.Address(), pusherAPIPath))
+			go func() {
+				if err := pusherAPIServer.Run(); err != nil {
+					r.errChan <- err
+				}
+			}()
+
+			r.shutdownables = append(r.shutdownables, pusherAPIServer)
 		}
 	}
 
@@ -480,17 +485,6 @@ func (r *Runner) startWSServer(wsServer *server.HTTPServer) {
 		if err != nil {
 			if !wsServer.Stopped() {
 				r.errChan <- fmt.Errorf("WebSocket server at %s stopped: %v", wsServer.Address(), err)
-			}
-		}
-	}()
-}
-
-func (r *Runner) startHTTPServer(httpServer *server.HTTPServer, name string) {
-	go func() {
-		err := httpServer.StartAndAnnounce(name)
-		if err != nil {
-			if !httpServer.Stopped() {
-				r.errChan <- fmt.Errorf("%s at %s stopped: %v", name, httpServer.Address(), err)
 			}
 		}
 	}()
