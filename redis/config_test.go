@@ -319,8 +319,58 @@ func TestSentinel(t *testing.T) {
 	assert.Equal(t, []string{"localhost:1234", "localhost:1235"}, config.Hostnames())
 
 	assert.Equal(t, []string{"localhost:1234", "localhost:1235"}, options.InitAddress)
-	assert.Equal(t, "user", options.Username)
-	assert.Equal(t, "pass", options.Password)
+	assert.Equal(t, "user", options.Sentinel.Username)
+	assert.Equal(t, "pass", options.Sentinel.Password)
+	assert.Equal(t, "", options.Username)
+	assert.Equal(t, "", options.Password)
+}
+
+func TestSentinelWithMasterAuth(t *testing.T) {
+	config := NewRedisConfig()
+	config.URL = "redis://:data_pass@mymaster"
+	config.Sentinels = ":sentinel_pass@localhost:26379"
+	options, err := config.ToRueidisOptions()
+	require.NoError(t, err)
+
+	assert.True(t, config.IsSentinel())
+	assert.Equal(t, "mymaster", options.Sentinel.MasterSet)
+	assert.Equal(t, []string{"localhost:26379"}, options.InitAddress)
+	assert.Equal(t, "", options.Sentinel.Username)
+	assert.Equal(t, "sentinel_pass", options.Sentinel.Password)
+	assert.Equal(t, "", options.Username)
+	assert.Equal(t, "data_pass", options.Password)
+}
+
+func TestSentinelNoAuth(t *testing.T) {
+	config := NewRedisConfig()
+	config.URL = "redis://mymaster"
+	config.Sentinels = "localhost:26379"
+	options, err := config.ToRueidisOptions()
+	require.NoError(t, err)
+
+	assert.True(t, config.IsSentinel())
+	assert.Equal(t, "mymaster", options.Sentinel.MasterSet)
+	assert.Equal(t, []string{"localhost:26379"}, options.InitAddress)
+	assert.Equal(t, "", options.Sentinel.Username)
+	assert.Equal(t, "", options.Sentinel.Password)
+	assert.Equal(t, "", options.Username)
+	assert.Equal(t, "", options.Password)
+}
+
+func TestSentinelAuthOnly(t *testing.T) {
+	config := NewRedisConfig()
+	config.URL = "redis://mymaster"
+	config.Sentinels = ":sentinel_pass@localhost:26379"
+	options, err := config.ToRueidisOptions()
+	require.NoError(t, err)
+
+	assert.True(t, config.IsSentinel())
+	assert.Equal(t, "mymaster", options.Sentinel.MasterSet)
+	assert.Equal(t, []string{"localhost:26379"}, options.InitAddress)
+	assert.Equal(t, "", options.Sentinel.Username)
+	assert.Equal(t, "sentinel_pass", options.Sentinel.Password)
+	assert.Equal(t, "", options.Username)
+	assert.Equal(t, "", options.Password)
 }
 
 func TestSentinelImplicitFormat(t *testing.T) {
