@@ -174,6 +174,20 @@ func (config *RedisConfig) parseSentinels() (*rueidis.ClientOption, error) {
 
 	options.Sentinel.MasterSet = sentinelMaster.Host
 
+	// Move sentinel creds to sentinel-specific fields
+	options.Sentinel.Username = options.Username
+	options.Sentinel.Password = options.Password
+
+	// Restore data-node creds from main URL
+	masterOpts, masterErr := parseRedisURL(config.URL)
+	if masterErr == nil {
+		options.Username = masterOpts.Username
+		options.Password = masterOpts.Password
+	} else {
+		options.Username = ""
+		options.Password = ""
+	}
+
 	return options, nil
 }
 
