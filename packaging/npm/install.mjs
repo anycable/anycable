@@ -19,7 +19,7 @@ export async function install() {
 }
 
 const baseReleaseUrl =
-  "https://github.com/anycable/anycable-go/releases/download/";
+  "https://github.com/anycable/anycable/releases/download/";
 
 import packageJson from "./package.json" with { type: "json" };
 const packageVersion = packageJson.version;
