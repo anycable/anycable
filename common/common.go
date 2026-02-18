@@ -3,6 +3,7 @@ package common
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 
 	"github.com/anycable/anycable-go/logger"
@@ -394,15 +395,9 @@ func (sm *StreamMessage) LogValue() slog.Value {
 }
 
 func (sm *StreamMessage) ToReplyFor(identifier string) *Reply {
-	data := sm.Data
-
-	var msg interface{}
-
-	// We ignore JSON deserialization failures and consider the message to be a string
-	json.Unmarshal([]byte(data), &msg) // nolint:errcheck
-
-	if msg == nil {
-		msg = sm.Data
+	raw := json.RawMessage(sm.Data)
+	if !json.Valid([]byte(sm.Data)) {
+		raw, _ = json.Marshal(sm.Data)
 	}
 
 	stream := ""
@@ -414,7 +409,7 @@ func (sm *StreamMessage) ToReplyFor(identifier string) *Reply {
 
 	return &Reply{
 		Identifier: identifier,
-		Message:    msg,
+		Message:    raw,
 		StreamID:   stream,
 		Offset:     sm.Offset,
 		Epoch:      sm.Epoch,
@@ -568,6 +563,10 @@ func PubSubMessageFromJSON(raw []byte) (interface{}, error) {
 
 	if err := json.Unmarshal(raw, &rmsg); err != nil {
 		return nil, err
+	}
+
+	if rmsg.Command == "" {
+		return nil, errors.New("invalid publication format")
 	}
 
 	return rmsg, nil
