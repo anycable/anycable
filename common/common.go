@@ -395,9 +395,15 @@ func (sm *StreamMessage) LogValue() slog.Value {
 }
 
 func (sm *StreamMessage) ToReplyFor(identifier string) *Reply {
-	raw := json.RawMessage(sm.Data)
-	if !json.Valid([]byte(sm.Data)) {
-		raw, _ = json.Marshal(sm.Data)
+	data := sm.Data
+
+	var msg interface{}
+
+	// We ignore JSON deserialization failures and consider the message to be a string
+	json.Unmarshal([]byte(data), &msg) // nolint:errcheck
+
+	if msg == nil {
+		msg = sm.Data
 	}
 
 	stream := ""
@@ -409,7 +415,7 @@ func (sm *StreamMessage) ToReplyFor(identifier string) *Reply {
 
 	return &Reply{
 		Identifier: identifier,
-		Message:    raw,
+		Message:    msg,
 		StreamID:   stream,
 		Offset:     sm.Offset,
 		Epoch:      sm.Epoch,
