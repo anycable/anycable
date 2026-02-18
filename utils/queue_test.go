@@ -1,9 +1,13 @@
 package utils
 
 import (
+	"runtime"
 	"strconv"
+	"sync"
 	"testing"
+	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -120,4 +124,79 @@ func TestByteQueueClear(t *testing.T) {
 	require.Equal(t, 0, q.head)
 	require.Equal(t, 1, q.tail)
 	require.Equal(t, false, q.Closed())
+}
+
+type finalizeTracker struct {
+	mu   sync.Mutex
+	data map[string]bool
+}
+
+func (ft *finalizeTracker) finalize(id string) {
+	ft.mu.Lock()
+	defer ft.mu.Unlock()
+	ft.data[id] = true
+}
+
+func (ft *finalizeTracker) get(id string) bool {
+	ft.mu.Lock()
+	defer ft.mu.Unlock()
+	return ft.data[id]
+}
+
+func TestQueue_vs_GC(t *testing.T) {
+	q := NewQueue[*map[string]string](initialCapacity)
+
+	wg := sync.WaitGroup{}
+
+	wg.Add(2)
+
+	tracker := &finalizeTracker{data: make(map[string]bool)}
+
+	go func() {
+		payload := map[string]string{"foo": "a"}
+		item := Item[*map[string]string]{1, &payload}
+
+		runtime.SetFinalizer(&payload, func(*map[string]string) {
+			tracker.finalize("a")
+		})
+		q.Add(item)
+
+		wg.Done()
+	}()
+
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		payload := map[string]string{"foo": "b"}
+		item2 := Item[*map[string]string]{1, &payload}
+		runtime.SetFinalizer(&payload, func(*map[string]string) {
+			tracker.finalize("b")
+		})
+		q.Add(item2)
+
+		wg.Done()
+	}()
+
+	wg.Wait()
+
+	require.Equal(t, 2, q.Len())
+
+	q.Remove()
+
+	runtime.GC()
+
+	// Let finalizers to trigger
+	time.Sleep(500 * time.Millisecond)
+
+	assert.True(t, tracker.get("a"))
+	assert.False(t, tracker.get("b"))
+
+	q.Remove()
+
+	runtime.GC()
+
+	// Let finalizers to trigger
+	time.Sleep(500 * time.Millisecond)
+
+	assert.True(t, tracker.get("a"))
+	assert.True(t, tracker.get("b"))
 }

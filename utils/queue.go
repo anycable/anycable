@@ -116,6 +116,7 @@ func (q *Queue[T]) Remove() (Item[T], bool) {
 		return Item[T]{}, false
 	}
 	i := q.nodes[q.head]
+	q.nodes[q.head] = Item[T]{}
 	q.head = (q.head + 1) % len(q.nodes)
 	q.cnt--
 	q.size -= i.Size

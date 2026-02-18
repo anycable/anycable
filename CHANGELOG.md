@@ -1,5 +1,9 @@
 # Change log
 
+- Fix GC-ing stale data in the outgoing messages queue. ([@palkan][])
+
+## 1.6.9 (2026-01-27)
+
 - Add new REST API with `/publish` and `/presence/:stream/users` methods. ([@palkan][])
 
 - Add Durable Streams (read) support. ([@palkan][])
