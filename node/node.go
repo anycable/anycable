@@ -896,11 +896,11 @@ func (n *Node) Disconnect(s *Session) error {
 		return nil
 	}
 
+	// unsubscribe from all streams to clean up broker subscriptions
+	n.unsubscribeSessionStreams(s)
+
 	if s.IsResumeable() {
 		n.broker.TouchSession(s.GetID()) // nolint:errcheck
-	} else {
-		// For non-resumeable sessions, unsubscribe from all streams to clean up broker subscriptions
-		n.unsubscribeSessionStreams(s)
 	}
 
 	n.broker.TouchPresence(s.GetID()) // nolint:errcheck

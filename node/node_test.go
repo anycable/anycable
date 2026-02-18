@@ -414,27 +414,6 @@ func TestDisconnect(t *testing.T) {
 		mockBroker.AssertCalled(t, "Unsubscribe", "stream3")
 		mockBroker.AssertNumberOfCalls(t, "Unsubscribe", 3)
 	})
-
-	t.Run("Resumeable session does not unsubscribe from broker streams", func(t *testing.T) {
-		mockBroker := &mocks.Broker{}
-		node.SetBroker(mockBroker)
-
-		session := NewMockSession("3", node)
-		node.hub.AddSession(session)
-
-		session.subscriptions.AddChannel("test_channel")
-		session.subscriptions.AddChannelStream("test_channel", "stream1")
-
-		session.resumeInterval = 300 * time.Second
-
-		mockBroker.On("TouchSession", mock.Anything).Return(nil)
-		mockBroker.On("TouchPresence", mock.Anything).Return(nil)
-
-		err := node.Disconnect(session)
-		require.NoError(t, err)
-
-		mockBroker.AssertNotCalled(t, "Unsubscribe", mock.Anything)
-	})
 }
 
 func TestHistory(t *testing.T) {
