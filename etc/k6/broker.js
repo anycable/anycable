@@ -2,6 +2,7 @@
 //    xk6 build v0.38.3 --with github.com/anycable/xk6-cable@v0.3.0
 
 import { check, sleep, fail } from "k6";
+import http from 'k6/http';
 import cable from "k6/x/cable";
 import { randomIntBetween } from "https://jslib.k6.io/k6-utils/1.1.0/index.js";
 
@@ -59,6 +60,7 @@ let config = __ENV;
 config.URL = config.URL || "ws://localhost:8080/cable";
 
 let url = config.URL;
+let broadcastUrl = config.BROADCAST_URL || "http://localhost:8090/_broadcast";
 let channelName = config.CHANNEL_ID || "BenchmarkChannel";
 
 let numChannels = parseInt(config.NUM_CHANNELS || "5") || 5;
@@ -71,6 +73,8 @@ let sender = __VU % sendersMod == 0;
 let sendingRate = parseFloat(config.SENDING_RATE || "0.3");
 
 let iterations = (config.N || "20") | 0;
+
+let payloadScale = (config.PAYLOAD_SCALE || "1") | 0;
 
 export default function () {
   let cableOptions = {
@@ -120,11 +124,18 @@ export default function () {
     if (sender && randomIntBetween(1, 10) / 10 <= sendingRate) {
       let start = Date.now();
       broadcastsSent.add(1);
-      // Create message via cable instead of a form
-      channel.perform("broadcast", {
-        ts: start,
-        content: `hello from ${__VU} numero ${i + 1}`,
-      });
+      // Create message via HTTP broadcast intead of perform
+      http.post(broadcastUrl, JSON.stringify({
+        stream: `all${channelStreamId}`,
+        data: JSON.stringify({
+          ts: start,
+          content: `hello from ${__VU} numero ${i + 1}`.repeat(payloadScale),
+        })
+      }));
+      // channel.perform("broadcast", {
+      //   ts: start,
+      //   content: `hello from ${__VU} numero ${i + 1}`.repeat(payloadScale),
+      // });
     }
 
     sleep(randomIntBetween(5, 10) / 100);
