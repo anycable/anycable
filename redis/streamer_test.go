@@ -70,14 +70,23 @@ func TestStreamer(t *testing.T) {
 	block_ms := 500
 	l := slog.Default()
 
-	received := make(chan map[string]string, 10)
+	// Create a separate Redis client for test operations (publishing, waiting for consumers)
+	// so we don't depend on the streamer's internal client lifecycle.
+	options, err := rconfig.ToRueidisOptions()
+	require.NoError(t, err)
 
-	handler := func(msg map[string]string) error {
-		received <- msg
-		return nil
-	}
+	testClient, err := rueidis.NewClient(*options)
+	require.NoError(t, err)
+	defer testClient.Close()
 
 	t.Run("Handles incoming messages", func(t *testing.T) {
+		received := make(chan map[string]string, 10)
+
+		handler := func(msg map[string]string) error {
+			received <- msg
+			return nil
+		}
+
 		streamer := NewStreamer(stream, group, &rconfig, l, StreamerWithHandler(handler), StreamerWithBlockMS(int64(block_ms)))
 
 		err := streamer.Start()
@@ -85,11 +94,9 @@ func TestStreamer(t *testing.T) {
 
 		defer streamer.Shutdown(context.Background()) // nolint:errcheck
 
-		require.NoError(t, streamer.initClient())
+		require.NoError(t, waitRedisStreamConsumers(testClient, 1))
 
-		require.NoError(t, waitRedisStreamConsumers(streamer.client, 1))
-
-		require.NoError(t, publishToRedisStream(streamer.client, stream, "testo"))
+		require.NoError(t, publishToRedisStream(testClient, stream, "testo"))
 
 		messages := drainStream(received)
 		require.Equalf(t, 1, len(messages), "Expected 1 message, got %d", len(messages))
@@ -100,6 +107,13 @@ func TestStreamer(t *testing.T) {
 	})
 
 	t.Run("With multiple subscribers", func(t *testing.T) {
+		received := make(chan map[string]string, 10)
+
+		handler := func(msg map[string]string) error {
+			received <- msg
+			return nil
+		}
+
 		streamer := NewStreamer(stream, group, &rconfig, l, StreamerWithHandler(handler), StreamerWithBlockMS(int64(block_ms)))
 
 		err := streamer.Start()
@@ -107,21 +121,19 @@ func TestStreamer(t *testing.T) {
 
 		defer streamer.Shutdown(context.Background()) // nolint:errcheck
 
-		require.NoError(t, streamer.initClient())
-
 		streamer2 := NewStreamer(stream, group, &rconfig, l, StreamerWithHandler(handler), StreamerWithBlockMS(int64(block_ms)))
 		err = streamer2.Start()
 		require.NoError(t, err)
 
 		defer streamer2.Shutdown(context.Background()) // nolint:errcheck
 
-		require.NoError(t, waitRedisStreamConsumers(streamer.client, 2))
+		require.NoError(t, waitRedisStreamConsumers(testClient, 2))
 
-		require.NoError(t, publishToRedisStream(streamer.client, stream, "123_test"))
+		require.NoError(t, publishToRedisStream(testClient, stream, "123_test"))
 
-		require.NoError(t, publishToRedisStream(streamer.client, stream, "124_test"))
+		require.NoError(t, publishToRedisStream(testClient, stream, "124_test"))
 
-		require.NoError(t, publishToRedisStream(streamer.client, stream, "125_test"))
+		require.NoError(t, publishToRedisStream(testClient, stream, "125_test"))
 
 		messages := drainStream(received)
 
