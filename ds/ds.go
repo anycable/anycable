@@ -207,13 +207,14 @@ func (s *Stream) NextCursor() string {
 
 // NewDSSession creates a node.Session struct to represents a durable stream connection and register it within
 // the AnyCable node. TODO: Integrate JWT authentication.
-func NewDSSession(n *node.Node, c *Config, w http.ResponseWriter, info *server.RequestInfo, sp *StreamParams) (*Stream, error) {
+func NewDSSession(n *node.Node, c *Config, w http.ResponseWriter, info *server.RequestInfo, sp *StreamParams) (*Stream, *PollConnection, error) {
 	sopts := []node.SessionOption{}
 	var conn node.Connection
 
 	stream := &Stream{Params: sp}
 
-	conn = NewPollConnection(w)
+	pollConn := NewPollConnection(w)
+	conn = pollConn
 
 	switch sp.LiveMode {
 	case "":
@@ -227,7 +228,7 @@ func NewDSSession(n *node.Node, c *Config, w http.ResponseWriter, info *server.R
 		sseEncoder := &SSEEncoder{Cursor: stream.NextCursor()}
 		sopts = append(sopts, node.WithEncoder(sseEncoder))
 	default:
-		return nil, fmt.Errorf("unsupported live mode: %s", sp.LiveMode)
+		return nil, pollConn, fmt.Errorf("unsupported live mode: %s", sp.LiveMode)
 	}
 
 	session := node.NewSession(n, conn, info.URL, info.Headers, info.UID, sopts...)
@@ -240,16 +241,16 @@ func NewDSSession(n *node.Node, c *Config, w http.ResponseWriter, info *server.R
 		res, err := n.Authenticate(session)
 
 		if err != nil {
-			return nil, err
+			return nil, pollConn, err
 		}
 
 		if res.Status == common.FAILURE {
-			return nil, fmt.Errorf("authentication rejected")
+			return nil, pollConn, fmt.Errorf("authentication rejected")
 		}
 	}
 
 	stream.Session = session
 	stream.Conn = conn
 
-	return stream, nil
+	return stream, pollConn, nil
 }

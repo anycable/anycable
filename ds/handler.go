@@ -70,11 +70,11 @@ func DSHandler(n *node.Node, brk broker.Broker, st *streams.Controller, m metric
 		}
 
 		// Authenticate and init stream
-		stream, err := NewDSSession(n, c, w, info, streamParams)
+		stream, pollConn, err := NewDSSession(n, c, w, info, streamParams)
 
 		if err != nil {
 			l.Debug("unauthenticated", "err", err)
-			w.WriteHeader(http.StatusUnauthorized)
+			pollConn.Close(http.StatusUnauthorized, "Auth Failed")
 			return
 		}
 
@@ -83,7 +83,7 @@ func DSHandler(n *node.Node, brk broker.Broker, st *streams.Controller, m metric
 
 		if _, _, serr := st.VerifiedStream(identifier); serr != nil {
 			stream.Session.Log.Debug("unauthorized", "err", serr)
-			w.WriteHeader(http.StatusUnauthorized)
+			pollConn.Close(http.StatusUnauthorized, "unauthorized")
 			// Ensure its removed from the node
 			stream.Session.Disconnect("unauthorized", http.StatusUnauthorized)
 			return
@@ -99,7 +99,7 @@ func DSHandler(n *node.Node, brk broker.Broker, st *streams.Controller, m metric
 
 		if err != nil {
 			stream.Session.Log.Error("failed to get stream metadata", "err", err)
-			w.WriteHeader(http.StatusInternalServerError)
+			pollConn.Close(http.StatusInternalServerError, "")
 			return
 		}
 
@@ -114,7 +114,7 @@ func DSHandler(n *node.Node, brk broker.Broker, st *streams.Controller, m metric
 
 			w.Header().Set(StreamOffsetHeader, EncodeOffset(tail.Offset, tail.Epoch))
 
-			w.WriteHeader(http.StatusOK)
+			pollConn.Close(http.StatusOK, "")
 			return
 		}
 
@@ -124,16 +124,16 @@ func DSHandler(n *node.Node, brk broker.Broker, st *streams.Controller, m metric
 			}
 
 			if streamParams.LiveMode != SSEMode {
-				handleHTTP(n, brk, c, m, w, r, stream, tail, shutdownCtx)
+				handleHTTP(n, brk, c, m, w, r, stream, pollConn, tail, shutdownCtx)
 			} else {
-				handleSSE(n, brk, c, m, w, r, stream, tail, shutdownCtx)
+				handleSSE(n, brk, c, m, w, r, stream, pollConn, tail, shutdownCtx)
 			}
 			return
 		}
 	})
 }
 
-func handleHTTP(n *node.Node, brk broker.Broker, c *Config, m metrics.Instrumenter, w http.ResponseWriter, r *http.Request, s *Stream, tail *common.StreamMessage, shutdownCtx context.Context) {
+func handleHTTP(n *node.Node, brk broker.Broker, c *Config, m metrics.Instrumenter, w http.ResponseWriter, r *http.Request, s *Stream, pollConn *PollConnection, tail *common.StreamMessage, shutdownCtx context.Context) {
 	w.Header().Set("Content-Type", "application/json")
 	// TODO: how to distinguish private streams?
 	w.Header().Set("Cache-Control", "public, max-age=60, stale-while-revalidate=300")
@@ -146,7 +146,7 @@ func handleHTTP(n *node.Node, brk broker.Broker, c *Config, m metrics.Instrument
 	if err != nil {
 		s.Session.Log.Error("failed to fetch history", "err", err)
 		// Either offset is unreachable or epoch has changed
-		w.WriteHeader(http.StatusGone)
+		pollConn.Close(http.StatusGone, "")
 		return
 	}
 
@@ -159,6 +159,7 @@ func handleHTTP(n *node.Node, brk broker.Broker, c *Config, m metrics.Instrument
 		w.Header().Set(StreamUpToDateHeader, "true")
 
 		s.Session.Log.Debug("write history", "len", len(backlog))
+		pollConn.Close(http.StatusOK, "")
 		w.Write(EncodeJSONBatch(backlog)) // nolint: errcheck
 		return
 	}
@@ -173,7 +174,7 @@ func handleHTTP(n *node.Node, brk broker.Broker, c *Config, m metrics.Instrument
 
 	if err != nil {
 		s.Session.Log.Error("failed to subscribe", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		pollConn.Close(http.StatusInternalServerError, "")
 		return
 	}
 
@@ -205,11 +206,11 @@ func handleHTTP(n *node.Node, brk broker.Broker, c *Config, m metrics.Instrument
 	}
 }
 
-func handleSSE(n *node.Node, brk broker.Broker, c *Config, m metrics.Instrumenter, w http.ResponseWriter, r *http.Request, s *Stream, tail *common.StreamMessage, shutdownCtx context.Context) {
+func handleSSE(n *node.Node, brk broker.Broker, c *Config, m metrics.Instrumenter, w http.ResponseWriter, r *http.Request, s *Stream, pollConn *PollConnection, tail *common.StreamMessage, shutdownCtx context.Context) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		s.Session.Log.Error("streaming not supported")
-		w.WriteHeader(http.StatusInternalServerError)
+		pollConn.Close(http.StatusInternalServerError, "")
 		return
 	}
 
@@ -230,7 +231,7 @@ func handleSSE(n *node.Node, brk broker.Broker, c *Config, m metrics.Instrumente
 	backlog, err := fetchHistory(brk, s.Params)
 	if err != nil {
 		s.Session.Log.Error("failed to fetch history", "err", err)
-		w.WriteHeader(http.StatusGone)
+		pollConn.Close(http.StatusGone, "")
 		return
 	}
 
@@ -238,7 +239,7 @@ func handleSSE(n *node.Node, brk broker.Broker, c *Config, m metrics.Instrumente
 		tail = &backlog[len(backlog)-1]
 	}
 
-	w.WriteHeader(http.StatusOK)
+	pollConn.Close(http.StatusOK, "")
 	flusher.Flush()
 
 	offset := EncodeOffset(tail.Offset, tail.Epoch)
