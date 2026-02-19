@@ -276,7 +276,7 @@ func BuildSession(conn Connection, env *common.SessionEnv) *Session {
 		metrics:       metrics.NoopMetrics{},
 		env:           env,
 		subscriptions: NewSubscriptionState(),
-		writeQueue:    utils.NewQueue[*ws.SentFrame](256),
+		writeQueue:    utils.NewQueue[*ws.SentFrame](16),
 		writeTimeout:  2 * time.Second,
 		closeCtx:      ctx,
 		closeCancel:   cancel,

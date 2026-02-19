@@ -21,8 +21,8 @@ type Config struct {
 func NewConfig() Config {
 	return Config{
 		Paths:           []string{"/cable"},
-		ReadBufferSize:  4096,
-		WriteBufferSize: 4096,
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
 		MaxMessageSize:  65536,
 		MaxPendingSize:  1024 * 1024, // 1 MB
 		WriteTimeout:    2,
