@@ -4,7 +4,7 @@
 
 - Reduce memory usage by making WS buffers smaller by default (back to 1kb) and decreasing the initial write queue size. ([@palkan][])
 
-- Fix leaving orphaned pub/sub subscriptions for resumeable sessions. ([@palkan][])
+- Fix leaving orphaned pub/sub subscriptions for resumable sessions. ([@palkan][])
 
 - Fix GC-ing stale data in the outgoing messages queue. ([@palkan][])
 
