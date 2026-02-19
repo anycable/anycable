@@ -1,0 +1,11 @@
+version: '8.0'
+
+compose:
+  files:
+    - compose.yml
+  project_name: anycable_dev_grafana
+
+interaction:
+  restart_redis:
+    description: Restart Redis without affecting other services
+    command: docker compose --project-name anycable_dev_grafana restart redis

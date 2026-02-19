@@ -4,7 +4,9 @@
 import { check, sleep, fail } from "k6";
 import http from 'k6/http';
 import cable from "k6/x/cable";
-import { randomIntBetween } from "https://jslib.k6.io/k6-utils/1.1.0/index.js";
+import { randomIntBetween } from "./utils/index.js";
+
+let durationScale = __ENV.DURATION_SCALE || "0";
 
 const rampingOptions = {
   scenarios: {
@@ -12,13 +14,13 @@ const rampingOptions = {
       executor: "ramping-vus",
       startVUs: 100,
       stages: [
-        { duration: "10s", target: 300 },
-        { duration: "10s", target: 500 },
-        { duration: "10s", target: 1000 },
-        { duration: "10s", target: 1300 },
-        { duration: "10s", target: 1500 },
-        { duration: "30s", target: 1500 },
-        { duration: "30s", target: 0 },
+        { duration: `1${durationScale}s`, target: 300 },
+        { duration: `1${durationScale}s`, target: 500 },
+        { duration: `1${durationScale}s`, target: 1000 },
+        { duration: `1${durationScale}s`, target: 1300 },
+        { duration: `1${durationScale}s`, target: 1500 },
+        { duration: `3${durationScale}s`, target: 1500 },
+        { duration: `3${durationScale}s`, target: 0 },
       ],
       gracefulStop: "1m",
       gracefulRampDown: "1m",
@@ -71,6 +73,7 @@ let sendersMod = (1 / sendersRatio) | 0;
 let sender = __VU % sendersMod == 0;
 
 let sendingRate = parseFloat(config.SENDING_RATE || "0.3");
+let sendingViaPerformRate = parseFloat(config.SENDING_WS_RATE || "0.3");
 
 let iterations = (config.N || "20") | 0;
 
@@ -124,18 +127,24 @@ export default function () {
     if (sender && randomIntBetween(1, 10) / 10 <= sendingRate) {
       let start = Date.now();
       broadcastsSent.add(1);
-      // Create message via HTTP broadcast intead of perform
-      http.post(broadcastUrl, JSON.stringify({
-        stream: `all${channelStreamId}`,
-        data: JSON.stringify({
+
+      let content = `hello from ${__VU} numero ${i + 1}`.repeat(randomIntBetween(1, payloadScale));
+
+      if (randomIntBetween(1, 10) / 10 <= sendingViaPerformRate) {
+        channel.perform("broadcast", {
           ts: start,
-          content: `hello from ${__VU} numero ${i + 1}`.repeat(payloadScale),
-        })
-      }));
-      // channel.perform("broadcast", {
-      //   ts: start,
-      //   content: `hello from ${__VU} numero ${i + 1}`.repeat(payloadScale),
-      // });
+          content,
+        });
+      } else {
+        // Create message via HTTP broadcast intead of perform
+        http.post(broadcastUrl, JSON.stringify({
+          stream: `all${channelStreamId}`,
+          data: JSON.stringify({
+            ts: start,
+            content,
+          })
+        }));
+      }
     }
 
     sleep(randomIntBetween(5, 10) / 100);

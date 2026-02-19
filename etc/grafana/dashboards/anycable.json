@@ -1,0 +1,389 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "graphTooltip": 1,
+  "links": [],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "title": "Clients",
+      "type": "row"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 1, "fillOpacity": 10, "spanNulls": false }
+        }
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 1 },
+      "id": 1,
+      "targets": [
+        { "expr": "anycable_go_clients_num", "legendFormat": "Total", "refId": "A" },
+        { "expr": "anycable_go_clients_uniq_num", "legendFormat": "Unique", "refId": "B" }
+      ],
+      "title": "Connected Clients",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 1, "fillOpacity": 10, "spanNulls": false }
+        }
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 1 },
+      "id": 2,
+      "targets": [
+        { "expr": "anycable_go_broadcast_streams_num", "legendFormat": "Active streams", "refId": "A" }
+      ],
+      "title": "Active Streams",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 1, "fillOpacity": 10, "spanNulls": false }
+        }
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 1 },
+      "id": 3,
+      "targets": [
+        { "expr": "anycable_go_disconnect_queue_size", "legendFormat": "Disconnect queue", "refId": "A" }
+      ],
+      "title": "Disconnect Queue",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 9 },
+      "id": 101,
+      "title": "Messages",
+      "type": "row"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "ops",
+          "custom": { "lineWidth": 1, "fillOpacity": 10, "spanNulls": false }
+        }
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 10 },
+      "id": 10,
+      "targets": [
+        { "expr": "rate(anycable_go_client_msg_total[1m])", "legendFormat": "Received from clients/s", "refId": "A" },
+        { "expr": "rate(anycable_go_failed_client_msg_total[1m])", "legendFormat": "Unrecognized/s", "refId": "B" }
+      ],
+      "title": "Client Messages (received)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "ops",
+          "custom": { "lineWidth": 1, "fillOpacity": 10, "spanNulls": false }
+        }
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 10 },
+      "id": 11,
+      "targets": [
+        { "expr": "rate(anycable_go_server_msg_total[1m])", "legendFormat": "Sent to clients/s", "refId": "A" },
+        { "expr": "rate(anycable_go_failed_server_msg_total[1m])", "legendFormat": "Failed to send/s", "refId": "B" },
+        { "expr": "rate(anycable_go_timeout_server_msg_total[1m])", "legendFormat": "Write timeouts/s", "refId": "C" }
+      ],
+      "title": "Server Messages (sent)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "Bps",
+          "custom": { "lineWidth": 1, "fillOpacity": 10, "spanNulls": false }
+        }
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 10 },
+      "id": 12,
+      "targets": [
+        { "expr": "rate(anycable_go_data_sent_total[1m])", "legendFormat": "Sent", "refId": "A" },
+        { "expr": "rate(anycable_go_data_rcvd_total[1m])", "legendFormat": "Received", "refId": "B" }
+      ],
+      "title": "Data Throughput",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 18 },
+      "id": 102,
+      "title": "Publications & Broadcasts",
+      "type": "row"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "ops",
+          "custom": { "lineWidth": 1, "fillOpacity": 10, "spanNulls": false }
+        }
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 19 },
+      "id": 20,
+      "targets": [
+        { "expr": "rate(anycable_go_publications_total[1m])", "legendFormat": "Publications/s", "refId": "A" },
+        { "expr": "rate(anycable_go_failed_broadcast_msg_total[1m])", "legendFormat": "Unknown/s", "refId": "B" }
+      ],
+      "title": "Publications (from app)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "ops",
+          "custom": { "lineWidth": 1, "fillOpacity": 10, "spanNulls": false }
+        }
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 19 },
+      "id": 21,
+      "targets": [
+        { "expr": "rate(anycable_go_broadcast_msg_total[1m])", "legendFormat": "Broadcasts/s", "refId": "A" }
+      ],
+      "title": "Broadcasts (to clients)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "ops",
+          "custom": { "lineWidth": 1, "fillOpacity": 10, "spanNulls": false }
+        }
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 19 },
+      "id": 22,
+      "targets": [
+        { "expr": "rate(anycable_go_remote_commands_total[1m])", "legendFormat": "Remote commands/s", "refId": "A" }
+      ],
+      "title": "Remote Commands",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 27 },
+      "id": 103,
+      "title": "RPC",
+      "type": "row"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "ops",
+          "custom": { "lineWidth": 1, "fillOpacity": 10, "spanNulls": false }
+        }
+      },
+      "gridPos": { "h": 8, "w": 6, "x": 0, "y": 28 },
+      "id": 30,
+      "targets": [
+        { "expr": "rate(anycable_go_rpc_call_total[1m])", "legendFormat": "Calls/s", "refId": "A" },
+        { "expr": "rate(anycable_go_rpc_retries_total[1m])", "legendFormat": "Retries/s", "refId": "B" }
+      ],
+      "title": "RPC Calls",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "ops",
+          "custom": { "lineWidth": 1, "fillOpacity": 10, "spanNulls": false }
+        }
+      },
+      "gridPos": { "h": 8, "w": 6, "x": 6, "y": 28 },
+      "id": 31,
+      "targets": [
+        { "expr": "rate(anycable_go_rpc_error_total[1m])", "legendFormat": "Errors/s", "refId": "A" },
+        { "expr": "rate(anycable_go_rpc_timeout_total[1m])", "legendFormat": "Timeouts/s", "refId": "B" },
+        { "expr": "rate(anycable_go_rpc_canceled_total[1m])", "legendFormat": "Canceled/s", "refId": "C" }
+      ],
+      "title": "RPC Errors",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 1, "fillOpacity": 10, "spanNulls": false }
+        }
+      },
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 28 },
+      "id": 33,
+      "targets": [
+        { "expr": "anycable_go_rpc_pending_num", "legendFormat": "Pending", "refId": "A" }
+      ],
+      "title": "RPC Pending",
+      "description": "Key latency indicator. Growth means AnyCable can't keep up with incoming commands — consider tuning concurrency or scaling.",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 1, "fillOpacity": 10, "spanNulls": false }
+        }
+      },
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 28 },
+      "id": 32,
+      "targets": [
+        { "expr": "anycable_go_rpc_capacity_num", "legendFormat": "Capacity", "refId": "A" },
+        { "expr": "anycable_go_grpc_active_conn_num", "legendFormat": "gRPC connections", "refId": "B" }
+      ],
+      "title": "RPC Capacity",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 36 },
+      "id": 104,
+      "title": "Errors & Auth",
+      "type": "row"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "ops",
+          "custom": { "lineWidth": 1, "fillOpacity": 10, "spanNulls": false }
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 37 },
+      "id": 40,
+      "targets": [
+        { "expr": "rate(anycable_go_failed_auths_total[1m])", "legendFormat": "Failed auths/s", "refId": "A" }
+      ],
+      "title": "Failed Authentications",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "ops",
+          "custom": { "lineWidth": 1, "fillOpacity": 10, "spanNulls": false }
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 37 },
+      "id": 41,
+      "targets": [
+        { "expr": "rate(anycable_go_disconnected_slow_clients_total[1m])", "legendFormat": "Slow clients/s", "refId": "A" }
+      ],
+      "title": "Disconnected Slow Clients",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 45 },
+      "id": 105,
+      "title": "Memory & Runtime",
+      "type": "row"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "decbytes",
+          "custom": { "lineWidth": 1, "fillOpacity": 10, "spanNulls": false }
+        }
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 46 },
+      "id": 50,
+      "targets": [
+        { "expr": "anycable_go_mem_sys_bytes", "legendFormat": "Total (sys)", "refId": "A" },
+        { "expr": "anycable_go_heap_sys_bytes", "legendFormat": "Heap (sys)", "refId": "B" },
+        { "expr": "anycable_go_stack_sys_bytes", "legendFormat": "Stack (sys)", "refId": "C" }
+      ],
+      "title": "Memory Obtained from OS",
+      "description": "Total, heap, and stack memory obtained from OS. Heap/stack require ANYCABLE_MEMORY_METRICS=1.",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "decbytes",
+          "custom": { "lineWidth": 1, "fillOpacity": 10, "spanNulls": false }
+        }
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 46 },
+      "id": 51,
+      "targets": [
+        { "expr": "anycable_go_heap_alloc_total", "legendFormat": "Heap allocated", "refId": "A" },
+        { "expr": "anycable_go_heap_idle_bytes", "legendFormat": "Heap idle", "refId": "B" },
+        { "expr": "anycable_go_heap_released_bytes", "legendFormat": "Heap released", "refId": "C" }
+      ],
+      "title": "Heap Details",
+      "description": "Requires ANYCABLE_MEMORY_METRICS=1.",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 1, "fillOpacity": 10, "spanNulls": false }
+        }
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 46 },
+      "id": 52,
+      "targets": [
+        { "expr": "anycable_go_goroutines_num", "legendFormat": "Goroutines", "refId": "A" }
+      ],
+      "title": "Goroutines",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["anycable"],
+  "templating": { "list": [] },
+  "time": { "from": "now-5m", "to": "now" },
+  "timezone": "",
+  "title": "AnyCable",
+  "uid": "anycable",
+  "version": 1
+}
