@@ -1,5 +1,11 @@
 # Change log
 
+## 1.6.10 (2026-02-19)
+
+- Reduce memory usage by making WS buffers smaller by default (back to 1kb) and decreasing the initial write queue size. ([@palkan][])
+
+- Fix leaving orphaned pub/sub subscriptions for resumeable sessions. ([@palkan][])
+
 - Fix GC-ing stale data in the outgoing messages queue. ([@palkan][])
 
 ## 1.6.9 (2026-01-27)
