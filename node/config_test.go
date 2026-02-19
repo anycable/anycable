@@ -14,7 +14,7 @@ func TestConfig_ToToml(t *testing.T) {
 	conf.HubGopoolSize = 100
 	conf.PingTimestampPrecision = "ns"
 	conf.ShutdownDisconnectPoolSize = 1024
-	conf.ReadQueueTimeout = 5000
+	conf.ReadPoolTimeout = 5000
 
 	tomlStr := conf.ToToml()
 

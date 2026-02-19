@@ -30,7 +30,7 @@ type Config struct {
 	// The max size of the Go routines pool to process inbound client messages
 	ReadGopoolSize int
 	// For how long to wait before the processing of the incoming message starts by the read pool (in ms)
-	ReadQueueTimeout int `toml:"read_queue_timeout"`
+	ReadPoolTimeout int `toml:"read_queue_timeout"`
 	// The max size of the Go routines pool to process outbound client messages
 	WriteGopoolSize int
 	// How should ping message timestamp be formatted? ('s' => seconds, 'ms' => milli seconds, 'ns' => nano seconds)
@@ -59,7 +59,7 @@ func NewConfig() Config {
 		ShutdownDisconnectPoolSize: 16,
 		WriteGopoolSize:            1024,
 		ReadGopoolSize:             1024,
-		ReadQueueTimeout:           3000,
+		ReadPoolTimeout:            3000,
 		PingTimestampPrecision:     "s",
 		DisconnectMode:             DISCONNECT_MODE_AUTO,
 		ShutdownTimeout:            30,
@@ -118,7 +118,7 @@ func (c Config) ToToml() string {
 	result.WriteString(fmt.Sprintf("read_gopool_size = %d\n", c.ReadGopoolSize))
 
 	result.WriteString("# The max delay before processing incoming messages in the read pool (milliseconds)\n")
-	result.WriteString(fmt.Sprintf("read_queue_timeout = %d\n", c.ReadQueueTimeout))
+	result.WriteString(fmt.Sprintf("read_queue_timeout = %d\n", c.ReadPoolTimeout))
 
 	result.WriteString("# The number of Go routines to use for writing data to clients\n")
 	result.WriteString(fmt.Sprintf("write_gopool_size = %d\n", c.WriteGopoolSize))

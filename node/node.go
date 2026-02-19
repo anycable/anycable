@@ -38,9 +38,7 @@ const (
 	metricsWritePoolPendingNum   = "write_pool_pending_num"
 	metricsReadPoolPendingNum    = "read_pool_pending_num"
 	metricsReadPoolRunningNum    = "read_pool_running_num"
-	metricsPollPoolPendingNum    = "poll_pool_pending_num"
-	metricsPollPoolRunningNum    = "poll_pool_running_num"
-	metricsPollPoolTimeoutsTotal = "poll_pool_timeouts_total"
+	metricsReadPoolTimeoutsTotal = "read_pool_timeouts_total"
 
 	metricsFailedAuths             = "failed_auths_total"
 	metricsReceivedMsg             = "client_msg_total"
@@ -102,7 +100,6 @@ type Node struct {
 	closed       bool
 	log          *slog.Logger
 
-	pollPool  *utils.GoPool
 	readPool  *utils.GoPool
 	writePool *utils.GoPool
 }
@@ -156,7 +153,6 @@ func NewNode(config *Config, opts ...NodeOption) *Node {
 	// ReadPool is only used with netpoll
 	if config.NetpollEnabled {
 		n.readPool = utils.NewGoPool("read", config.ReadGopoolSize)
-		n.pollPool = utils.NewGoPool("poll", config.ReadGopoolSize)
 	}
 	n.writePool = utils.NewGoPool("write", config.WriteGopoolSize)
 
@@ -1293,10 +1289,8 @@ func (n *Node) registerMetrics() {
 
 	n.metrics.RegisterGauge(metricsReadPoolPendingNum, "The number of tasks pending in the read pool")
 	n.metrics.RegisterGauge(metricsReadPoolRunningNum, "The number of tasks currently running in the read pool")
-	n.metrics.RegisterGauge(metricsPollPoolPendingNum, "The number of tasks pending in the netpoll pool")
-	n.metrics.RegisterGauge(metricsPollPoolRunningNum, "The number of tasks currently running in the netpoll pool")
 	n.metrics.RegisterGauge(metricsWritePoolPendingNum, "The number of tasks pending in the write pool")
-	n.metrics.RegisterCounter(metricsPollPoolTimeoutsTotal, "The number of dropped incoming message due to the poll pool timeouts")
+	n.metrics.RegisterCounter(metricsReadPoolTimeoutsTotal, "The number of dropped incoming message due to the read pool timeouts")
 
 	n.metrics.RegisterCounter(metricsFailedAuths, "The total number of failed authentication attempts")
 	n.metrics.RegisterCounter(metricsRejectedClients, "The total number of client connections rejected because the server was overloaded")

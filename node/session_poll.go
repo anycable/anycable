@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/anycable/anycable-go/netpoll"
-	"github.com/anycable/anycable-go/utils"
 	"github.com/anycable/anycable-go/ws"
 
 	gobwas "github.com/gobwas/ws"
@@ -57,12 +56,12 @@ ADD:
 		ctx, cancel := context.WithTimeout(context.Background(), s.readWaitTimeout)
 		defer cancel()
 
-		s.metrics.GaugeIncrement(metricsPollPoolPendingNum)
-		rerr := s.pollPool.ScheduleContext(ctx, func() {
-			s.metrics.GaugeDecrement(metricsPollPoolPendingNum)
-			s.metrics.GaugeIncrement(metricsPollPoolRunningNum)
+		s.metrics.GaugeIncrement(metricsReadPoolPendingNum)
+		rerr := s.readPool.ScheduleContext(ctx, func() {
+			s.metrics.GaugeDecrement(metricsReadPoolPendingNum)
+			s.metrics.GaugeIncrement(metricsReadPoolRunningNum)
 			defer func() {
-				s.metrics.GaugeDecrement(metricsPollPoolRunningNum)
+				s.metrics.GaugeDecrement(metricsReadPoolRunningNum)
 			}()
 
 			message, op, rerr := ws.ReadClientData(wsconn)
@@ -90,13 +89,13 @@ ADD:
 			}
 
 			if message != nil {
-				s.EnqueueReadMessage(message)
+				s.ReadMessage(message) // nolint:errcheck
 			}
 		})
 
 		if rerr != nil {
-			s.metrics.GaugeDecrement(metricsPollPoolPendingNum)
-			s.metrics.CounterIncrement(metricsPollPoolTimeoutsTotal)
+			s.metrics.GaugeDecrement(metricsReadPoolPendingNum)
+			s.metrics.CounterIncrement(metricsReadPoolTimeoutsTotal)
 			// Discard frame
 			_, op, _ := ws.DiscardClientData(wsconn)
 			s.Log.Error("timed out to process WebSocket frame, discarded", "op", op)
@@ -115,105 +114,4 @@ ADD:
 	}
 
 	return err
-}
-
-// EnqueueReadMessage adds a new incoming message to the queue and activates the read routine (from the pool)
-func (s *Session) EnqueueReadMessage(message []byte) {
-	if s.readQueue.Closed() {
-		return
-	}
-
-	pendingTotal := s.readQueue.Size()
-	// TODO: Add limit and configuration
-	maxPending := uint64(0)
-	// s.mu.Lock()
-	// maxPending := s.maxPendingSize
-	// s.mu.Unlock()
-
-	if maxPending > 0 && pendingTotal >= maxPending {
-		s.readQueue.Clear()
-		// s.mu.Lock()
-		// s.maxPendingSize = 0
-		// s.mu.Unlock()
-
-		s.Log.Debug("chatty client detected, disconnecting", "pending", pendingTotal, "max", maxPending)
-
-		// s.metrics.CounterIncrement(metricsDisconnectedSlowClients)
-		// s.DisconnectWithMessage(common.NewDisconnectMessage(common.SLOW_CLIENT_REASON, true), common.SLOW_CLIENT_REASON)
-		return
-	}
-
-	size := len(message)
-
-	item := utils.Item[[]byte]{Data: message, Size: uint64(size)}
-
-	if !s.readQueue.Add(item) {
-		defer s.Disconnect("scheduling read failed", ws.CloseAbnormalClosure)
-	}
-
-	s.ensureReadWorkerRunning()
-}
-
-// ReadMessages takes messages from the read queue and process them
-func (s *Session) ReadMessages() {
-	for {
-		pendingLen := s.readQueue.Len()
-		if pendingLen <= 0 {
-			return
-		}
-
-		item, ok := s.readQueue.Remove()
-		if !ok {
-			return
-		}
-
-		err := s.ReadMessage(item.Data)
-
-		if err != nil {
-			return
-		}
-	}
-}
-
-func (s *Session) ensureReadWorkerRunning() {
-	s.rmu.Lock()
-
-	if s.readPool == nil {
-		s.rmu.Unlock()
-		return
-	}
-
-	if s.readWorkerRunning || s.readWorkerScheduled {
-		s.rmu.Unlock()
-		return
-	}
-
-	s.readWorkerScheduled = true
-
-	s.rmu.Unlock()
-
-	s.metrics.GaugeIncrement(metricsReadPoolPendingNum)
-	s.readPool.ScheduleContext(s.closeCtx, func() { // nolint:errcheck
-		s.metrics.GaugeDecrement(metricsReadPoolPendingNum)
-		s.metrics.GaugeIncrement(metricsReadPoolRunningNum)
-		defer func() {
-			s.metrics.GaugeDecrement(metricsReadPoolRunningNum)
-		}()
-
-		s.rmu.Lock()
-		if s.readWorkerRunning {
-			s.rmu.Unlock()
-			return
-		}
-
-		s.readWorkerScheduled = false
-		s.readWorkerRunning = true
-		s.rmu.Unlock()
-
-		s.ReadMessages()
-
-		s.rmu.Lock()
-		s.readWorkerRunning = false
-		s.rmu.Unlock()
-	})
 }

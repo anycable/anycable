@@ -1363,8 +1363,8 @@ func wsCLIFlags(c *config.Config) []cli.Flag {
 		&cli.IntFlag{
 			Name:        "read_queue_timeout",
 			Usage:       "The max delay before processing incoming messages in the read pool (milliseconds)",
-			Value:       c.App.ReadQueueTimeout,
-			Destination: &c.App.ReadQueueTimeout,
+			Value:       c.App.ReadPoolTimeout,
+			Destination: &c.App.ReadPoolTimeout,
 			Hidden:      true,
 		},
 

@@ -159,9 +159,6 @@ type Session struct {
 	writeTimeout   time.Duration
 	maxPendingSize atomic.Uint64
 
-	readQueue *utils.Queue[[]byte]
-
-	pollPool        *utils.GoPool
 	readPool        *utils.GoPool
 	writePool       *utils.GoPool
 	readWaitTimeout time.Duration
@@ -170,11 +167,6 @@ type Session struct {
 	wrmu            sync.Mutex
 	workerRunning   bool
 	workerScheduled bool
-
-	// Mutex for activating ReadMessages worker
-	rmu                 sync.Mutex
-	readWorkerRunning   bool
-	readWorkerScheduled bool
 
 	timers *SessionTimers
 
@@ -296,7 +288,6 @@ func BuildSession(conn Connection, env *common.SessionEnv) *Session {
 		env:           env,
 		subscriptions: NewSubscriptionState(),
 		writeQueue:    utils.NewQueue[*ws.SentFrame](16),
-		readQueue:     utils.NewQueue[[]byte](8),
 		writeTimeout:  2 * time.Second,
 		closeCtx:      ctx,
 		closeCancel:   cancel,
@@ -318,10 +309,9 @@ func NewSession(node *Node, conn Connection, url string, headers *map[string]str
 	session.sendNativePing = node.config.EnableNativePing
 	session.uid = uid
 
-	session.pollPool = node.pollPool
 	session.readPool = node.readPool
 	session.writePool = node.writePool
-	session.readWaitTimeout = time.Duration(node.config.ReadQueueTimeout) * time.Millisecond
+	session.readWaitTimeout = time.Duration(node.config.ReadPoolTimeout) * time.Millisecond
 
 	ctx := node.log.With("sid", session.uid)
 
