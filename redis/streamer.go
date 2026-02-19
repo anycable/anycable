@@ -37,6 +37,8 @@ type Streamer struct {
 
 	shutdownCh chan struct{}
 	finishedCh chan struct{}
+	readyCh    chan struct{}
+	readyOnce  sync.Once
 
 	log *slog.Logger
 }
@@ -74,6 +76,7 @@ func NewStreamer(stream string, group string, config *RedisConfig, l *slog.Logge
 		block_ms:     2000,
 		shutdownCh:   make(chan struct{}),
 		finishedCh:   make(chan struct{}),
+		readyCh:      make(chan struct{}),
 		handler:      func(map[string]string) (err error) { return },
 	}
 
@@ -156,6 +159,12 @@ func (s *Streamer) Client() rueidis.Client {
 	return s.client
 }
 
+// Ready returns a channel that is closed when the reader goroutine
+// is ready to consume messages.
+func (s *Streamer) Ready() <-chan struct{} {
+	return s.readyCh
+}
+
 func (s *Streamer) runReader() {
 	err := s.initClient()
 
@@ -190,6 +199,8 @@ func (s *Streamer) runReader() {
 
 	readBlockMilliseconds := s.block_ms
 	var lastClaimedAt int64
+
+	s.readyOnce.Do(func() { close(s.readyCh) })
 
 	for {
 		select {

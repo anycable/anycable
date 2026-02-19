@@ -94,7 +94,7 @@ func TestStreamer(t *testing.T) {
 
 		defer streamer.Shutdown(context.Background()) // nolint:errcheck
 
-		require.NoError(t, waitRedisStreamConsumers(testClient, 1))
+		<-streamer.Ready()
 
 		require.NoError(t, publishToRedisStream(testClient, stream, "testo"))
 
@@ -127,7 +127,8 @@ func TestStreamer(t *testing.T) {
 
 		defer streamer2.Shutdown(context.Background()) // nolint:errcheck
 
-		require.NoError(t, waitRedisStreamConsumers(testClient, 2))
+		<-streamer.Ready()
+		<-streamer2.Ready()
 
 		require.NoError(t, publishToRedisStream(testClient, stream, "123_test"))
 
