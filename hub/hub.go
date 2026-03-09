@@ -128,6 +128,7 @@ func (h *Hub) Run() {
 			h.disconnectSessions(command.Identifier, command.Reconnect)
 
 		case <-h.shutdown:
+			h.doneFn()
 			h.done.Done()
 			return
 		}

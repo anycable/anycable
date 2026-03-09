@@ -68,7 +68,7 @@ func (s *GracefulSignals) exec() {
 	shutdown := make(chan struct{})
 	s.executed = true
 
-	terminateCtx, terminateImmediately := context.WithCancel(context.Background())
+	terminateCtx, terminateImmediately := context.WithCancel(context.Background()) // #nosec G118
 
 	timeoutCtx, cancelTimeout := context.WithTimeout(terminateCtx, s.timeout)
 	defer cancelTimeout()

@@ -6,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"net/url"
 	"os"
+	"regexp"
 	"strings"
 
 	pb "github.com/anycable/anycable-go/protos"
@@ -91,13 +91,16 @@ func (c *Config) Impl() string {
 		return c.Implementation
 	}
 
-	uri, err := url.Parse(ensureGrpcScheme(c.Host))
+	schemeRegex := regexp.MustCompile(`^([^\/]+)://.*`)
+	matches := schemeRegex.FindStringSubmatch(ensureGrpcScheme(c.Host))
 
-	if err != nil {
+	if len(matches) == 0 {
 		return fmt.Sprintf("<invalid RPC host: %s>", c.Host)
 	}
 
-	if uri.Scheme == "http" || uri.Scheme == "https" {
+	scheme := matches[1]
+
+	if scheme == "http" || scheme == "https" {
 		return "http"
 	}
 

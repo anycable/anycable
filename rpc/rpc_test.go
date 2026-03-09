@@ -166,6 +166,7 @@ func TestAuthenticate(t *testing.T) {
 		}
 
 		canceledCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
 
 		client.On("Connect", mock.Anything,
 			&expectedReq).Return(

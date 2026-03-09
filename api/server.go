@@ -230,5 +230,5 @@ func (s *Server) PresenceHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(utils.ToJSON(info)) // nolint:errcheck
+	w.Write(utils.ToJSON(info)) // nolint:errcheck,gosec
 }

@@ -147,6 +147,12 @@ func TestGRPCMultiHost(t *testing.T) {
 func runGRPCServer(t *testing.T, port int) (*mocks.RPCServer, func()) {
 	server := grpc.NewServer(
 		grpc.MaxConcurrentStreams(1),
+		grpc.UnaryInterceptor(func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+			t.Logf("gRPC server at %d received call: %s, request: %+v", port, info.FullMethod, req)
+			resp, err := handler(ctx, req)
+			t.Logf("gRPC server at %d responding: %s, response: %+v, error: %v", port, info.FullMethod, resp, err)
+			return resp, err
+		}),
 	)
 	service := mocks.RPCServer{}
 	pb.RegisterRPCServer(server, &service)

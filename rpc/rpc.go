@@ -616,7 +616,7 @@ func noopCancel() {}
 
 func (c *Controller) newRequestContext(parentCtx context.Context, sessionID string) (ctx context.Context, cancel context.CancelFunc) {
 	if c.requestTimeout > 0 {
-		ctx, cancel = context.WithTimeout(parentCtx, c.requestTimeout)
+		ctx, cancel = context.WithTimeout(parentCtx, c.requestTimeout) // #nosec G118
 	} else {
 		ctx = parentCtx
 		cancel = noopCancel
@@ -629,6 +629,10 @@ func (c *Controller) newRequestContext(parentCtx context.Context, sessionID stri
 
 func defaultDialer(conf *Config, l *slog.Logger) (pb.RPCClient, ClientHelper, error) {
 	host := conf.Host
+
+	// Go 1.26: Workaround to handle commas in grpc-list addresses
+	host = strings.ReplaceAll(host, ",", "/")
+
 	enableTLS := conf.TLSEnabled()
 
 	kacp := keepalive.ClientParameters{

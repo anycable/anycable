@@ -1,5 +1,7 @@
 # Change log
 
+- Upgrade to Go 1.26. ([@palkan][])
+
 ## 1.6.10 (2026-02-19)
 
 - Reduce memory usage by making WS buffers smaller by default (back to 1kb) and decreasing the initial write queue size. ([@palkan][])

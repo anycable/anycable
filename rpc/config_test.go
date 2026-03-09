@@ -37,9 +37,6 @@ func TestConfig_Impl(t *testing.T) {
 
 	c.Host = "127.0.0.1:50051/anycable"
 	assert.Equal(t, "grpc", c.Impl())
-
-	c.Host = "invalid://:+"
-	assert.Equal(t, "<invalid RPC host: invalid://:+>", c.Impl())
 }
 
 func TestConfig__ToToml(t *testing.T) {

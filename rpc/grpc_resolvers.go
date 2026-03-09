@@ -14,7 +14,7 @@ type multiHostGRPCResolver struct {
 }
 
 func (r *multiHostGRPCResolver) start() error {
-	addrStrs := strings.Split(r.target.URL.Host, ",")
+	addrStrs := append([]string{r.target.URL.Host}, strings.Split(r.target.URL.Path, "/")...)
 	endpoints := make([]resolver.Endpoint, len(addrStrs))
 	for i, s := range addrStrs {
 		addr := resolver.Address{Addr: s}

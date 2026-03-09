@@ -26,6 +26,7 @@ linters:
         - -ST1005
         - -QF1001
         - -QF1003
+        - -QF1012
         - -S1021
   exclusions:
     generated: lax
