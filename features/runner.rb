@@ -15,7 +15,7 @@ begin
     gem "activesupport", "~> 7.0.0"
     gem "perfect_toml"
 
-    gem "pusher"
+    gem "pusher", "< 2.0.4"
   end
 rescue
   raise if retried
