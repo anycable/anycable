@@ -20,17 +20,18 @@ Changing this limit depends on the OS and the way you deploy the server (e.g., f
 
 ### Heroku
 
-Heroku sets the open files limit to 10k, and it's not possible to change it. Larger sized dynos (Performance-M +) have an open file limit of 1048576. See more [here](../deployment/heroku.md).
+Heroku sets the open files limit to 10k, and it's not possible to change it. Larger sized dynos have an open file limit of ~1M. See more [here](../deployment/heroku.md).
 
 ### AWS ECS
 
-ECS has a default limit of 1024 open files. Make sure you configured [the `ulimit` setting](https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_Ulimit.html) in your task definition. For example:
+On Fargate, the default soft and hard limit is 65,535 open files. The EC2 launch type's default `ulimit` value will depend upon your host OS configuration, but can still be configured in the task definition. Make sure you configure [the `ulimit` setting](https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_Ulimit.html) in your task definition. For example:
 
 ```yml
 HardLimit: 1048576
 Name: nofile
 SoftLimit: 1048576
 ```
+
 
 ## TCP keepalive
 
