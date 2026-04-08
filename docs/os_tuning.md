@@ -20,7 +20,7 @@ Changing this limit depends on the OS and the way you deploy the server (e.g., f
 
 ### Heroku
 
-Heroku sets the open files limit to 10k, and it's not possible to change it. See more [here](../deployment/heroku.md).
+Heroku sets the open files limit to 10k, and it's not possible to change it. Larger sized dynos (Performance-M +) have an open file limit of 1048576. See more [here](../deployment/heroku.md).
 
 ### AWS ECS
 
