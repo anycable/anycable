@@ -32,7 +32,6 @@ Name: nofile
 SoftLimit: 1048576
 ```
 
-
 ## TCP keepalive
 
 WebSockets are implemented on top of the TCP protocol. Normally, closing a connection is happening via 4-step handshake. But what happens if there is no more network to send handshake packets? How TCP detects that connection was lost if there is no network? By using [_keepalive_](http://tldp.org/HOWTO/TCP-Keepalive-HOWTO/overview.html) feature.
