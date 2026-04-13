@@ -15,7 +15,7 @@ require (
 	github.com/joomcode/errorx v1.2.0
 	github.com/lmittmann/tint v1.1.3
 	github.com/matoous/go-nanoid v1.5.1
-	github.com/mattn/go-isatty v0.0.20
+	github.com/mattn/go-isatty v0.0.21
 	github.com/mitchellh/go-mruby v0.0.0-20200315023956-207cedc21542
 	github.com/nats-io/nats.go v1.49.0
 	github.com/posthog/posthog-go v1.10.0
