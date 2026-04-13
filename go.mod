@@ -18,7 +18,7 @@ require (
 	github.com/mattn/go-isatty v0.0.20
 	github.com/mitchellh/go-mruby v0.0.0-20200315023956-207cedc21542
 	github.com/nats-io/nats.go v1.49.0
-	github.com/posthog/posthog-go v1.10.0
+	github.com/posthog/posthog-go v1.11.2
 	github.com/redis/rueidis v1.0.72
 	github.com/smira/go-statsd v1.3.4
 	github.com/stretchr/testify v1.11.1
