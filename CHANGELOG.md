@@ -1,5 +1,9 @@
 # Change log
 
+## 1.6.13 (2026-04-30)
+
+- Upgrade dependencies.
+
 ## 1.6.12 (2026-04-02)
 
 - Upgrade dependencies.
