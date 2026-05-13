@@ -2,6 +2,8 @@ package lib_test
 
 import (
 	"context"
+	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -29,7 +31,10 @@ func newSlowHandler(t *testing.T, delay time.Duration) *httptest.Server {
 func TestPublisher_IssuedAndDroppedCounts(t *testing.T) {
 	srv := newSlowHandler(t, 100*time.Millisecond)
 
-	p := lib.NewPublisher(srv.URL, 2)
+	// Pin to a single worker so the queue-full path is observable; with the
+	// default worker count, every Publish here would be picked up before the
+	// queue could fill.
+	p := lib.NewPublisher(srv.URL, 2, lib.WithWorkers(1), lib.WithBatchSize(1))
 	t.Cleanup(p.Close)
 
 	start := time.Now()
@@ -120,9 +125,13 @@ func TestPublisher_EmptyStream(t *testing.T) {
 }
 
 func TestPublisher_HandlerReturns500_RecordsAsIssuedNotDropped(t *testing.T) {
-	var hits atomic.Int64
+	var broadcastsSeen atomic.Int64
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		hits.Add(1)
+		body, _ := io.ReadAll(r.Body)
+		var arr []map[string]any
+		if json.Unmarshal(body, &arr) == nil {
+			broadcastsSeen.Add(int64(len(arr)))
+		}
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
 	t.Cleanup(srv.Close)
@@ -135,7 +144,51 @@ func TestPublisher_HandlerReturns500_RecordsAsIssuedNotDropped(t *testing.T) {
 
 	assert.EqualValues(t, 5, p.IssuedCount(), "issued counts all enqueued tasks, regardless of HTTP status")
 	assert.EqualValues(t, 0, p.DroppedCount(), "non-2xx is not a drop — drops only count scheduler-fell-behind")
-	assert.EqualValues(t, 5, hits.Load(), "handler should have seen all 5 POSTs")
+	assert.EqualValues(t, 0, p.CompletedCount(), "non-2xx must not increment completed")
+	assert.EqualValues(t, 5, broadcastsSeen.Load(), "server should have received all 5 broadcasts (possibly batched into fewer POSTs)")
+}
+
+func TestPublisher_CompletedCountTracks2xx(t *testing.T) {
+	srv := newSlowHandler(t, 0)
+
+	p := lib.NewPublisher(srv.URL, 16)
+	for range 7 {
+		p.Publish("a", "x")
+	}
+	p.Close()
+
+	assert.EqualValues(t, 7, p.IssuedCount())
+	assert.EqualValues(t, 7, p.CompletedCount(), "all 2xx-responded broadcasts should be completed")
+}
+
+func TestPublisher_BatchingCoalescesUnderBackpressure(t *testing.T) {
+	// One slow worker; production pushes 20 tasks faster than dispatch.
+	// The single worker will pack subsequent tasks into batches up to the
+	// configured batchSize, so we should see far fewer POSTs than tasks.
+	var posts atomic.Int64
+	var broadcasts atomic.Int64
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		posts.Add(1)
+		body, _ := io.ReadAll(r.Body)
+		var arr []map[string]any
+		if json.Unmarshal(body, &arr) == nil {
+			broadcasts.Add(int64(len(arr)))
+		}
+		time.Sleep(50 * time.Millisecond)
+		w.WriteHeader(http.StatusCreated)
+	}))
+	t.Cleanup(srv.Close)
+
+	p := lib.NewPublisher(srv.URL, 1024, lib.WithWorkers(1), lib.WithBatchSize(64))
+	for range 20 {
+		p.Publish("a", "x")
+	}
+	p.Close()
+
+	assert.EqualValues(t, 20, p.IssuedCount())
+	assert.EqualValues(t, 20, broadcasts.Load(), "server must still see every broadcast, just packed")
+	assert.EqualValues(t, 20, p.CompletedCount())
+	assert.Less(t, posts.Load(), int64(20), "batching should yield fewer POSTs than broadcasts under backpressure")
 }
 
 func TestPublisher_AgainstBuildServer(t *testing.T) {
