@@ -36,7 +36,25 @@ do not work around it.
 | `-s` | per-client subscription count (must be ≤ `-S`) |
 
 Optional knobs with safe defaults: `--drain-timeout=30s`, `--max-inflight=4096`,
-`--setup-failure-tolerance=0`, `--seed=1`.
+`--publish-workers=64`, `--publish-batch=64`, `--setup-failure-tolerance=0`,
+`--seed=1`.
+
+`--publish-workers` is the size of the HTTP worker pool draining the
+publisher queue. The default (64) is sized for the **embedded-server
+scenario** where each POST to `/broadcast` triggers synchronous fan-out
+across every subscribed client — high publisher concurrency multiplies
+server-side work and can exhaust the Go OS-thread limit at high `-c`
+(`runtime: failed to create new OS thread`). When pointing the publisher
+at an **external broadcaster** (NATS, Redis, an edge service) each POST
+is cheap and values up to ~1024 are reasonable; raise it to find that
+broadcaster's ceiling.
+
+`--publish-batch` is the maximum number of broadcasts a single worker
+will coalesce into one POST under backpressure (`[{stream,data}, …]`
+array body, supported by the AnyCable broadcast endpoint). At low rates
+batches collapse to size 1 with no added latency; when the broadcast
+endpoint can't keep up, batching amortizes per-request overhead and is
+often the difference between a useful number and a 200× under-report.
 
 ## Picking a configuration
 
@@ -57,17 +75,31 @@ dimension is non-zero so a change anywhere shows up.
 
 ## Reading the summary
 
-Eight keys come back on stdout. The fast triage:
+Thirteen keys come back on stdout. The fast triage:
 
 | Key | What it means | What to flag |
 |---|---|---|
-| `throughput_msgs_per_sec` | Primary metric: total received / d.Seconds(). | Should approximate `r × c × s / S` to within ~5% on a clean host. |
+| `throughput_max_msgs_per_sec` | **Headline / success metric.** Highest receive rate sustained over any sliding window of size `-d` across the full sample timeline (publish + drain). | Compare to `expected_msgs_per_sec`. Above ~95% = clean run. Below ~80% = the system never managed the target rate even momentarily — real fan-out regression. |
+| `throughput_min_msgs_per_sec` | Lowest receive rate over any full `-d`-second window. | A very low min means a stall — useful when investigating GC pauses, broker reconnections, or scheduler hiccups. |
+| `throughput_first_msgs_per_sec` | Rate over the first `-d`-second window of sampling. | Captures warm-up behavior. If `first` ≪ `max`, the system needed time to ramp. |
+| `throughput_last_msgs_per_sec` | Rate over the last `-d`-second window. | Captures drain-tail behavior. If `last` is high, queues were still draining at sample end — re-run with a longer `--drain-timeout`. |
+| `expected_msgs_per_sec` | Theoretical ceiling: `r × c × s / S`. | Constant for a given config — printed so `max / expected` is one division away. |
 | `clients_complete` / `clients_short` | Reconciliation: did every client receive its share? | Any `clients_short > 0` is a **validity** failure. Report it; don't gloss over it. |
 | `messages_missing` | How short the short clients were, summed. | Treat as binary: > 0 = invalid run. |
-| `publications_issued` | Schedule cardinality: `floor(d / interval)`. Deterministic for `(r, d)`. | Should equal `r × d.Seconds()` for integer-second windows. |
+| `publications_issued` | Schedule cardinality: `floor(d / interval)`. Deterministic for `(r, d)`. | Should equal `r × d.Seconds()` for integer-second windows. This is the *intent*, not the *outcome*. |
+| `publications_completed` | Broadcasts whose HTTP POST returned 2xx. The actual count the server accepted. | `completed < issued` means non-2xx responses or transport errors mid-flight — investigate the server log. |
 | `publications_dropped` | Publisher queue was full (scheduler-fell-behind). | Any `> 0` means `--max-inflight` too small or HTTP path back-pressured. Recommend raising the cap or lowering `-r`. |
 | `scheduler_late_publishes` | Diagnostic: catch-up fires (OS couldn't hit the tick on time). | Ratio over `publications_issued`: under 10% is healthy. Over 30% means the host is too loaded for stable rate measurement; suggest pinning `GOMAXPROCS` or lowering `-r`. |
-| `observed_publish_rate` | `issued / d.Seconds()`. With absolute scheduling, ≈ `-r` by construction. | Drift from `-r` means `d` was inexact for the schedule (e.g., non-integer-second `-d`). Rare. |
+| `observed_publish_rate` | `publications_completed / publish_window_wall_seconds` — the *real* rate at which the server accepted POSTs. | If this is well below `-r`, the broadcast endpoint is the bottleneck, **not** the WebSocket fan-out. Raising `--publish-batch` or adjusting the server is the lever, not raising `-r`. |
+| `publish_window_wall_seconds` | Time from first enqueue to last completed POST. | If this is much larger than `-d`, the broadcast endpoint couldn't accept POSTs at the scheduled rate. Investigate before trusting throughput. |
+
+**Why `max` and not a simple `total / d`?** Because under backpressure the
+publish window stretches well beyond `-d` (see `publish_window_wall_seconds`),
+and the receive timeline keeps growing for the duration of the drain. A flat
+`received / d` divides by the wrong denominator and tells you nothing about
+whether the system ever achieved the target rate. The sliding-window max
+answers the question that actually matters: "did the system ever sustain the
+target rate over a window the size of one publish duration?"
 
 Exit codes: `0` clean, `1` `clients_short > 0` or `publications_dropped > 0`,
 `2` flag-parse error.
@@ -83,7 +115,7 @@ for i in 1 2 3 4 5; do
     -c 1000 -r 100 -d 10s -S 10 -s 2 --seed $i --non-interactive \
   >> baseline.txt
 done
-awk -F= '/^throughput_msgs_per_sec/ { s+=$2; n++; if($2<min||n==1)min=$2; if($2>max)max=$2 } END { printf "n=%d mean=%.0f min=%.0f max=%.0f spread=%.1f%%\n", n, s/n, min, max, 100*(max-min)/(s/n) }' baseline.txt
+awk -F= '/^throughput_max_msgs_per_sec/ { s+=$2; n++; if($2<min||n==1)min=$2; if($2>max)max=$2 } END { printf "n=%d mean=%.0f min=%.0f max=%.0f spread=%.1f%%\n", n, s/n, min, max, 100*(max-min)/(s/n) }' baseline.txt
 ```
 
 If `spread` across 5 runs exceeds 5%, the host is too noisy for a clean
@@ -104,6 +136,18 @@ single-run delta.
   (issued count is deterministic by design), but the publish distribution
   inside the window degenerated into catch-up bursts. Note this in the
   report.
+- **`publish_window_wall_seconds` ≫ `-d` and `observed_publish_rate` ≪ `-r`**:
+  the broadcast endpoint, not the WebSocket fan-out, is the bottleneck.
+  The publisher kept enqueueing at `-r` but workers couldn't POST that
+  fast. Don't read `throughput_max_msgs_per_sec` as a fan-out ceiling in
+  this state — it's a broadcast-endpoint ceiling. Raising `--publish-batch`
+  amortizes HTTP overhead and is often the right next move.
+- **`throughput_max_msgs_per_sec` ≪ `expected_msgs_per_sec` with
+  `clients_short=0` and `observed_publish_rate ≈ -r`**: the publisher
+  delivered, the clients received, but the WebSocket fan-out path could
+  never sustain the target rate over any `-d`-second window. This *is*
+  the fan-out regression signal — investigate the hub/broker path before
+  the publisher.
 - **Throughput off by 5–15% with otherwise clean numbers**: in-process
   colocation noise. Run the variance workflow above to size it before
   drawing conclusions.

@@ -119,8 +119,13 @@ The library contract is the public surface of `etc/benchi/lib/`:
   flip those fields rather than reaching into `cli.NewConfig` directly.
 - `lib.BuildPool(lib.PoolConfig{...})` — N connected clients with bounded
   parallelism and per-client stream subsets.
-- `lib.NewPublisher(url, maxInflight)` — bounded async publisher with
-  `Publish` / `IssuedCount` / `DroppedCount` / `TargetCounts` / `Close`.
+- `lib.NewPublisher(url, maxInflight, opts...)` — bounded async publisher
+  with `Publish` / `IssuedCount` / `DroppedCount` / `CompletedCount` /
+  `TargetCounts` / `Close`. Workers coalesce queued tasks into batched
+  POSTs under backpressure. Options: `lib.WithWorkers(n)` (default 64,
+  sized for the embedded server; raise for external broadcasters where
+  each POST is cheap), `lib.WithBatchSize(n)` (default 64; 1 disables
+  batching).
 - `lib.NewAccumulator()` — per-client receive counter; pass to
   `PoolConfig.Accumulator` so the drain goroutines feed it for free.
 
