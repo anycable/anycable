@@ -10,6 +10,7 @@ replace github.com/anycable/anycable-go => ../..
 require (
 	github.com/anycable/anycable-go v0.0.0-00010101000000-000000000000
 	github.com/gorilla/websocket v1.5.3
+	github.com/mattn/go-isatty v0.0.21
 	github.com/stretchr/testify v1.11.1
 )
 
@@ -33,7 +34,6 @@ require (
 	github.com/klauspost/compress v1.18.5 // indirect
 	github.com/lmittmann/tint v1.1.3 // indirect
 	github.com/matoous/go-nanoid v1.5.1 // indirect
-	github.com/mattn/go-isatty v0.0.21 // indirect
 	github.com/minio/highwayhash v1.0.4 // indirect
 	github.com/mitchellh/go-mruby v0.0.0-20200315023956-207cedc21542 // indirect
 	github.com/nats-io/jwt/v2 v2.8.1 // indirect

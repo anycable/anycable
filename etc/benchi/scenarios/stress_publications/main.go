@@ -12,6 +12,7 @@ import (
 	"math/rand/v2"
 	"os"
 	"strconv"
+	"sync/atomic"
 	"time"
 
 	"github.com/anycable/anycable-go/etc/benchi/lib"
@@ -25,15 +26,16 @@ func main() {
 // so test-only seams live in their own struct and can't accidentally leak
 // into the CLI.
 type runConfig struct {
-	c            int
-	r            int
-	d            time.Duration
-	bigS         int
-	s            int
-	drainTimeout time.Duration
-	maxInflight  int
-	tolerance    int
-	seed         uint64
+	c              int
+	r              int
+	d              time.Duration
+	bigS           int
+	s              int
+	drainTimeout   time.Duration
+	maxInflight    int
+	tolerance      int
+	seed           uint64
+	nonInteractive bool
 }
 
 // runOpts is the testing seam. Production main constructs an empty value;
@@ -69,7 +71,7 @@ func run(args []string, stdout, stderr io.Writer, opts runOpts) int {
 		return 2
 	}
 
-	return runWithConfig(cfg, opts, stdout)
+	return runWithConfig(cfg, opts, stdout, stderr)
 }
 
 func parseFlags(args []string, stderr io.Writer) (runConfig, error) {
@@ -87,6 +89,7 @@ func parseFlags(args []string, stderr io.Writer) (runConfig, error) {
 	fs.IntVar(&cfg.tolerance, "setup-failure-tolerance", 0, "max client setup failures before aborting")
 	var seed int64
 	fs.Int64Var(&seed, "seed", 1, "RNG seed for stream-subset selection and per-tick stream choice")
+	fs.BoolVar(&cfg.nonInteractive, "non-interactive", false, "suppress lifecycle logs and progress bar on stderr; emit only the key=value summary on stdout (auto-on when stderr is not a TTY)")
 
 	if err := fs.Parse(args); err != nil {
 		return cfg, err
@@ -105,26 +108,33 @@ func parseFlags(args []string, stderr io.Writer) (runConfig, error) {
 
 // summary holds the reconciled numbers printed at the end of a run.
 type summary struct {
-	throughputMsgsPerSec float64
-	clientsComplete      int
-	clientsShort         int
-	messagesMissing      int
-	publicationsIssued   int64
-	publicationsDropped  int64
-	observedPublishRate  float64
+	throughputMsgsPerSec   float64
+	clientsComplete        int
+	clientsShort           int
+	messagesMissing        int
+	publicationsIssued     int64
+	publicationsDropped    int64
+	schedulerLatePublishes int
+	observedPublishRate    float64
 }
 
-func runWithConfig(cfg runConfig, opts runOpts, stdout io.Writer) int {
+func runWithConfig(cfg runConfig, opts runOpts, stdout, stderr io.Writer) int {
 	ctx := context.Background()
+	u := newUI(stderr, cfg.nonInteractive)
 
+	u.logf("starting embedded AnyCable server...")
 	server, err := lib.BuildServer(lib.ServerConfig{})
 	if err != nil {
 		fmt.Fprintln(stdout, "server build failed:", err)
 		return 1
 	}
 	defer server.Shutdown(ctx) //nolint:errcheck // best-effort shutdown
+	u.logf("server ready at %s", server.WebSocketURL())
 
+	var connected, subscribed atomic.Int64
 	acc := lib.NewAccumulator()
+	poolStart := time.Now()
+	u.logf("building pool: %d clients × %d subscriptions = %d total...", cfg.c, cfg.s, cfg.c*cfg.s)
 	pool, err := lib.BuildPool(lib.PoolConfig{
 		ServerURL:   server.WebSocketURL(),
 		C:           cfg.c,
@@ -134,12 +144,17 @@ func runWithConfig(cfg runConfig, opts runOpts, stdout io.Writer) int {
 		Seed:        cfg.seed,
 		Accumulator: acc,
 		Streams:     opts.streamSubsets,
+		OnConnect:   func() { connected.Add(1) },
+		OnSubscribe: func() { subscribed.Add(1) },
 	})
 	if err != nil {
 		fmt.Fprintln(stdout, "pool setup failed:", err)
 		return 1
 	}
 	defer pool.Close()
+	u.logf("pool ready: %d connected, %d subscribed (%s)",
+		connected.Load(), subscribed.Load(),
+		time.Since(poolStart).Round(10*time.Millisecond))
 
 	broadcastURL := server.BroadcastURL()
 	if opts.broadcastURL != "" {
@@ -152,7 +167,14 @@ func runWithConfig(cfg runConfig, opts runOpts, stdout io.Writer) int {
 		opts.setupHook(server, pool, pub)
 	}
 
-	publishWindow(cfg, pub)
+	totalSchedule := int64(cfg.d / publishInterval(cfg))
+	u.logf("starting publish window: %dHz for %s (%d scheduled publishes)...",
+		cfg.r, cfg.d, totalSchedule)
+	progress := u.startProgress("publishing", totalSchedule, pub.IssuedCount)
+	late := publishWindow(cfg, pub)
+	progress.Stop()
+	u.logf("publish window done: %d issued, %d late, %d dropped",
+		pub.IssuedCount(), late, pub.DroppedCount())
 
 	// Close the publisher to drain its in-flight queue before reading the
 	// target counts. TargetCounts is a snapshot of enqueue-time intent and
@@ -163,10 +185,14 @@ func runWithConfig(cfg runConfig, opts runOpts, stdout io.Writer) int {
 	targets := pub.TargetCounts()
 	expected := computeExpected(pool, targets)
 
+	drainStart := time.Now()
+	u.logf("draining (timeout %s)...", cfg.drainTimeout)
 	pollDrain(acc, expected, cfg.drainTimeout)
+	u.logf("drain complete (%s)", time.Since(drainStart).Round(10*time.Millisecond))
 
 	snap := acc.Snapshot()
-	s := buildSummary(cfg, snap, expected, pub)
+	s := buildSummary(cfg, snap, expected, pub, late)
+	u.logf("summary:")
 	printSummary(stdout, s)
 
 	if s.clientsShort > 0 || s.publicationsDropped > 0 {
@@ -175,23 +201,42 @@ func runWithConfig(cfg runConfig, opts runOpts, stdout io.Writer) int {
 	return 0
 }
 
-func publishWindow(cfg runConfig, pub *lib.Publisher) {
-	rng := rand.New(rand.NewPCG(cfg.seed^0xA5A5A5A5A5A5A5A5, cfg.seed))
+// publishInterval mirrors publishWindow's interval computation so the UI can
+// pre-compute the total scheduled publishes for the progress bar denominator.
+func publishInterval(cfg runConfig) time.Duration {
 	interval := time.Second / time.Duration(cfg.r)
 	if interval <= 0 {
 		interval = time.Nanosecond
 	}
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
-	deadline := time.After(cfg.d)
-	for {
-		select {
-		case <-ticker.C:
-			stream := strconv.Itoa(rng.IntN(cfg.bigS) + 1)
-			pub.Publish(stream, "x")
-		case <-deadline:
+	return interval
+}
+
+// publishWindow walks the scheduled tick grid in absolute time. For tick i,
+// the scheduled instant is start + i*interval; the loop sleeps to that
+// instant before firing, except when the wallclock is already past it — in
+// which case it fires immediately and increments latePublishes. Total
+// issued count is deterministic for a given (r, d): every nextTickAt <= end
+// fires exactly once, regardless of OS scheduler jitter. Catch-up bursts
+// can extend wallclock past d; runWithConfig's drainTimeout bounds the
+// outer run.
+func publishWindow(cfg runConfig, pub *lib.Publisher) (latePublishes int) {
+	rng := rand.New(rand.NewPCG(cfg.seed^0xA5A5A5A5A5A5A5A5, cfg.seed))
+	interval := publishInterval(cfg)
+	start := time.Now()
+	end := start.Add(cfg.d)
+	for i := int64(1); ; i++ {
+		nextTickAt := start.Add(time.Duration(i) * interval)
+		if nextTickAt.After(end) {
 			return
 		}
+		now := time.Now()
+		if now.Before(nextTickAt) {
+			time.Sleep(nextTickAt.Sub(now))
+		} else {
+			latePublishes++
+		}
+		stream := strconv.Itoa(rng.IntN(cfg.bigS) + 1)
+		pub.Publish(stream, "x")
 	}
 }
 
@@ -244,7 +289,7 @@ func drained(snap, expected map[string]int) bool {
 	return true
 }
 
-func buildSummary(cfg runConfig, snap, expected map[string]int, pub *lib.Publisher) summary {
+func buildSummary(cfg runConfig, snap, expected map[string]int, pub *lib.Publisher, latePublishes int) summary {
 	var (
 		totalReceived  int
 		clientsComp    int
@@ -264,13 +309,14 @@ func buildSummary(cfg runConfig, snap, expected map[string]int, pub *lib.Publish
 	}
 	seconds := cfg.d.Seconds()
 	return summary{
-		throughputMsgsPerSec: float64(totalReceived) / seconds,
-		clientsComplete:      clientsComp,
-		clientsShort:         clientsShort,
-		messagesMissing:      messagesShort,
-		publicationsIssued:   pub.IssuedCount(),
-		publicationsDropped:  pub.DroppedCount(),
-		observedPublishRate:  float64(pub.IssuedCount()) / seconds,
+		throughputMsgsPerSec:   float64(totalReceived) / seconds,
+		clientsComplete:        clientsComp,
+		clientsShort:           clientsShort,
+		messagesMissing:        messagesShort,
+		publicationsIssued:     pub.IssuedCount(),
+		publicationsDropped:    pub.DroppedCount(),
+		schedulerLatePublishes: latePublishes,
+		observedPublishRate:    float64(pub.IssuedCount()) / seconds,
 	}
 }
 
@@ -281,5 +327,6 @@ func printSummary(w io.Writer, s summary) {
 	fmt.Fprintf(w, "messages_missing=%d\n", s.messagesMissing)
 	fmt.Fprintf(w, "publications_issued=%d\n", s.publicationsIssued)
 	fmt.Fprintf(w, "publications_dropped=%d\n", s.publicationsDropped)
+	fmt.Fprintf(w, "scheduler_late_publishes=%d\n", s.schedulerLatePublishes)
 	fmt.Fprintf(w, "observed_publish_rate=%.2f\n", s.observedPublishRate)
 }
