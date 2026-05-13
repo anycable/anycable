@@ -12,15 +12,17 @@ import (
 
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/encoders"
+	"github.com/anycable/anycable-go/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 type MockSession struct {
-	sid      string
-	incoming chan ([]byte)
-	closed   bool
-	closeMu  sync.Mutex
+	sid        string
+	closed     bool
+	closeMu    sync.Mutex
+	encoder    encoders.JSON
+	writeQueue *utils.Queue[[]byte]
 }
 
 func (s *MockSession) GetID() string {
@@ -32,7 +34,19 @@ func (s *MockSession) GetIdentifiers() string {
 }
 
 func (s *MockSession) Send(msg encoders.EncodedMessage) {
-	s.incoming <- toJSON(msg)
+	payload := s.encodeMessage(msg)
+
+	if s.writeQueue.Closed() {
+		return
+	}
+
+	size := len(payload)
+
+	item := utils.Item[[]byte]{Data: payload, Size: uint64(size)}
+
+	if !s.writeQueue.Add(item) {
+		return
+	}
 }
 
 func (s *MockSession) DisconnectWithMessage(msg encoders.EncodedMessage, code string) {
@@ -43,7 +57,19 @@ func (s *MockSession) DisconnectWithMessage(msg encoders.EncodedMessage, code st
 		return
 	}
 
-	s.incoming <- toJSON(msg)
+	s.Send(msg)
+	s.closed = true
+}
+
+func (s *MockSession) Close() {
+	s.closeMu.Lock()
+	defer s.closeMu.Unlock()
+
+	if s.closed {
+		return
+	}
+
+	s.writeQueue.Close()
 	s.closed = true
 }
 
@@ -56,21 +82,58 @@ func (s *MockSession) Closed() bool {
 
 func (s *MockSession) Read() ([]byte, error) {
 	timer := time.After(100 * time.Millisecond)
+	done := make(chan []byte, 1)
+	stop := make(chan struct{})
+	defer close(stop)
+
+	go func() {
+		for {
+			item, ok := s.writeQueue.Remove()
+			if ok {
+				done <- item.Data
+				return
+			}
+
+			select {
+			case <-time.After(10 * time.Millisecond):
+			case <-stop:
+				return
+			}
+		}
+	}()
 
 	select {
 	case <-timer:
 		return nil, errors.New("Session hasn't received any messages")
-	case msg := <-s.incoming:
+	case msg := <-done:
 		return msg, nil
 	}
 }
 
-func (s *MockSession) ReadIndifinitely() ([]byte, error) {
-	return <-s.incoming, nil
+func (s *MockSession) ReadIndifinitely() {
+	s.writeQueue.Wait()
+	s.writeQueue.Remove()
+}
+
+func (s *MockSession) encodeMessage(msg encoders.EncodedMessage) []byte {
+	if cm, ok := msg.(*encoders.CachedEncodedMessage); ok {
+		frame, _ := cm.Fetch(
+			s.encoder.ID(),
+			s.encoder.Encode,
+		)
+
+		return frame.Payload
+	}
+
+	frame, _ := s.encoder.Encode(msg)
+	return frame.Payload
 }
 
 func NewMockSession(sid string) *MockSession {
-	return &MockSession{sid: sid, incoming: make(chan []byte, 256)}
+	return &MockSession{
+		sid:        sid,
+		writeQueue: utils.NewQueue[[]byte](16),
+	}
 }
 
 func TestUnsubscribeRaceConditions(t *testing.T) {
@@ -406,6 +469,24 @@ type benchmarkConfig struct {
 	payload           string
 }
 
+func (bc benchmarkConfig) Inspect() string {
+	payloadSize := len(bc.payload)
+
+	var decoded string
+	if err := json.Unmarshal([]byte(bc.payload), &decoded); err == nil {
+		payloadSize = len(decoded)
+	}
+
+	return fmt.Sprintf(
+		"pool=%d,streams=%d,sessions=%d,streams-per-session=%d,payload=%dB",
+		bc.hubPoolSize,
+		bc.totalStreams,
+		bc.totalSessions,
+		bc.streamsPerSession,
+		payloadSize,
+	)
+}
+
 func BenchmarkBroadcast(b *testing.B) {
 	configs := []benchmarkConfig{}
 
@@ -414,18 +495,21 @@ func BenchmarkBroadcast(b *testing.B) {
 		{1000, 10},
 		{100, 10},
 		{10, 3},
+		{1, 1},
 	}
-	sessionsNum := 10000
+	sessionsNum := []int{1000, 10000}
 	payload := "\"A quick brow fox bla-bla-bla\""
 
 	for _, streamNum := range streamNums {
 		for _, poolSize := range poolSizes {
-			configs = append(configs, benchmarkConfig{poolSize, streamNum[0], sessionsNum, streamNum[1], payload})
+			for _, sessionNum := range sessionsNum {
+				configs = append(configs, benchmarkConfig{poolSize, streamNum[0], sessionNum, streamNum[1], payload})
+			}
 		}
 	}
 
 	for _, config := range configs {
-		b.Run(fmt.Sprintf("%v", config), func(b *testing.B) {
+		b.Run(config.Inspect(), func(b *testing.B) {
 			broadcastsPerStream := b.N / config.totalStreams
 			messagesPerSession := config.streamsPerSession * broadcastsPerStream
 
