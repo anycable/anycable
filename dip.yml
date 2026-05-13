@@ -1,0 +1,61 @@
+version: '7.1'
+
+compose:
+  files:
+    - .dockerdev/compose.yml
+  project_name: anycable_go
+
+interaction:
+  # Open a Bash shell within the app container (with Redis up).
+  runner:
+    description: Open a Bash shell within the app container (with Redis up)
+    service: app
+    command: /bin/bash
+
+  # Run an arbitrary script within a container, no dependent services started.
+  bash:
+    description: Open a shell without bringing dependencies up
+    service: app
+    command: /bin/bash
+    compose_run_options: [no-deps]
+
+  make:
+    description: Run make targets (e.g. dip make test, dip make test-conformance)
+    service: app
+    command: make
+
+  go:
+    description: Run go commands
+    service: app
+    command: go
+
+  bundle:
+    description: Run Bundler commands
+    service: app
+    command: bundle
+    compose_run_options: [no-deps]
+
+  # Run anycable-go (`make run`) with port 8080 exposed to the host.
+  server:
+    description: Run AnyCable-Go server at http://localhost:8080
+    service: server
+    compose:
+      run_options: [service-ports, use-aliases]
+
+  'redis-cli':
+    description: Run Redis console
+    service: redis
+    command: redis-cli -h redis
+
+  claude:
+    description: Run Claude CLI in the container (skipping permission prompts)
+    service: app
+    command: claude --dangerously-skip-permissions
+
+provision:
+  - '[[ "$RESET_DOCKER" == "true" ]] && echo "Re-creating the Docker env from scratch..." && dip compose down --volumes || echo "Re-provisioning the Docker env..."'
+  - dip compose build
+  - test -f .dockerdev/.claude.json || cp .dockerdev/.claude.json.example .dockerdev/.claude.json
+  - dip compose up -d redis
+  - dip bundle check || dip bundle install
+  - dip go mod download

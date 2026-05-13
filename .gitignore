@@ -47,3 +47,6 @@ Gemfile.lock
 admin/ui/build
 
 .claude/*.local.*
+
+# Docker dev env: per-developer Claude config (seeded from .claude.json.example).
+.dockerdev/.claude.json

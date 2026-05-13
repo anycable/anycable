@@ -6,6 +6,20 @@ export GO111MODULE=on
 
 MODIFIER ?= ""
 
+# Whether to build/test with mruby support. Set MRUBY_GO=false to drop the mrb tag
+# (useful in environments without mruby toolchain, e.g. the Dockerized dev env).
+MRUBY_GO ?= true
+
+ifeq ($(MRUBY_GO),true)
+  GO_TAGS_BUILD := mrb gops
+  GO_TAGS_TEST := mrb
+  GO_TAGS_LICENSES := mrb
+else
+  GO_TAGS_BUILD := gops
+  GO_TAGS_TEST :=
+  GO_TAGS_LICENSES :=
+endif
+
 ifndef ANYCABLE_DEBUG
   export ANYCABLE_DEBUG=1
 endif
@@ -70,13 +84,13 @@ install-with-mruby:
 	go install -tags mrb ./...
 
 build:
-	go build $(BUILD_ARGS) -tags "mrb gops" -ldflags $(LD_FLAGS) -o $(OUTPUT) cmd/anycable-go/main.go
+	go build $(BUILD_ARGS) -tags "$(GO_TAGS_BUILD)" -ldflags $(LD_FLAGS) -o $(OUTPUT) cmd/anycable-go/main.go
 
 build-gobench:
-	go build -tags "mrb gops" -ldflags $(LD_FLAGS) -o $(GOBENCHDIST) cmd/gobench-cable/main.go
+	go build -tags "$(GO_TAGS_BUILD)" -ldflags $(LD_FLAGS) -o $(GOBENCHDIST) cmd/gobench-cable/main.go
 
 build-embedded:
-	go build -tags "mrb gops" -ldflags $(LD_FLAGS) -o $(EMBEDDEDDIST) cmd/embedded-cable/main.go
+	go build -tags "$(GO_TAGS_BUILD)" -ldflags $(LD_FLAGS) -o $(EMBEDDEDDIST) cmd/embedded-cable/main.go
 
 prepare-mruby:
 	cd ./vendorlib/go-mruby && \
@@ -117,13 +131,13 @@ build-docker-local:
 
 # Run server
 run:
-	go run -ldflags $(LD_FLAGS) -tags "mrb gops" ./cmd/anycable-go/main.go
+	go run -ldflags $(LD_FLAGS) -tags "$(GO_TAGS_BUILD)" ./cmd/anycable-go/main.go
 
 run-gobench:
-	go run -ldflags $(LD_FLAGS) -tags "mrb gops" ./cmd/gobench-cable/main.go
+	go run -ldflags $(LD_FLAGS) -tags "$(GO_TAGS_BUILD)" ./cmd/gobench-cable/main.go
 
 run-embedded:
-	go run -ldflags $(LD_FLAGS) -tags "mrb gops" ./cmd/embedded-cable/main.go
+	go run -ldflags $(LD_FLAGS) -tags "$(GO_TAGS_BUILD)" ./cmd/embedded-cable/main.go
 
 run-docker:
 	docker run --rm -p 8080:8080 -v $(PWD)/dist:/app -w /app --entrypoint ./anycable-go-linux-arm64 anycable/anycable-go:$(subst v,,$(VERSION))
@@ -151,19 +165,19 @@ build-protos: bin/protoc-gen-go bin/protoc-gen-go-grpc bin/protoc-gen-grpchan
 	sed -i '' 's/type RPCServer struct {/type RPCServer struct {\n	protos.UnimplementedRPCServer/g' ./mocks/RPCServer.go
 
 bench:
-	go test -tags mrb -bench=. ./...
+	go test -tags "$(GO_TAGS_TEST)" -bench=. ./...
 
 test:
-	go test -count=1 -timeout=60s -race -tags mrb ./... $(TEST_FLAGS)
+	go test -count=1 -timeout=60s -race -tags "$(GO_TAGS_TEST)" ./... $(TEST_FLAGS)
 
 benchmarks: build
 	ruby features/runner.rb features/*.benchfile
 
 tmp/anycable-go-test:
-	go build $(TEST_BUILD_FLAGS) -tags mrb -race -o tmp/anycable-go-test cmd/anycable-go/main.go
+	go build $(TEST_BUILD_FLAGS) -tags "$(GO_TAGS_TEST)" -race -o tmp/anycable-go-test cmd/anycable-go/main.go
 
 tmp/anycable-embedded-test:
-	go build $(TEST_BUILD_FLAGS) -tags mrb -race -o tmp/anycable-embedded-test cmd/embedded-cable/main.go
+	go build $(TEST_BUILD_FLAGS) -tags "$(GO_TAGS_TEST)" -race -o tmp/anycable-embedded-test cmd/embedded-cable/main.go
 
 test-conformance: tmp/anycable-go-test
 	bundle exec anyt -c "tmp/anycable-go-test --headers=cookie,x-api-token" --target-url="ws://localhost:8080/cable"
@@ -212,7 +226,11 @@ TESTFILE ?= features/*.testfile
 test-features: build
 	ruby features/runner.rb $(TESTFILE)
 
+ifeq ($(MRUBY_GO),true)
 test-ci: prepare prepare-mruby test test-conformance
+else
+test-ci: prepare test test-conformance
+endif
 
 prepare:
 	bundle install
@@ -238,7 +256,7 @@ bin/go-licenses:
 		env GO111MODULE=off go get -v github.com/google/go-licenses
 
 licenses: bin/go-licenses
-	@env GOFLAGS="-tags=mrb" $$(go env GOPATH)/bin/go-licenses csv github.com/anycable/anycable-go/cli 2>/dev/null | awk -F',' '{ print $$3 }' | sort | uniq | grep -v "Unknown"
-	@env GOFLAGS="-tags=mrb" $$(go env GOPATH)/bin/go-licenses csv github.com/anycable/anycable-go/cli 2>/dev/null | grep "Unknown" | grep -v "anycable-go" || echo "No unknown licenses 👌"
+	@env GOFLAGS="-tags=$(GO_TAGS_LICENSES)" $$(go env GOPATH)/bin/go-licenses csv github.com/anycable/anycable-go/cli 2>/dev/null | awk -F',' '{ print $$3 }' | sort | uniq | grep -v "Unknown"
+	@env GOFLAGS="-tags=$(GO_TAGS_LICENSES)" $$(go env GOPATH)/bin/go-licenses csv github.com/anycable/anycable-go/cli 2>/dev/null | grep "Unknown" | grep -v "anycable-go" || echo "No unknown licenses 👌"
 
 .PHONY: tmp/anycable-go-test tmp/anycable-embedded-test vendor
