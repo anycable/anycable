@@ -53,9 +53,9 @@ func TestStressPublications_SmallSmoke(t *testing.T) {
 	assert.Equal(t, "0", summary["clients_short"])
 	assert.Equal(t, "0", summary["publications_dropped"])
 
-	issued := atoi(t, summary["publications_issued"])
-	assert.GreaterOrEqual(t, issued, 8, "expected ~10 publishes; got %d", issued)
-	assert.LessOrEqual(t, issued, 12, "expected ~10 publishes; got %d", issued)
+	// Absolute-deadline scheduling: at -r 10 -d 1s the schedule is exactly
+	// 10 ticks (i*100ms for i=1..10, all <= end). Issued is deterministic.
+	assert.Equal(t, "10", summary["publications_issued"], "exact tick count for -r 10 -d 1s")
 }
 
 func TestStressPublications_CadenceUnderArtificialLatency(t *testing.T) {
@@ -110,8 +110,11 @@ func TestStressPublications_CadenceUnderArtificialLatency(t *testing.T) {
 	summary := parseSummary(t, stdout.String())
 	issued := atoi(t, summary["publications_issued"])
 	dropped := atoi(t, summary["publications_dropped"])
-	assert.GreaterOrEqual(t, issued, 90, "cadence gated by HTTP latency: only %d issued in 1s at -r 100", issued)
-	assert.LessOrEqual(t, issued, 110, "scheduler over-fired: %d issued in 1s at -r 100", issued)
+	// With absolute-deadline scheduling the schedule for -r 100 -d 1s has
+	// exactly 100 ticks. HTTP latency lives on worker goroutines, so the
+	// scheduler is decoupled from it — issued is the schedule, not the
+	// network.
+	assert.Equal(t, 100, issued, "cadence is decoupled from HTTP: exact schedule of -r 100 -d 1s")
 	assert.Equal(t, 0, dropped, "max-inflight=4096 was plenty; drops indicate a regression in the scheduler-decoupling")
 }
 
@@ -184,6 +187,27 @@ func TestStressPublications_DrainTimeoutHonored(t *testing.T) {
 	assert.Less(t, elapsed, 3500*time.Millisecond, "scenario hung past drain timeout: ran %s", elapsed)
 	summary := parseSummary(t, stdout.String())
 	assert.GreaterOrEqual(t, atoi(t, summary["clients_short"]), 1, "incomplete drain should be reported, not hang")
+}
+
+func TestStressPublications_HighCadenceMatchesSchedule(t *testing.T) {
+	// At -r 500 -d 1s the schedule has 500 ticks at 2ms interval — a regime
+	// where time.Ticker historically coalesced heavily under load. Absolute-
+	// deadline scheduling walks every nextTickAt <= end, so issued is exact.
+	// scheduler_late_publishes may be non-zero (it counts catch-up firings)
+	// but does not reduce the issued count.
+	var stdout, stderr bytes.Buffer
+	exit := run(
+		[]string{"-c", "1", "-r", "500", "-d", "1s", "-S", "1", "-s", "1", "--drain-timeout", "3s"},
+		&stdout, &stderr, runOpts{},
+	)
+	require.Equal(t, 0, exit, "expected exit 0 — stdout=%q stderr=%q", stdout.String(), stderr.String())
+
+	summary := parseSummary(t, stdout.String())
+	assert.Equal(t, "500", summary["publications_issued"], "absolute scheduling hits 500 exactly")
+	assert.Equal(t, "0", summary["publications_dropped"])
+	// Late publishes is a diagnostic, not an assertion target — we only
+	// require the key exists and parses as an integer.
+	atoi(t, summary["scheduler_late_publishes"])
 }
 
 func TestStressPublications_FlagDefaults(t *testing.T) {

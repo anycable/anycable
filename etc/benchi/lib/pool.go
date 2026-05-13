@@ -44,6 +44,16 @@ type PoolConfig struct {
 	// when non-nil. Used primarily by tests to inject specific subscription
 	// patterns (including ones designed to fail).
 	Streams [][]string
+
+	// OnConnect, when non-nil, fires exactly once per client after Connect
+	// succeeds (before Subscribe runs). Callbacks happen concurrently from
+	// N worker goroutines — implementations must be safe for concurrent
+	// use (e.g., an atomic counter increment).
+	OnConnect func()
+
+	// OnSubscribe, when non-nil, fires exactly once per client after
+	// Subscribe succeeds. Same concurrency contract as OnConnect.
+	OnSubscribe func()
 }
 
 // poolEntry binds a client to its assigned ID and stream subset so the drain
@@ -130,10 +140,16 @@ func BuildPool(cfg PoolConfig) (*ClientPool, error) {
 				results[idx] = buildResult{idx: idx, err: err, failure: fmt.Sprintf("client %s: connect: %v", id, err)}
 				return
 			}
+			if cfg.OnConnect != nil {
+				cfg.OnConnect()
+			}
 			if err := cl.Subscribe(streams); err != nil {
 				cl.Close()
 				results[idx] = buildResult{idx: idx, err: err, failure: fmt.Sprintf("client %s: subscribe: %v", id, err)}
 				return
+			}
+			if cfg.OnSubscribe != nil {
+				cfg.OnSubscribe()
 			}
 
 			results[idx] = buildResult{
