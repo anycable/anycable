@@ -112,28 +112,36 @@ func parseFlags(args []string, stderr io.Writer) (runConfig, error) {
 
 // summary holds the reconciled numbers printed at the end of a run.
 //
-// throughput is reported as four numbers computed over sliding windows of
-// size -d across the receive timeline (sampled at 100ms): max (the
-// headline / success metric — the highest sustained rate the system ever
-// achieved over a -d-second window), min, first (rate during the first
-// -d-second window of sampling), last (rate during the last -d-second
-// window). expectedMsgsPerSec is the theoretical ceiling — `r × c × s / S`
-// — provided so the operator can read max as a fraction of expected.
+// Throughput is reported as the overall average plus four sliding-window
+// statistics over the receive timeline (window = -d, sampled at 100ms):
+// max (headline / success metric — highest sustained rate over any -d
+// window), min, p50, p95. expectedMsgsPerSec is the theoretical ceiling
+// `r × c × s / S` so the operator can read max as a fraction of expected.
+//
+// observedPublishRate mirrors the same structure over the publisher's
+// CompletedCount timeline: overall (completed / publishWallSecs) plus the
+// windowed max/min/p50/p95. If overall ≪ -r, the broadcast endpoint, not
+// the WebSocket fan-out, is the bottleneck.
 type summary struct {
-	throughputMaxMsgsPerSec   float64
-	throughputMinMsgsPerSec   float64
-	throughputFirstMsgsPerSec float64
-	throughputLastMsgsPerSec  float64
-	expectedMsgsPerSec        float64
-	clientsComplete           int
-	clientsShort              int
-	messagesMissing           int
-	publicationsIssued        int64
-	publicationsCompleted     int64
-	publicationsDropped       int64
-	schedulerLatePublishes    int
-	observedPublishRate       float64
-	publishWindowWallSecs     float64
+	throughputMsgsPerSec    float64
+	throughputMaxMsgsPerSec float64
+	throughputMinMsgsPerSec float64
+	throughputP50MsgsPerSec float64
+	throughputP95MsgsPerSec float64
+	expectedMsgsPerSec      float64
+	clientsComplete         int
+	clientsShort            int
+	messagesMissing         int
+	publicationsIssued      int64
+	publicationsCompleted   int64
+	publicationsDropped     int64
+	schedulerLatePublishes  int
+	observedPublishRate     float64
+	observedPublishRateMax  float64
+	observedPublishRateMin  float64
+	observedPublishRateP50  float64
+	observedPublishRateP95  float64
+	publishWindowWallSecs   float64
 }
 
 func runWithConfig(cfg runConfig, opts runOpts, stdout, stderr io.Writer) int {
@@ -196,11 +204,16 @@ func runWithConfig(cfg runConfig, opts runOpts, stdout, stderr io.Writer) int {
 	u.logf("starting publish window: %dHz for %s (%d scheduled publishes)...",
 		cfg.r, cfg.d, totalSchedule)
 
-	// Throughput sampler runs across publish + drain so the receive timeline
-	// captures both the publishing burst and the drain tail; this is what
-	// the sliding-window stats are computed from.
-	sampler := lib.NewReceiveSampler(progressTickInterval, acc.TotalReceived)
-	sampler.Start()
+	// Two samplers run in parallel, both ticking at progressTickInterval so
+	// the timelines align. recvSampler covers publish + drain (the receive
+	// rate keeps mattering until the last message lands); pubSampler runs
+	// only while POSTs are being completed (publishStart -> pub.Close
+	// returns) so the rate distribution isn't diluted by a flat tail of
+	// post-drain zero samples.
+	recvSampler := lib.NewReceiveSampler(progressTickInterval, acc.TotalReceived)
+	pubSampler := lib.NewReceiveSampler(progressTickInterval, pub.CompletedCount)
+	recvSampler.Start()
+	pubSampler.Start()
 
 	// Two progress bars updated on the same tick: publishing tracks
 	// completed POSTs (real backpressure visible after publishWindow
@@ -216,6 +229,7 @@ func runWithConfig(cfg runConfig, opts runOpts, stdout, stderr io.Writer) int {
 	late := publishWindow(cfg, pub)
 	pub.Close()
 	publishWallSecs := time.Since(publishStart).Seconds()
+	pubSampler.Stop()
 
 	targets := pub.TargetCounts()
 	expected := computeExpected(pool, targets)
@@ -223,7 +237,7 @@ func runWithConfig(cfg runConfig, opts runOpts, stdout, stderr io.Writer) int {
 	drainStart := time.Now()
 	pollDrain(acc, expected, cfg.drainTimeout)
 	drainElapsed := time.Since(drainStart)
-	sampler.Stop()
+	recvSampler.Stop()
 	progress.Stop()
 	u.logf("publish window done: %d issued, %d completed, %d late, %d dropped in %.2fs (%.0f msg/s actual)",
 		pub.IssuedCount(), pub.CompletedCount(), late, pub.DroppedCount(),
@@ -231,8 +245,13 @@ func runWithConfig(cfg runConfig, opts runOpts, stdout, stderr io.Writer) int {
 	u.logf("drain complete (%s)", drainElapsed.Round(10*time.Millisecond))
 
 	snap := acc.Snapshot()
-	windowStats := lib.ComputeWindowStats(sampler.Samples(), cfg.d)
-	s := buildSummary(cfg, snap, expected, pub, late, publishWallSecs, windowStats, expectedRate)
+	recvSamples := recvSampler.Samples()
+	pubSamples := pubSampler.Samples()
+	throughputWS := lib.ComputeWindowStats(recvSamples, cfg.d)
+	throughputOverall := lib.Overall(recvSamples)
+	publishWS := lib.ComputeWindowStats(pubSamples, cfg.d)
+	s := buildSummary(cfg, snap, expected, pub, late, publishWallSecs,
+		throughputOverall, throughputWS, publishWS, expectedRate)
 	u.logf("summary:")
 	printSummary(stdout, s)
 
@@ -330,7 +349,7 @@ func drained(snap, expected map[string]int) bool {
 	return true
 }
 
-func buildSummary(cfg runConfig, snap, expected map[string]int, pub *lib.Publisher, latePublishes int, publishWallSecs float64, ws lib.WindowStats, expectedRate float64) summary {
+func buildSummary(cfg runConfig, snap, expected map[string]int, pub *lib.Publisher, latePublishes int, publishWallSecs, throughputOverall float64, throughputWS, publishWS lib.WindowStats, expectedRate float64) summary {
 	var (
 		clientsComp   int
 		clientsShort  int
@@ -351,28 +370,34 @@ func buildSummary(cfg runConfig, snap, expected map[string]int, pub *lib.Publish
 		observedRate = float64(pub.CompletedCount()) / publishWallSecs
 	}
 	return summary{
-		throughputMaxMsgsPerSec:   ws.Max,
-		throughputMinMsgsPerSec:   ws.Min,
-		throughputFirstMsgsPerSec: ws.First,
-		throughputLastMsgsPerSec:  ws.Last,
-		expectedMsgsPerSec:        expectedRate,
-		clientsComplete:           clientsComp,
-		clientsShort:              clientsShort,
-		messagesMissing:           messagesShort,
-		publicationsIssued:        pub.IssuedCount(),
-		publicationsCompleted:     pub.CompletedCount(),
-		publicationsDropped:       pub.DroppedCount(),
-		schedulerLatePublishes:    latePublishes,
-		observedPublishRate:       observedRate,
-		publishWindowWallSecs:     publishWallSecs,
+		throughputMsgsPerSec:    throughputOverall,
+		throughputMaxMsgsPerSec: throughputWS.Max,
+		throughputMinMsgsPerSec: throughputWS.Min,
+		throughputP50MsgsPerSec: throughputWS.P50,
+		throughputP95MsgsPerSec: throughputWS.P95,
+		expectedMsgsPerSec:      expectedRate,
+		clientsComplete:         clientsComp,
+		clientsShort:            clientsShort,
+		messagesMissing:         messagesShort,
+		publicationsIssued:      pub.IssuedCount(),
+		publicationsCompleted:   pub.CompletedCount(),
+		publicationsDropped:     pub.DroppedCount(),
+		schedulerLatePublishes:  latePublishes,
+		observedPublishRate:     observedRate,
+		observedPublishRateMax:  publishWS.Max,
+		observedPublishRateMin:  publishWS.Min,
+		observedPublishRateP50:  publishWS.P50,
+		observedPublishRateP95:  publishWS.P95,
+		publishWindowWallSecs:   publishWallSecs,
 	}
 }
 
 func printSummary(w io.Writer, s summary) {
+	fmt.Fprintf(w, "throughput_msgs_per_sec=%.2f\n", s.throughputMsgsPerSec)
 	fmt.Fprintf(w, "throughput_max_msgs_per_sec=%.2f\n", s.throughputMaxMsgsPerSec)
 	fmt.Fprintf(w, "throughput_min_msgs_per_sec=%.2f\n", s.throughputMinMsgsPerSec)
-	fmt.Fprintf(w, "throughput_first_msgs_per_sec=%.2f\n", s.throughputFirstMsgsPerSec)
-	fmt.Fprintf(w, "throughput_last_msgs_per_sec=%.2f\n", s.throughputLastMsgsPerSec)
+	fmt.Fprintf(w, "throughput_p50_msgs_per_sec=%.2f\n", s.throughputP50MsgsPerSec)
+	fmt.Fprintf(w, "throughput_p95_msgs_per_sec=%.2f\n", s.throughputP95MsgsPerSec)
 	fmt.Fprintf(w, "expected_msgs_per_sec=%.2f\n", s.expectedMsgsPerSec)
 	fmt.Fprintf(w, "clients_complete=%d\n", s.clientsComplete)
 	fmt.Fprintf(w, "clients_short=%d\n", s.clientsShort)
@@ -382,5 +407,9 @@ func printSummary(w io.Writer, s summary) {
 	fmt.Fprintf(w, "publications_dropped=%d\n", s.publicationsDropped)
 	fmt.Fprintf(w, "scheduler_late_publishes=%d\n", s.schedulerLatePublishes)
 	fmt.Fprintf(w, "observed_publish_rate=%.2f\n", s.observedPublishRate)
+	fmt.Fprintf(w, "observed_publish_rate_max=%.2f\n", s.observedPublishRateMax)
+	fmt.Fprintf(w, "observed_publish_rate_min=%.2f\n", s.observedPublishRateMin)
+	fmt.Fprintf(w, "observed_publish_rate_p50=%.2f\n", s.observedPublishRateP50)
+	fmt.Fprintf(w, "observed_publish_rate_p95=%.2f\n", s.observedPublishRateP95)
 	fmt.Fprintf(w, "publish_window_wall_seconds=%.2f\n", s.publishWindowWallSecs)
 }

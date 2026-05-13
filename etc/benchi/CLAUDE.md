@@ -75,14 +75,18 @@ dimension is non-zero so a change anywhere shows up.
 
 ## Reading the summary
 
-Thirteen keys come back on stdout. The fast triage:
+The summary prints two families of rate metrics — throughput (messages
+received by clients) and observed publish rate (POSTs the server
+accepted) — each as an overall average plus four sliding-window
+statistics (window size = `-d`, sampled every 100ms). The fast triage:
 
 | Key | What it means | What to flag |
 |---|---|---|
-| `throughput_max_msgs_per_sec` | **Headline / success metric.** Highest receive rate sustained over any sliding window of size `-d` across the full sample timeline (publish + drain). | Compare to `expected_msgs_per_sec`. Above ~95% = clean run. Below ~80% = the system never managed the target rate even momentarily — real fan-out regression. |
+| `throughput_msgs_per_sec` | **Overall average:** total messages received divided by total receive-timeline wall seconds (publish + drain). | A whole-run average — useful as one-line summary, but `max` is the better success metric since a long drain tail can drag this number down. |
+| `throughput_max_msgs_per_sec` | **Headline / success metric.** Highest receive rate sustained over any sliding `-d`-second window. | Compare to `expected_msgs_per_sec`. Above ~95% = clean run. Below ~80% = the system never managed the target rate even momentarily — real fan-out regression. |
 | `throughput_min_msgs_per_sec` | Lowest receive rate over any full `-d`-second window. | A very low min means a stall — useful when investigating GC pauses, broker reconnections, or scheduler hiccups. |
-| `throughput_first_msgs_per_sec` | Rate over the first `-d`-second window of sampling. | Captures warm-up behavior. If `first` ≪ `max`, the system needed time to ramp. |
-| `throughput_last_msgs_per_sec` | Rate over the last `-d`-second window. | Captures drain-tail behavior. If `last` is high, queues were still draining at sample end — re-run with a longer `--drain-timeout`. |
+| `throughput_p50_msgs_per_sec` | Median windowed rate. The "typical sustained" rate across the receive timeline. | If `p50` ≪ `max`, the peak was brief; the run is bursty rather than steady. Investigate with `min` and `p95`. |
+| `throughput_p95_msgs_per_sec` | 95th-percentile windowed rate. The "near-peak" rate the system held most of the time. | If `max ≈ p95` the system was steady at peak; if `max ≫ p95` the peak was a single window. |
 | `expected_msgs_per_sec` | Theoretical ceiling: `r × c × s / S`. | Constant for a given config — printed so `max / expected` is one division away. |
 | `clients_complete` / `clients_short` | Reconciliation: did every client receive its share? | Any `clients_short > 0` is a **validity** failure. Report it; don't gloss over it. |
 | `messages_missing` | How short the short clients were, summed. | Treat as binary: > 0 = invalid run. |
@@ -90,16 +94,21 @@ Thirteen keys come back on stdout. The fast triage:
 | `publications_completed` | Broadcasts whose HTTP POST returned 2xx. The actual count the server accepted. | `completed < issued` means non-2xx responses or transport errors mid-flight — investigate the server log. |
 | `publications_dropped` | Publisher queue was full (scheduler-fell-behind). | Any `> 0` means `--max-inflight` too small or HTTP path back-pressured. Recommend raising the cap or lowering `-r`. |
 | `scheduler_late_publishes` | Diagnostic: catch-up fires (OS couldn't hit the tick on time). | Ratio over `publications_issued`: under 10% is healthy. Over 30% means the host is too loaded for stable rate measurement; suggest pinning `GOMAXPROCS` or lowering `-r`. |
-| `observed_publish_rate` | `publications_completed / publish_window_wall_seconds` — the *real* rate at which the server accepted POSTs. | If this is well below `-r`, the broadcast endpoint is the bottleneck, **not** the WebSocket fan-out. Raising `--publish-batch` or adjusting the server is the lever, not raising `-r`. |
+| `observed_publish_rate` | `publications_completed / publish_window_wall_seconds` — the *real* overall rate at which the server accepted POSTs. | If this is well below `-r`, the broadcast endpoint is the bottleneck, **not** the WebSocket fan-out. Raising `--publish-batch` or adjusting the server is the lever, not raising `-r`. |
+| `observed_publish_rate_max` / `_min` / `_p50` / `_p95` | Same sliding-window stats applied to the publisher's CompletedCount timeline (window = `-d`). | `max ≪ -r`: broadcast endpoint can't keep up even at its best window. `p50 ≪ max`: bursty completions, likely batching against backpressure. |
 | `publish_window_wall_seconds` | Time from first enqueue to last completed POST. | If this is much larger than `-d`, the broadcast endpoint couldn't accept POSTs at the scheduled rate. Investigate before trusting throughput. |
 
-**Why `max` and not a simple `total / d`?** Because under backpressure the
-publish window stretches well beyond `-d` (see `publish_window_wall_seconds`),
-and the receive timeline keeps growing for the duration of the drain. A flat
-`received / d` divides by the wrong denominator and tells you nothing about
-whether the system ever achieved the target rate. The sliding-window max
-answers the question that actually matters: "did the system ever sustain the
-target rate over a window the size of one publish duration?"
+**Why `max` (windowed) and not the overall average?** Because under
+backpressure the publish window stretches well beyond `-d` (see
+`publish_window_wall_seconds`), and the receive timeline keeps growing
+for the duration of the drain. The overall average divides by a wall
+clock that includes both the burst *and* the long-tail drain, so it
+tells you nothing about whether the system ever achieved the target
+rate. The sliding-window max answers the question that actually
+matters: "did the system ever sustain the target rate over a window
+the size of one publish duration?" `throughput_msgs_per_sec` is
+reported alongside as a single-number whole-run figure but is **not**
+the success metric.
 
 Exit codes: `0` clean, `1` `clients_short > 0` or `publications_dropped > 0`,
 `2` flag-parse error.
@@ -142,6 +151,12 @@ single-run delta.
   fast. Don't read `throughput_max_msgs_per_sec` as a fan-out ceiling in
   this state — it's a broadcast-endpoint ceiling. Raising `--publish-batch`
   amortizes HTTP overhead and is often the right next move.
+- **`observed_publish_rate_max` ≪ `-r` even though the publisher had
+  budget**: the broadcast endpoint never sustained the requested rate
+  over *any* `-d`-second window. Combined with low `observed_publish_rate_p50`,
+  this points at a steady ceiling on the broadcast endpoint — not a
+  one-off hiccup. Profile the receive-side fan-out or move the
+  broadcaster (NATS/Redis/edge) out of process.
 - **`throughput_max_msgs_per_sec` ≪ `expected_msgs_per_sec` with
   `clients_short=0` and `observed_publish_rate ≈ -r`**: the publisher
   delivered, the clients received, but the WebSocket fan-out path could
