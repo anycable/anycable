@@ -16,6 +16,7 @@ import (
 	"github.com/anycable/anycable-go/metrics"
 	nconfig "github.com/anycable/anycable-go/nats"
 	"github.com/anycable/anycable-go/node"
+	pgconfig "github.com/anycable/anycable-go/postgres"
 	"github.com/anycable/anycable-go/pubsub"
 	"github.com/anycable/anycable-go/pusher"
 	rconfig "github.com/anycable/anycable-go/redis"
@@ -50,6 +51,7 @@ type Config struct {
 	LegacyRedisBroadcast broadcast.LegacyRedisConfig `toml:"redis_pubsub_broadcast"`
 	RedisBroadcast       broadcast.RedisConfig       `toml:"redis_stream_broadcast"`
 	NATSBroadcast        broadcast.LegacyNATSConfig  `toml:"nats_broadcast"`
+	Postgres             pgconfig.Config             `toml:"postgres"`
 	HTTPBroadcast        broadcast.HTTPConfig        `toml:"http_broadcast"`
 	RedisPubSub          pubsub.RedisConfig          `toml:"redis_pubsub"`
 	NATSPubSub           pubsub.NATSConfig           `toml:"nats_pubsub"`
@@ -87,6 +89,7 @@ func NewConfig() Config {
 		RedisBroadcast:       broadcast.NewRedisConfig(),
 		LegacyRedisBroadcast: broadcast.NewLegacyRedisConfig(),
 		NATSBroadcast:        broadcast.NewLegacyNATSConfig(),
+		Postgres:             pgconfig.NewConfig(),
 		HTTPBroadcast:        broadcast.NewHTTPConfig(),
 		RedisPubSub:          pubsub.NewRedisConfig(),
 		NATSPubSub:           pubsub.NewNATSConfig(),
@@ -176,7 +179,7 @@ func (c *Config) ToToml() string {
 
 	result.WriteString("# Pub/sub adapter for inter-node communication\n")
 	if c.PubSubAdapter == "" {
-		result.WriteString("# pubsub_adapter = \"redis\" # or \"nats\"\n\n")
+		result.WriteString("# pubsub_adapter = \"redis\" # or \"nats\" or \"postgres\"\n\n")
 	} else {
 		result.WriteString(fmt.Sprintf("pubsub_adapter = \"%s\"\n\n", c.PubSubAdapter))
 	}
@@ -235,6 +238,8 @@ func (c *Config) ToToml() string {
 	result.WriteString(c.LegacyRedisBroadcast.ToToml())
 	result.WriteString("[nats_broadcast]\n")
 	result.WriteString(c.NATSBroadcast.ToToml())
+	result.WriteString("[postgres]\n")
+	result.WriteString(c.Postgres.ToToml())
 
 	result.WriteString("# Pub/sub adapters configuration\n[redis_pubsub]\n")
 	result.WriteString(c.RedisPubSub.ToToml())

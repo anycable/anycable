@@ -2,7 +2,7 @@
 
 Publishing messages from your application to connected clients (aka _broadcasting_) is an essential component of any real-time application.
 
-AnyCable comes with multiple options on how to broadcast messages. We call them _broadcasters_. Currently, we support HTTP, Redis, and NATS-based broadcasters.
+AnyCable comes with multiple options on how to broadcast messages. We call them _broadcasters_. Currently, we support HTTP, Redis, NATS, and Postgres-based broadcasters.
 
 **NOTE:** The default broadcaster is Redis Pub/Sub for backward-compatibility reasons. This is going to change in v2.
 
@@ -118,6 +118,22 @@ $ nats pub __anycable__ '{"stream":"my_stream","data":"{\"text\":\"Hello, world!
 NATS Pub/Sub is useful when you want to set up an AnyCable cluster using our [embedded NATS](./embedded_nats.md) feature, so you can avoid having additional infrastructure components.
 
 See [configuration](./configuration.md#nats-configuration) for available NATS options.
+
+## Postgres
+
+> Enable via `--broadcast_adapter=postgres` (or `ANYCABLE_BROADCAST_ADAPTER=postgres`).
+
+Postgres broadcaster consumes publications from the `anycable_broadcasts` table. Applications insert the full AnyCable publication JSON into the `payload` column; anycable-go claims rows with `FOR UPDATE SKIP LOCKED`, processes them through the broker, and deletes them after successful delivery.
+
+Unlike PostgreSQL `NOTIFY`, the table stores the full payload, so publications are not constrained by the notification payload limit. A trigger still emits a small notification on insert, but that notification is only a wake-up signal. Polling remains the correctness fallback when notifications are missed or delayed.
+
+For multi-node clusters, pair the broadcaster with the Postgres pub/sub adapter:
+
+```sh
+$ anycable-go --broadcast_adapter=postgres --pubsub=postgres
+```
+
+The Postgres schema is an explicit contract. On startup, anycable-go validates the contract version, required columns, and insert triggers before accepting traffic. See the Rails generator for the migration template, or create compatible tables manually if you are not using Rails.
 
 ## Publication format
 

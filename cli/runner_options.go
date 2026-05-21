@@ -84,6 +84,9 @@ func WithDefaultBroadcaster() Option {
 			case "nats":
 				nb := broadcast.NewLegacyNATSBroadcaster(h, &c.NATSBroadcast, l)
 				broadcasters = append(broadcasters, nb)
+			case "postgres":
+				pg := broadcast.NewPostgresBroadcaster(h, &c.Postgres, l)
+				broadcasters = append(broadcasters, pg)
 			default:
 				return broadcasters, errorx.IllegalArgument.New("Unsupported broadcast adapter: %s", adapter)
 			}
@@ -116,6 +119,8 @@ func WithDefaultSubscriber() Option {
 			return pubsub.NewRedisSubscriber(h, &c.RedisPubSub, l)
 		case "nats":
 			return pubsub.NewNATSSubscriber(h, &c.NATSPubSub, l)
+		case "postgres":
+			return pubsub.NewPostgresSubscriber(h, &c.Postgres, l)
 		}
 
 		return nil, errorx.IllegalArgument.New("Unsupported subscriber adapter: %s", c.PubSubAdapter)

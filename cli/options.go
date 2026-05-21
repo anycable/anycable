@@ -106,6 +106,7 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 	flags = append(flags, redisCLIFlags(&c)...)
 	flags = append(flags, redisBroadcastCLIFlags(&c)...)
 	flags = append(flags, httpBroadcastCLIFlags(&c)...)
+	flags = append(flags, postgresCLIFlags(&c)...)
 	flags = append(flags, natsCLIFlags(&c)...)
 	flags = append(flags, rpcCLIFlags(&c, &headers, &cookieFilter, &noRPC)...)
 	flags = append(flags, disconnectorCLIFlags(&c)...)
@@ -259,6 +260,14 @@ Use shutdown_timeout instead.`)
 		slices.Contains(c.BroadcastAdapters, "redisx") ||
 		(c.Broker.Adapter == "redis")) {
 		c.PubSubAdapter = "redis"
+	}
+
+	if (c.PubSubAdapter == defaults.PubSubAdapter) && slices.Contains(c.BroadcastAdapters, "postgres") {
+		c.PubSubAdapter = "postgres"
+	}
+
+	if c.Postgres.ClaimID == "" {
+		c.Postgres.ClaimID = c.ID
 	}
 
 	// Propagate allowed origins to all the components
@@ -470,6 +479,7 @@ const (
 	redisCategoryDescription         = "REDIS:"
 	redisXCategoryDescription        = "REDIS X BROADCAST:"
 	httpBroadcastCategoryDescription = "HTTP BROADCAST:"
+	postgresCategoryDescription      = "POSTGRES:"
 	natsCategoryDescription          = "NATS:"
 	rpcCategoryDescription           = "RPC:"
 	disconnectorCategoryDescription  = "DISCONNECTOR:"
@@ -625,7 +635,7 @@ func broadcastCLIFlags(c *config.Config, adapters *string) []cli.Flag {
 	return withDefaults(broadcastCategoryDescription, []cli.Flag{
 		&cli.StringFlag{
 			Name:        "broadcast_adapter",
-			Usage:       "Broadcasting adapter to use (http, redisx, redis or nats). You can specify multiple at once via a comma-separated list",
+			Usage:       "Broadcasting adapter to use (http, redisx, redis, nats or postgres). You can specify multiple at once via a comma-separated list",
 			Destination: adapters,
 		},
 		&cli.StringFlag{
@@ -636,7 +646,7 @@ func broadcastCLIFlags(c *config.Config, adapters *string) []cli.Flag {
 		},
 		&cli.StringFlag{
 			Name:        "pubsub",
-			Usage:       "Pub/Sub adapter to use (redis or nats)",
+			Usage:       "Pub/Sub adapter to use (redis, nats or postgres)",
 			Value:       c.PubSubAdapter,
 			Destination: &c.PubSubAdapter,
 		},
@@ -818,6 +828,98 @@ func httpBroadcastCLIFlags(c *config.Config) []cli.Flag {
 		&cli.BoolFlag{
 			Name:        "http_broadcast_cors",
 			Destination: &c.HTTPBroadcast.AddCORSHeaders,
+			Hidden:      true,
+		},
+	})
+}
+
+// postgresCLIFlags returns Postgres signalling flags.
+func postgresCLIFlags(c *config.Config) []cli.Flag {
+	return withDefaults(postgresCategoryDescription, []cli.Flag{
+		&cli.StringFlag{
+			Name:        "postgres_url",
+			Usage:       "Postgres URL used by the Postgres broadcast and pub/sub adapters",
+			Value:       c.Postgres.URL,
+			EnvVars:     []string{envPrefix + "POSTGRES_URL"},
+			Destination: &c.Postgres.URL,
+		},
+		&cli.StringFlag{
+			Name:        "postgres_notify_channel",
+			Usage:       "Postgres NOTIFY channel used to wake polling loops",
+			Value:       c.Postgres.NotifyChannel,
+			Destination: &c.Postgres.NotifyChannel,
+		},
+		&cli.StringFlag{
+			Name:        "postgres_internal_stream",
+			Usage:       "Postgres pub/sub stream used for internal remote commands",
+			Value:       c.Postgres.InternalStream,
+			Destination: &c.Postgres.InternalStream,
+		},
+		&cli.StringFlag{
+			Name:        "postgres_broadcasts_table",
+			Usage:       "Postgres table used for app-to-AnyCable broadcasts",
+			Value:       c.Postgres.BroadcastsTable,
+			Destination: &c.Postgres.BroadcastsTable,
+		},
+		&cli.StringFlag{
+			Name:        "postgres_pubsub_table",
+			Usage:       "Postgres table used for AnyCable inter-node pub/sub",
+			Value:       c.Postgres.PubSubTable,
+			Destination: &c.Postgres.PubSubTable,
+		},
+		&cli.StringFlag{
+			Name:        "postgres_contract_table",
+			Usage:       "Postgres table used to validate the installed signalling contract",
+			Value:       c.Postgres.ContractTable,
+			Destination: &c.Postgres.ContractTable,
+		},
+		&cli.IntFlag{
+			Name:        "postgres_poll_interval_milliseconds",
+			Usage:       "Postgres poll fallback interval in milliseconds",
+			Value:       c.Postgres.PollIntervalMilliseconds,
+			Destination: &c.Postgres.PollIntervalMilliseconds,
+		},
+		&cli.IntFlag{
+			Name:        "postgres_batch_size",
+			Usage:       "Postgres rows to process in one polling batch",
+			Value:       c.Postgres.BatchSize,
+			Destination: &c.Postgres.BatchSize,
+		},
+		&cli.IntFlag{
+			Name:        "postgres_claim_timeout_seconds",
+			Usage:       "Seconds before an unfinished Postgres broadcast claim may be retried",
+			Value:       c.Postgres.ClaimTimeoutSeconds,
+			Destination: &c.Postgres.ClaimTimeoutSeconds,
+		},
+		&cli.IntFlag{
+			Name:        "postgres_max_attempts",
+			Usage:       "Max failed attempts before a Postgres broadcast is no longer retried",
+			Value:       c.Postgres.MaxAttempts,
+			Destination: &c.Postgres.MaxAttempts,
+		},
+		&cli.Int64Flag{
+			Name:        "postgres_retention_ttl",
+			Usage:       "Seconds to keep old Postgres signalling rows before cleanup",
+			Value:       c.Postgres.RetentionTTLSeconds,
+			Destination: &c.Postgres.RetentionTTLSeconds,
+		},
+		&cli.Int64Flag{
+			Name:        "postgres_cleanup_interval",
+			Usage:       "Postgres cleanup interval in seconds",
+			Value:       c.Postgres.CleanupIntervalSeconds,
+			Destination: &c.Postgres.CleanupIntervalSeconds,
+		},
+		&cli.BoolFlag{
+			Name:        "postgres_validate_contract",
+			Usage:       "Validate Postgres signalling schema, version and triggers on startup",
+			Value:       c.Postgres.ValidateContract,
+			Destination: &c.Postgres.ValidateContract,
+		},
+		&cli.StringFlag{
+			Name:        "postgres_claim_id",
+			Usage:       "Diagnostic owner stored on claimed Postgres broadcast rows",
+			Value:       c.Postgres.ClaimID,
+			Destination: &c.Postgres.ClaimID,
 			Hidden:      true,
 		},
 	})
