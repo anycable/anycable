@@ -43,11 +43,13 @@ Supports wildcards, e.g., `--allowed_origins=*.evilmartians.io,www.evilmartians.
 
 **--broadcast_adapter** (`ANYCABLE_BROADCAST_ADAPTER`, default: `redis`)
 
-[Broadcasting adapter](./broadcasting.md) to use. Available options: `redis` (default), `redisx`, `nats`, and `http`.
+[Broadcasting adapter](./broadcasting.md) to use. Available options: `redis` (default), `redisx`, `nats`, `postgres`, and `http`.
 
 When HTTP adapter is used, AnyCable-Go accepts broadcasting requests on `:8090/_broadcast`.
 
 You can also enable multiple adapters at once by specifying them separated by commas.
+
+When the Postgres broadcast adapter is used and `--pubsub` is not explicitly set, AnyCable-Go selects `pubsub=postgres` so table-backed broadcasts can reach every node in a cluster.
 
 **--broker** (`ANYCABLE_BROKER`, default: `none`)
 
@@ -55,7 +57,7 @@ You can also enable multiple adapters at once by specifying them separated by co
 
 **--pubsub** (`ANYCABLE_PUBSUB`, default: `none`)
 
-Pub/Sub adapter to use to distribute broadcasted messages within the cluster (when non-distributed broadcasting adapter is used). **Required for broker**.
+Pub/Sub adapter to use to distribute broadcasted messages within the cluster (when non-distributed broadcasting adapter is used). Available options: `redis`, `nats`, and `postgres`. **Required for broker**.
 
 **--streams_secret** (`ANYCABLE_STREAMS_SECRET`)
 
@@ -142,6 +144,62 @@ The list of [NATS][] servers to connect to (default: `"nats://localhost:4222"`).
 **--nats_channel** (`ANYCABLE_NATS_CHANNEL`)
 
 NATS channel for broadcasting (default: `"__anycable__"`).
+
+## Postgres configuration
+
+Postgres settings are used by the `postgres` broadcast and pub/sub adapters. Tables store the full payloads; `NOTIFY` only wakes polling loops. See [broadcasting](./broadcasting.md#postgres) and [pub/sub](./pubsub.md#postgres) for the delivery model and schema contract expectations.
+
+**--postgres_url** (`ANYCABLE_POSTGRES_URL`)
+
+Postgres URL used by the Postgres broadcast and pub/sub adapters (default: `"postgres://localhost:5432/postgres?sslmode=disable"`).
+
+**--postgres_notify_channel** (`ANYCABLE_POSTGRES_NOTIFY_CHANNEL`)
+
+Postgres `NOTIFY` channel used to wake polling loops (default: `"anycable_signals"`).
+
+**--postgres_internal_stream** (`ANYCABLE_POSTGRES_INTERNAL_STREAM`)
+
+Stream used by Postgres pub/sub for internal remote commands between AnyCable nodes (default: `"__anycable_internal__"`).
+
+**--postgres_broadcasts_table** (`ANYCABLE_POSTGRES_BROADCASTS_TABLE`)
+
+Postgres table containing app-to-AnyCable broadcasts (default: `"anycable_broadcasts"`).
+
+**--postgres_pubsub_table** (`ANYCABLE_POSTGRES_PUBSUB_TABLE`)
+
+Postgres table containing AnyCable inter-node pub/sub messages (default: `"anycable_pubsub"`).
+
+**--postgres_contract_table** (`ANYCABLE_POSTGRES_CONTRACT_TABLE`)
+
+Postgres table containing the installed signalling contract version (default: `"anycable_contracts"`).
+
+**--postgres_validate_contract** (`ANYCABLE_POSTGRES_VALIDATE_CONTRACT`)
+
+Validate the Postgres signalling schema, contract version, and insert triggers on startup (default: `true`).
+
+**--postgres_poll_interval_milliseconds** (`ANYCABLE_POSTGRES_POLL_INTERVAL_MILLISECONDS`)
+
+Poll fallback interval in milliseconds. Polling is the correctness fallback when notifications are missed or delayed (default: `500`).
+
+**--postgres_batch_size** (`ANYCABLE_POSTGRES_BATCH_SIZE`)
+
+Maximum number of rows to process in one polling batch (default: `100`).
+
+**--postgres_claim_timeout_seconds** (`ANYCABLE_POSTGRES_CLAIM_TIMEOUT_SECONDS`)
+
+Seconds before an unfinished broadcast claim may be retried by another AnyCable node (default: `30`).
+
+**--postgres_max_attempts** (`ANYCABLE_POSTGRES_MAX_ATTEMPTS`)
+
+Maximum number of failed processing attempts before a broadcast row is no longer retried (default: `5`).
+
+**--postgres_retention_ttl** (`ANYCABLE_POSTGRES_RETENTION_TTL`)
+
+Seconds to keep old Postgres signalling rows before cleanup (default: `300`).
+
+**--postgres_cleanup_interval** (`ANYCABLE_POSTGRES_CLEANUP_INTERVAL`)
+
+Postgres cleanup interval in seconds (default: `60`).
 
 ## Logging settings
 
