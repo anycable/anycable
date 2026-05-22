@@ -135,29 +135,32 @@ func (g *Gate) broadcastLoop(ctx context.Context) {
 func (g *Gate) performBroadcast(streamMsg *common.StreamMessage) {
 	stream := streamMsg.Stream
 
-	buf := make(map[string](encoders.EncodedMessage))
+	buf := make(map[string]encoders.EncodedMessage)
 
 	var bdata encoders.EncodedMessage
 
 	g.mu.RLock()
-	streamSessions := streamSessionsSnapshot(g.streams[stream])
+	rows := streamSessionsSnapshot(g.streams[stream])
 	g.mu.RUnlock()
 
-	for session, ids := range streamSessions {
-		if streamMsg.Meta != nil && streamMsg.Meta.ExcludeSocket == session.GetID() {
+	exclude := ""
+	if streamMsg.Meta != nil {
+		exclude = streamMsg.Meta.ExcludeSocket
+	}
+
+	for _, row := range rows {
+		if exclude != "" && row.session.GetID() == exclude {
 			continue
 		}
 
-		for _, id := range ids {
-			if msg, ok := buf[id]; ok {
-				bdata = msg
-			} else {
-				bdata = buildMessage(streamMsg, id)
-				buf[id] = bdata
-			}
-
-			session.Send(bdata)
+		if msg, ok := buf[row.id]; ok {
+			bdata = msg
+		} else {
+			bdata = buildMessage(streamMsg, row.id)
+			buf[row.id] = bdata
 		}
+
+		row.session.Send(bdata)
 	}
 }
 
@@ -171,19 +174,24 @@ func buildMessage(msg *common.StreamMessage, identifier string) encoders.Encoded
 	return encoders.NewCachedEncodedMessage(reply)
 }
 
-func streamSessionsSnapshot[T comparable](src map[T]map[string]bool) map[T][]string {
-	dest := make(map[T][]string)
+type sessionStreamRow[T comparable] struct {
+	session T
+	id      string
+}
 
-	for k, v := range src {
-		dest[k] = make([]string, len(v))
+func streamSessionsSnapshot[T comparable](src map[T]map[string]bool) []sessionStreamRow[T] {
+	n := 0
+	for _, v := range src {
+		n += len(v)
+	}
 
-		i := 0
+	out := make([]sessionStreamRow[T], 0, n)
 
-		for id := range v {
-			dest[k][i] = id
-			i++
+	for session, ids := range src {
+		for id := range ids {
+			out = append(out, sessionStreamRow[T]{session: session, id: id})
 		}
 	}
 
-	return dest
+	return out
 }
