@@ -107,11 +107,11 @@ func setupPostgresBroadcastTest(t *testing.T) (*pgadapter.Config, *pgxpool.Pool)
 }
 
 func testPostgresBroadcastURL() string {
-	if url := os.Getenv("POSTGRES_URL"); url != "" {
+	if url := os.Getenv("ANYCABLE_POSTGRES_TEST_URL"); url != "" {
 		return url
 	}
 
-	return "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
+	return "postgres://localhost:5432/postgres?sslmode=disable"
 }
 
 func publishPostgresBroadcast(pool *pgxpool.Pool, config *pgadapter.Config, payload map[string]string) error {

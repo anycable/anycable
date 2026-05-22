@@ -84,11 +84,11 @@ func setupPostgresPubSubTest(t *testing.T) (*pgadapter.Config, *pgxpool.Pool) {
 }
 
 func testPostgresPubSubURL() string {
-	if url := os.Getenv("POSTGRES_URL"); url != "" {
+	if url := os.Getenv("ANYCABLE_POSTGRES_TEST_URL"); url != "" {
 		return url
 	}
 
-	return "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
+	return "postgres://localhost:5432/postgres?sslmode=disable"
 }
 
 func installPostgresPubSubTestTables(t *testing.T, pool *pgxpool.Pool, config *pgadapter.Config) {

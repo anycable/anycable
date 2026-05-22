@@ -100,6 +100,17 @@ func TestValidateContract(t *testing.T) {
 	broadcastsTable, err := QuoteTableName(config.BroadcastsTable)
 	require.NoError(t, err)
 
+	_, err = pool.Exec(ctx, fmt.Sprintf("ALTER TABLE %s DISABLE TRIGGER %s", broadcastsTable, trigger))
+	require.NoError(t, err)
+
+	err = ValidateContract(ctx, pool, config)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "enabled INSERT trigger")
+
+	_, err = pool.Exec(ctx, fmt.Sprintf("ALTER TABLE %s ENABLE TRIGGER %s", broadcastsTable, trigger))
+	require.NoError(t, err)
+	require.NoError(t, ValidateContract(ctx, pool, config))
+
 	_, err = pool.Exec(ctx, fmt.Sprintf("DROP TRIGGER %s ON %s", trigger, broadcastsTable))
 	require.NoError(t, err)
 
@@ -138,11 +149,11 @@ func setupContractTest(t *testing.T) (*Config, *pgxpool.Pool) {
 }
 
 func testPostgresURL() string {
-	if url := os.Getenv("POSTGRES_URL"); url != "" {
+	if url := os.Getenv("ANYCABLE_POSTGRES_TEST_URL"); url != "" {
 		return url
 	}
 
-	return "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
+	return "postgres://localhost:5432/postgres?sslmode=disable"
 }
 
 func installContractTestTables(t *testing.T, pool *pgxpool.Pool, config *Config) {

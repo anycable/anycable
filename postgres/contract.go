@@ -226,13 +226,15 @@ SELECT EXISTS (
   WHERE tgrelid = to_regclass($1)
     AND tgname = $2
     AND NOT tgisinternal
-)`, table, trigger).Scan(&exists)
+    AND tgenabled <> 'D'
+    AND (tgtype::int & 4) = 4
+  )`, table, trigger).Scan(&exists)
 	if err != nil {
 		return fmt.Errorf("failed to inspect trigger %s on %s: %w", trigger, table, err)
 	}
 
 	if !exists {
-		return fmt.Errorf("postgres signalling table %s is missing trigger %s", table, trigger)
+		return fmt.Errorf("postgres signalling table %s is missing enabled INSERT trigger %s", table, trigger)
 	}
 
 	return nil
