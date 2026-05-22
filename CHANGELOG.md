@@ -1,5 +1,7 @@
 # Change log
 
+- Add Postgres broadcast and pub/sub signalling adapters. ([@TikiTDO][])
+
 ## 1.6.13 (2026-04-30)
 
 - Upgrade dependencies.
@@ -514,3 +516,4 @@ See [Changelog](https://github.com/anycable/anycable-go/blob/0-6-stable/CHANGELO
 [@rafaelrubbioli]: https://github.com/rafaelrubbioli
 [@gzigzigzeo]: https://github.com/gzigzigzeo
 [@ardecvz]: https://github.com/ardecvz
+[@TikiTDO]: https://github.com/TikiTDO
