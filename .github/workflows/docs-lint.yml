@@ -1,4 +1,6 @@
 name: Lint Docs
+permissions:
+  contents: read
 
 on:
   push:
