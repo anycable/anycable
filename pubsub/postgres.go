@@ -68,14 +68,31 @@ func NewPostgresSubscriber(node Handler, config *pgadapter.Config, l *slog.Logge
 func (s *PostgresSubscriber) Start(done chan error) error {
 	s.ctx, s.cancel = context.WithCancel(context.Background())
 
-	pool, err := pgadapter.NewPool(s.ctx, s.config)
-	if err != nil {
-		s.cancel()
-		return err
-	}
+	var pool *pgxpool.Pool
+	var listener *pgadapter.Listener
 
-	if err := pgadapter.ValidateContract(s.ctx, pool, s.config); err != nil {
-		pool.Close()
+	err := pgadapter.StartupWithRetry(s.ctx, s.config, s.log, "pub/sub adapter", func(ctx context.Context) error {
+		nextPool, err := pgadapter.NewPool(ctx, s.config)
+		if err != nil {
+			return err
+		}
+
+		if err := pgadapter.ValidateContract(ctx, nextPool, s.config); err != nil {
+			nextPool.Close()
+			return err
+		}
+
+		nextListener, err := pgadapter.NewListener(ctx, s.config, s.log, s.wake)
+		if err != nil {
+			nextPool.Close()
+			return err
+		}
+
+		pool = nextPool
+		listener = nextListener
+		return nil
+	})
+	if err != nil {
 		s.cancel()
 		return err
 	}
@@ -85,16 +102,6 @@ func (s *PostgresSubscriber) Start(done chan error) error {
 	s.poolMu.Unlock()
 
 	s.Subscribe(s.config.InternalStream)
-
-	listener, err := pgadapter.NewListener(s.ctx, s.config, s.log, s.wake)
-	if err != nil {
-		s.poolMu.Lock()
-		s.pool = nil
-		s.poolMu.Unlock()
-		pool.Close()
-		s.cancel()
-		return err
-	}
 
 	s.listener = listener
 

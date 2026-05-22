@@ -42,6 +42,8 @@ type Config struct {
 	RetentionTTLSeconds int64 `toml:"retention_ttl"`
 	// How often to run cleanup.
 	CleanupIntervalSeconds int64 `toml:"cleanup_interval"`
+	// Max attempts to connect and validate the contract during startup.
+	StartupMaxAttempts int `toml:"startup_max_attempts"`
 	// Validate schema, trigger, and version contract on startup.
 	ValidateContract bool `toml:"validate_contract"`
 }
@@ -62,6 +64,7 @@ func NewConfig() Config {
 		MaxAttempts:              5,
 		RetentionTTLSeconds:      300,
 		CleanupIntervalSeconds:   60,
+		StartupMaxAttempts:       5,
 		ValidateContract:         true,
 	}
 }
@@ -135,6 +138,15 @@ func (c Config) CleanupDuration() time.Duration {
 	return time.Duration(c.CleanupInterval()) * time.Second
 }
 
+// StartupAttempts returns the number of startup connection/contract attempts.
+func (c Config) StartupAttempts() int {
+	if c.StartupMaxAttempts <= 0 {
+		return 5
+	}
+
+	return c.StartupMaxAttempts
+}
+
 // NodeID returns the diagnostic claim owner recorded on broadcast rows.
 func (c Config) NodeID() string {
 	if c.ClaimID == "" {
@@ -188,6 +200,9 @@ func (c Config) ToToml() string {
 
 	result.WriteString("# Cleanup interval in seconds\n")
 	result.WriteString(fmt.Sprintf("cleanup_interval = %d\n", c.CleanupInterval()))
+
+	result.WriteString("# Max startup attempts for connection and contract validation\n")
+	result.WriteString(fmt.Sprintf("startup_max_attempts = %d\n", c.StartupAttempts()))
 
 	result.WriteString("# Validate schema contract on startup\n")
 	if c.ValidateContract {

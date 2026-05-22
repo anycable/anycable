@@ -57,21 +57,31 @@ func (b *PostgresBroadcaster) Start(done chan error) error {
 
 	b.ctx, b.cancel = context.WithCancel(context.Background())
 
-	pool, err := pgadapter.NewPool(b.ctx, b.config)
-	if err != nil {
-		b.cancel()
-		return err
-	}
+	var pool *pgxpool.Pool
+	var listener *pgadapter.Listener
 
-	if err := pgadapter.ValidateContract(b.ctx, pool, b.config); err != nil {
-		pool.Close()
-		b.cancel()
-		return err
-	}
+	err := pgadapter.StartupWithRetry(b.ctx, b.config, b.log, "broadcast adapter", func(ctx context.Context) error {
+		nextPool, err := pgadapter.NewPool(ctx, b.config)
+		if err != nil {
+			return err
+		}
 
-	listener, err := pgadapter.NewListener(b.ctx, b.config, b.log, b.wake)
+		if err := pgadapter.ValidateContract(ctx, nextPool, b.config); err != nil {
+			nextPool.Close()
+			return err
+		}
+
+		nextListener, err := pgadapter.NewListener(ctx, b.config, b.log, b.wake)
+		if err != nil {
+			nextPool.Close()
+			return err
+		}
+
+		pool = nextPool
+		listener = nextListener
+		return nil
+	})
 	if err != nil {
-		pool.Close()
 		b.cancel()
 		return err
 	}

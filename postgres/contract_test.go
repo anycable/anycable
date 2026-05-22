@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 	"testing"
@@ -28,6 +29,7 @@ func TestConfig_ToToml(t *testing.T) {
 	config.MaxAttempts = 2
 	config.RetentionTTLSeconds = 60
 	config.CleanupIntervalSeconds = 10
+	config.StartupMaxAttempts = 3
 
 	tomlStr := config.ToToml()
 
@@ -36,6 +38,7 @@ func TestConfig_ToToml(t *testing.T) {
 	assert.Contains(t, tomlStr, "internal_stream = \"internal\"")
 	assert.Contains(t, tomlStr, "broadcasts_table = \"broadcasts\"")
 	assert.Contains(t, tomlStr, "pubsub_table = \"pubsub\"")
+	assert.Contains(t, tomlStr, "startup_max_attempts = 3")
 
 	config2 := NewConfig()
 
@@ -43,6 +46,45 @@ func TestConfig_ToToml(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, config, config2)
+}
+
+func TestStartupWithRetry(t *testing.T) {
+	t.Run("retries until success", func(t *testing.T) {
+		config := NewConfig()
+		config.StartupMaxAttempts = 3
+		attempts := 0
+
+		err := startupWithRetryDelay(context.Background(), &config, slog.Default(), "test", func(ctx context.Context) error {
+			attempts++
+			if attempts < 3 {
+				return fmt.Errorf("not ready")
+			}
+
+			return nil
+		}, func(int) time.Duration {
+			return time.Millisecond
+		})
+
+		require.NoError(t, err)
+		assert.Equal(t, 3, attempts)
+	})
+
+	t.Run("fails after max attempts", func(t *testing.T) {
+		config := NewConfig()
+		config.StartupMaxAttempts = 2
+		attempts := 0
+
+		err := startupWithRetryDelay(context.Background(), &config, slog.Default(), "test", func(ctx context.Context) error {
+			attempts++
+			return fmt.Errorf("still down")
+		}, func(int) time.Duration {
+			return time.Millisecond
+		})
+
+		require.Error(t, err)
+		assert.Equal(t, 2, attempts)
+		assert.Contains(t, err.Error(), "postgres test startup failed after 2 attempt(s)")
+	})
 }
 
 func TestValidateContract(t *testing.T) {

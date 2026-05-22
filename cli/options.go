@@ -909,6 +909,12 @@ func postgresCLIFlags(c *config.Config) []cli.Flag {
 			Value:       c.Postgres.CleanupIntervalSeconds,
 			Destination: &c.Postgres.CleanupIntervalSeconds,
 		},
+		&cli.IntFlag{
+			Name:        "postgres_startup_max_attempts",
+			Usage:       "Max Postgres startup attempts for connection and contract validation",
+			Value:       c.Postgres.StartupMaxAttempts,
+			Destination: &c.Postgres.StartupMaxAttempts,
+		},
 		&cli.BoolFlag{
 			Name:        "postgres_validate_contract",
 			Usage:       "Validate Postgres signalling schema, version and triggers on startup",

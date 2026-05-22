@@ -201,6 +201,10 @@ Seconds to keep old Postgres signalling rows before cleanup (default: `300`).
 
 Postgres cleanup interval in seconds (default: `60`).
 
+**--postgres_startup_max_attempts** (`ANYCABLE_POSTGRES_STARTUP_MAX_ATTEMPTS`)
+
+Maximum number of startup attempts for the Postgres connection and signalling contract validation (default: `5`). Retries use exponential backoff to tolerate short database readiness races, but persistent connection or contract errors still fail startup.
+
 ## Logging settings
 
 **--log_level** (`ANYCABLE_LOG_LEVEL`)
