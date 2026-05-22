@@ -140,7 +140,7 @@ func (g *Gate) performBroadcast(streamMsg *common.StreamMessage) {
 	var bdata encoders.EncodedMessage
 
 	g.mu.RLock()
-	rows := streamSessionsSnapshot(g.streams[stream])
+	rows := createStreamSessionsSnapshot(g.streams[stream])
 	g.mu.RUnlock()
 
 	exclude := ""
@@ -179,19 +179,18 @@ type sessionStreamRow[T comparable] struct {
 	id      string
 }
 
-func streamSessionsSnapshot[T comparable](src map[T]map[string]bool) []sessionStreamRow[T] {
+func createStreamSessionsSnapshot[T comparable](src map[T]map[string]bool) []sessionStreamRow[T] {
 	n := 0
 	for _, v := range src {
 		n += len(v)
 	}
-
-	out := make([]sessionStreamRow[T], 0, n)
+	dst := make([]sessionStreamRow[T], 0, n)
 
 	for session, ids := range src {
 		for id := range ids {
-			out = append(out, sessionStreamRow[T]{session: session, id: id})
+			dst = append(dst, sessionStreamRow[T]{session: session, id: id})
 		}
 	}
 
-	return out
+	return dst
 }
