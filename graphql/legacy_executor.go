@@ -119,6 +119,11 @@ func (ex *LegacyExecutor) HandleCommand(s *node.Session, msg *common.Message) er
 			return err
 		}
 
+		// Happens when the client connection was closed in flight
+		if res == nil {
+			return nil
+		}
+
 		// Now we need to check whether the query was subscription or not.
 		// If not, we should remove it from the subscription lists.
 		if len(res.Transmissions) != 1 {

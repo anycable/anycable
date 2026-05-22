@@ -160,6 +160,11 @@ func (ex *Executor) HandleCommand(s *node.Session, msg *common.Message) error {
 		return err
 	}
 
+	// Happens when the client connection was closed in flight
+	if res == nil {
+		return nil
+	}
+
 	// If no transmissions were returned,
 	// send the ack ourselves (only for calls, not acks or errors)
 	if occpMsg.GetCode() == CallCode && len(res.Transmissions) == 0 {
