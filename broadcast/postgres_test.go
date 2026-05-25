@@ -3,6 +3,7 @@ package broadcast
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -77,6 +78,48 @@ func TestPostgresBroadcaster(t *testing.T) {
 	})
 }
 
+func TestPostgresBroadcasterFinalFailureKeepsClaim(t *testing.T) {
+	config, pool := setupPostgresBroadcastTest(t)
+	defer pool.Close()
+	defer dropPostgresBroadcastTestTables(t, pool, config)
+
+	config.MaxAttempts = 1
+
+	handler := &mocks.Handler{}
+	handler.On("HandleBroadcast", mock.Anything).Return(errors.New("boom"))
+
+	errchan := make(chan error, 2)
+	broadcaster := NewPostgresBroadcaster(handler, config, slog.Default())
+	err := broadcaster.Start(errchan)
+	require.NoError(t, err)
+	defer broadcaster.Shutdown(context.Background()) // nolint:errcheck
+
+	id, err := insertPostgresBroadcast(pool, config, map[string]string{"stream": "any_test", "data": "broken"})
+	require.NoError(t, err)
+
+	table, err := pgadapter.QuoteTableName(config.BroadcastsTable)
+	require.NoError(t, err)
+
+	var claimedBy string
+	var claimedAtPresent bool
+	var attempts int
+	var lastError string
+
+	require.Eventually(t, func() bool {
+		err := pool.QueryRow(
+			context.Background(),
+			fmt.Sprintf("SELECT claimed_by, claimed_at IS NOT NULL, attempts, last_error FROM %s WHERE id = $1", table),
+			id,
+		).Scan(&claimedBy, &claimedAtPresent, &attempts, &lastError)
+
+		return err == nil &&
+			claimedBy == config.NodeID() &&
+			claimedAtPresent &&
+			attempts == 1 &&
+			lastError == "boom"
+	}, time.Second, 25*time.Millisecond)
+}
+
 func setupPostgresBroadcastTest(t *testing.T) (*pgadapter.Config, *pgxpool.Pool) {
 	t.Helper()
 
@@ -115,14 +158,20 @@ func testPostgresBroadcastURL() string {
 }
 
 func publishPostgresBroadcast(pool *pgxpool.Pool, config *pgadapter.Config, payload map[string]string) error {
+	_, err := insertPostgresBroadcast(pool, config, payload)
+	return err
+}
+
+func insertPostgresBroadcast(pool *pgxpool.Pool, config *pgadapter.Config, payload map[string]string) (int64, error) {
 	table, err := pgadapter.QuoteTableName(config.BroadcastsTable)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
-	query := fmt.Sprintf("INSERT INTO %s (payload) VALUES ($1)", table)
-	_, err = pool.Exec(context.Background(), query, string(utils.ToJSON(payload)))
-	return err
+	query := fmt.Sprintf("INSERT INTO %s (payload) VALUES ($1) RETURNING id", table)
+	var id int64
+	err = pool.QueryRow(context.Background(), query, string(utils.ToJSON(payload))).Scan(&id)
+	return id, err
 }
 
 func installPostgresBroadcastTestTables(t *testing.T, pool *pgxpool.Pool, config *pgadapter.Config) {

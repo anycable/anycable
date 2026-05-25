@@ -281,6 +281,18 @@ func (b *PostgresBroadcaster) updateFailure(id int64, cause error, final bool) e
 
 	// Non-final failures clear the claim so the row can be retried later. Final
 	// failures are left in the table until cleanup for operator inspection.
+	if final {
+		query := fmt.Sprintf(`
+UPDATE %s
+SET last_error = $2
+WHERE id = $1
+  AND claimed_by = $3
+`, table)
+
+		_, err = b.pool.Exec(b.ctx, query, id, lastError, b.config.NodeID())
+		return err
+	}
+
 	query := fmt.Sprintf(`
 UPDATE %s
 SET claimed_by = NULL,

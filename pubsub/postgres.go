@@ -313,11 +313,6 @@ func (s *PostgresSubscriber) deliver(stream string, payload []byte) {
 	case common.StreamMessage:
 		s.log.With("stream", stream).Debug("received Postgres pub/sub broadcast")
 		s.node.Broadcast(&v)
-	case []*common.StreamMessage:
-		for _, msg := range v {
-			s.log.With("stream", stream).Debug("received Postgres pub/sub broadcast")
-			s.node.Broadcast(msg)
-		}
 	case common.RemoteCommandMessage:
 		s.log.With("stream", stream).Debug("received Postgres pub/sub command")
 		s.node.ExecuteRemoteCommand(&v)
