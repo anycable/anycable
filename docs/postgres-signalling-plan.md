@@ -205,37 +205,52 @@ The node-to-node fanout table remains an internal server detail in this PR.
 8. Update docs and tests to describe polling as the correctness mechanism and
    notify as latency optimization.
 
-## Validation Plan
+## Test Plan
 
-Schema tests:
+Core coverage:
 
-- schema creation is idempotent;
-- schema ensure runs automatically when a PostgreSQL-backed component is active;
-- opt-out skips schema creation/modification but still fails on incompatible
-  schema when validation remains enabled;
-- required tables, functions, indexes, and triggers are validated;
-- no schema marker/version table is required for the initial contract;
-- invalid table/function/channel names are rejected before SQL execution.
-
-Broadcast queue tests:
-
-- rows are claimed with `SKIP LOCKED`;
-- two nodes do not process the same row;
+- schema ensure is idempotent and runs automatically when a PostgreSQL-backed
+  component is active;
+- opt-out skips schema creation/modification, while catalog validation still
+  fails clearly for incompatible externally managed schemas;
+- required tables, functions, indexes, and triggers are validated without a
+  schema marker/version table;
+- invalid table/function/channel names are rejected before SQL execution;
+- broadcast rows are claimed with `SKIP LOCKED` and never processed by two
+  nodes;
 - rows for different streams can be processed concurrently;
 - later same-stream rows are not claimed while an older same-stream row is
   unfinished;
-- final failures keep inspection data and unblock later same-stream rows;
-- successful rows are acked.
-
-Fanout tests:
-
+- final failures keep inspection data and unblock or block later same-stream
+  rows according to the agreed policy;
+- successful broadcast rows are acked;
 - notification payloads include the changed stream name;
 - nodes ignore notifications for unsubscribed streams;
-- changed subscribed streams are coalesced before querying;
-- fallback polling batches subscribed stream cursors;
 - repeated wakeups or fallback ticks do not duplicate delivery;
-- two nodes subscribed to the same stream both receive the same publication;
-- one node receives same-stream rows in insertion order.
+- two nodes subscribed to the same stream both receive the same fanout row;
+- one node receives same-stream rows in insertion order;
+- cursors advance independently per stream after delivery.
+
+Batching and stress cases:
+
+- coalesce multiple changed subscribed streams into one catch-up pass;
+- verify one catch-up query can fetch rows for more than one stream;
+- verify fallback polling batches subscribed stream cursors instead of issuing
+  one query per stream;
+- enforce a per-stream row limit so one hot stream does not starve other
+  changed streams;
+- include unsubscribed streams in notification payloads and assert they are not
+  included in the batch query;
+- subscribe to many streams, publish to a small subset, and assert poller query
+  work is bounded by the changed subset, not every subscribed stream;
+- publish bursts to many streams at once and verify wake-up coalescing still
+  drains all rows;
+- run concurrent publishers for the same stream and assert delivered order is
+  still stream ordered;
+- simulate a slow or failing consumer for one stream and verify unrelated
+  streams continue to move;
+- temporarily disable notifications and verify fallback polling catches up
+  without duplicates.
 
 Targeted commands:
 
