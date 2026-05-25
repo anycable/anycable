@@ -507,6 +507,16 @@ Batching and stress cases:
 - temporarily disable notifications and verify fallback polling catches up
   without duplicates.
 
+CI coverage:
+
+- the main CI test workflow that runs Go tests needs a PostgreSQL service so the
+  PostgreSQL-backed suites can run in CI. In this repository that workflow is
+  currently `.github/workflows/test.yml`; if the upstream workflow is renamed to
+  `ci.yml`, apply the same service there;
+- other workflows, such as lint, docs lint, release, and benchmark workflows,
+  should not need PostgreSQL unless they start running the PostgreSQL-backed test
+  suites later.
+
 Targeted commands:
 
 ```sh
