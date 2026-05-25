@@ -9,18 +9,25 @@ clean final shape rather than preserving the first local implementation.
 - Polling is the source of truth. `LISTEN/NOTIFY` only wakes polling loops and
   never carries durable delivery payloads.
 - Do not create one PostgreSQL `LISTEN` channel per stream. Use two stable
-  wake-up channels and include enough payload metadata for nodes to decide
-  whether they need to catch up.
+  wake-up channels:
+  - app-to-server broadcasts;
+  - node-to-node fanout.
 - Treat app-to-server broadcasts and node-to-node fanout as two logical links
   with different delivery semantics.
+- Use per-stream offsets for ordering and cursors. Auto-increment IDs may exist
+  as internal row identifiers if implementation needs them, but delivery order,
+  catch-up cursors, and public SQL function return values should be based on
+  `(stream, offset)`.
 - Keep this PR focused on signalling. Broker/history support can use the same
-  tables later, but this PR should not claim `HistoryFrom`, `HistorySince`, or
-  `Peak` support.
+  offset model later, but this PR should not claim `HistoryFrom`,
+  `HistorySince`, or `Peak` support.
 - Guarantee ordering per stream, not globally across unrelated streams.
 
 ## Target Shape
 
-![AnyCable PostgreSQL data model](images/postgres-signalling-data-model.png)
+**Diagram placeholder:** the data model diagram was removed while the offset
+schema is being finalized. Replace this placeholder with the updated diagram
+before asking for final review.
 
 ### Server-owned schema
 
@@ -30,27 +37,68 @@ AnyCable Go owns the schema required by PostgreSQL-backed components:
   component is active;
 - fail startup if schema management is enabled and the schema cannot be created
   or validated;
-- provide `postgres_ensure_schema` as a concise opt-out flag for deployments
-  that manage schema externally;
+- provide `postgres_ensure_schema` as the proposed concise opt-out flag for
+  deployments that manage schema externally;
 - keep publishing applications behind SQL functions instead of requiring them
   to know table layouts.
 
 No schema marker table is required for the first version. Startup should run
-idempotent DDL for the required tables, indexes, triggers, and SQL functions,
-then interrogate PostgreSQL catalogs to validate the resulting shape. This keeps
-the table surface to the two delivery tables: `anycable_broadcasts` and
-`anycable_pubsub`.
+idempotent, non-destructive DDL for the required tables, indexes, triggers, and
+SQL functions, then interrogate PostgreSQL catalogs to validate the resulting
+shape.
 
 The proposed flag follows the existing `postgres_*` configuration convention:
 `--postgres_ensure_schema=false` skips DDL creation/actualization. Startup still
-interrogates PostgreSQL catalogs and fails when the schema shape is incompatible.
+interrogates PostgreSQL catalogs and fails when the schema shape is
+incompatible.
+
+Schema actualization should create missing objects and add missing compatible
+columns, indexes, triggers, and functions. It should fail rather than apply a
+destructive or ambiguous migration when an existing object has an incompatible
+type, nullability contract, uniqueness contract, function signature, or trigger
+shape.
+
+### Offset metadata
+
+Per-stream offsets require a small metadata table so offsets do not reset after
+retention cleanup removes old delivery rows:
+
+- `anycable_stream_offsets` stores the latest allocated offset per logical
+  scope and stream;
+- the primary key is `(scope, stream)`;
+- known first-version scopes are `broadcast` and `pubsub`;
+- allocation is transactional and atomic, using an upsert that increments the
+  offset row and returns the new value.
+
+One possible allocation shape:
+
+```sql
+INSERT INTO anycable_stream_offsets (scope, stream, offset)
+VALUES ($1, $2, 1)
+ON CONFLICT (scope, stream)
+DO UPDATE SET offset = anycable_stream_offsets.offset + 1,
+              updated_at = now()
+RETURNING offset;
+```
+
+The offset increment and delivery-row insert should happen in the same
+transaction. If the transaction rolls back, the offset increment rolls back too,
+so successful publications keep contiguous per-stream offsets without relying on
+global auto-increment IDs.
+
+The metadata table is part of delivery semantics, unlike the removed schema
+contract table. If a future broker/history implementation merges the delivery
+links into a single publication source of truth, it can reuse the same
+stream-offset model instead of translating from global row IDs.
 
 ### App-to-server queue
 
 `anycable_broadcasts` is a single-consumer queue for publications created by
 applications:
 
-- rows include `stream` as a first-class column, not only inside JSON payload;
+- rows include `stream` and `offset` as first-class columns;
+- `(stream, offset)` is unique;
+- payload and metadata columns are `text`;
 - AnyCable nodes poll with `FOR UPDATE SKIP LOCKED`;
 - exactly one node claims and processes a row;
 - successful rows are acked;
@@ -60,8 +108,8 @@ applications:
   `postgres_exhausted_broadcast_policy`;
 - `NOTIFY` only wakes nodes after inserts.
 
-This keeps the existing broadcaster shape, but makes the stream visible to SQL
-so the claim query can preserve per-stream order.
+This keeps the current broadcaster shape, but makes stream ordering visible to
+SQL and avoids the rollback-gap/global-ID concerns of auto-increment cursors.
 
 `postgres_exhausted_broadcast_policy` should support:
 
@@ -74,13 +122,23 @@ so the claim query can preserve per-stream order.
 stream forever. `block` is available for deployments that prefer strict
 same-stream sequence handling after unrecoverable failures.
 
+Cleanup should respect the policy:
+
+- `skip` rows may be cleaned after the retention window;
+- `block` rows should not be removed by automatic cleanup, because removal is
+  the operator action that unblocks later same-stream rows.
+
 ### Node-to-node fanout log
 
 `anycable_pubsub` is a fanout catch-up log:
 
 - each interested AnyCable node may read the same row;
+- rows include `stream` and `offset` as first-class columns;
+- `(stream, offset)` is unique;
 - rows are fetched by stream cursor, not claimed;
-- notification payloads include the changed stream name;
+- notification payloads include at least the changed stream name;
+- notification payloads may include the latest offset as a latency or logging
+  hint, but correctness must come from polling by local cursor;
 - nodes ignore notifications for streams with no local subscribers;
 - wakeups can be coalesced before querying;
 - fallback ticks batch all subscribed stream cursors instead of issuing one
@@ -89,22 +147,32 @@ same-stream sequence handling after unrecoverable failures.
 This keeps PostgreSQL from acting like Redis with thousands of dynamic
 `LISTEN`s, while still avoiding the current N-per-stream polling loop.
 
+Fanout rows are server-produced. If a node encounters a malformed fanout payload,
+it should log and advance past that row rather than repeatedly blocking the
+stream on a poison row. Cursor advancement should happen only after a terminal
+handling outcome: delivered, ignored because the stream is no longer subscribed,
+or logged-and-dropped as malformed.
+
 ## Dataflow
 
-![AnyCable PostgreSQL dataflow](images/postgres-signalling-dataflow.png)
+**Diagram placeholder:** the dataflow diagram was removed while the offset
+schema is being finalized. Replace this placeholder with the updated diagram
+before asking for final review.
 
 1. A publishing application calls `anycable_publish(stream, payload, meta)`.
-2. PostgreSQL inserts an `anycable_broadcasts` row and sends a wake-up
+2. PostgreSQL transactionally allocates the next `broadcast` offset for the
+   stream, inserts an `anycable_broadcasts` row, and sends a wake-up
    notification on the app-to-server channel.
 3. AnyCable nodes poll the broadcast queue. The claim query uses
    `FOR UPDATE SKIP LOCKED` and only claims rows that have no older unfinished
    row for the same stream.
 4. The winning node handles the broadcast through the broker path.
-5. The broker writes a node-to-node fanout row to `anycable_pubsub`.
+5. The broker writes a node-to-node fanout row to `anycable_pubsub`, allocating
+   the next `pubsub` offset for the stream.
 6. PostgreSQL sends a wake-up notification whose payload includes the stream
    name on the node-to-node channel.
 7. Nodes subscribed to that stream batch-fetch rows newer than their local
-   cursor and deliver them in stream order.
+   cursor and deliver them in stream-offset order.
 8. Periodic polling remains the correctness fallback if notifications are
    missed, delayed, or coalesced.
 
@@ -114,11 +182,11 @@ The practical guarantee should be per-stream ordering. Global ordering across
 unrelated streams is not required and would unnecessarily serialize work.
 
 The app-to-server claim query should skip rows that have an older unfinished row
-for the same stream:
+for the same stream. One possible shape:
 
 ```sql
 WITH candidates AS (
-  SELECT broadcasts.id
+  SELECT broadcasts.stream, broadcasts.offset
   FROM anycable_broadcasts broadcasts
   WHERE broadcasts.attempts < $attempts_limit
     AND (
@@ -129,10 +197,13 @@ WITH candidates AS (
       SELECT 1
       FROM anycable_broadcasts older
       WHERE older.stream = broadcasts.stream
-        AND older.id < broadcasts.id
-        AND older.attempts < $attempts_limit
+        AND older.offset < broadcasts.offset
+        AND (
+          older.attempts < $attempts_limit
+          OR $exhausted_policy = 'block'
+        )
     )
-  ORDER BY broadcasts.id
+  ORDER BY broadcasts.created_at, broadcasts.stream, broadcasts.offset
   LIMIT $batch_limit
   FOR UPDATE SKIP LOCKED
 )
@@ -142,19 +213,25 @@ SET claimed_by = $node_id,
     attempts = broadcasts.attempts + 1,
     last_error = NULL
 FROM candidates
-WHERE broadcasts.id = candidates.id
-RETURNING broadcasts.id, broadcasts.stream, broadcasts.payload, broadcasts.attempts;
+WHERE broadcasts.stream = candidates.stream
+  AND broadcasts.offset = candidates.offset
+RETURNING broadcasts.stream, broadcasts.offset, broadcasts.payload, broadcasts.attempts;
 ```
 
-This allows rows from different streams to be processed concurrently while
+This allows rows from different streams to be claimed in the same pass while
 serializing rows for the same stream. If an older same-stream row exhausts its
 attempts, the configured exhausted-row policy decides whether later rows may
 proceed.
 
+This does not require one node to process different streams concurrently inside
+the same polling loop. The required property is that different streams are not
+blocked by each other's offsets or poison rows. Additional worker-level
+parallelism can be added later if throughput requires it.
+
 For node-to-node fanout, each node should serialize its own polling loop,
-deliver rows ordered by `(stream, id)`, and advance a stream cursor only after
-the row is delivered. That preserves per-stream order locally without requiring
-cross-stream ordering.
+deliver rows ordered by `(stream, offset)`, and advance a stream cursor after
+each terminal handling outcome. That preserves per-stream order locally without
+requiring cross-stream ordering.
 
 ## Batched Fanout Polling
 
@@ -167,19 +244,19 @@ One possible shape:
 ```sql
 WITH cursors AS (
   SELECT *
-  FROM unnest($streams::text[], $cursors::bigint[]) AS c(stream, cursor)
+  FROM unnest($streams::text[], $offsets::bigint[]) AS c(stream, offset)
 )
-SELECT publications.stream, publications.id, publications.payload
+SELECT publications.stream, publications.offset, publications.payload
 FROM cursors
 JOIN LATERAL (
-  SELECT id, payload
+  SELECT offset, payload
   FROM anycable_pubsub
   WHERE stream = cursors.stream
-    AND id > cursors.cursor
-  ORDER BY id
+    AND offset > cursors.offset
+  ORDER BY offset
   LIMIT $per_stream_limit
 ) publications ON true
-ORDER BY publications.stream, publications.id;
+ORDER BY publications.stream, publications.offset;
 ```
 
 The exact SQL can change during implementation, but the key property is that
@@ -191,21 +268,26 @@ trip instead of one round trip per locally subscribed stream.
 Publishing applications should call functions instead of inserting rows
 directly:
 
-- `anycable_publish(stream, payload, meta default '{}')`
-- `anycable_remote_command(payload, meta default '{}')`
+- `anycable_publish(stream text, payload text, meta text default '{}')`
+- `anycable_remote_command(payload text, meta text default '{}')`
 
 The functions should:
 
 - validate required inputs;
+- allocate the next per-stream offset;
 - insert into the app-to-server queue;
 - trigger a wake-up notification;
-- return the created row id for observability.
+- return the created offset for observability.
 
-Payload columns should be `text`. The payload is an opaque serialized AnyCable
-message; routing and queue behavior should rely on explicit columns such as
-`stream` and claim state, not SQL inspection of the payload body. If future
-broker/history work needs structured metadata, add separate metadata columns
-rather than making the main payload `jsonb`.
+Payload and metadata columns should be `text`. The payload is an opaque
+serialized AnyCable message; routing and queue behavior should rely on explicit
+columns such as `stream`, `offset`, and claim state, not SQL inspection of the
+payload body. If future broker/history work needs structured metadata, add
+separate metadata columns rather than making the main payload `jsonb`.
+
+`anycable_remote_command` should enqueue the command on the configured internal
+stream so it shares the same offset and ordering mechanics as other
+app-to-server messages.
 
 The node-to-node fanout table remains an internal server detail in this PR.
 
@@ -213,18 +295,21 @@ The node-to-node fanout table remains an internal server detail in this PR.
 
 1. Replace external schema validation with server-owned schema ensure plus
    catalog validation.
-2. Add `stream` to the app-to-server broadcast queue schema and publishing
-   function.
-3. Update the broadcast claim query to enforce per-stream ordering.
-4. Keep final failed rows claimed for inspection; non-final failures release
-   their claim for retry.
-5. Use two stable notification channels, one for app-to-server wakeups and one
+2. Replace schema marker/contract table configuration with the proposed
+   `postgres_ensure_schema` flag.
+3. Add the offset metadata table and atomic offset allocation helper.
+4. Add `stream`, `offset`, and text `meta` support to the app-to-server
+   broadcast queue schema and publishing functions.
+5. Update the broadcast claim query to enforce per-stream offset ordering.
+6. Add `postgres_exhausted_broadcast_policy` and wire cleanup semantics to the
+   selected policy.
+7. Use two stable notification channels, one for app-to-server wakeups and one
    for node-to-node fanout wakeups; do not add per-stream `LISTEN`s.
-6. Pass notification payloads into adapter wake-up code so pub/sub can enqueue
+8. Pass notification payloads into adapter wake-up code so pub/sub can enqueue
    changed streams.
-7. Replace pub/sub per-stream polling with batched catch-up by stream cursor.
-8. Update docs and tests to describe polling as the correctness mechanism and
-   notify as latency optimization.
+9. Replace pub/sub per-stream polling with batched catch-up by stream offset.
+10. Update docs and tests to describe polling as the correctness mechanism and
+    notify as latency optimization.
 
 ## Test Plan
 
@@ -232,14 +317,33 @@ Core coverage:
 
 - schema ensure is idempotent and runs automatically when a PostgreSQL-backed
   component is active;
-- opt-out skips schema creation/modification, while catalog validation still
-  fails clearly for incompatible externally managed schemas;
+- schema ensure creates a fully missing schema;
+- schema ensure actualizes non-destructive compatible drift, such as missing
+  indexes, triggers, functions, or additive columns;
+- schema ensure fails clearly on incompatible existing tables, column types,
+  nullability, uniqueness contracts, function signatures, or trigger shapes;
+- `postgres_ensure_schema=false` skips DDL creation/modification, while catalog
+  validation still fails clearly for incompatible externally managed schemas;
 - required tables, functions, indexes, and triggers are validated without a
   schema marker/version table;
 - invalid table/function/channel names are rejected before SQL execution;
+- offset allocation is monotonic and contiguous per `(scope, stream)` for
+  committed publications;
+- rolled-back publishing transactions do not create visible offset gaps;
+- concurrent publishers for the same stream receive unique, ordered offsets;
+- retention cleanup does not reset stream offsets;
+- SQL functions validate stream, payload, and metadata inputs;
+- `anycable_publish` returns the created stream offset and inserts the expected
+  text payload/metadata;
+- `anycable_remote_command` routes through the internal stream and returns the
+  created stream offset;
+- app-to-server and node-to-node wakeups use distinct notification channels;
+- notification payloads include the changed stream name, and any offset field is
+  treated only as a hint;
 - broadcast rows are claimed with `SKIP LOCKED` and never processed by two
   nodes;
-- rows for different streams can be processed concurrently;
+- rows for different streams can proceed without blocking on each other's
+  offsets;
 - later same-stream rows are not claimed while an older same-stream row is
   unfinished;
 - final failures keep inspection data;
@@ -247,13 +351,16 @@ Core coverage:
   after an exhausted row;
 - `postgres_exhausted_broadcast_policy=block` keeps later same-stream rows
   blocked behind an exhausted row;
+- cleanup removes exhausted `skip` rows after retention but does not remove
+  exhausted `block` rows automatically;
 - successful broadcast rows are acked;
-- notification payloads include the changed stream name;
 - nodes ignore notifications for unsubscribed streams;
 - repeated wakeups or fallback ticks do not duplicate delivery;
 - two nodes subscribed to the same stream both receive the same fanout row;
-- one node receives same-stream rows in insertion order;
-- cursors advance independently per stream after delivery.
+- one node receives same-stream rows in offset order;
+- cursors advance independently per stream after terminal handling outcomes;
+- malformed fanout payloads are logged and skipped without repeatedly blocking
+  the same stream.
 
 Batching and stress cases:
 
