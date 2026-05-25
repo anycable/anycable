@@ -7,12 +7,12 @@ It uses the following vocabulary:
 - A publication is one event for one stream.
 - `publication.id` is a global fetch cursor used for batching.
 - `publication.offset` plus `publication.epoch` is the stream-local position used for history and recovery semantics.
-- `NOTIFY` is only a wakeup or compact ID signal; durable payload data lives in PostgreSQL.
+- `NOTIFY` is only a wakeup signal; durable payload data lives in PostgreSQL.
 
 ## Target Shape
 
 - Replace separate PostgreSQL broadcast and pub/sub tables with one canonical publication table plus one stream metadata table.
-- Keep PostgreSQL schema ownership in AnyCable Go.
+- Keep PostgreSQL schema ownership in AnyCable Go, with automatic schema actualization enabled by default whenever a PostgreSQL-backed component is active.
 - Have publishing applications write through SQL functions, not raw table inserts.
 - Avoid claiming publication rows for pub/sub fanout. Publications are topic events, so every AnyCable node may observe the same row and locally forward it to matching subscribers.
 - Keep the schema compatible with a future PostgreSQL broker, but do not claim full broker/history support until `HistoryFrom`, `HistorySince`, and `Peak` are implemented on top of the PostgreSQL tables.
@@ -60,7 +60,7 @@ Rollback semantics:
 1. A publishing application calls `anycable_publish(stream, payload, meta)`.
 2. PostgreSQL upserts and locks the `anycable_streams` row for the stream.
 3. PostgreSQL increments `top_offset` and inserts a canonical `anycable_publications` row with `(stream, offset, epoch, payload)`.
-4. PostgreSQL sends `pg_notify` with either a wakeup or compact publication ID information.
+4. PostgreSQL sends `pg_notify` with the updated stream name, signalling that nodes interested in that stream should catch up.
 5. AnyCable nodes wake and batch-fetch publication rows by global `id`.
 6. Each node advances its global observed cursor across all fetched rows.
 7. Each node forwards only rows whose `stream` has local subscribers.
@@ -73,7 +73,7 @@ Rollback semantics:
 - Upsert or lock `anycable_streams[stream]`.
 - Increment that stream's `top_offset` in the same transaction.
 - Insert one `anycable_publications` row.
-- Call `pg_notify`.
+- Call `pg_notify` with the stream name.
 - Return `(id, stream, offset, epoch)`.
 
 `anycable_remote_command(payload, meta default '{}')` should:
@@ -85,10 +85,9 @@ Rollback semantics:
 ## Go Adapter Changes
 
 - Move schema rendering and verification into the `postgres` package.
-- Add an explicit schema mode after maintainer confirmation:
-  - `validate`: fail if required PostgreSQL objects are missing or incompatible.
-  - `ensure`: create or update the schema idempotently on startup.
-  - `setup`: optional explicit command path if startup DDL is not desired in production.
+- Automatically create or actualize the PostgreSQL schema when a PostgreSQL-backed component is active.
+- Add a concise opt-out flag, for example `--disable-postgres-schema-check`, for deployments that manage schema separately.
+- Fail startup when PostgreSQL schema checking is enabled and required tables, functions, or indexes are missing or incompatible.
 - Rework PostgreSQL pub/sub polling around one global cursor:
 
 ```sql
@@ -100,6 +99,7 @@ LIMIT $2;
 ```
 
 - Maintain the local subscription map in Go.
+- Treat `NOTIFY` payloads as stream names. A notification means "this stream changed recently; catch up if this node is subscribed."
 - Route fetched rows locally only when the row stream is subscribed.
 - Advance the global cursor across ignored rows too, so unrelated streams do not cause repeated reads.
 - Avoid passing already-positioned publications through broker paths that overwrite `Offset` and `Epoch`.
@@ -115,6 +115,9 @@ LIMIT $2;
 Schema and function tests:
 
 - Schema creation is idempotent.
+- Schema actualization runs automatically when PostgreSQL-backed components are active.
+- `--disable-postgres-schema-check` skips automatic schema creation/modification for externally managed schemas.
+- Startup fails when schema checking is enabled and the database schema is missing or mismatched.
 - Validation fails clearly when a required table, function, or index is missing or incompatible.
 - Invalid table names or prefixes are rejected before SQL execution.
 - `anycable_publish` creates stream metadata lazily.
@@ -127,6 +130,7 @@ Schema and function tests:
 Pub/sub behavior tests:
 
 - One poll batch fetches publications globally, not per stream.
+- `NOTIFY` payloads include stream names so each node can check whether that stream is locally subscribed before fetching.
 - A node subscribed to `stream_a` receives only `stream_a` rows while advancing past `stream_b` rows.
 - Two nodes both receive the same publication when both are subscribed.
 - Repeated wakeups or ticks do not duplicate delivery.
@@ -147,7 +151,6 @@ Integration and regression tests:
 
 ## Maintainer Decision Gates
 
-- Should startup schema handling default to `validate`, `ensure`, or an explicit setup command?
 - Should this PR convert PostgreSQL broadcasting into fanout-style delivery now, or keep a smaller transitional adapter?
 - Should `anycable_publications.payload` be `jsonb`, `text`, or configurable?
 - Is broker/history support explicitly out of scope for this PR, with the schema prepared for it later?
