@@ -12,9 +12,10 @@ import (
 )
 
 type Listener struct {
-	config *Config
-	log    *slog.Logger
-	wake   func()
+	config  *Config
+	channel string
+	log     *slog.Logger
+	wake    func(string)
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -24,14 +25,15 @@ type Listener struct {
 // NewListener opens a dedicated connection and subscribes to the configured
 // NOTIFY channel. Notifications are intentionally used only as wake-up signals;
 // callers must fetch payloads from their tables.
-func NewListener(parent context.Context, config *Config, log *slog.Logger, wake func()) (*Listener, error) {
+func NewListener(parent context.Context, config *Config, channel string, log *slog.Logger, wake func(string)) (*Listener, error) {
 	ctx, cancel := context.WithCancel(parent)
 	listener := &Listener{
-		config: config,
-		log:    log,
-		wake:   wake,
-		ctx:    ctx,
-		cancel: cancel,
+		config:  config,
+		channel: channel,
+		log:     log,
+		wake:    wake,
+		ctx:     ctx,
+		cancel:  cancel,
 	}
 
 	if err := listener.connect(); err != nil {
@@ -52,7 +54,7 @@ func (l *Listener) Run(done chan error) {
 		if err == nil {
 			attempt = 0
 			l.log.With("channel", notification.Channel).Debug("received Postgres notification")
-			l.wake()
+			l.wake(notification.Payload)
 			continue
 		}
 
@@ -90,7 +92,7 @@ func (l *Listener) connect() error {
 		return fmt.Errorf("failed to connect Postgres listener: %w", err)
 	}
 
-	channel, err := QuoteIdentifier(l.config.NotifyChannel)
+	channel, err := QuoteIdentifier(l.channel)
 	if err != nil {
 		_ = conn.Close(context.Background())
 		return err
@@ -98,11 +100,11 @@ func (l *Listener) connect() error {
 
 	if _, err := conn.Exec(l.ctx, fmt.Sprintf("LISTEN %s", channel)); err != nil {
 		_ = conn.Close(context.Background())
-		return fmt.Errorf("failed to listen on Postgres channel %s: %w", l.config.NotifyChannel, err)
+		return fmt.Errorf("failed to listen on Postgres channel %s: %w", l.channel, err)
 	}
 
 	l.conn = conn
-	l.log.With("channel", l.config.NotifyChannel).Info("listening for Postgres notifications")
+	l.log.With("channel", l.channel).Info("listening for Postgres notifications")
 
 	return nil
 }

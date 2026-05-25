@@ -2,6 +2,7 @@ package pubsub
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -18,6 +19,12 @@ type postgresSubscriptionEntry struct {
 	cursor int64
 }
 
+type postgresNotification struct {
+	V      int    `json:"v"`
+	Stream string `json:"stream"`
+	Offset int64  `json:"offset"`
+}
+
 type PostgresSubscriber struct {
 	node   Handler
 	config *pgadapter.Config
@@ -32,6 +39,7 @@ type PostgresSubscriber struct {
 	once   sync.Once
 
 	subscriptions map[string]*postgresSubscriptionEntry
+	changed       map[string]struct{}
 	subMu         sync.RWMutex
 	pollMu        sync.Mutex
 	wakeCh        chan struct{}
@@ -57,6 +65,7 @@ func NewPostgresSubscriber(node Handler, config *pgadapter.Config, l *slog.Logge
 		node:           node,
 		config:         config,
 		subscriptions:  make(map[string]*postgresSubscriptionEntry),
+		changed:        make(map[string]struct{}),
 		log:            l.With("context", "pubsub").With("provider", "postgres"),
 		wakeCh:         make(chan struct{}, 1),
 		trackingEvents: false,
@@ -64,7 +73,7 @@ func NewPostgresSubscriber(node Handler, config *pgadapter.Config, l *slog.Logge
 	}, nil
 }
 
-// Start validates the shared contract and starts the cursor polling loop.
+// Start ensures the shared schema and starts the cursor polling loop.
 func (s *PostgresSubscriber) Start(done chan error) error {
 	s.ctx, s.cancel = context.WithCancel(context.Background())
 
@@ -77,12 +86,12 @@ func (s *PostgresSubscriber) Start(done chan error) error {
 			return err
 		}
 
-		if err := pgadapter.ValidateContract(ctx, nextPool, s.config); err != nil {
+		if err := pgadapter.EnsureSchema(ctx, nextPool, s.config); err != nil {
 			nextPool.Close()
 			return err
 		}
 
-		nextListener, err := pgadapter.NewListener(ctx, s.config, s.log, s.wake)
+		nextListener, err := pgadapter.NewListener(ctx, s.config, s.config.PubSubNotifyChannel, s.log, s.wakePayload)
 		if err != nil {
 			nextPool.Close()
 			return err
@@ -193,7 +202,25 @@ func (s *PostgresSubscriber) publish(stream string, msg interface{}) {
 	}
 
 	payload := string(utils.ToJSON(msg))
-	query := fmt.Sprintf("INSERT INTO %s (stream, payload) VALUES ($1, $2)", table)
+	offsetsTable, err := pgadapter.QuoteTableName(s.config.StreamOffsetsTable)
+	if err != nil {
+		s.log.Error("invalid Postgres stream offsets table", "error", err)
+		return
+	}
+
+	query := fmt.Sprintf(`
+WITH next_offset AS (
+  INSERT INTO %s AS offsets (scope, stream, "offset")
+  VALUES ('pubsub', $1, 1)
+  ON CONFLICT (scope, stream)
+  DO UPDATE SET "offset" = offsets."offset" + 1,
+                updated_at = now()
+  RETURNING "offset"
+)
+INSERT INTO %s (stream, "offset", payload, meta)
+SELECT $1, "offset", $2, '{}'
+FROM next_offset
+`, offsetsTable, table)
 
 	s.log.With("stream", stream).Debug("publish Postgres pub/sub message", "data", msg)
 
@@ -202,7 +229,7 @@ func (s *PostgresSubscriber) publish(stream string, msg interface{}) {
 		return
 	}
 
-	s.wake()
+	s.wakeStream(stream)
 }
 
 func (s *PostgresSubscriber) pollLoop() {
@@ -214,9 +241,9 @@ func (s *PostgresSubscriber) pollLoop() {
 		case <-s.ctx.Done():
 			return
 		case <-s.wakeCh:
-			s.pollOnce()
+			s.pollOnce(false)
 		case <-ticker.C:
-			s.pollOnce()
+			s.pollOnce(true)
 		}
 	}
 }
@@ -242,7 +269,7 @@ func (s *PostgresSubscriber) cleanupLoop() {
 	}
 }
 
-func (s *PostgresSubscriber) pollOnce() {
+func (s *PostgresSubscriber) pollOnce(all bool) {
 	// Serialize polls so a slow database round-trip cannot race another wake-up
 	// and deliver the same row twice to this node.
 	if !s.pollMu.TryLock() {
@@ -255,48 +282,67 @@ func (s *PostgresSubscriber) pollOnce() {
 		return
 	}
 
-	snapshot := s.subscriptionSnapshot()
-	for stream, cursor := range snapshot {
-		if err := s.pollStream(pool, stream, cursor); err != nil {
-			s.log.Error("failed to poll Postgres pub/sub stream", "stream", stream, "error", err)
-		}
+	if err := s.pollStreams(pool, s.subscriptionSnapshot(all)); err != nil && s.ctx.Err() == nil {
+		s.log.Error("failed to poll Postgres pub/sub streams", "error", err)
 	}
 }
 
-func (s *PostgresSubscriber) pollStream(pool *pgxpool.Pool, stream string, cursor int64) error {
+func (s *PostgresSubscriber) pollStreams(pool *pgxpool.Pool, cursors map[string]int64) error {
+	if len(cursors) == 0 {
+		return nil
+	}
+
 	table, err := pgadapter.QuoteTableName(s.config.PubSubTable)
 	if err != nil {
 		return err
 	}
 
+	streams := make([]string, 0, len(cursors))
+	offsets := make([]int64, 0, len(cursors))
+	for stream, cursor := range cursors {
+		streams = append(streams, stream)
+		offsets = append(offsets, cursor)
+	}
+
 	query := fmt.Sprintf(`
-SELECT id, payload
-FROM %s
-WHERE stream = $1
-  AND id > $2
-ORDER BY id
-LIMIT $3
+WITH cursors AS (
+  SELECT *
+  FROM unnest($1::text[], $2::bigint[]) AS c(stream, cursor_offset)
+)
+SELECT cursors.stream, publications."offset", publications.payload
+FROM cursors
+JOIN LATERAL (
+  SELECT "offset", payload
+  FROM %s
+  WHERE stream = cursors.stream
+    AND "offset" > cursors.cursor_offset
+  ORDER BY "offset"
+  LIMIT $3
+) publications ON true
+ORDER BY cursors.stream, publications."offset"
 `, table)
 
-	rows, err := pool.Query(s.ctx, query, stream, cursor, s.config.BatchLimit())
+	rows, err := pool.Query(s.ctx, query, streams, offsets, s.config.BatchLimit())
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
 
 	for rows.Next() {
-		var id int64
+		var stream string
+		var offset int64
 		var payload string
 
-		if err := rows.Scan(&id, &payload); err != nil {
+		if err := rows.Scan(&stream, &offset, &payload); err != nil {
 			return err
 		}
 
-		if !s.advanceCursor(stream, id) {
-			return nil
+		if !s.isSubscribed(stream) {
+			continue
 		}
 
 		s.deliver(stream, []byte(payload))
+		s.advanceCursor(stream, offset)
 	}
 
 	return rows.Err()
@@ -351,7 +397,7 @@ func (s *PostgresSubscriber) currentCursor(stream string) int64 {
 		return 0
 	}
 
-	query := fmt.Sprintf("SELECT COALESCE(MAX(id), 0) FROM %s WHERE stream = $1", table)
+	query := fmt.Sprintf("SELECT COALESCE(MAX(\"offset\"), 0) FROM %s WHERE stream = $1", table)
 
 	var cursor int64
 	if err := pool.QueryRow(context.Background(), query, stream).Scan(&cursor); err != nil {
@@ -369,14 +415,26 @@ func (s *PostgresSubscriber) currentPool() *pgxpool.Pool {
 	return s.pool
 }
 
-func (s *PostgresSubscriber) subscriptionSnapshot() map[string]int64 {
-	s.subMu.RLock()
-	defer s.subMu.RUnlock()
+func (s *PostgresSubscriber) subscriptionSnapshot(all bool) map[string]int64 {
+	s.subMu.Lock()
+	defer s.subMu.Unlock()
 
-	snapshot := make(map[string]int64, len(s.subscriptions))
-	for stream, entry := range s.subscriptions {
-		snapshot[stream] = entry.cursor
+	if all || len(s.changed) == 0 {
+		snapshot := make(map[string]int64, len(s.subscriptions))
+		for stream, entry := range s.subscriptions {
+			snapshot[stream] = entry.cursor
+		}
+		s.changed = make(map[string]struct{})
+		return snapshot
 	}
+
+	snapshot := make(map[string]int64, len(s.changed))
+	for stream := range s.changed {
+		if entry, ok := s.subscriptions[stream]; ok {
+			snapshot[stream] = entry.cursor
+		}
+	}
+	s.changed = make(map[string]struct{})
 
 	return snapshot
 }
@@ -397,11 +455,42 @@ func (s *PostgresSubscriber) advanceCursor(stream string, id int64) bool {
 	return true
 }
 
+func (s *PostgresSubscriber) isSubscribed(stream string) bool {
+	s.subMu.RLock()
+	defer s.subMu.RUnlock()
+
+	_, ok := s.subscriptions[stream]
+	return ok
+}
+
 func (s *PostgresSubscriber) wake() {
 	select {
 	case s.wakeCh <- struct{}{}:
 	default:
 	}
+}
+
+func (s *PostgresSubscriber) wakePayload(payload string) {
+	var notification postgresNotification
+	if err := json.Unmarshal([]byte(payload), &notification); err != nil || notification.V != 1 || notification.Stream == "" {
+		s.log.Warn("failed to parse Postgres pub/sub notification", "payload", logger.CompactValue(payload), "error", err)
+		s.wake()
+		return
+	}
+
+	s.wakeStream(notification.Stream)
+}
+
+func (s *PostgresSubscriber) wakeStream(stream string) {
+	s.subMu.Lock()
+	if _, ok := s.subscriptions[stream]; !ok {
+		s.subMu.Unlock()
+		return
+	}
+	s.changed[stream] = struct{}{}
+	s.subMu.Unlock()
+
+	s.wake()
 }
 
 // test-only

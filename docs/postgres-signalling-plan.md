@@ -96,15 +96,17 @@ retention cleanup removes old delivery rows:
 - allocation is transactional and atomic, using an upsert that increments the
   offset row and returns the new value.
 
+SQL examples quote `"offset"` because `OFFSET` is a PostgreSQL keyword.
+
 One possible allocation shape:
 
 ```sql
-INSERT INTO anycable_stream_offsets (scope, stream, offset)
+INSERT INTO anycable_stream_offsets (scope, stream, "offset")
 VALUES ($1, $2, 1)
 ON CONFLICT (scope, stream)
-DO UPDATE SET offset = anycable_stream_offsets.offset + 1,
+DO UPDATE SET "offset" = anycable_stream_offsets."offset" + 1,
               updated_at = now()
-RETURNING offset;
+RETURNING "offset";
 ```
 
 The offset increment and delivery-row insert should happen in the same
@@ -260,7 +262,7 @@ shape:
 
 ```sql
 WITH candidates AS (
-  SELECT broadcasts.stream, broadcasts.offset
+  SELECT broadcasts.stream, broadcasts."offset"
   FROM anycable_broadcasts broadcasts
   WHERE broadcasts.attempts < $attempts_limit
     AND broadcasts.exhausted_at IS NULL
@@ -272,13 +274,13 @@ WITH candidates AS (
       SELECT 1
       FROM anycable_broadcasts older
       WHERE older.stream = broadcasts.stream
-        AND older.offset < broadcasts.offset
+        AND older."offset" < broadcasts."offset"
         AND (
           older.exhausted_at IS NULL
           OR $exhausted_policy = 'block'
         )
     )
-  ORDER BY broadcasts.created_at, broadcasts.stream, broadcasts.offset
+  ORDER BY broadcasts.created_at, broadcasts.stream, broadcasts."offset"
   LIMIT $batch_limit
   FOR UPDATE SKIP LOCKED
 )
@@ -289,8 +291,8 @@ SET claimed_by = $node_id,
     last_error = NULL
 FROM candidates
 WHERE broadcasts.stream = candidates.stream
-  AND broadcasts.offset = candidates.offset
-RETURNING broadcasts.stream, broadcasts.offset, broadcasts.payload, broadcasts.attempts;
+  AND broadcasts."offset" = candidates."offset"
+RETURNING broadcasts.stream, broadcasts."offset", broadcasts.payload, broadcasts.attempts;
 ```
 
 This allows rows from different streams to be claimed in the same pass while
@@ -324,19 +326,19 @@ One possible shape:
 ```sql
 WITH cursors AS (
   SELECT *
-  FROM unnest($streams::text[], $offsets::bigint[]) AS c(stream, offset)
+  FROM unnest($streams::text[], $offsets::bigint[]) AS c(stream, cursor_offset)
 )
-SELECT cursors.stream, publications.offset, publications.payload
+SELECT cursors.stream, publications."offset", publications.payload
 FROM cursors
 JOIN LATERAL (
-  SELECT offset, payload
+  SELECT "offset", payload
   FROM anycable_pubsub
   WHERE stream = cursors.stream
-    AND offset > cursors.offset
-  ORDER BY offset
+    AND "offset" > cursors.cursor_offset
+  ORDER BY "offset"
   LIMIT $per_stream_limit
 ) publications ON true
-ORDER BY cursors.stream, publications.offset;
+ORDER BY cursors.stream, publications."offset";
 ```
 
 The exact SQL can change during implementation, but the key property is that

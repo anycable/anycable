@@ -48,7 +48,7 @@ func (*PostgresBroadcaster) IsFanout() bool {
 	return false
 }
 
-// Start validates the external schema contract, subscribes to wake-up
+// Start ensures the schema, subscribes to wake-up
 // notifications, and starts the polling/cleanup loops.
 func (b *PostgresBroadcaster) Start(done chan error) error {
 	if err := pgadapter.ValidateIdentifiers(b.config); err != nil {
@@ -66,12 +66,14 @@ func (b *PostgresBroadcaster) Start(done chan error) error {
 			return err
 		}
 
-		if err := pgadapter.ValidateContract(ctx, nextPool, b.config); err != nil {
+		if err := pgadapter.EnsureSchema(ctx, nextPool, b.config); err != nil {
 			nextPool.Close()
 			return err
 		}
 
-		nextListener, err := pgadapter.NewListener(ctx, b.config, b.log, b.wake)
+		nextListener, err := pgadapter.NewListener(ctx, b.config, b.config.BroadcastNotifyChannel, b.log, func(string) {
+			b.wake()
+		})
 		if err != nil {
 			nextPool.Close()
 			return err
@@ -161,6 +163,9 @@ func (b *PostgresBroadcaster) drain() {
 	for {
 		count, err := b.pollOnce()
 		if err != nil {
+			if b.ctx.Err() != nil {
+				return
+			}
 			b.log.Error("failed to poll Postgres broadcasts", "error", err)
 			return
 		}
@@ -177,15 +182,31 @@ func (b *PostgresBroadcaster) pollOnce() (int, error) {
 		return 0, err
 	}
 
-	// Claims are updated and returned in one statement so that concurrent nodes
-	// can share the table without processing the same row at the same time.
+	if err := b.finalizeExpiredFinalAttempts(table); err != nil {
+		return 0, err
+	}
+
 	query := fmt.Sprintf(`
 WITH candidates AS (
-  SELECT id
-  FROM %s
-  WHERE attempts < $4
-    AND (claimed_at IS NULL OR claimed_at < now() - ($1::bigint * interval '1 second'))
-  ORDER BY id
+  SELECT broadcasts.stream, broadcasts."offset"
+  FROM %s broadcasts
+  WHERE broadcasts.attempts < $4
+    AND broadcasts.exhausted_at IS NULL
+    AND (
+      broadcasts.claimed_at IS NULL
+      OR broadcasts.claimed_at < now() - ($1::bigint * interval '1 second')
+    )
+    AND NOT EXISTS (
+      SELECT 1
+      FROM %s older
+      WHERE older.stream = broadcasts.stream
+        AND older."offset" < broadcasts."offset"
+        AND (
+          older.exhausted_at IS NULL
+          OR $5 = 'block'
+        )
+    )
+  ORDER BY broadcasts.created_at, broadcasts.stream, broadcasts."offset"
   LIMIT $2
   FOR UPDATE SKIP LOCKED
 )
@@ -195,11 +216,12 @@ SET claimed_by = $3,
     attempts = broadcasts.attempts + 1,
     last_error = NULL
 FROM candidates
-WHERE broadcasts.id = candidates.id
-RETURNING broadcasts.id, broadcasts.payload, broadcasts.attempts
-`, table, table)
+WHERE broadcasts.stream = candidates.stream
+  AND broadcasts."offset" = candidates."offset"
+RETURNING broadcasts.stream, broadcasts."offset", broadcasts.payload, broadcasts.attempts
+`, table, table, table)
 
-	rows, err := b.pool.Query(b.ctx, query, b.config.ClaimTimeout(), b.config.BatchLimit(), b.config.NodeID(), b.config.AttemptsLimit())
+	rows, err := b.pool.Query(b.ctx, query, b.config.ClaimTimeout(), b.config.BatchLimit(), b.config.NodeID(), b.config.AttemptsLimit(), b.config.ExhaustedPolicy())
 	if err != nil {
 		return 0, err
 	}
@@ -207,25 +229,26 @@ RETURNING broadcasts.id, broadcasts.payload, broadcasts.attempts
 
 	count := 0
 	for rows.Next() {
-		var id int64
+		var stream string
+		var offset int64
 		var payload string
 		var attempts int
 
-		if err := rows.Scan(&id, &payload, &attempts); err != nil {
+		if err := rows.Scan(&stream, &offset, &payload, &attempts); err != nil {
 			return count, err
 		}
 
 		count++
 
 		if err := b.node.HandleBroadcast([]byte(payload)); err != nil {
-			b.log.Warn("failed to handle Postgres broadcast", "id", id, "attempts", attempts, "error", err)
+			b.log.Warn("failed to handle Postgres broadcast", "stream", stream, "offset", offset, "attempts", attempts, "error", err)
 
 			if attempts >= b.config.AttemptsLimit() {
-				if err := b.fail(id, err); err != nil {
+				if err := b.fail(stream, offset, err); err != nil {
 					return count, err
 				}
 			} else {
-				if err := b.release(id, err); err != nil {
+				if err := b.release(stream, offset, err); err != nil {
 					return count, err
 				}
 			}
@@ -233,7 +256,7 @@ RETURNING broadcasts.id, broadcasts.payload, broadcasts.attempts
 			continue
 		}
 
-		if err := b.ack(id); err != nil {
+		if err := b.ack(stream, offset); err != nil {
 			return count, err
 		}
 	}
@@ -245,26 +268,41 @@ RETURNING broadcasts.id, broadcasts.payload, broadcasts.attempts
 	return count, nil
 }
 
-func (b *PostgresBroadcaster) ack(id int64) error {
+func (b *PostgresBroadcaster) finalizeExpiredFinalAttempts(table string) error {
+	query := fmt.Sprintf(`
+UPDATE %s
+SET exhausted_at = now(),
+    last_error = COALESCE(last_error, 'claim timed out on final attempt')
+WHERE exhausted_at IS NULL
+  AND attempts >= $1
+  AND claimed_at IS NOT NULL
+  AND claimed_at < now() - ($2::bigint * interval '1 second')
+`, table)
+
+	_, err := b.pool.Exec(b.ctx, query, b.config.AttemptsLimit(), b.config.ClaimTimeout())
+	return err
+}
+
+func (b *PostgresBroadcaster) ack(stream string, offset int64) error {
 	table, err := pgadapter.QuoteTableName(b.config.BroadcastsTable)
 	if err != nil {
 		return err
 	}
 
-	query := fmt.Sprintf("DELETE FROM %s WHERE id = $1 AND claimed_by = $2", table)
-	_, err = b.pool.Exec(b.ctx, query, id, b.config.NodeID())
+	query := fmt.Sprintf("DELETE FROM %s WHERE stream = $1 AND \"offset\" = $2 AND claimed_by = $3", table)
+	_, err = b.pool.Exec(b.ctx, query, stream, offset, b.config.NodeID())
 	return err
 }
 
-func (b *PostgresBroadcaster) release(id int64, cause error) error {
-	return b.updateFailure(id, cause, false)
+func (b *PostgresBroadcaster) release(stream string, offset int64, cause error) error {
+	return b.updateFailure(stream, offset, cause, false)
 }
 
-func (b *PostgresBroadcaster) fail(id int64, cause error) error {
-	return b.updateFailure(id, cause, true)
+func (b *PostgresBroadcaster) fail(stream string, offset int64, cause error) error {
+	return b.updateFailure(stream, offset, cause, true)
 }
 
-func (b *PostgresBroadcaster) updateFailure(id int64, cause error, final bool) error {
+func (b *PostgresBroadcaster) updateFailure(stream string, offset int64, cause error, final bool) error {
 	table, err := pgadapter.QuoteTableName(b.config.BroadcastsTable)
 	if err != nil {
 		return err
@@ -276,7 +314,7 @@ func (b *PostgresBroadcaster) updateFailure(id int64, cause error, final bool) e
 	}
 
 	if final {
-		b.log.Error("Postgres broadcast attempts exhausted", "id", id, "error", lastError)
+		b.log.Error("Postgres broadcast attempts exhausted", "stream", stream, "offset", offset, "error", lastError)
 	}
 
 	// Non-final failures clear the claim so the row can be retried later. Final
@@ -284,12 +322,14 @@ func (b *PostgresBroadcaster) updateFailure(id int64, cause error, final bool) e
 	if final {
 		query := fmt.Sprintf(`
 UPDATE %s
-SET last_error = $2
-WHERE id = $1
-  AND claimed_by = $3
+SET last_error = $3,
+    exhausted_at = now()
+WHERE stream = $1
+  AND "offset" = $2
+  AND claimed_by = $4
 `, table)
 
-		_, err = b.pool.Exec(b.ctx, query, id, lastError, b.config.NodeID())
+		_, err = b.pool.Exec(b.ctx, query, stream, offset, lastError, b.config.NodeID())
 		return err
 	}
 
@@ -297,12 +337,13 @@ WHERE id = $1
 UPDATE %s
 SET claimed_by = NULL,
     claimed_at = NULL,
-    last_error = $2
-WHERE id = $1
-  AND claimed_by = $3
+    last_error = $3
+WHERE stream = $1
+  AND "offset" = $2
+  AND claimed_by = $4
 `, table)
 
-	_, err = b.pool.Exec(b.ctx, query, id, lastError, b.config.NodeID())
+	_, err = b.pool.Exec(b.ctx, query, stream, offset, lastError, b.config.NodeID())
 	return err
 }
 
@@ -312,13 +353,17 @@ func (b *PostgresBroadcaster) cleanup() error {
 		return err
 	}
 
+	if b.config.ExhaustedPolicy() == pgadapter.ExhaustedBroadcastPolicyBlock {
+		return nil
+	}
+
 	query := fmt.Sprintf(`
 DELETE FROM %s
-WHERE attempts >= $1
-  AND created_at < now() - ($2::bigint * interval '1 second')
+WHERE exhausted_at IS NOT NULL
+  AND exhausted_at < now() - ($1::bigint * interval '1 second')
 `, table)
 
-	_, err = b.pool.Exec(b.ctx, query, b.config.AttemptsLimit(), int64(b.config.RetentionDuration().Seconds()))
+	_, err = b.pool.Exec(b.ctx, query, int64(b.config.RetentionDuration().Seconds()))
 	return err
 }
 

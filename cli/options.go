@@ -844,10 +844,16 @@ func postgresCLIFlags(c *config.Config) []cli.Flag {
 			Destination: &c.Postgres.URL,
 		},
 		&cli.StringFlag{
-			Name:        "postgres_notify_channel",
-			Usage:       "Postgres NOTIFY channel used to wake polling loops",
-			Value:       c.Postgres.NotifyChannel,
-			Destination: &c.Postgres.NotifyChannel,
+			Name:        "postgres_broadcast_notify_channel",
+			Usage:       "Postgres NOTIFY channel used to wake app-to-server broadcast polling",
+			Value:       c.Postgres.BroadcastNotifyChannel,
+			Destination: &c.Postgres.BroadcastNotifyChannel,
+		},
+		&cli.StringFlag{
+			Name:        "postgres_pubsub_notify_channel",
+			Usage:       "Postgres NOTIFY channel used to wake node-to-node pub/sub polling",
+			Value:       c.Postgres.PubSubNotifyChannel,
+			Destination: &c.Postgres.PubSubNotifyChannel,
 		},
 		&cli.StringFlag{
 			Name:        "postgres_internal_stream",
@@ -868,10 +874,10 @@ func postgresCLIFlags(c *config.Config) []cli.Flag {
 			Destination: &c.Postgres.PubSubTable,
 		},
 		&cli.StringFlag{
-			Name:        "postgres_contract_table",
-			Usage:       "Postgres table used to validate the installed signalling contract",
-			Value:       c.Postgres.ContractTable,
-			Destination: &c.Postgres.ContractTable,
+			Name:        "postgres_stream_offsets_table",
+			Usage:       "Postgres table used for per-stream signalling offsets",
+			Value:       c.Postgres.StreamOffsetsTable,
+			Destination: &c.Postgres.StreamOffsetsTable,
 		},
 		&cli.IntFlag{
 			Name:        "postgres_poll_interval_milliseconds",
@@ -897,6 +903,12 @@ func postgresCLIFlags(c *config.Config) []cli.Flag {
 			Value:       c.Postgres.MaxAttempts,
 			Destination: &c.Postgres.MaxAttempts,
 		},
+		&cli.StringFlag{
+			Name:        "postgres_exhausted_broadcast_policy",
+			Usage:       "Policy for exhausted Postgres broadcast rows (skip or block)",
+			Value:       c.Postgres.ExhaustedBroadcastPolicy,
+			Destination: &c.Postgres.ExhaustedBroadcastPolicy,
+		},
 		&cli.Int64Flag{
 			Name:        "postgres_retention_ttl",
 			Usage:       "Seconds to keep old Postgres signalling rows before cleanup",
@@ -911,15 +923,15 @@ func postgresCLIFlags(c *config.Config) []cli.Flag {
 		},
 		&cli.IntFlag{
 			Name:        "postgres_startup_max_attempts",
-			Usage:       "Max Postgres startup attempts for connection and contract validation",
+			Usage:       "Max Postgres startup attempts for connection and schema validation",
 			Value:       c.Postgres.StartupMaxAttempts,
 			Destination: &c.Postgres.StartupMaxAttempts,
 		},
 		&cli.BoolFlag{
-			Name:        "postgres_validate_contract",
-			Usage:       "Validate Postgres signalling schema, version and triggers on startup",
-			Value:       c.Postgres.ValidateContract,
-			Destination: &c.Postgres.ValidateContract,
+			Name:        "postgres_ensure_schema",
+			Usage:       "Create or actualize the Postgres signalling schema on startup",
+			Value:       c.Postgres.EnsureSchema,
+			Destination: &c.Postgres.EnsureSchema,
 		},
 		&cli.StringFlag{
 			Name:        "postgres_claim_id",

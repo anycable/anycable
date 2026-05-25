@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
@@ -94,7 +93,7 @@ func TestPostgresBroadcasterFinalFailureKeepsClaim(t *testing.T) {
 	require.NoError(t, err)
 	defer broadcaster.Shutdown(context.Background()) // nolint:errcheck
 
-	id, err := insertPostgresBroadcast(pool, config, map[string]string{"stream": "any_test", "data": "broken"})
+	offset, err := insertPostgresBroadcast(pool, config, map[string]string{"stream": "any_test", "data": "broken"})
 	require.NoError(t, err)
 
 	table, err := pgadapter.QuoteTableName(config.BroadcastsTable)
@@ -104,20 +103,99 @@ func TestPostgresBroadcasterFinalFailureKeepsClaim(t *testing.T) {
 	var claimedAtPresent bool
 	var attempts int
 	var lastError string
+	var exhaustedAtPresent bool
 
 	require.Eventually(t, func() bool {
 		err := pool.QueryRow(
 			context.Background(),
-			fmt.Sprintf("SELECT claimed_by, claimed_at IS NOT NULL, attempts, last_error FROM %s WHERE id = $1", table),
-			id,
-		).Scan(&claimedBy, &claimedAtPresent, &attempts, &lastError)
+			fmt.Sprintf("SELECT claimed_by, claimed_at IS NOT NULL, attempts, last_error, exhausted_at IS NOT NULL FROM %s WHERE stream = $1 AND \"offset\" = $2", table),
+			"any_test",
+			offset,
+		).Scan(&claimedBy, &claimedAtPresent, &attempts, &lastError, &exhaustedAtPresent)
 
 		return err == nil &&
 			claimedBy == config.NodeID() &&
 			claimedAtPresent &&
 			attempts == 1 &&
-			lastError == "boom"
+			lastError == "boom" &&
+			exhaustedAtPresent
 	}, time.Second, 25*time.Millisecond)
+}
+
+func TestPostgresBroadcasterPollsBatchAcrossStreams(t *testing.T) {
+	config, pool := setupPostgresBroadcastTest(t)
+	defer pool.Close()
+	defer dropPostgresBroadcastTestTables(t, pool, config)
+
+	config.BatchSize = 2
+	require.NoError(t, pgadapter.EnsureSchema(context.Background(), pool, config))
+
+	handler := &postgresRecordingHandler{}
+	broadcaster := newPollingPostgresBroadcaster(handler, config, pool)
+
+	require.NoError(t, publishPostgresBroadcast(pool, config, map[string]string{"stream": "alpha", "data": "a1"}))
+	require.NoError(t, publishPostgresBroadcast(pool, config, map[string]string{"stream": "alpha", "data": "a2"}))
+	require.NoError(t, publishPostgresBroadcast(pool, config, map[string]string{"stream": "beta", "data": "b1"}))
+
+	count, err := broadcaster.pollOnce()
+	require.NoError(t, err)
+	assert.Equal(t, 2, count)
+	assert.ElementsMatch(t, []string{"a1", "b1"}, handler.data())
+
+	count, err = broadcaster.pollOnce()
+	require.NoError(t, err)
+	assert.Equal(t, 1, count)
+	assert.ElementsMatch(t, []string{"a1", "a2", "b1"}, handler.data())
+}
+
+func TestPostgresBroadcasterExhaustedPolicyControlsSameStreamProgress(t *testing.T) {
+	for _, tc := range []struct {
+		name            string
+		policy          string
+		secondPollCount int
+		expectedData    []string
+	}{
+		{
+			name:            "skip exhausted row",
+			policy:          pgadapter.ExhaustedBroadcastPolicySkip,
+			secondPollCount: 1,
+			expectedData:    []string{"broken", "later"},
+		},
+		{
+			name:            "block behind exhausted row",
+			policy:          pgadapter.ExhaustedBroadcastPolicyBlock,
+			secondPollCount: 0,
+			expectedData:    []string{"broken"},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			config, pool := setupPostgresBroadcastTest(t)
+			defer pool.Close()
+			defer dropPostgresBroadcastTestTables(t, pool, config)
+
+			config.BatchSize = 10
+			config.MaxAttempts = 1
+			config.ExhaustedBroadcastPolicy = tc.policy
+			require.NoError(t, pgadapter.EnsureSchema(context.Background(), pool, config))
+
+			handler := &postgresRecordingHandler{
+				failures: map[string]error{"broken": errors.New("boom")},
+			}
+			broadcaster := newPollingPostgresBroadcaster(handler, config, pool)
+
+			require.NoError(t, publishPostgresBroadcast(pool, config, map[string]string{"stream": "ordered", "data": "broken"}))
+			require.NoError(t, publishPostgresBroadcast(pool, config, map[string]string{"stream": "ordered", "data": "later"}))
+
+			count, err := broadcaster.pollOnce()
+			require.NoError(t, err)
+			assert.Equal(t, 1, count)
+
+			count, err = broadcaster.pollOnce()
+			require.NoError(t, err)
+			assert.Equal(t, tc.secondPollCount, count)
+			assert.Equal(t, tc.expectedData, handler.data())
+		})
+	}
 }
 
 func setupPostgresBroadcastTest(t *testing.T) (*pgadapter.Config, *pgxpool.Pool) {
@@ -125,16 +203,17 @@ func setupPostgresBroadcastTest(t *testing.T) (*pgadapter.Config, *pgxpool.Pool)
 
 	config := pgadapter.NewConfig()
 	config.URL = testPostgresBroadcastURL()
-	config.NotifyChannel = "anycable_test_signals"
+	config.BroadcastNotifyChannel = "anycable_test_broadcasts"
+	config.PubSubNotifyChannel = "anycable_test_pubsub"
 	config.InternalStream = "__anycable_test_internal__"
 	config.ClaimID = "postgres-test"
 	config.PollIntervalMilliseconds = 25
 	config.CleanupIntervalSeconds = 3600
 
 	suffix := fmt.Sprintf("%d", time.Now().UnixNano())
-	config.ContractTable = "anycable_contracts_" + suffix
 	config.BroadcastsTable = "anycable_broadcasts_" + suffix
 	config.PubSubTable = "anycable_pubsub_" + suffix
+	config.StreamOffsetsTable = "anycable_stream_offsets_" + suffix
 
 	pool, err := pgadapter.NewPool(context.Background(), &config)
 	require.NoError(t, err)
@@ -144,9 +223,14 @@ func setupPostgresBroadcastTest(t *testing.T) (*pgadapter.Config, *pgxpool.Pool)
 		t.Skipf("Skipping Postgres tests: %v", err)
 	}
 
-	installPostgresBroadcastTestTables(t, pool, &config)
-
 	return &config, pool
+}
+
+func newPollingPostgresBroadcaster(handler Handler, config *pgadapter.Config, pool *pgxpool.Pool) *PostgresBroadcaster {
+	broadcaster := NewPostgresBroadcaster(handler, config, slog.Default())
+	broadcaster.pool = pool
+	broadcaster.ctx = context.Background()
+	return broadcaster
 }
 
 func testPostgresBroadcastURL() string {
@@ -163,109 +247,58 @@ func publishPostgresBroadcast(pool *pgxpool.Pool, config *pgadapter.Config, payl
 }
 
 func insertPostgresBroadcast(pool *pgxpool.Pool, config *pgadapter.Config, payload map[string]string) (int64, error) {
-	table, err := pgadapter.QuoteTableName(config.BroadcastsTable)
-	if err != nil {
-		return 0, err
-	}
-
-	query := fmt.Sprintf("INSERT INTO %s (payload) VALUES ($1) RETURNING id", table)
 	var id int64
-	err = pool.QueryRow(context.Background(), query, string(utils.ToJSON(payload))).Scan(&id)
+	err := pool.QueryRow(context.Background(), "SELECT anycable_publish($1, $2, '{}')", payload["stream"], string(utils.ToJSON(payload))).Scan(&id)
 	return id, err
-}
-
-func installPostgresBroadcastTestTables(t *testing.T, pool *pgxpool.Pool, config *pgadapter.Config) {
-	t.Helper()
-
-	// Keep this schema in sync with the Rails generator migration so the
-	// broadcaster runs against the same contract applications install.
-	contractTable, err := pgadapter.QuoteTableName(config.ContractTable)
-	require.NoError(t, err)
-	broadcastsTable, err := pgadapter.QuoteTableName(config.BroadcastsTable)
-	require.NoError(t, err)
-	pubsubTable, err := pgadapter.QuoteTableName(config.PubSubTable)
-	require.NoError(t, err)
-	functionName, err := pgadapter.QuoteIdentifier("anycable_test_notify_" + strings.ReplaceAll(config.BroadcastsTable, "anycable_broadcasts_", ""))
-	require.NoError(t, err)
-	broadcastsTrigger, err := pgadapter.QuoteIdentifier(pgadapter.BroadcastsTriggerName)
-	require.NoError(t, err)
-	pubsubTrigger, err := pgadapter.QuoteIdentifier(pgadapter.PubSubTriggerName)
-	require.NoError(t, err)
-	channelLiteral := strings.ReplaceAll(config.NotifyChannel, "'", "''")
-
-	sql := fmt.Sprintf(`
-CREATE TABLE %s (
-  name text PRIMARY KEY,
-  version integer NOT NULL,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-
-INSERT INTO %s (name, version)
-VALUES ('%s', %d);
-
-CREATE TABLE %s (
-  id bigserial PRIMARY KEY,
-  payload text NOT NULL,
-  claimed_by text,
-  claimed_at timestamptz,
-  attempts integer NOT NULL DEFAULT 0,
-  last_error text,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-
-CREATE INDEX ON %s (claimed_at, id) WHERE claimed_at IS NOT NULL;
-CREATE INDEX ON %s (attempts, id);
-
-CREATE TABLE %s (
-  id bigserial PRIMARY KEY,
-  stream text NOT NULL,
-  payload text NOT NULL,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-
-CREATE INDEX ON %s (stream, id);
-CREATE INDEX ON %s (created_at);
-
-CREATE FUNCTION %s()
-RETURNS trigger
-LANGUAGE plpgsql
-AS $$
-BEGIN
-  PERFORM pg_notify('%s', json_build_object('v', 1, 'table', TG_TABLE_NAME, 'id', NEW.id)::text);
-  RETURN NEW;
-END;
-$$;
-
-CREATE TRIGGER %s
-AFTER INSERT ON %s
-FOR EACH ROW EXECUTE FUNCTION %s();
-
-CREATE TRIGGER %s
-AFTER INSERT ON %s
-FOR EACH ROW EXECUTE FUNCTION %s();
-`, contractTable, contractTable, pgadapter.ContractName, pgadapter.ContractVersion, broadcastsTable, broadcastsTable, broadcastsTable, pubsubTable, pubsubTable, pubsubTable, functionName, channelLiteral, broadcastsTrigger, broadcastsTable, functionName, pubsubTrigger, pubsubTable, functionName)
-
-	_, err = pool.Exec(context.Background(), sql)
-	require.NoError(t, err)
 }
 
 func dropPostgresBroadcastTestTables(t *testing.T, pool *pgxpool.Pool, config *pgadapter.Config) {
 	t.Helper()
 
-	contractTable, err := pgadapter.QuoteTableName(config.ContractTable)
-	require.NoError(t, err)
 	broadcastsTable, err := pgadapter.QuoteTableName(config.BroadcastsTable)
 	require.NoError(t, err)
 	pubsubTable, err := pgadapter.QuoteTableName(config.PubSubTable)
 	require.NoError(t, err)
-	functionName, err := pgadapter.QuoteIdentifier("anycable_test_notify_" + strings.ReplaceAll(config.BroadcastsTable, "anycable_broadcasts_", ""))
+	offsetsTable, err := pgadapter.QuoteTableName(config.StreamOffsetsTable)
 	require.NoError(t, err)
 
 	_, err = pool.Exec(context.Background(), fmt.Sprintf(`
 DROP TABLE IF EXISTS %s;
 DROP TABLE IF EXISTS %s;
 DROP TABLE IF EXISTS %s;
-DROP FUNCTION IF EXISTS %s();
-`, broadcastsTable, pubsubTable, contractTable, functionName))
+DROP FUNCTION IF EXISTS anycable_publish(text, text, text);
+DROP FUNCTION IF EXISTS anycable_remote_command(text, text);
+`, broadcastsTable, pubsubTable, offsetsTable))
 	require.NoError(t, err)
+}
+
+type postgresRecordingHandler struct {
+	failures map[string]error
+	handled  []map[string]string
+}
+
+func (h *postgresRecordingHandler) HandleBroadcast(data []byte) error {
+	var msg map[string]string
+	if err := json.Unmarshal(data, &msg); err != nil {
+		return err
+	}
+
+	h.handled = append(h.handled, msg)
+
+	if err, ok := h.failures[msg["data"]]; ok {
+		return err
+	}
+
+	return nil
+}
+
+func (h *postgresRecordingHandler) HandlePubSub(data []byte) {
+}
+
+func (h *postgresRecordingHandler) data() []string {
+	data := make([]string, 0, len(h.handled))
+	for _, msg := range h.handled {
+		data = append(data, msg["data"])
+	}
+	return data
 }

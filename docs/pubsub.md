@@ -61,7 +61,7 @@ See [configuration](./configuration.md) for available NATS configuration setting
 
 ### Postgres
 
-The Postgres pub/sub adapter stores inter-node messages in the `anycable_pubsub` table and uses PostgreSQL `LISTEN/NOTIFY` only to wake polling loops. Each node tracks cursors for its active streams and fetches payloads from Postgres, so message size is not limited by `NOTIFY`.
+The Postgres pub/sub adapter stores inter-node messages in the `anycable_pubsub` table and uses PostgreSQL `LISTEN/NOTIFY` only to wake polling loops. Each node tracks per-stream offset cursors for its active streams and fetches payloads from Postgres, so message size is not limited by `NOTIFY`.
 
 Use it with the Postgres broadcaster for a database-backed deployment:
 
@@ -71,4 +71,4 @@ $ anycable-go --broadcast_adapter=postgres --pubsub=postgres
 $ ANYCABLE_BROADCAST_ADAPTER=postgres ANYCABLE_PUBSUB=postgres anycable-go
 ```
 
-The same Postgres signalling contract used by the broadcaster is validated on startup.
+The same server-owned Postgres signalling schema used by the broadcaster is ensured and validated on startup.

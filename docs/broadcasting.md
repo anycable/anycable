@@ -123,7 +123,7 @@ See [configuration](./configuration.md#nats-configuration) for available NATS op
 
 > Enable via `--broadcast_adapter=postgres` (or `ANYCABLE_BROADCAST_ADAPTER=postgres`).
 
-Postgres broadcaster consumes publications from the `anycable_broadcasts` table. Applications insert the full AnyCable publication JSON into the `payload` column; anycable-go claims rows with `FOR UPDATE SKIP LOCKED`, processes them through the broker, and deletes them after successful delivery.
+Postgres broadcaster consumes publications from the `anycable_broadcasts` table. Applications publish through `anycable_publish(stream, payload, meta)` or `anycable_remote_command(payload, meta)`; anycable-go claims rows with `FOR UPDATE SKIP LOCKED`, processes them through the broker, and deletes them after successful delivery.
 
 Unlike PostgreSQL `NOTIFY`, the table stores the full payload, so publications are not constrained by the notification payload limit. A trigger still emits a small notification on insert, but that notification is only a wake-up signal. Polling remains the correctness fallback when notifications are missed or delayed.
 
@@ -133,7 +133,7 @@ For multi-node clusters, pair the broadcaster with the Postgres pub/sub adapter:
 $ anycable-go --broadcast_adapter=postgres --pubsub=postgres
 ```
 
-The Postgres schema is an explicit contract. On startup, anycable-go validates the contract version, required columns, and insert triggers before accepting traffic. See the Rails generator for the migration template, or create compatible tables manually if you are not using Rails.
+AnyCable-Go owns the required Postgres signalling schema by default. Set `--postgres_ensure_schema=false` only when another migration system manages the schema; startup still validates the required tables, indexes, triggers, and SQL functions before accepting traffic.
 
 ## Publication format
 

@@ -147,15 +147,19 @@ NATS channel for broadcasting (default: `"__anycable__"`).
 
 ## Postgres configuration
 
-Postgres settings are used by the `postgres` broadcast and pub/sub adapters. Tables store the full payloads; `NOTIFY` only wakes polling loops. See [broadcasting](./broadcasting.md#postgres) and [pub/sub](./pubsub.md#postgres) for the delivery model and schema contract expectations.
+Postgres settings are used by the `postgres` broadcast and pub/sub adapters. Tables store the full payloads; `NOTIFY` only wakes polling loops. See [broadcasting](./broadcasting.md#postgres) and [pub/sub](./pubsub.md#postgres) for the delivery model and schema expectations.
 
 **--postgres_url** (`ANYCABLE_POSTGRES_URL`)
 
 Postgres URL used by the Postgres broadcast and pub/sub adapters (default: `"postgres://localhost:5432/postgres?sslmode=disable"`).
 
-**--postgres_notify_channel** (`ANYCABLE_POSTGRES_NOTIFY_CHANNEL`)
+**--postgres_broadcast_notify_channel** (`ANYCABLE_POSTGRES_BROADCAST_NOTIFY_CHANNEL`)
 
-Postgres `NOTIFY` channel used to wake polling loops (default: `"anycable_signals"`).
+Postgres `NOTIFY` channel used to wake app-to-server broadcast polling (default: `"anycable_broadcasts"`).
+
+**--postgres_pubsub_notify_channel** (`ANYCABLE_POSTGRES_PUBSUB_NOTIFY_CHANNEL`)
+
+Postgres `NOTIFY` channel used to wake node-to-node pub/sub polling (default: `"anycable_pubsub"`).
 
 **--postgres_internal_stream** (`ANYCABLE_POSTGRES_INTERNAL_STREAM`)
 
@@ -169,13 +173,13 @@ Postgres table containing app-to-AnyCable broadcasts (default: `"anycable_broadc
 
 Postgres table containing AnyCable inter-node pub/sub messages (default: `"anycable_pubsub"`).
 
-**--postgres_contract_table** (`ANYCABLE_POSTGRES_CONTRACT_TABLE`)
+**--postgres_stream_offsets_table** (`ANYCABLE_POSTGRES_STREAM_OFFSETS_TABLE`)
 
-Postgres table containing the installed signalling contract version (default: `"anycable_contracts"`).
+Postgres table containing latest offsets per signalling scope and stream (default: `"anycable_stream_offsets"`).
 
-**--postgres_validate_contract** (`ANYCABLE_POSTGRES_VALIDATE_CONTRACT`)
+**--postgres_ensure_schema** (`ANYCABLE_POSTGRES_ENSURE_SCHEMA`)
 
-Validate the Postgres signalling schema, contract version, and insert triggers on startup (default: `true`).
+Create or actualize the Postgres signalling schema on startup. When disabled, AnyCable still validates the required tables, indexes, triggers, and SQL functions before accepting traffic (default: `true`).
 
 **--postgres_poll_interval_milliseconds** (`ANYCABLE_POSTGRES_POLL_INTERVAL_MILLISECONDS`)
 
@@ -193,6 +197,10 @@ Seconds before an unfinished broadcast claim may be retried by another AnyCable 
 
 Maximum number of failed processing attempts before a broadcast row is no longer retried (default: `5`).
 
+**--postgres_exhausted_broadcast_policy** (`ANYCABLE_POSTGRES_EXHAUSTED_BROADCAST_POLICY`)
+
+Policy for exhausted broadcast rows. `skip` lets later same-stream rows proceed after a row records `exhausted_at`; `block` keeps later same-stream rows behind the exhausted row until an operator removes or fixes it (default: `"skip"`).
+
 **--postgres_retention_ttl** (`ANYCABLE_POSTGRES_RETENTION_TTL`)
 
 Seconds to keep old Postgres signalling rows before cleanup (default: `300`).
@@ -203,7 +211,7 @@ Postgres cleanup interval in seconds (default: `60`).
 
 **--postgres_startup_max_attempts** (`ANYCABLE_POSTGRES_STARTUP_MAX_ATTEMPTS`)
 
-Maximum number of startup attempts for the Postgres connection and signalling contract validation (default: `5`). Retries use exponential backoff to tolerate short database readiness races, but persistent connection or contract errors still fail startup.
+Maximum number of startup attempts for the Postgres connection and signalling schema validation (default: `5`). Retries use exponential backoff to tolerate short database readiness races, but persistent connection or schema errors still fail startup.
 
 ## Logging settings
 
