@@ -5,9 +5,9 @@ It uses the following vocabulary:
 
 - A stream is a named topic, not a worker.
 - A publication is one event for one stream.
-- `publication.id` is a global fetch cursor used for batching.
+- `publication.id` is a durable row identity and optional lookup handle, not a stream position.
 - `publication.offset` plus `publication.epoch` is the stream-local position used for history and recovery semantics.
-- `NOTIFY` is only a wakeup signal; durable payload data lives in PostgreSQL.
+- `NOTIFY` carries the updated stream name as a wakeup signal; durable payload data lives in PostgreSQL.
 
 ## Target Shape
 
@@ -43,15 +43,15 @@ anycable_publications
 
 Primary indexes:
 
-- `anycable_publications(id)` for global batch reads.
-- `anycable_publications(stream, epoch, offset)` for future history and broker reads.
+- `anycable_publications(id)` for row identity and optional direct lookups.
+- `anycable_publications(stream, epoch, offset)` for changed-stream catch-up, history, and broker reads.
 - `anycable_publications(created_at)` for cleanup.
 - `anycable_streams(expires_at)` if stream metadata expiry is supported.
 
 Rollback semantics:
 
 - Stream offsets should be transactional. If the publish transaction rolls back, the stream offset increment rolls back too.
-- The global `id` may have gaps because it is backed by a PostgreSQL sequence. That is acceptable because it is only a batch cursor, not a stream position.
+- The global `id` may have gaps because it is backed by a PostgreSQL sequence. That is acceptable because it is only row identity, not a stream position.
 
 ## Dataflow
 
@@ -61,9 +61,9 @@ Rollback semantics:
 2. PostgreSQL upserts and locks the `anycable_streams` row for the stream.
 3. PostgreSQL increments `top_offset` and inserts a canonical `anycable_publications` row with `(stream, offset, epoch, payload)`.
 4. PostgreSQL sends `pg_notify` with the updated stream name, signalling that nodes interested in that stream should catch up.
-5. AnyCable nodes wake and batch-fetch publication rows by global `id`.
-6. Each node advances its global observed cursor across all fetched rows.
-7. Each node forwards only rows whose `stream` has local subscribers.
+5. AnyCable nodes wake and check whether the stream is locally subscribed.
+6. Interested nodes batch-fetch new publication rows for changed subscribed streams by stream-local position.
+7. Each node advances its observed cursor for the fetched stream.
 8. Connected clients receive the publication with stream-local `offset` and `epoch`.
 
 ## SQL Functions
@@ -88,20 +88,23 @@ Rollback semantics:
 - Automatically create or actualize the PostgreSQL schema when a PostgreSQL-backed component is active.
 - Add a concise opt-out flag, for example `--disable-postgres-schema-check`, for deployments that manage schema separately.
 - Fail startup when PostgreSQL schema checking is enabled and required tables, functions, or indexes are missing or incompatible.
-- Rework PostgreSQL pub/sub polling around one global cursor:
+- Rework PostgreSQL pub/sub polling around coalesced changed-stream catch-up:
 
 ```sql
 SELECT id, stream, offset, epoch, kind, payload
 FROM anycable_publications
-WHERE id > $1
-ORDER BY id
-LIMIT $2;
+WHERE stream = $1
+  AND epoch = $2
+  AND offset > $3
+ORDER BY offset
+LIMIT $4;
 ```
 
 - Maintain the local subscription map in Go.
 - Treat `NOTIFY` payloads as stream names. A notification means "this stream changed recently; catch up if this node is subscribed."
-- Route fetched rows locally only when the row stream is subscribed.
-- Advance the global cursor across ignored rows too, so unrelated streams do not cause repeated reads.
+- Coalesce pending stream names and batch-fetch changed subscribed streams instead of polling every subscribed stream. The single-stream query above can be generalized with a `VALUES` list of `(stream, epoch, offset)` cursors.
+- Track observed position per stream, using `offset` and `epoch`.
+- Ignore notifications for streams with no local subscribers.
 - Avoid passing already-positioned publications through broker paths that overwrite `Offset` and `Epoch`.
 
 ## Ruby and Rails Changes
@@ -129,9 +132,11 @@ Schema and function tests:
 
 Pub/sub behavior tests:
 
-- One poll batch fetches publications globally, not per stream.
+- The hot path does not query once for every subscribed stream.
 - `NOTIFY` payloads include stream names so each node can check whether that stream is locally subscribed before fetching.
-- A node subscribed to `stream_a` receives only `stream_a` rows while advancing past `stream_b` rows.
+- A node subscribed to `stream_a` fetches and receives only `stream_a` rows when `stream_a` is notified.
+- Notifications for unsubscribed streams do not trigger publication fetches.
+- Multiple changed subscribed streams can be coalesced into a bounded batch of catch-up reads.
 - Two nodes both receive the same publication when both are subscribed.
 - Repeated wakeups or ticks do not duplicate delivery.
 - Late subscription starts from the current tail unless a PostgreSQL broker/history mode is implemented.
