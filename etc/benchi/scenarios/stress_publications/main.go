@@ -11,6 +11,8 @@ import (
 	"io"
 	"math/rand/v2"
 	"os"
+	"runtime"
+	"runtime/pprof"
 	"strconv"
 	"sync/atomic"
 	"time"
@@ -38,6 +40,10 @@ type runConfig struct {
 	tolerance      int
 	seed           uint64
 	nonInteractive bool
+	cpuProfile     string
+	memProfile     string
+	blockProfile   string
+	mutexProfile   string
 }
 
 // runOpts is the testing seam. Production main constructs an empty value;
@@ -94,6 +100,10 @@ func parseFlags(args []string, stderr io.Writer) (runConfig, error) {
 	var seed int64
 	fs.Int64Var(&seed, "seed", 1, "RNG seed for stream-subset selection and per-tick stream choice")
 	fs.BoolVar(&cfg.nonInteractive, "non-interactive", false, "suppress lifecycle logs and progress bar on stderr; emit only the key=value summary on stdout (auto-on when stderr is not a TTY)")
+	fs.StringVar(&cfg.cpuProfile, "cpu-profile", "", "if set, write CPU profile (scoped to publish window) to this path")
+	fs.StringVar(&cfg.memProfile, "mem-profile", "", "if set, write heap profile to this path after the publish window")
+	fs.StringVar(&cfg.blockProfile, "block-profile", "", "if set, enable block profiling at rate=1 and write to this path after the run")
+	fs.StringVar(&cfg.mutexProfile, "mutex-profile", "", "if set, enable mutex profiling at fraction=1 and write to this path after the run")
 
 	if err := fs.Parse(args); err != nil {
 		return cfg, err
@@ -147,6 +157,13 @@ type summary struct {
 func runWithConfig(cfg runConfig, opts runOpts, stdout, stderr io.Writer) int {
 	ctx := context.Background()
 	u := newUI(stderr, cfg.nonInteractive)
+
+	if cfg.blockProfile != "" {
+		runtime.SetBlockProfileRate(1)
+	}
+	if cfg.mutexProfile != "" {
+		runtime.SetMutexProfileFraction(1)
+	}
 
 	u.logf("starting embedded AnyCable server...")
 	server, err := lib.BuildServer(lib.ServerConfig{})
@@ -225,11 +242,67 @@ func runWithConfig(cfg runConfig, opts runOpts, stdout, stderr io.Writer) int {
 		bar{label: "publishing", total: totalSchedule, get: pub.CompletedCount},
 		bar{label: "receiving", total: expectedReceived, get: acc.TotalReceived},
 	)
+	if cfg.cpuProfile != "" {
+		f, err := os.Create(cfg.cpuProfile)
+		if err != nil {
+			fmt.Fprintln(stdout, "cpu-profile create failed:", err)
+			return 1
+		}
+		if err := pprof.StartCPUProfile(f); err != nil {
+			fmt.Fprintln(stdout, "cpu-profile start failed:", err)
+			return 1
+		}
+		defer func() {
+			pprof.StopCPUProfile()
+			f.Close()
+			u.logf("cpu profile written: %s", cfg.cpuProfile)
+		}()
+	}
 	publishStart := time.Now()
 	late := publishWindow(cfg, pub)
 	pub.Close()
 	publishWallSecs := time.Since(publishStart).Seconds()
 	pubSampler.Stop()
+	if cfg.cpuProfile != "" {
+		pprof.StopCPUProfile()
+	}
+	if cfg.memProfile != "" {
+		f, err := os.Create(cfg.memProfile)
+		if err != nil {
+			fmt.Fprintln(stdout, "mem-profile create failed:", err)
+		} else {
+			runtime.GC()
+			if err := pprof.WriteHeapProfile(f); err != nil {
+				fmt.Fprintln(stdout, "mem-profile write failed:", err)
+			}
+			f.Close()
+			u.logf("heap profile written: %s", cfg.memProfile)
+		}
+	}
+	if cfg.blockProfile != "" {
+		f, err := os.Create(cfg.blockProfile)
+		if err != nil {
+			fmt.Fprintln(stdout, "block-profile create failed:", err)
+		} else {
+			if err := pprof.Lookup("block").WriteTo(f, 0); err != nil {
+				fmt.Fprintln(stdout, "block-profile write failed:", err)
+			}
+			f.Close()
+			u.logf("block profile written: %s", cfg.blockProfile)
+		}
+	}
+	if cfg.mutexProfile != "" {
+		f, err := os.Create(cfg.mutexProfile)
+		if err != nil {
+			fmt.Fprintln(stdout, "mutex-profile create failed:", err)
+		} else {
+			if err := pprof.Lookup("mutex").WriteTo(f, 0); err != nil {
+				fmt.Fprintln(stdout, "mutex-profile write failed:", err)
+			}
+			f.Close()
+			u.logf("mutex profile written: %s", cfg.mutexProfile)
+		}
+	}
 
 	targets := pub.TargetCounts()
 	expected := computeExpected(pool, targets)
