@@ -6,7 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -198,6 +200,54 @@ func TestPostgresBroadcasterExhaustedPolicyControlsSameStreamProgress(t *testing
 	}
 }
 
+func TestPostgresBroadcasterFinalAttemptTimeoutUnblocksSkipPolicy(t *testing.T) {
+	config, pool := setupPostgresBroadcastTest(t)
+	defer pool.Close()
+	defer dropPostgresBroadcastTestTables(t, pool, config)
+
+	config.BatchSize = 10
+	config.ClaimTimeoutSeconds = 1
+	config.MaxAttempts = 1
+	config.ExhaustedBroadcastPolicy = pgadapter.ExhaustedBroadcastPolicySkip
+	require.NoError(t, pgadapter.EnsureSchema(context.Background(), pool, config))
+
+	firstOffset, err := insertPostgresBroadcast(pool, config, map[string]string{"stream": "ordered", "data": "timed-out"})
+	require.NoError(t, err)
+	require.NoError(t, publishPostgresBroadcast(pool, config, map[string]string{"stream": "ordered", "data": "later"}))
+
+	table, err := pgadapter.QuoteTableName(config.BroadcastsTable)
+	require.NoError(t, err)
+	_, err = pool.Exec(
+		context.Background(),
+		fmt.Sprintf("UPDATE %s SET claimed_by = $3, claimed_at = now() - interval '5 seconds', attempts = $4 WHERE stream = $1 AND \"offset\" = $2", table),
+		"ordered",
+		firstOffset,
+		config.NodeID(),
+		config.AttemptsLimit(),
+	)
+	require.NoError(t, err)
+
+	handler := &postgresRecordingHandler{}
+	broadcaster := newPollingPostgresBroadcaster(handler, config, pool)
+
+	count, err := broadcaster.pollOnce()
+	require.NoError(t, err)
+	assert.Equal(t, 1, count)
+	assert.Equal(t, []string{"later"}, handler.data())
+
+	var exhaustedAtPresent bool
+	var lastError string
+	err = pool.QueryRow(
+		context.Background(),
+		fmt.Sprintf("SELECT exhausted_at IS NOT NULL, last_error FROM %s WHERE stream = $1 AND \"offset\" = $2", table),
+		"ordered",
+		firstOffset,
+	).Scan(&exhaustedAtPresent, &lastError)
+	require.NoError(t, err)
+	assert.True(t, exhaustedAtPresent)
+	assert.Equal(t, "claim timed out on final attempt", lastError)
+}
+
 func setupPostgresBroadcastTest(t *testing.T) (*pgadapter.Config, *pgxpool.Pool) {
 	t.Helper()
 
@@ -211,9 +261,14 @@ func setupPostgresBroadcastTest(t *testing.T) (*pgadapter.Config, *pgxpool.Pool)
 	config.CleanupIntervalSeconds = 3600
 
 	suffix := fmt.Sprintf("%d", time.Now().UnixNano())
-	config.BroadcastsTable = "anycable_broadcasts_" + suffix
-	config.PubSubTable = "anycable_pubsub_" + suffix
-	config.StreamOffsetsTable = "anycable_stream_offsets_" + suffix
+	schema := "anycable_test_broadcast_" + suffix
+
+	config.URL = testPostgresBroadcastURLWithSearchPath(config.URL, schema)
+	config.BroadcastsTable = schema + ".anycable_broadcasts"
+	config.PubSubTable = schema + ".anycable_pubsub"
+	config.StreamOffsetsTable = schema + ".anycable_stream_offsets"
+
+	createPostgresBroadcastTestSchema(t, testPostgresBroadcastURL(), schema)
 
 	pool, err := pgadapter.NewPool(context.Background(), &config)
 	require.NoError(t, err)
@@ -224,6 +279,26 @@ func setupPostgresBroadcastTest(t *testing.T) (*pgadapter.Config, *pgxpool.Pool)
 	}
 
 	return &config, pool
+}
+
+func createPostgresBroadcastTestSchema(t *testing.T, rawURL string, schema string) {
+	t.Helper()
+
+	config := pgadapter.NewConfig()
+	config.URL = rawURL
+
+	pool, err := pgadapter.NewPool(context.Background(), &config)
+	require.NoError(t, err)
+	defer pool.Close()
+
+	if err := pool.Ping(context.Background()); err != nil {
+		t.Skipf("Skipping Postgres tests: %v", err)
+	}
+
+	quotedSchema, err := pgadapter.QuoteIdentifier(schema)
+	require.NoError(t, err)
+	_, err = pool.Exec(context.Background(), fmt.Sprintf("CREATE SCHEMA %s", quotedSchema))
+	require.NoError(t, err)
 }
 
 func newPollingPostgresBroadcaster(handler Handler, config *pgadapter.Config, pool *pgxpool.Pool) *PostgresBroadcaster {
@@ -241,6 +316,19 @@ func testPostgresBroadcastURL() string {
 	return "postgres://localhost:5432/postgres?sslmode=disable"
 }
 
+func testPostgresBroadcastURLWithSearchPath(rawURL string, schema string) string {
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return rawURL
+	}
+
+	query := parsed.Query()
+	query.Set("search_path", schema)
+	parsed.RawQuery = query.Encode()
+
+	return parsed.String()
+}
+
 func publishPostgresBroadcast(pool *pgxpool.Pool, config *pgadapter.Config, payload map[string]string) error {
 	_, err := insertPostgresBroadcast(pool, config, payload)
 	return err
@@ -255,6 +343,14 @@ func insertPostgresBroadcast(pool *pgxpool.Pool, config *pgadapter.Config, paylo
 func dropPostgresBroadcastTestTables(t *testing.T, pool *pgxpool.Pool, config *pgadapter.Config) {
 	t.Helper()
 
+	if schema, ok := postgresBroadcastTestSchema(config.BroadcastsTable); ok {
+		quotedSchema, err := pgadapter.QuoteIdentifier(schema)
+		require.NoError(t, err)
+		_, err = pool.Exec(context.Background(), fmt.Sprintf("DROP SCHEMA IF EXISTS %s CASCADE", quotedSchema))
+		require.NoError(t, err)
+		return
+	}
+
 	broadcastsTable, err := pgadapter.QuoteTableName(config.BroadcastsTable)
 	require.NoError(t, err)
 	pubsubTable, err := pgadapter.QuoteTableName(config.PubSubTable)
@@ -266,10 +362,17 @@ func dropPostgresBroadcastTestTables(t *testing.T, pool *pgxpool.Pool, config *p
 DROP TABLE IF EXISTS %s;
 DROP TABLE IF EXISTS %s;
 DROP TABLE IF EXISTS %s;
-DROP FUNCTION IF EXISTS anycable_publish(text, text, text);
-DROP FUNCTION IF EXISTS anycable_remote_command(text, text);
 `, broadcastsTable, pubsubTable, offsetsTable))
 	require.NoError(t, err)
+}
+
+func postgresBroadcastTestSchema(table string) (string, bool) {
+	schema, _, ok := strings.Cut(table, ".")
+	if !ok || schema == "" {
+		return "", false
+	}
+
+	return schema, true
 }
 
 type postgresRecordingHandler struct {

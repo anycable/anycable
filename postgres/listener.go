@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/anycable/anycable-go/utils"
@@ -20,6 +21,11 @@ type Listener struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 	conn   *pgx.Conn
+	done   chan struct{}
+
+	mu         sync.Mutex
+	runStarted bool
+	closed     bool
 }
 
 // NewListener opens a dedicated connection and subscribes to the configured
@@ -34,6 +40,7 @@ func NewListener(parent context.Context, config *Config, channel string, log *sl
 		wake:    wake,
 		ctx:     ctx,
 		cancel:  cancel,
+		done:    make(chan struct{}),
 	}
 
 	if err := listener.connect(); err != nil {
@@ -47,6 +54,17 @@ func NewListener(parent context.Context, config *Config, channel string, log *sl
 // Run waits for notifications and calls wake for every received signal. If the
 // connection drops, it reconnects and re-issues LISTEN.
 func (l *Listener) Run(done chan error) {
+	l.mu.Lock()
+	if l.closed {
+		l.mu.Unlock()
+		return
+	}
+	l.runStarted = true
+	l.mu.Unlock()
+
+	defer close(l.done)
+	defer l.closeConn(context.Background()) // nolint:errcheck
+
 	attempt := 0
 
 	for {
@@ -79,11 +97,21 @@ func (l *Listener) Run(done chan error) {
 func (l *Listener) Shutdown(ctx context.Context) error {
 	l.cancel()
 
-	if l.conn == nil {
-		return nil
+	l.mu.Lock()
+	if !l.runStarted {
+		l.closed = true
+		l.mu.Unlock()
+		return l.closeConn(ctx)
 	}
+	done := l.done
+	l.mu.Unlock()
 
-	return l.conn.Close(ctx)
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 func (l *Listener) connect() error {
@@ -136,4 +164,14 @@ func (l *Listener) reconnect(attempt *int) error {
 		l.log.Info("reconnected Postgres listener")
 		return nil
 	}
+}
+
+func (l *Listener) closeConn(ctx context.Context) error {
+	if l.conn == nil {
+		return nil
+	}
+
+	err := l.conn.Close(ctx)
+	l.conn = nil
+	return err
 }

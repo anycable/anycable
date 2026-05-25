@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -113,9 +115,16 @@ func TestPostgresEnsureSchema(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), offset)
 
-	trigger, err := QuoteIdentifier(BroadcastsTriggerName)
-	require.NoError(t, err)
+	var storedPayload string
+	var storedMeta string
 	broadcastsTable, err := QuoteTableName(config.BroadcastsTable)
+	require.NoError(t, err)
+	err = pool.QueryRow(ctx, fmt.Sprintf("SELECT payload, meta FROM %s WHERE stream = $1 AND \"offset\" = $2", broadcastsTable), "any_test", offset).Scan(&storedPayload, &storedMeta)
+	require.NoError(t, err)
+	assert.Equal(t, "payload", storedPayload)
+	assert.Equal(t, "meta", storedMeta)
+
+	trigger, err := QuoteIdentifier(BroadcastsTriggerName)
 	require.NoError(t, err)
 
 	_, err = pool.Exec(ctx, fmt.Sprintf("ALTER TABLE %s DISABLE TRIGGER %s", broadcastsTable, trigger))
@@ -124,7 +133,7 @@ func TestPostgresEnsureSchema(t *testing.T) {
 	config.EnsureSchema = false
 	err = EnsureSchema(ctx, pool, config)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "enabled INSERT trigger")
+	assert.Contains(t, err.Error(), "enabled AFTER INSERT row trigger")
 
 	config.EnsureSchema = true
 	require.NoError(t, EnsureSchema(ctx, pool, config))
@@ -142,6 +151,153 @@ func TestPostgresEnsureSchema(t *testing.T) {
 	assert.Contains(t, err.Error(), BroadcastsTriggerName)
 }
 
+func TestPostgresEnsureSchemaValidatesFunctionAndTriggerContracts(t *testing.T) {
+	t.Run("function signature", func(t *testing.T) {
+		ctx := context.Background()
+		config, pool := setupContractTest(t)
+		defer pool.Close()
+		defer dropContractTestTables(t, pool, config)
+
+		require.NoError(t, EnsureSchema(ctx, pool, config))
+
+		_, err := pool.Exec(ctx, `
+DROP FUNCTION anycable_publish(text, text, text);
+CREATE FUNCTION anycable_publish(target_stream text, payload jsonb, meta text DEFAULT '{}')
+RETURNS bigint
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN 1;
+END;
+$$;
+`)
+		require.NoError(t, err)
+
+		config.EnsureSchema = false
+		err = EnsureSchema(ctx, pool, config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "anycable_publish(text, text, text)")
+	})
+
+	t.Run("function body", func(t *testing.T) {
+		ctx := context.Background()
+		config, pool := setupContractTest(t)
+		defer pool.Close()
+		defer dropContractTestTables(t, pool, config)
+
+		require.NoError(t, EnsureSchema(ctx, pool, config))
+
+		_, err := pool.Exec(ctx, `
+CREATE OR REPLACE FUNCTION anycable_publish(target_stream text, payload text, meta text DEFAULT '{}')
+RETURNS bigint
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN 1;
+END;
+$$;
+`)
+		require.NoError(t, err)
+
+		config.EnsureSchema = false
+		err = EnsureSchema(ctx, pool, config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "body does not match expected contract")
+	})
+
+	t.Run("trigger function body", func(t *testing.T) {
+		ctx := context.Background()
+		config, pool := setupContractTest(t)
+		defer pool.Close()
+		defer dropContractTestTables(t, pool, config)
+
+		require.NoError(t, EnsureSchema(ctx, pool, config))
+
+		broadcastFn, err := QuoteIdentifier(triggerFunctionName(config.BroadcastsTable, broadcastScope))
+		require.NoError(t, err)
+		_, err = pool.Exec(ctx, fmt.Sprintf(`
+CREATE OR REPLACE FUNCTION %s()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  PERFORM pg_notify('wrong_channel', '{}');
+  RETURN NEW;
+END;
+$$;
+`, broadcastFn))
+		require.NoError(t, err)
+
+		config.EnsureSchema = false
+		err = EnsureSchema(ctx, pool, config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "payload contract")
+	})
+
+	t.Run("trigger function identity", func(t *testing.T) {
+		ctx := context.Background()
+		config, pool := setupContractTest(t)
+		defer pool.Close()
+		defer dropContractTestTables(t, pool, config)
+
+		require.NoError(t, EnsureSchema(ctx, pool, config))
+
+		broadcastsTable, err := QuoteTableName(config.BroadcastsTable)
+		require.NoError(t, err)
+		broadcastTrigger, err := QuoteIdentifier(BroadcastsTriggerName)
+		require.NoError(t, err)
+		wrongFn, err := QuoteIdentifier(triggerFunctionName(config.BroadcastsTable, "wrong"))
+		require.NoError(t, err)
+
+		_, err = pool.Exec(ctx, fmt.Sprintf(`
+CREATE FUNCTION %s()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN NEW;
+END;
+$$;
+DROP TRIGGER %s ON %s;
+CREATE TRIGGER %s
+AFTER INSERT ON %s
+FOR EACH ROW EXECUTE FUNCTION %s();
+`, wrongFn, broadcastTrigger, broadcastsTable, broadcastTrigger, broadcastsTable, wrongFn))
+		require.NoError(t, err)
+
+		config.EnsureSchema = false
+		err = EnsureSchema(ctx, pool, config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "using function")
+	})
+}
+
+func TestPostgresEnsureSchemaActualizesPartialTables(t *testing.T) {
+	ctx := context.Background()
+	config, pool := setupContractTest(t)
+	defer pool.Close()
+	defer dropContractTestTables(t, pool, config)
+
+	broadcastsTable, err := QuoteTableName(config.BroadcastsTable)
+	require.NoError(t, err)
+	pubsubTable, err := QuoteTableName(config.PubSubTable)
+	require.NoError(t, err)
+
+	_, err = pool.Exec(ctx, fmt.Sprintf(`
+CREATE TABLE %s (
+  id bigserial PRIMARY KEY
+);
+
+CREATE TABLE %s (
+  id bigserial PRIMARY KEY
+);
+`, broadcastsTable, pubsubTable))
+	require.NoError(t, err)
+
+	require.NoError(t, EnsureSchema(ctx, pool, config))
+	require.NoError(t, ValidateSchema(ctx, pool, config))
+}
+
 func setupContractTest(t *testing.T) (*Config, *pgxpool.Pool) {
 	t.Helper()
 
@@ -154,10 +310,14 @@ func setupContractTest(t *testing.T) (*Config, *pgxpool.Pool) {
 	config.CleanupIntervalSeconds = 3600
 
 	suffix := fmt.Sprintf("%d", time.Now().UnixNano())
+	schema := "anycable_test_" + suffix
 
-	config.BroadcastsTable = "anycable_broadcasts_" + suffix
-	config.PubSubTable = "anycable_pubsub_" + suffix
-	config.StreamOffsetsTable = "anycable_stream_offsets_" + suffix
+	config.URL = testPostgresURLWithSearchPath(config.URL, schema)
+	config.BroadcastsTable = schema + ".anycable_broadcasts"
+	config.PubSubTable = schema + ".anycable_pubsub"
+	config.StreamOffsetsTable = schema + ".anycable_stream_offsets"
+
+	createContractTestSchema(t, testPostgresURL(), schema)
 
 	pool, err := NewPool(context.Background(), &config)
 	require.NoError(t, err)
@@ -170,6 +330,26 @@ func setupContractTest(t *testing.T) (*Config, *pgxpool.Pool) {
 	return &config, pool
 }
 
+func createContractTestSchema(t *testing.T, rawURL string, schema string) {
+	t.Helper()
+
+	config := NewConfig()
+	config.URL = rawURL
+
+	pool, err := NewPool(context.Background(), &config)
+	require.NoError(t, err)
+	defer pool.Close()
+
+	if err := pool.Ping(context.Background()); err != nil {
+		t.Skipf("Skipping Postgres tests: %v", err)
+	}
+
+	quotedSchema, err := QuoteIdentifier(schema)
+	require.NoError(t, err)
+	_, err = pool.Exec(context.Background(), fmt.Sprintf("CREATE SCHEMA %s", quotedSchema))
+	require.NoError(t, err)
+}
+
 func testPostgresURL() string {
 	if url := os.Getenv("ANYCABLE_POSTGRES_TEST_URL"); url != "" {
 		return url
@@ -178,10 +358,31 @@ func testPostgresURL() string {
 	return "postgres://localhost:5432/postgres?sslmode=disable"
 }
 
+func testPostgresURLWithSearchPath(rawURL string, schema string) string {
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return rawURL
+	}
+
+	query := parsed.Query()
+	query.Set("search_path", schema)
+	parsed.RawQuery = query.Encode()
+
+	return parsed.String()
+}
+
 func dropContractTestTables(t *testing.T, pool *pgxpool.Pool, config *Config) {
 	t.Helper()
 
 	ctx := context.Background()
+	if schema, ok := contractTestSchema(config.BroadcastsTable); ok {
+		quotedSchema, err := QuoteIdentifier(schema)
+		require.NoError(t, err)
+		_, err = pool.Exec(ctx, fmt.Sprintf("DROP SCHEMA IF EXISTS %s CASCADE", quotedSchema))
+		require.NoError(t, err)
+		return
+	}
+
 	broadcastsTable, err := QuoteTableName(config.BroadcastsTable)
 	require.NoError(t, err)
 	pubsubTable, err := QuoteTableName(config.PubSubTable)
@@ -190,6 +391,7 @@ func dropContractTestTables(t *testing.T, pool *pgxpool.Pool, config *Config) {
 	require.NoError(t, err)
 	broadcastFn, _ := QuoteIdentifier(triggerFunctionName(config.BroadcastsTable, broadcastScope))
 	pubsubFn, _ := QuoteIdentifier(triggerFunctionName(config.PubSubTable, pubSubScope))
+	wrongFn, _ := QuoteIdentifier(triggerFunctionName(config.BroadcastsTable, "wrong"))
 
 	_, err = pool.Exec(ctx, fmt.Sprintf(`
 DROP TABLE IF EXISTS %s;
@@ -197,10 +399,18 @@ DROP TABLE IF EXISTS %s;
 DROP TABLE IF EXISTS %s;
 DROP FUNCTION IF EXISTS %s();
 DROP FUNCTION IF EXISTS %s();
-DROP FUNCTION IF EXISTS anycable_publish(text, text, text);
-DROP FUNCTION IF EXISTS anycable_remote_command(text, text);
-`, broadcastsTable, pubsubTable, offsetsTable, broadcastFn, pubsubFn))
+DROP FUNCTION IF EXISTS %s();
+`, broadcastsTable, pubsubTable, offsetsTable, broadcastFn, pubsubFn, wrongFn))
 	require.NoError(t, err)
+}
+
+func contractTestSchema(table string) (string, bool) {
+	schema, _, ok := strings.Cut(table, ".")
+	if !ok || schema == "" {
+		return "", false
+	}
+
+	return schema, true
 }
 
 func callPublish(ctx context.Context, pool *pgxpool.Pool, stream string, payload string, meta string) (int64, error) {

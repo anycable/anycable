@@ -105,19 +105,62 @@ func ValidateSchema(ctx context.Context, pool *pgxpool.Pool, config *Config) err
 		}
 	}
 
-	if err := validateTrigger(ctx, pool, config.BroadcastsTable, BroadcastsTriggerName); err != nil {
+	if err := validateTrigger(ctx, pool, config.BroadcastsTable, BroadcastsTriggerName, triggerFunctionName(config.BroadcastsTable, broadcastScope)); err != nil {
 		return err
 	}
 
-	if err := validateTrigger(ctx, pool, config.PubSubTable, PubSubTriggerName); err != nil {
+	if err := validateTrigger(ctx, pool, config.PubSubTable, PubSubTriggerName, triggerFunctionName(config.PubSubTable, pubSubScope)); err != nil {
 		return err
 	}
 
-	if err := validateFunction(ctx, pool, "anycable_publish", 3); err != nil {
+	if err := validateTriggerFunction(ctx, pool, triggerFunctionName(config.BroadcastsTable, broadcastScope), config.BroadcastNotifyChannel); err != nil {
 		return err
 	}
 
-	if err := validateFunction(ctx, pool, "anycable_remote_command", 2); err != nil {
+	if err := validateTriggerFunction(ctx, pool, triggerFunctionName(config.PubSubTable, pubSubScope), config.PubSubNotifyChannel); err != nil {
+		return err
+	}
+
+	if err := validateFunction(ctx, pool, "anycable_publish", "text, text, text", 1); err != nil {
+		return err
+	}
+
+	if err := validateFunction(ctx, pool, "anycable_remote_command", "text, text", 1); err != nil {
+		return err
+	}
+
+	offsetsTable, err := QuoteTableName(config.StreamOffsetsTable)
+	if err != nil {
+		return err
+	}
+	broadcastsTable, err := QuoteTableName(config.BroadcastsTable)
+	if err != nil {
+		return err
+	}
+
+	if err := validateFunctionBody(ctx, pool, "anycable_publish", [][]string{
+		{"INSERT INTO"},
+		{config.StreamOffsetsTable, offsetsTable},
+		{config.BroadcastsTable, broadcastsTable},
+		{"ON CONFLICT (scope, stream)"},
+		{`RETURNING "offset"`},
+		{"target_stream"},
+		{"payload"},
+		{"meta"},
+	}); err != nil {
+		return err
+	}
+
+	if err := validateFunctionBody(ctx, pool, "anycable_remote_command", [][]string{
+		{"INSERT INTO"},
+		{config.StreamOffsetsTable, offsetsTable},
+		{config.BroadcastsTable, broadcastsTable},
+		{"ON CONFLICT (scope, stream)"},
+		{`RETURNING "offset"`},
+		{config.InternalStream, sqlLiteral(config.InternalStream)},
+		{"payload"},
+		{"meta"},
+	}); err != nil {
 		return err
 	}
 
@@ -234,6 +277,21 @@ CREATE TABLE IF NOT EXISTS %s (
   PRIMARY KEY (scope, stream)
 );
 
+ALTER TABLE %s ADD COLUMN IF NOT EXISTS scope text;
+ALTER TABLE %s ADD COLUMN IF NOT EXISTS stream text;
+ALTER TABLE %s ADD COLUMN IF NOT EXISTS "offset" bigint DEFAULT 0;
+ALTER TABLE %s ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
+UPDATE %s SET scope = '' WHERE scope IS NULL;
+UPDATE %s SET stream = '' WHERE stream IS NULL;
+UPDATE %s SET "offset" = 0 WHERE "offset" IS NULL;
+UPDATE %s SET updated_at = now() WHERE updated_at IS NULL;
+ALTER TABLE %s ALTER COLUMN scope SET NOT NULL;
+ALTER TABLE %s ALTER COLUMN stream SET NOT NULL;
+ALTER TABLE %s ALTER COLUMN "offset" SET DEFAULT 0;
+ALTER TABLE %s ALTER COLUMN "offset" SET NOT NULL;
+ALTER TABLE %s ALTER COLUMN updated_at SET DEFAULT now();
+ALTER TABLE %s ALTER COLUMN updated_at SET NOT NULL;
+
 CREATE TABLE IF NOT EXISTS %s (
   id bigserial PRIMARY KEY,
   stream text NOT NULL,
@@ -250,13 +308,29 @@ CREATE TABLE IF NOT EXISTS %s (
 
 ALTER TABLE %s ADD COLUMN IF NOT EXISTS stream text;
 ALTER TABLE %s ADD COLUMN IF NOT EXISTS "offset" bigint;
+ALTER TABLE %s ADD COLUMN IF NOT EXISTS payload text;
 ALTER TABLE %s ADD COLUMN IF NOT EXISTS meta text NOT NULL DEFAULT '{}';
+ALTER TABLE %s ADD COLUMN IF NOT EXISTS claimed_by text;
+ALTER TABLE %s ADD COLUMN IF NOT EXISTS claimed_at timestamptz;
+ALTER TABLE %s ADD COLUMN IF NOT EXISTS attempts integer DEFAULT 0;
+ALTER TABLE %s ADD COLUMN IF NOT EXISTS last_error text;
 ALTER TABLE %s ADD COLUMN IF NOT EXISTS exhausted_at timestamptz;
+ALTER TABLE %s ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
 UPDATE %s SET stream = '' WHERE stream IS NULL;
 UPDATE %s SET "offset" = id WHERE "offset" IS NULL;
+UPDATE %s SET payload = '' WHERE payload IS NULL;
+UPDATE %s SET meta = '{}' WHERE meta IS NULL;
+UPDATE %s SET attempts = 0 WHERE attempts IS NULL;
+UPDATE %s SET created_at = now() WHERE created_at IS NULL;
 ALTER TABLE %s ALTER COLUMN stream SET NOT NULL;
 ALTER TABLE %s ALTER COLUMN "offset" SET NOT NULL;
+ALTER TABLE %s ALTER COLUMN payload SET NOT NULL;
+ALTER TABLE %s ALTER COLUMN meta SET DEFAULT '{}';
 ALTER TABLE %s ALTER COLUMN meta SET NOT NULL;
+ALTER TABLE %s ALTER COLUMN attempts SET DEFAULT 0;
+ALTER TABLE %s ALTER COLUMN attempts SET NOT NULL;
+ALTER TABLE %s ALTER COLUMN created_at SET DEFAULT now();
+ALTER TABLE %s ALTER COLUMN created_at SET NOT NULL;
 
 CREATE UNIQUE INDEX IF NOT EXISTS %s ON %s (stream, "offset");
 CREATE INDEX IF NOT EXISTS %s ON %s (claimed_at, stream, "offset") WHERE exhausted_at IS NULL;
@@ -272,10 +346,22 @@ CREATE TABLE IF NOT EXISTS %s (
 );
 
 ALTER TABLE %s ADD COLUMN IF NOT EXISTS "offset" bigint;
+ALTER TABLE %s ADD COLUMN IF NOT EXISTS stream text;
+ALTER TABLE %s ADD COLUMN IF NOT EXISTS payload text;
 ALTER TABLE %s ADD COLUMN IF NOT EXISTS meta text NOT NULL DEFAULT '{}';
+ALTER TABLE %s ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
 UPDATE %s SET "offset" = id WHERE "offset" IS NULL;
+UPDATE %s SET stream = '' WHERE stream IS NULL;
+UPDATE %s SET payload = '' WHERE payload IS NULL;
+UPDATE %s SET meta = '{}' WHERE meta IS NULL;
+UPDATE %s SET created_at = now() WHERE created_at IS NULL;
 ALTER TABLE %s ALTER COLUMN "offset" SET NOT NULL;
+ALTER TABLE %s ALTER COLUMN stream SET NOT NULL;
+ALTER TABLE %s ALTER COLUMN payload SET NOT NULL;
+ALTER TABLE %s ALTER COLUMN meta SET DEFAULT '{}';
 ALTER TABLE %s ALTER COLUMN meta SET NOT NULL;
+ALTER TABLE %s ALTER COLUMN created_at SET DEFAULT now();
+ALTER TABLE %s ALTER COLUMN created_at SET NOT NULL;
 
 CREATE UNIQUE INDEX IF NOT EXISTS %s ON %s (stream, "offset");
 CREATE INDEX IF NOT EXISTS %s ON %s (created_at);
@@ -375,12 +461,19 @@ BEGIN
 END;
 $$;
 `, offsetsTable,
+		offsetsTable, offsetsTable, offsetsTable, offsetsTable,
+		offsetsTable, offsetsTable, offsetsTable, offsetsTable,
+		offsetsTable, offsetsTable, offsetsTable, offsetsTable, offsetsTable, offsetsTable,
 		broadcastsTable,
-		broadcastsTable, broadcastsTable, broadcastsTable, broadcastsTable,
 		broadcastsTable, broadcastsTable, broadcastsTable, broadcastsTable, broadcastsTable,
+		broadcastsTable, broadcastsTable, broadcastsTable, broadcastsTable, broadcastsTable,
+		broadcastsTable, broadcastsTable, broadcastsTable, broadcastsTable, broadcastsTable, broadcastsTable,
+		broadcastsTable, broadcastsTable, broadcastsTable, broadcastsTable, broadcastsTable, broadcastsTable, broadcastsTable, broadcastsTable, broadcastsTable,
 		broadcastOffsetIndex, broadcastsTable, broadcastClaimIndex, broadcastsTable, broadcastCleanupIndex, broadcastsTable,
 		pubsubTable,
 		pubsubTable, pubsubTable, pubsubTable, pubsubTable, pubsubTable,
+		pubsubTable, pubsubTable, pubsubTable, pubsubTable, pubsubTable,
+		pubsubTable, pubsubTable, pubsubTable, pubsubTable, pubsubTable, pubsubTable, pubsubTable,
 		pubsubOffsetIndex, pubsubTable, pubsubCreatedIndex, pubsubTable,
 		broadcastTriggerFn, broadcastChannel,
 		broadcastTrigger, broadcastsTable, broadcastTrigger, broadcastsTable, broadcastTriggerFn,
@@ -471,45 +564,109 @@ SELECT EXISTS (
 	return nil
 }
 
-func validateTrigger(ctx context.Context, pool *pgxpool.Pool, table string, trigger string) error {
+func validateTrigger(ctx context.Context, pool *pgxpool.Pool, table string, trigger string, functionName string) error {
 	var exists bool
 	err := pool.QueryRow(ctx, `
 SELECT EXISTS (
   SELECT 1
   FROM pg_catalog.pg_trigger
+  JOIN pg_catalog.pg_proc p ON p.oid = tgfoid
   WHERE tgrelid = to_regclass($1)
     AND tgname = $2
+    AND p.proname = $3
     AND NOT tgisinternal
     AND tgenabled <> 'D'
+    AND (tgtype::int & 1) = 1
+    AND (tgtype::int & 2) = 0
     AND (tgtype::int & 4) = 4
-)`, table, trigger).Scan(&exists)
+)`, table, trigger, functionName).Scan(&exists)
 	if err != nil {
 		return fmt.Errorf("failed to inspect trigger %s on %s: %w", trigger, table, err)
 	}
 	if !exists {
-		return fmt.Errorf("postgres signalling table %s is missing enabled INSERT trigger %s", table, trigger)
+		return fmt.Errorf("postgres signalling table %s is missing enabled AFTER INSERT row trigger %s using function %s", table, trigger, functionName)
 	}
 	return nil
 }
 
-func validateFunction(ctx context.Context, pool *pgxpool.Pool, name string, argCount int) error {
+func validateTriggerFunction(ctx context.Context, pool *pgxpool.Pool, name string, channel string) error {
 	var exists bool
 	err := pool.QueryRow(ctx, `
 SELECT EXISTS (
   SELECT 1
   FROM pg_catalog.pg_proc p
   JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+  JOIN pg_catalog.pg_language l ON l.oid = p.prolang
   WHERE p.proname = $1
     AND n.nspname = current_schema()
-    AND p.pronargs = $2
+    AND p.pronargs = 0
+    AND pg_catalog.format_type(p.prorettype, NULL) = 'trigger'
+    AND l.lanname = 'plpgsql'
+    AND position('pg_notify' in p.prosrc) > 0
+    AND position($2 in p.prosrc) > 0
+    AND position('json_build_object' in p.prosrc) > 0
+    AND position('NEW.stream' in p.prosrc) > 0
+    AND position('NEW."offset"' in p.prosrc) > 0
+)`, name, channel).Scan(&exists)
+	if err != nil {
+		return fmt.Errorf("failed to inspect trigger function %s: %w", name, err)
+	}
+	if !exists {
+		return fmt.Errorf("postgres signalling trigger function %s does not match expected NOTIFY payload contract", name)
+	}
+	return nil
+}
+
+func validateFunction(ctx context.Context, pool *pgxpool.Pool, name string, argTypes string, defaultCount int) error {
+	var exists bool
+	err := pool.QueryRow(ctx, `
+SELECT EXISTS (
+  SELECT 1
+  FROM pg_catalog.pg_proc p
+  JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+  JOIN pg_catalog.pg_language l ON l.oid = p.prolang
+  WHERE p.proname = $1
+    AND n.nspname = current_schema()
+    AND oidvectortypes(p.proargtypes) = $2
+    AND p.pronargdefaults = $3
     AND pg_catalog.format_type(p.prorettype, NULL) = 'bigint'
-)`, name, argCount).Scan(&exists)
+    AND l.lanname = 'plpgsql'
+)`, name, argTypes, defaultCount).Scan(&exists)
 	if err != nil {
 		return fmt.Errorf("failed to inspect function %s: %w", name, err)
 	}
 	if !exists {
-		return fmt.Errorf("postgres signalling function %s with %d arguments returning bigint does not exist", name, argCount)
+		return fmt.Errorf("postgres signalling function %s(%s) with %d default argument(s) returning bigint does not exist", name, argTypes, defaultCount)
 	}
+	return nil
+}
+
+func validateFunctionBody(ctx context.Context, pool *pgxpool.Pool, name string, requiredGroups [][]string) error {
+	var source string
+	err := pool.QueryRow(ctx, `
+SELECT p.prosrc
+FROM pg_catalog.pg_proc p
+JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+WHERE p.proname = $1
+  AND n.nspname = current_schema()
+`, name).Scan(&source)
+	if err != nil {
+		return fmt.Errorf("failed to inspect function %s body: %w", name, err)
+	}
+
+	for _, alternatives := range requiredGroups {
+		matched := false
+		for _, fragment := range alternatives {
+			if strings.Contains(source, fragment) {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			return fmt.Errorf("postgres signalling function %s body does not match expected contract; missing one of %s", name, strings.Join(alternatives, ", "))
+		}
+	}
+
 	return nil
 }
 

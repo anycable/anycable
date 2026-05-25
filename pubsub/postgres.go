@@ -282,19 +282,19 @@ func (s *PostgresSubscriber) pollOnce(all bool) {
 		return
 	}
 
-	if err := s.pollStreams(pool, s.subscriptionSnapshot(all)); err != nil && s.ctx.Err() == nil {
+	if _, err := s.pollStreams(pool, s.subscriptionSnapshot(all)); err != nil && s.ctx.Err() == nil {
 		s.log.Error("failed to poll Postgres pub/sub streams", "error", err)
 	}
 }
 
-func (s *PostgresSubscriber) pollStreams(pool *pgxpool.Pool, cursors map[string]int64) error {
+func (s *PostgresSubscriber) pollStreams(pool *pgxpool.Pool, cursors map[string]int64) (int, error) {
 	if len(cursors) == 0 {
-		return nil
+		return 0, nil
 	}
 
 	table, err := pgadapter.QuoteTableName(s.config.PubSubTable)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	streams := make([]string, 0, len(cursors))
@@ -308,34 +308,46 @@ func (s *PostgresSubscriber) pollStreams(pool *pgxpool.Pool, cursors map[string]
 WITH cursors AS (
   SELECT *
   FROM unnest($1::text[], $2::bigint[]) AS c(stream, cursor_offset)
+),
+publications AS (
+  SELECT
+    cursors.stream,
+    rows."offset",
+    rows.payload,
+    row_number() OVER (PARTITION BY cursors.stream ORDER BY rows."offset") AS stream_position
+  FROM cursors
+  JOIN LATERAL (
+    SELECT "offset", payload
+    FROM %s
+    WHERE stream = cursors.stream
+      AND "offset" > cursors.cursor_offset
+    ORDER BY "offset"
+    LIMIT $3
+  ) rows ON true
 )
-SELECT cursors.stream, publications."offset", publications.payload
-FROM cursors
-JOIN LATERAL (
-  SELECT "offset", payload
-  FROM %s
-  WHERE stream = cursors.stream
-    AND "offset" > cursors.cursor_offset
-  ORDER BY "offset"
-  LIMIT $3
-) publications ON true
-ORDER BY cursors.stream, publications."offset"
+SELECT stream, "offset", payload
+FROM publications
+ORDER BY stream_position, stream, "offset"
+LIMIT $3
 `, table)
 
 	rows, err := pool.Query(s.ctx, query, streams, offsets, s.config.BatchLimit())
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer rows.Close()
 
+	count := 0
 	for rows.Next() {
 		var stream string
 		var offset int64
 		var payload string
 
 		if err := rows.Scan(&stream, &offset, &payload); err != nil {
-			return err
+			return count, err
 		}
+
+		count++
 
 		if !s.isSubscribed(stream) {
 			continue
@@ -345,7 +357,7 @@ ORDER BY cursors.stream, publications."offset"
 		s.advanceCursor(stream, offset)
 	}
 
-	return rows.Err()
+	return count, rows.Err()
 }
 
 func (s *PostgresSubscriber) deliver(stream string, payload []byte) {
