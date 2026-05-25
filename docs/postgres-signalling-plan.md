@@ -154,8 +154,8 @@ applications:
 - AnyCable nodes poll with `FOR UPDATE SKIP LOCKED`;
 - exactly one node claims and processes a row;
 - successful rows are acknowledged by deleting the queue row;
-- failed rows are released for retry or left with failure details after attempts
-  are exhausted;
+- failed rows are released for retry or left with failure details and
+  `exhausted_at` after attempts are exhausted;
 - the behavior for exhausted rows is controlled by
   `postgres_exhausted_broadcast_policy`;
 - `NOTIFY` only wakes nodes after inserts;
@@ -168,7 +168,7 @@ SQL and avoids the rollback-gap/global-ID concerns of auto-increment cursors.
 `postgres_exhausted_broadcast_policy` should support:
 
 - `skip`: keep failure details for inspection, but unblock later same-stream
-  rows after the older row exhausts attempts;
+  rows only after the older row has recorded a terminal exhausted failure;
 - `block`: keep the exhausted row as an ordering barrier until an operator
   resolves or removes it.
 
@@ -179,20 +179,29 @@ same-stream sequence handling after unrecoverable failures.
 Retriable failures should release the claim by clearing `claimed_by` and
 `claimed_at`, while preserving the failure details needed for the next attempt.
 Exhausted failures should keep inspection metadata, including `claimed_by`,
-`claimed_at`, attempts, and the last error. The exhausted-row policy decides only
-whether later same-stream rows can proceed; it does not erase inspection state.
+`claimed_at`, attempts, the last error, and `exhausted_at`. The exhausted-row
+policy decides only whether later same-stream rows can proceed; it does not erase
+inspection state.
+
+Attempt count alone is not terminal state. A row claimed for its final attempt is
+still in flight until it succeeds, is released for retry, times out, or records a
+terminal exhausted failure. Claim-timeout handling must not let final-attempt
+rows unblock later same-stream offsets merely because `attempts` reached the
+limit. The `skip` policy unblocks later same-stream rows only after
+`exhausted_at` is set.
 
 Cleanup should respect the policy:
 
 - successful rows are already deleted by ack and do not participate in cleanup;
-- `skip` rows may be cleaned after the retention window;
+- `skip` rows may be cleaned after the retention window measured from
+  `exhausted_at`;
 - `block` rows should not be removed by automatic cleanup, because removal is
   the operator action that unblocks later same-stream rows.
 
 There is no retained terminal-success state in the first version. Keeping only
 unfinished or failed broadcast rows makes the same-stream ordering predicate
-simple: older rows block later offsets only while they are still unacknowledged
-and either retriable or exhausted under the `block` policy.
+simple: older rows block later offsets while they are unacknowledged and not
+terminally exhausted, or while they are exhausted under the `block` policy.
 
 ### Node-to-node fanout log
 
@@ -276,6 +285,7 @@ WITH candidates AS (
   SELECT broadcasts.stream, broadcasts.offset
   FROM anycable_broadcasts broadcasts
   WHERE broadcasts.attempts < $attempts_limit
+    AND broadcasts.exhausted_at IS NULL
     AND (
       broadcasts.claimed_at IS NULL
       OR broadcasts.claimed_at < now() - ($claim_timeout::bigint * interval '1 second')
@@ -286,7 +296,7 @@ WITH candidates AS (
       WHERE older.stream = broadcasts.stream
         AND older.offset < broadcasts.offset
         AND (
-          older.attempts < $attempts_limit
+          older.exhausted_at IS NULL
           OR $exhausted_policy = 'block'
         )
     )
@@ -306,9 +316,9 @@ RETURNING broadcasts.stream, broadcasts.offset, broadcasts.payload, broadcasts.a
 ```
 
 This allows rows from different streams to be claimed in the same pass while
-serializing rows for the same stream. If an older same-stream row exhausts its
-attempts, the configured exhausted-row policy decides whether later rows may
-proceed.
+serializing rows for the same stream. If an older same-stream row records a
+terminal exhausted failure by setting `exhausted_at`, the configured
+exhausted-row policy decides whether later rows may proceed.
 
 The query assumes successful rows are deleted during ack. If an implementation
 chooses to retain successful rows later, it must add an explicit terminal status
@@ -338,7 +348,7 @@ WITH cursors AS (
   SELECT *
   FROM unnest($streams::text[], $offsets::bigint[]) AS c(stream, offset)
 )
-SELECT publications.stream, publications.offset, publications.payload
+SELECT cursors.stream, publications.offset, publications.payload
 FROM cursors
 JOIN LATERAL (
   SELECT offset, payload
@@ -348,7 +358,7 @@ JOIN LATERAL (
   ORDER BY offset
   LIMIT $per_stream_limit
 ) publications ON true
-ORDER BY publications.stream, publications.offset;
+ORDER BY cursors.stream, publications.offset;
 ```
 
 The exact SQL can change during implementation, but the key property is that
@@ -371,6 +381,15 @@ The functions should:
 - trigger a wake-up notification;
 - return the created `broadcast`-scope offset for observability.
 
+Minimum SQL input validation:
+
+- reject `NULL` or empty `stream` for `anycable_publish`;
+- reject a `NULL` or empty configured internal stream for
+  `anycable_remote_command`;
+- reject `NULL` payloads;
+- accept metadata as opaque text, defaulting to `'{}'`, and reject `NULL` meta;
+- do not parse payload or metadata as JSON in SQL.
+
 There is no batch SQL function in the first version. Producers that batch at the
 application API layer should decompose the batch into one SQL function call per
 message. This matches the existing AnyCable path where batches are decomposed
@@ -390,6 +409,9 @@ Schema ensure should create or actualize `anycable_remote_command` with the
 configured internal stream. If `postgres_internal_stream` changes, the ensured
 function must change with it. Deployments running with `postgres_ensure_schema=false`
 must provide a function whose behavior matches the configured internal stream.
+Startup catalog validation should verify the function signature, but matching
+the configured internal-stream behavior is an operator responsibility unless the
+implementation adds an explicit transactional probe.
 
 The node-to-node fanout table remains an internal server detail in this PR.
 
@@ -438,6 +460,8 @@ Core coverage:
 - concurrent publishers for the same stream receive unique, ordered offsets;
 - retention cleanup does not reset stream offsets;
 - SQL functions validate stream, payload, and metadata inputs;
+- SQL functions reject `NULL` or empty streams, `NULL` payloads, and `NULL`
+  metadata, while treating payload and metadata as opaque text;
 - `anycable_publish` returns the created stream offset and inserts the expected
   text payload/metadata;
 - `anycable_remote_command` routes through the internal stream and returns the
@@ -458,15 +482,17 @@ Core coverage:
   offsets;
 - later same-stream rows are not claimed while an older same-stream row is
   unfinished;
+- an older same-stream row claimed for its final attempt still blocks later rows
+  until success, retry release, timeout handling, or recorded exhausted failure;
 - retriable failures release claim metadata for retry;
 - final failures keep inspection data, including `claimed_by`, `claimed_at`,
-  attempts, and last error;
+  attempts, last error, and `exhausted_at`;
 - `postgres_exhausted_broadcast_policy=skip` lets later same-stream rows move
   after an exhausted row;
 - `postgres_exhausted_broadcast_policy=block` keeps later same-stream rows
   blocked behind an exhausted row;
-- cleanup removes exhausted `skip` rows after retention but does not remove
-  exhausted `block` rows automatically;
+- cleanup removes exhausted `skip` rows after the `exhausted_at` retention
+  window but does not remove exhausted `block` rows automatically;
 - successful broadcast rows are deleted on ack and do not block later
   same-stream offsets;
 - nodes ignore notifications for unsubscribed streams;
