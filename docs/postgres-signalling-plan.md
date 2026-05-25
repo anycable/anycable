@@ -54,13 +54,13 @@ flowchart LR
   FnPublish --> BroadcastNotify
   FnRemote --> BroadcastNotify
   BroadcastNotify -. wakes .-> Go
-  Go --> Broadcasts
+  Go -- claim and ack --> Broadcasts
   Go --> Offsets
-  Go --> PubSub
-  Go --> PubSubNotify
+  Go -- append fanout --> PubSub
+  Go -- notify --> PubSubNotify
   PubSubNotify -. wakes .-> Go
-  Go --> PubSub
-  Go --> Subscribers
+  Go -- catch up --> PubSub
+  Go -- deliver --> Subscribers
 ```
 
 ### Server-owned schema
@@ -75,6 +75,11 @@ AnyCable Go owns the schema required by PostgreSQL-backed components:
   deployments that manage schema externally;
 - keep publishing applications behind SQL functions instead of requiring them
   to know table layouts.
+
+The first version should actualize the full PostgreSQL signalling schema when
+any PostgreSQL-backed signalling component is active. This keeps setup simple
+and avoids a partial-schema matrix across broadcast, pub/sub, and SQL function
+objects.
 
 No schema marker table is required for the first version. Startup should run
 idempotent, non-destructive DDL for the required tables, indexes, triggers, and
@@ -162,6 +167,12 @@ SQL and avoids the rollback-gap/global-ID concerns of auto-increment cursors.
 stream forever. `block` is available for deployments that prefer strict
 same-stream sequence handling after unrecoverable failures.
 
+Retriable failures should release the claim by clearing `claimed_by` and
+`claimed_at`, while preserving the failure details needed for the next attempt.
+Exhausted failures should keep inspection metadata, including `claimed_by`,
+`claimed_at`, attempts, and the last error. The exhausted-row policy decides only
+whether later same-stream rows can proceed; it does not erase inspection state.
+
 Cleanup should respect the policy:
 
 - successful rows are already deleted by ack and do not participate in cleanup;
@@ -224,6 +235,9 @@ sequenceDiagram
 ```
 
 1. A publishing application calls `anycable_publish(stream, payload, meta)`.
+   Remote commands follow the same app-to-server path through
+   `anycable_remote_command(payload, meta)`, using the configured internal
+   stream.
 2. PostgreSQL transactionally allocates the next `broadcast` offset for the
    stream, inserts an `anycable_broadcasts` row, and sends a wake-up
    notification on `postgres_broadcast_notify_channel`.
@@ -303,9 +317,10 @@ requiring cross-stream ordering.
 
 ## Batched Fanout Polling
 
-The current per-stream loop should be replaced by a batched query. Wake-up
-notifications enqueue changed streams; fallback ticks use all subscribed stream
-cursors.
+The current per-stream loop should be replaced by batched queries. Notify-driven
+wakeups enqueue changed subscribed streams, so work is bounded by the changed
+subset. Fallback ticks use all subscribed stream cursors, but still issue one
+bounded batched query instead of one query per stream.
 
 One possible shape:
 
@@ -336,8 +351,8 @@ trip instead of one round trip per locally subscribed stream.
 Publishing applications should call functions instead of inserting rows
 directly:
 
-- `anycable_publish(stream text, payload text, meta text default '{}')`
-- `anycable_remote_command(payload text, meta text default '{}')`
+- `anycable_publish(stream text, payload text, meta text default '{}') returns bigint`
+- `anycable_remote_command(payload text, meta text default '{}') returns bigint`
 
 The functions should:
 
@@ -345,7 +360,7 @@ The functions should:
 - allocate the next per-stream offset;
 - insert into the app-to-server queue;
 - trigger a wake-up notification;
-- return the created offset for observability.
+- return the created `broadcast`-scope offset for observability.
 
 There is no batch SQL function in the first version. Producers that batch at the
 application API layer should decompose the batch into one SQL function call per
@@ -405,6 +420,8 @@ Core coverage:
   schemas;
 - required tables, functions, indexes, and triggers are validated without a
   schema marker/version table;
+- activating any PostgreSQL-backed signalling component actualizes the full
+  PostgreSQL signalling schema;
 - invalid table/function/channel names are rejected before SQL execution;
 - offset allocation is monotonic and contiguous per `(scope, stream)` for
   committed publications;
@@ -428,7 +445,9 @@ Core coverage:
   offsets;
 - later same-stream rows are not claimed while an older same-stream row is
   unfinished;
-- final failures keep inspection data;
+- retriable failures release claim metadata for retry;
+- final failures keep inspection data, including `claimed_by`, `claimed_at`,
+  attempts, and last error;
 - `postgres_exhausted_broadcast_policy=skip` lets later same-stream rows move
   after an exhausted row;
 - `postgres_exhausted_broadcast_policy=block` keeps later same-stream rows
@@ -455,8 +474,10 @@ Batching and stress cases:
   changed streams;
 - include unsubscribed streams in notification payloads and assert they are not
   included in the batch query;
-- subscribe to many streams, publish to a small subset, and assert poller query
-  work is bounded by the changed subset, not every subscribed stream;
+- subscribe to many streams, publish to a small subset, and assert notify-driven
+  poller query work is bounded by the changed subscribed subset, not every
+  subscribed stream;
+- verify fallback ticks still cover all subscribed cursors in one bounded batch;
 - publish bursts to many streams at once and verify wake-up coalescing still
   drains all rows;
 - run concurrent publishers for the same stream and assert delivered order is
