@@ -190,6 +190,13 @@ rows unblock later same-stream offsets merely because `attempts` reached the
 limit. The `skip` policy unblocks later same-stream rows only after
 `exhausted_at` is set.
 
+To avoid permanent stream stalls after a worker disappears during the final
+attempt, timeout handling should finalize expired final-attempt rows before the
+normal claim query relies on `exhausted_at`. A timed-out row with
+`attempts >= $attempts_limit`, expired `claimed_at`, and `exhausted_at IS NULL`
+should be marked exhausted by setting `exhausted_at` and a timeout error while
+preserving `claimed_by`, `claimed_at`, and attempts for inspection.
+
 Cleanup should respect the policy:
 
 - successful rows are already deleted by ack and do not participate in cleanup;
@@ -278,7 +285,21 @@ The practical guarantee should be per-stream ordering. Global ordering across
 unrelated streams is not required and would unnecessarily serialize work.
 
 The app-to-server claim query should skip rows that have an older unfinished row
-for the same stream. One possible shape:
+for the same stream. Before the claim query runs, the poller should finalize
+expired final-attempt rows:
+
+```sql
+UPDATE anycable_broadcasts
+SET exhausted_at = now(),
+    last_error = COALESCE(last_error, 'claim timed out on final attempt')
+WHERE exhausted_at IS NULL
+  AND attempts >= $attempts_limit
+  AND claimed_at IS NOT NULL
+  AND claimed_at < now() - ($claim_timeout::bigint * interval '1 second');
+```
+
+Then the claim query can use `exhausted_at` as the terminal marker. One possible
+shape:
 
 ```sql
 WITH candidates AS (
@@ -484,6 +505,9 @@ Core coverage:
   unfinished;
 - an older same-stream row claimed for its final attempt still blocks later rows
   until success, retry release, timeout handling, or recorded exhausted failure;
+- timeout handling marks expired final-attempt rows exhausted by setting
+  `exhausted_at` and preserving inspection metadata before later same-stream
+  rows may proceed under `skip`;
 - retriable failures release claim metadata for retry;
 - final failures keep inspection data, including `claimed_by`, `claimed_at`,
   attempts, last error, and `exhausted_at`;
