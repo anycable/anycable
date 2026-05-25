@@ -40,35 +40,9 @@ clean final shape rather than preserving the first local implementation.
 
 ## Target Shape
 
-```mermaid
-flowchart LR
-  App[Publishing application]
-  FnPublish[anycable_publish]
-  FnRemote[anycable_remote_command]
-  Offsets[(anycable_stream_offsets)]
-  Broadcasts[(anycable_broadcasts)]
-  BroadcastNotify[[broadcast notify channel]]
-  Go[AnyCable Go nodes]
-  PubSub[(anycable_pubsub)]
-  PubSubNotify[[pubsub notify channel]]
-  Subscribers[Local subscribers]
+![PostgreSQL signalling data model](images/postgres-signalling-data-model.png)
 
-  App --> FnPublish
-  App --> FnRemote
-  FnPublish --> Offsets
-  FnRemote --> Offsets
-  FnPublish --> Broadcasts
-  FnRemote --> Broadcasts
-  Broadcasts -. notify broadcast JSON .-> BroadcastNotify
-  BroadcastNotify -. wakes .-> Go
-  Go -- claim and ack --> Broadcasts
-  Go -- allocate pubsub offset --> Offsets
-  Go -- append fanout row --> PubSub
-  PubSub -. notify pubsub JSON .-> PubSubNotify
-  PubSubNotify -. wakes .-> Go
-  Go -- catch up --> PubSub
-  Go -- deliver --> Subscribers
-```
+Source: [`docs/images/postgres-signalling-data-model.dot`](images/postgres-signalling-data-model.dot).
 
 ### Server-owned schema
 
@@ -238,26 +212,9 @@ or logged-and-dropped as malformed.
 
 ## Dataflow
 
-```mermaid
-sequenceDiagram
-  participant App as Publishing app
-  participant PG as PostgreSQL
-  participant Queue as anycable_broadcasts
-  participant NodeA as AnyCable node A
-  participant Fanout as anycable_pubsub
-  participant NodeB as AnyCable node B
+![PostgreSQL signalling dataflow](images/postgres-signalling-dataflow.png)
 
-  App->>PG: anycable_publish(stream, payload, meta)
-  PG->>PG: allocate broadcast offset
-  PG->>Queue: insert queued broadcast
-  PG-->>NodeA: NOTIFY broadcast channel with {v, stream, offset}
-  NodeA->>Queue: poll and claim with SKIP LOCKED
-  NodeA->>Fanout: append pubsub row with pubsub offset
-  NodeA->>Queue: delete acknowledged broadcast row
-  PG-->>NodeB: NOTIFY pubsub channel with {v, stream, offset}
-  NodeB->>Fanout: batch fetch subscribed stream cursors
-  NodeB-->>NodeB: deliver and advance per-stream cursor
-```
+Source: [`docs/images/postgres-signalling-dataflow.dot`](images/postgres-signalling-dataflow.dot).
 
 1. A publishing application calls `anycable_publish(stream, payload, meta)`.
    Remote commands follow the same app-to-server path through

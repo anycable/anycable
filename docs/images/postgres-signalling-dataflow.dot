@@ -1,0 +1,64 @@
+digraph PostgresSignallingDataflow {
+  graph [
+    rankdir=TB,
+    bgcolor="#ffffff",
+    pad=0.35,
+    nodesep=0.45,
+    ranksep=0.55,
+    splines=polyline,
+    fontname="Helvetica",
+    fontsize=14
+  ];
+
+  node [
+    shape=box,
+    style="rounded,filled",
+    fontname="Helvetica",
+    fontsize=12,
+    color="#506070",
+    fillcolor="#f8fafc",
+    penwidth=1.4
+  ];
+
+  edge [
+    fontname="Helvetica",
+    fontsize=10,
+    color="#5f6b7a",
+    arrowsize=0.7,
+    penwidth=1.2
+  ];
+
+  publish [label="1. Application calls\nanycable_publish(...)\nor anycable_remote_command(...)", fillcolor="#eef7ff"];
+  enqueue [label="2. PostgreSQL allocates\nbroadcast offset and inserts\nanycable_broadcasts row", fillcolor="#f4fbef"];
+  broadcast_notify [label="3. PostgreSQL NOTIFY\nbroadcast channel\nJSON {v, stream, offset}", fillcolor="#fff9e8"];
+  claim [label="4. AnyCable nodes poll\nFOR UPDATE SKIP LOCKED\nclaim only if no older unfinished row", fillcolor="#fbf8ff"];
+  handle [label="5. Winning node handles\npublication through broker path", fillcolor="#fbf8ff"];
+  ack [label="6a. Success:\ndelete acknowledged\nbroadcast row", fillcolor="#edf9f1"];
+  fanout [label="6b. Append fanout row\nwith pubsub offset", fillcolor="#f4fbef"];
+  pubsub_notify [label="7. PostgreSQL NOTIFY\npubsub channel\nJSON {v, stream, offset}", fillcolor="#fff9e8"];
+  catchup [label="8. Subscribed nodes\nbatch fetch changed stream cursors", fillcolor="#fbf8ff"];
+  deliver [label="9. Deliver in stream order\nand advance local cursor", fillcolor="#eef7ff"];
+
+  retry [label="Failure with attempts left:\nclear claim, keep failure details,\nrow is retriable", fillcolor="#fff3f0"];
+  final_attempt_timeout [label="Expired final attempt:\nset exhausted_at and timeout error\nbefore normal claim query", fillcolor="#fff3f0"];
+  exhausted [label="Exhausted row:\nkeep claimed_by, claimed_at,\nattempts, last error, exhausted_at", fillcolor="#fff3f0"];
+  policy [label="Policy gate:\nskip unblocks later rows after exhausted_at;\nblock keeps ordering barrier", fillcolor="#fff3f0"];
+
+  publish -> enqueue;
+  enqueue -> broadcast_notify;
+  broadcast_notify -> claim [style=dashed, label="wake only"];
+  claim -> handle;
+  handle -> ack [label="success"];
+  handle -> fanout [label="success"];
+  fanout -> pubsub_notify;
+  pubsub_notify -> catchup [style=dashed, label="wake only"];
+  catchup -> deliver;
+
+  handle -> retry [label="retriable failure", color="#b86755"];
+  retry -> claim [label="later poll"];
+  claim -> final_attempt_timeout [label="timed out and attempts exhausted", color="#b86755"];
+  handle -> exhausted [label="terminal failure", color="#b86755"];
+  final_attempt_timeout -> exhausted;
+  exhausted -> policy;
+  policy -> claim [label="skip allows later same-stream rows", style=dashed];
+}
