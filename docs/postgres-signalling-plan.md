@@ -21,6 +21,14 @@ clean final shape rather than preserving the first local implementation.
   `ANYCABLE_POSTGRES_PUBSUB_NOTIFY_CHANNEL`.
 - Treat app-to-server broadcasts and node-to-node fanout as two logical links
   with different delivery semantics.
+- Both wake-up links use JSON text payloads with version, stream, and latest
+  offset: `{"v":1,"stream":"stream-name","offset":123}`. The offset scope is
+  `broadcast` for app-to-server queue notifications and `pubsub` for
+  node-to-node fanout notifications.
+- Notifications are emitted by PostgreSQL as part of the SQL work that inserts
+  the corresponding row. Go code may initiate the SQL, but listeners should
+  treat PostgreSQL as the notification source and polling as the correctness
+  mechanism.
 - Use per-stream offsets for ordering and cursors. Auto-increment IDs may exist
   as internal row identifiers if implementation needs them, but delivery order,
   catch-up cursors, and public SQL function return values should be based on
@@ -51,13 +59,12 @@ flowchart LR
   FnRemote --> Offsets
   FnPublish --> Broadcasts
   FnRemote --> Broadcasts
-  FnPublish --> BroadcastNotify
-  FnRemote --> BroadcastNotify
+  Broadcasts -. notify broadcast JSON .-> BroadcastNotify
   BroadcastNotify -. wakes .-> Go
   Go -- claim and ack --> Broadcasts
-  Go --> Offsets
-  Go -- append fanout --> PubSub
-  Go -- notify --> PubSubNotify
+  Go -- allocate pubsub offset --> Offsets
+  Go -- append fanout row --> PubSub
+  PubSub -. notify pubsub JSON .-> PubSubNotify
   PubSubNotify -. wakes .-> Go
   Go -- catch up --> PubSub
   Go -- deliver --> Subscribers
@@ -151,7 +158,9 @@ applications:
   are exhausted;
 - the behavior for exhausted rows is controlled by
   `postgres_exhausted_broadcast_policy`;
-- `NOTIFY` only wakes nodes after inserts.
+- `NOTIFY` only wakes nodes after inserts;
+- notification payloads are JSON text with version, stream, and latest
+  `broadcast` offset: `{"v":1,"stream":"stream-name","offset":123}`.
 
 This keeps the current broadcaster shape, but makes stream ordering visible to
 SQL and avoids the rollback-gap/global-ID concerns of auto-increment cursors.
@@ -225,7 +234,7 @@ sequenceDiagram
   App->>PG: anycable_publish(stream, payload, meta)
   PG->>PG: allocate broadcast offset
   PG->>Queue: insert queued broadcast
-  PG-->>NodeA: NOTIFY broadcast channel
+  PG-->>NodeA: NOTIFY broadcast channel with {v, stream, offset}
   NodeA->>Queue: poll and claim with SKIP LOCKED
   NodeA->>Fanout: append pubsub row with pubsub offset
   NodeA->>Queue: delete acknowledged broadcast row
@@ -437,8 +446,12 @@ Core coverage:
   `anycable_remote_command` with the new internal stream;
 - producer-side batches are decomposed into one SQL function call per message;
 - app-to-server and node-to-node wakeups use distinct notification channels;
+- app-to-server wakeups include JSON text with `v`, `stream`, and the
+  `broadcast` offset;
 - notification payloads are JSON text with `v`, `stream`, and `offset`, and the
   offset field is treated only as a hint;
+- `broadcast` and `pubsub` offset scopes allocate independently for the same
+  stream;
 - broadcast rows are claimed with `SKIP LOCKED` and never processed by two
   nodes;
 - rows for different streams can proceed without blocking on each other's
