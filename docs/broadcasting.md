@@ -135,6 +135,8 @@ $ anycable-go --broadcast_adapter=postgres --pubsub=postgres
 
 AnyCable-Go owns the required Postgres signalling schema by default. Set `--postgres_ensure_schema=false` only when another migration system manages the schema; startup still validates the required tables, indexes, triggers, and SQL functions before accepting traffic.
 
+See [Postgres signalling](./postgres.md) for schema, publishing, ordering, and cleanup details.
+
 ## Publication format
 
 AnyCable accepts broadcast messages encoded as JSON and having the following properties:

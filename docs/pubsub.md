@@ -72,3 +72,5 @@ $ ANYCABLE_BROADCAST_ADAPTER=postgres ANYCABLE_PUBSUB=postgres anycable-go
 ```
 
 The same server-owned Postgres signalling schema used by the broadcaster is ensured and validated on startup.
+
+See [Postgres signalling](./postgres.md) for schema, ordering, batching, and cleanup details.

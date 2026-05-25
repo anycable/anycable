@@ -147,7 +147,7 @@ NATS channel for broadcasting (default: `"__anycable__"`).
 
 ## Postgres configuration
 
-Postgres settings are used by the `postgres` broadcast and pub/sub adapters. Tables store the full payloads; `NOTIFY` only wakes polling loops. See [broadcasting](./broadcasting.md#postgres) and [pub/sub](./pubsub.md#postgres) for the delivery model and schema expectations.
+Postgres settings are used by the `postgres` broadcast and pub/sub adapters. Tables store the full payloads; `NOTIFY` only wakes polling loops. See [Postgres signalling](./postgres.md) for the delivery model and schema expectations.
 
 **--postgres_url** (`ANYCABLE_POSTGRES_URL`)
 
