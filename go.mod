@@ -19,7 +19,7 @@ require (
 	github.com/mitchellh/go-mruby v0.0.0-20200315023956-207cedc21542
 	github.com/nats-io/nats.go v1.51.0
 	github.com/posthog/posthog-go v1.12.5
-	github.com/redis/rueidis v1.0.74
+	github.com/redis/rueidis v1.0.75
 	github.com/smira/go-statsd v1.3.4
 	github.com/stretchr/testify v1.11.1
 	github.com/urfave/cli/v2 v2.27.7
