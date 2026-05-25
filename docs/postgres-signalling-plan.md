@@ -1,161 +1,263 @@
 # PostgreSQL Signalling Implementation Plan
 
 This document captures the proposed direction for the PostgreSQL signalling PR.
-It uses the following vocabulary:
+All PostgreSQL signalling code in this PR is new to AnyCable, so the goal is a
+clean final shape rather than preserving the first local implementation.
 
-- A stream is a named topic, not a worker.
-- A publication is one event for one stream.
-- `publication.id` is a durable row identity and optional lookup handle, not a stream position.
-- `publication.offset` plus `publication.epoch` is the stream-local position used for history and recovery semantics.
-- `NOTIFY` carries the updated stream name as a wakeup signal; durable payload data lives in PostgreSQL.
+## Design Stance
+
+- Polling is the source of truth. `LISTEN/NOTIFY` only wakes polling loops and
+  never carries durable delivery payloads.
+- Do not create one PostgreSQL `LISTEN` channel per stream. Use stable wake-up
+  channels and include enough payload metadata for nodes to decide whether they
+  need to catch up.
+- Treat app-to-server broadcasts and node-to-node fanout as two logical links
+  with different delivery semantics.
+- Keep this PR focused on signalling. Broker/history support can use the same
+  tables later, but this PR should not claim `HistoryFrom`, `HistorySince`, or
+  `Peak` support.
+- Guarantee ordering per stream, not globally across unrelated streams.
 
 ## Target Shape
 
-- Replace separate PostgreSQL broadcast and pub/sub tables with one canonical publication table plus one stream metadata table.
-- Keep PostgreSQL schema ownership in AnyCable Go, with automatic schema actualization enabled by default whenever a PostgreSQL-backed component is active.
-- Have publishing applications write through SQL functions, not raw table inserts.
-- Avoid claiming publication rows for pub/sub fanout. Publications are topic events, so every AnyCable node may observe the same row and locally forward it to matching subscribers.
-- Keep the schema compatible with a future PostgreSQL broker, but do not claim full broker/history support until `HistoryFrom`, `HistorySince`, and `Peak` are implemented on top of the PostgreSQL tables.
-
-## Data Model
-
 ![AnyCable PostgreSQL data model](images/postgres-signalling-data-model.png)
 
-```text
-anycable_streams
-  stream text primary key
-  top_offset bigint not null default 0
-  epoch text not null
-  created_at timestamptz
-  updated_at timestamptz
-  expires_at timestamptz optional
+### Server-owned schema
 
-anycable_publications
-  id bigserial primary key
-  stream text not null references anycable_streams(stream)
-  offset bigint not null
-  epoch text not null
-  kind smallint not null default 0
-  payload jsonb/text not null
-  meta jsonb optional
-  created_at timestamptz not null default now()
-```
+AnyCable Go owns the schema required by PostgreSQL-backed components:
 
-Primary indexes:
+- create or actualize the schema automatically when a PostgreSQL-backed
+  component is active;
+- fail startup if schema management is enabled and the schema cannot be created
+  or validated;
+- provide a concise opt-out flag for deployments that manage schema externally;
+- keep publishing applications behind SQL functions instead of requiring them
+  to know table layouts.
 
-- `anycable_publications(id)` for row identity and optional direct lookups.
-- `anycable_publications(stream, epoch, offset)` for changed-stream catch-up, history, and broker reads.
-- `anycable_publications(created_at)` for cleanup.
-- `anycable_streams(expires_at)` if stream metadata expiry is supported.
+No schema marker table is required for the first version. Startup should run
+idempotent DDL for the required tables, indexes, triggers, and SQL functions,
+then interrogate PostgreSQL catalogs to validate the resulting shape. This keeps
+the table surface to the two delivery tables: `anycable_broadcasts` and
+`anycable_pubsub`.
 
-Rollback semantics:
+The current flag name is still a decision point. The maintainer suggested a
+`--disable-postgres-schema-check` style flag; the implementation should choose a
+name that reflects both creation and validation.
 
-- Stream offsets should be transactional. If the publish transaction rolls back, the stream offset increment rolls back too.
-- The global `id` may have gaps because it is backed by a PostgreSQL sequence. That is acceptable because it is only row identity, not a stream position.
+### App-to-server queue
+
+`anycable_broadcasts` is a single-consumer queue for publications created by
+applications:
+
+- rows include `stream` as a first-class column, not only inside JSON payload;
+- AnyCable nodes poll with `FOR UPDATE SKIP LOCKED`;
+- exactly one node claims and processes a row;
+- successful rows are acked;
+- failed rows are released for retry or left with failure details after attempts
+  are exhausted;
+- `NOTIFY` only wakes nodes after inserts.
+
+This keeps the existing broadcaster shape, but makes the stream visible to SQL
+so the claim query can preserve per-stream order.
+
+### Node-to-node fanout log
+
+`anycable_pubsub` is a fanout catch-up log:
+
+- each interested AnyCable node may read the same row;
+- rows are fetched by stream cursor, not claimed;
+- notification payloads include the changed stream name;
+- nodes ignore notifications for streams with no local subscribers;
+- wakeups can be coalesced before querying;
+- fallback ticks batch all subscribed stream cursors instead of issuing one
+  query per stream.
+
+This keeps PostgreSQL from acting like Redis with thousands of dynamic
+`LISTEN`s, while still avoiding the current N-per-stream polling loop.
 
 ## Dataflow
 
 ![AnyCable PostgreSQL dataflow](images/postgres-signalling-dataflow.png)
 
 1. A publishing application calls `anycable_publish(stream, payload, meta)`.
-2. PostgreSQL upserts and locks the `anycable_streams` row for the stream.
-3. PostgreSQL increments `top_offset` and inserts a canonical `anycable_publications` row with `(stream, offset, epoch, payload)`.
-4. PostgreSQL sends `pg_notify` with the updated stream name, signalling that nodes interested in that stream should catch up.
-5. AnyCable nodes wake and check whether the stream is locally subscribed.
-6. Interested nodes batch-fetch new publication rows for changed subscribed streams by stream-local position.
-7. Each node advances its observed cursor for the fetched stream.
-8. Connected clients receive the publication with stream-local `offset` and `epoch`.
+2. PostgreSQL inserts an `anycable_broadcasts` row and sends a wake-up
+   notification.
+3. AnyCable nodes poll the broadcast queue. The claim query uses
+   `FOR UPDATE SKIP LOCKED` and only claims rows that have no older unfinished
+   row for the same stream.
+4. The winning node handles the broadcast through the broker path.
+5. The broker writes a node-to-node fanout row to `anycable_pubsub`.
+6. PostgreSQL sends a wake-up notification whose payload includes the stream
+   name.
+7. Nodes subscribed to that stream batch-fetch rows newer than their local
+   cursor and deliver them in stream order.
+8. Periodic polling remains the correctness fallback if notifications are
+   missed, delayed, or coalesced.
+
+## Ordering Guarantee
+
+The practical guarantee should be per-stream ordering. Global ordering across
+unrelated streams is not required and would unnecessarily serialize work.
+
+The app-to-server claim query should skip rows that have an older unfinished row
+for the same stream:
+
+```sql
+WITH candidates AS (
+  SELECT broadcasts.id
+  FROM anycable_broadcasts broadcasts
+  WHERE broadcasts.attempts < $attempts_limit
+    AND (
+      broadcasts.claimed_at IS NULL
+      OR broadcasts.claimed_at < now() - ($claim_timeout::bigint * interval '1 second')
+    )
+    AND NOT EXISTS (
+      SELECT 1
+      FROM anycable_broadcasts older
+      WHERE older.stream = broadcasts.stream
+        AND older.id < broadcasts.id
+        AND older.attempts < $attempts_limit
+    )
+  ORDER BY broadcasts.id
+  LIMIT $batch_limit
+  FOR UPDATE SKIP LOCKED
+)
+UPDATE anycable_broadcasts AS broadcasts
+SET claimed_by = $node_id,
+    claimed_at = now(),
+    attempts = broadcasts.attempts + 1,
+    last_error = NULL
+FROM candidates
+WHERE broadcasts.id = candidates.id
+RETURNING broadcasts.id, broadcasts.stream, broadcasts.payload, broadcasts.attempts;
+```
+
+This allows rows from different streams to be processed concurrently while
+serializing rows for the same stream. If an older same-stream row exhausts its
+attempts, later rows may proceed; that creates a dropped-message gap, but not an
+inversion of successfully processed messages.
+
+For node-to-node fanout, each node should serialize its own polling loop,
+deliver rows ordered by `(stream, id)`, and advance a stream cursor only after
+the row is delivered. That preserves per-stream order locally without requiring
+cross-stream ordering.
+
+## Batched Fanout Polling
+
+The current per-stream loop should be replaced by a batched query. Wake-up
+notifications enqueue changed streams; fallback ticks use all subscribed stream
+cursors.
+
+One possible shape:
+
+```sql
+WITH cursors AS (
+  SELECT *
+  FROM unnest($streams::text[], $cursors::bigint[]) AS c(stream, cursor)
+)
+SELECT publications.stream, publications.id, publications.payload
+FROM cursors
+JOIN LATERAL (
+  SELECT id, payload
+  FROM anycable_pubsub
+  WHERE stream = cursors.stream
+    AND id > cursors.cursor
+  ORDER BY id
+  LIMIT $per_stream_limit
+) publications ON true
+ORDER BY publications.stream, publications.id;
+```
+
+The exact SQL can change during implementation, but the key property is that
+AnyCable performs bounded catch-up for a set of streams in one database round
+trip instead of one round trip per locally subscribed stream.
 
 ## SQL Functions
 
-`anycable_publish(stream, payload, meta default '{}')` should:
+Publishing applications should call functions instead of inserting rows
+directly:
 
-- Upsert or lock `anycable_streams[stream]`.
-- Increment that stream's `top_offset` in the same transaction.
-- Insert one `anycable_publications` row.
-- Call `pg_notify` with the stream name.
-- Return `(id, stream, offset, epoch)`.
+- `anycable_publish(stream, payload, meta default '{}')`
+- `anycable_remote_command(payload, meta default '{}')`
 
-`anycable_remote_command(payload, meta default '{}')` should:
+The functions should:
 
-- Use the same publication table.
-- Mark rows with `kind = remote_command`, likely on the internal stream.
-- Reuse the same wakeup and batch-fetch path.
+- validate required inputs;
+- insert into the app-to-server queue;
+- trigger a wake-up notification;
+- return the created row id for observability.
 
-## Go Adapter Changes
+The node-to-node fanout table remains an internal server detail in this PR.
 
-- Move schema rendering and verification into the `postgres` package.
-- Automatically create or actualize the PostgreSQL schema when a PostgreSQL-backed component is active.
-- Add a concise opt-out flag, for example `--disable-postgres-schema-check`, for deployments that manage schema separately.
-- Fail startup when PostgreSQL schema checking is enabled and required tables, functions, or indexes are missing or incompatible.
-- Rework PostgreSQL pub/sub polling around coalesced changed-stream catch-up:
+## Implementation Steps
 
-```sql
-SELECT id, stream, offset, epoch, kind, payload
-FROM anycable_publications
-WHERE stream = $1
-  AND epoch = $2
-  AND offset > $3
-ORDER BY offset
-LIMIT $4;
-```
-
-- Maintain the local subscription map in Go.
-- Treat `NOTIFY` payloads as stream names. A notification means "this stream changed recently; catch up if this node is subscribed."
-- Coalesce pending stream names and batch-fetch changed subscribed streams instead of polling every subscribed stream. The single-stream query above can be generalized with a `VALUES` list of `(stream, epoch, offset)` cursors.
-- Track observed position per stream, using `offset` and `epoch`.
-- Ignore notifications for streams with no local subscribers.
-- Avoid passing already-positioned publications through broker paths that overwrite `Offset` and `Epoch`.
-
-## Ruby and Rails Changes
-
-- `anycable-rb`: replace raw inserts with calls to `anycable_publish(...)` and `anycable_remote_command(...)`.
-- `anycable-rails`: remove ownership of PostgreSQL schema migrations.
-- Documentation should tell publishing applications that SQL functions are the public integration point and table layout is server-owned.
+1. Replace external schema validation with server-owned schema ensure plus
+   catalog validation.
+2. Add `stream` to the app-to-server broadcast queue schema and publishing
+   function.
+3. Update the broadcast claim query to enforce per-stream ordering.
+4. Keep final failed rows claimed for inspection; non-final failures release
+   their claim for retry.
+5. Keep one stable notification mechanism; do not add per-stream `LISTEN`s.
+6. Pass notification payloads into adapter wake-up code so pub/sub can enqueue
+   changed streams.
+7. Replace pub/sub per-stream polling with batched catch-up by stream cursor.
+8. Update docs and tests to describe polling as the correctness mechanism and
+   notify as latency optimization.
 
 ## Validation Plan
 
-Schema and function tests:
+Schema tests:
 
-- Schema creation is idempotent.
-- Schema actualization runs automatically when PostgreSQL-backed components are active.
-- `--disable-postgres-schema-check` skips automatic schema creation/modification for externally managed schemas.
-- Startup fails when schema checking is enabled and the database schema is missing or mismatched.
-- Validation fails clearly when a required table, function, or index is missing or incompatible.
-- Invalid table names or prefixes are rejected before SQL execution.
-- `anycable_publish` creates stream metadata lazily.
-- Same-stream publishes produce offsets `1, 2, 3`.
-- Different streams each start at offset `1`.
-- Concurrent same-stream publishes produce unique contiguous offsets.
-- A rolled-back publish leaves no committed publication and no committed stream offset gap.
-- The publish function returns the row `id` plus stream position.
+- schema creation is idempotent;
+- schema ensure runs automatically when a PostgreSQL-backed component is active;
+- opt-out skips schema creation/modification but still fails on incompatible
+  schema when validation remains enabled;
+- required tables, functions, indexes, and triggers are validated;
+- no schema marker/version table is required for the initial contract;
+- invalid table/function/channel names are rejected before SQL execution.
 
-Pub/sub behavior tests:
+Broadcast queue tests:
 
-- The hot path does not query once for every subscribed stream.
-- `NOTIFY` payloads include stream names so each node can check whether that stream is locally subscribed before fetching.
-- A node subscribed to `stream_a` fetches and receives only `stream_a` rows when `stream_a` is notified.
-- Notifications for unsubscribed streams do not trigger publication fetches.
-- Multiple changed subscribed streams can be coalesced into a bounded batch of catch-up reads.
-- Two nodes both receive the same publication when both are subscribed.
-- Repeated wakeups or ticks do not duplicate delivery.
-- Late subscription starts from the current tail unless a PostgreSQL broker/history mode is implemented.
-- Remote command rows route through command handling, not stream broadcast handling.
-- Cleanup removes old publication rows without breaking cursor behavior for active nodes.
+- rows are claimed with `SKIP LOCKED`;
+- two nodes do not process the same row;
+- rows for different streams can be processed concurrently;
+- later same-stream rows are not claimed while an older same-stream row is
+  unfinished;
+- final failures keep inspection data and unblock later same-stream rows;
+- successful rows are acked.
 
-Integration and regression tests:
+Fanout tests:
 
-- Add PostgreSQL-backed CI coverage for the Go adapter tests.
-- Run targeted suites first:
-  - `go test ./postgres`
-  - `go test ./pubsub -run Postgres`
-  - `go test ./broadcast -run Postgres`
-  - `go test ./broker ./node`
-- Run broader `go test ./...` once the targeted suites pass.
-- Ruby-side tests should assert publishing calls SQL functions, not raw table inserts.
+- notification payloads include the changed stream name;
+- nodes ignore notifications for unsubscribed streams;
+- changed subscribed streams are coalesced before querying;
+- fallback polling batches subscribed stream cursors;
+- repeated wakeups or fallback ticks do not duplicate delivery;
+- two nodes subscribed to the same stream both receive the same publication;
+- one node receives same-stream rows in insertion order.
+
+Targeted commands:
+
+```sh
+go test ./postgres -run Postgres
+go test ./broadcast -run Postgres
+go test ./pubsub -run Postgres
+go test ./config ./cli
+go test ./... -run Postgres
+```
+
+Run broader `go test ./...` once the targeted suites pass and local Redis/NATS
+dependencies are available or isolated.
 
 ## Maintainer Decision Gates
 
-- Should this PR convert PostgreSQL broadcasting into fanout-style delivery now, or keep a smaller transitional adapter?
-- Should `anycable_publications.payload` be `jsonb`, `text`, or configurable?
-- Is broker/history support explicitly out of scope for this PR, with the schema prepared for it later?
+- Should the implementation keep one configured PostgreSQL notification channel
+  with typed payloads, or split app-to-server and node-to-node into two stable
+  channels? Both avoid per-stream `LISTEN`s.
+- What is the preferred opt-out flag name for server-owned schema ensure and
+  validation?
+- Should final failed same-stream broadcast rows unblock later rows after
+  attempts are exhausted, or should they block until operator intervention?
+- Should payload columns remain `text` for parity with current JSON handling, or
+  should schema-owned tables use `jsonb` now?
