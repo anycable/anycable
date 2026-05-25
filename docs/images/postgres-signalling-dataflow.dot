@@ -28,7 +28,7 @@ digraph postgres_signalling_dataflow {
   app_link [label="App -> server link\nsingle consumer queue", shape=box, fillcolor="#E9F7EF", fontsize=16];
   app [label="Publishing app\ncalls SQL function", fillcolor="#F2ECFA"];
   broadcasts [label="anycable_broadcasts\nstream + payload + claim state", fillcolor="#E9F7EF"];
-  app_notify [label="NOTIFY wake-up\nstable channel, not delivery", fillcolor="#E7F0F8"];
+  app_notify [label="NOTIFY wake-up\napp-to-server channel,\nnot delivery", fillcolor="#E7F0F8"];
   claim [label="AnyCable nodes poll queue\nFOR UPDATE SKIP LOCKED", fillcolor="#F7F9FB"];
   order_guard [label="per-stream guard\nno older unfinished row", fillcolor="#FFF4D6"];
   winner [label="one node handles row\nack or retry/final failure", fillcolor="#F7F9FB"];
@@ -36,7 +36,7 @@ digraph postgres_signalling_dataflow {
   fanout_link [label="Node -> node link\nfanout catch-up log", shape=box, fillcolor="#FFF4D6", fontsize=16];
   broker [label="Broker emits stream message", fillcolor="#F7F9FB"];
   pubsub [label="anycable_pubsub\nstream + payload log", fillcolor="#FFF4D6"];
-  fanout_notify [label="NOTIFY wake-up\npayload includes stream", fillcolor="#E7F0F8"];
+  fanout_notify [label="NOTIFY wake-up\nnode-to-node channel,\npayload includes stream", fillcolor="#E7F0F8"];
   interested [label="nodes keep local\nstream cursors", fillcolor="#F7F9FB"];
   catchup [label="batched catch-up query\nchanged streams first,\nall streams on fallback tick", fillcolor="#F7F9FB"];
   clients [label="subscribed clients\nreceive in stream order", fillcolor="#E9F7EF"];

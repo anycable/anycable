@@ -8,9 +8,9 @@ clean final shape rather than preserving the first local implementation.
 
 - Polling is the source of truth. `LISTEN/NOTIFY` only wakes polling loops and
   never carries durable delivery payloads.
-- Do not create one PostgreSQL `LISTEN` channel per stream. Use stable wake-up
-  channels and include enough payload metadata for nodes to decide whether they
-  need to catch up.
+- Do not create one PostgreSQL `LISTEN` channel per stream. Use two stable
+  wake-up channels and include enough payload metadata for nodes to decide
+  whether they need to catch up.
 - Treat app-to-server broadcasts and node-to-node fanout as two logical links
   with different delivery semantics.
 - Keep this PR focused on signalling. Broker/history support can use the same
@@ -30,7 +30,8 @@ AnyCable Go owns the schema required by PostgreSQL-backed components:
   component is active;
 - fail startup if schema management is enabled and the schema cannot be created
   or validated;
-- provide a concise opt-out flag for deployments that manage schema externally;
+- provide `postgres_ensure_schema` as a concise opt-out flag for deployments
+  that manage schema externally;
 - keep publishing applications behind SQL functions instead of requiring them
   to know table layouts.
 
@@ -40,9 +41,9 @@ then interrogate PostgreSQL catalogs to validate the resulting shape. This keeps
 the table surface to the two delivery tables: `anycable_broadcasts` and
 `anycable_pubsub`.
 
-The current flag name is still a decision point. The maintainer suggested a
-`--disable-postgres-schema-check` style flag; the implementation should choose a
-name that reflects both creation and validation.
+The proposed flag follows the existing `postgres_*` configuration convention:
+`--postgres_ensure_schema=false` skips DDL creation/actualization. Startup still
+interrogates PostgreSQL catalogs and fails when the schema shape is incompatible.
 
 ### App-to-server queue
 
@@ -55,10 +56,23 @@ applications:
 - successful rows are acked;
 - failed rows are released for retry or left with failure details after attempts
   are exhausted;
+- the behavior for exhausted rows is controlled by
+  `postgres_exhausted_broadcast_policy`;
 - `NOTIFY` only wakes nodes after inserts.
 
 This keeps the existing broadcaster shape, but makes the stream visible to SQL
 so the claim query can preserve per-stream order.
+
+`postgres_exhausted_broadcast_policy` should support:
+
+- `skip`: keep failure details for inspection, but unblock later same-stream
+  rows after the older row exhausts attempts;
+- `block`: keep the exhausted row as an ordering barrier until an operator
+  resolves or removes it.
+
+`skip` is the pragmatic default because it avoids one poison row stopping a
+stream forever. `block` is available for deployments that prefer strict
+same-stream sequence handling after unrecoverable failures.
 
 ### Node-to-node fanout log
 
@@ -81,14 +95,14 @@ This keeps PostgreSQL from acting like Redis with thousands of dynamic
 
 1. A publishing application calls `anycable_publish(stream, payload, meta)`.
 2. PostgreSQL inserts an `anycable_broadcasts` row and sends a wake-up
-   notification.
+   notification on the app-to-server channel.
 3. AnyCable nodes poll the broadcast queue. The claim query uses
    `FOR UPDATE SKIP LOCKED` and only claims rows that have no older unfinished
    row for the same stream.
 4. The winning node handles the broadcast through the broker path.
 5. The broker writes a node-to-node fanout row to `anycable_pubsub`.
 6. PostgreSQL sends a wake-up notification whose payload includes the stream
-   name.
+   name on the node-to-node channel.
 7. Nodes subscribed to that stream batch-fetch rows newer than their local
    cursor and deliver them in stream order.
 8. Periodic polling remains the correctness fallback if notifications are
@@ -134,8 +148,8 @@ RETURNING broadcasts.id, broadcasts.stream, broadcasts.payload, broadcasts.attem
 
 This allows rows from different streams to be processed concurrently while
 serializing rows for the same stream. If an older same-stream row exhausts its
-attempts, later rows may proceed; that creates a dropped-message gap, but not an
-inversion of successfully processed messages.
+attempts, the configured exhausted-row policy decides whether later rows may
+proceed.
 
 For node-to-node fanout, each node should serialize its own polling loop,
 deliver rows ordered by `(stream, id)`, and advance a stream cursor only after
@@ -187,6 +201,12 @@ The functions should:
 - trigger a wake-up notification;
 - return the created row id for observability.
 
+Payload columns should be `text`. The payload is an opaque serialized AnyCable
+message; routing and queue behavior should rely on explicit columns such as
+`stream` and claim state, not SQL inspection of the payload body. If future
+broker/history work needs structured metadata, add separate metadata columns
+rather than making the main payload `jsonb`.
+
 The node-to-node fanout table remains an internal server detail in this PR.
 
 ## Implementation Steps
@@ -198,7 +218,8 @@ The node-to-node fanout table remains an internal server detail in this PR.
 3. Update the broadcast claim query to enforce per-stream ordering.
 4. Keep final failed rows claimed for inspection; non-final failures release
    their claim for retry.
-5. Keep one stable notification mechanism; do not add per-stream `LISTEN`s.
+5. Use two stable notification channels, one for app-to-server wakeups and one
+   for node-to-node fanout wakeups; do not add per-stream `LISTEN`s.
 6. Pass notification payloads into adapter wake-up code so pub/sub can enqueue
    changed streams.
 7. Replace pub/sub per-stream polling with batched catch-up by stream cursor.
@@ -221,8 +242,11 @@ Core coverage:
 - rows for different streams can be processed concurrently;
 - later same-stream rows are not claimed while an older same-stream row is
   unfinished;
-- final failures keep inspection data and unblock or block later same-stream
-  rows according to the agreed policy;
+- final failures keep inspection data;
+- `postgres_exhausted_broadcast_policy=skip` lets later same-stream rows move
+  after an exhausted row;
+- `postgres_exhausted_broadcast_policy=block` keeps later same-stream rows
+  blocked behind an exhausted row;
 - successful broadcast rows are acked;
 - notification payloads include the changed stream name;
 - nodes ignore notifications for unsubscribed streams;
@@ -264,15 +288,3 @@ go test ./... -run Postgres
 
 Run broader `go test ./...` once the targeted suites pass and local Redis/NATS
 dependencies are available or isolated.
-
-## Maintainer Decision Gates
-
-- Should the implementation keep one configured PostgreSQL notification channel
-  with typed payloads, or split app-to-server and node-to-node into two stable
-  channels? Both avoid per-stream `LISTEN`s.
-- What is the preferred opt-out flag name for server-owned schema ensure and
-  validation?
-- Should final failed same-stream broadcast rows unblock later rows after
-  attempts are exhausted, or should they block until operator intervention?
-- Should payload columns remain `text` for parity with current JSON handling, or
-  should schema-owned tables use `jsonb` now?
