@@ -2,7 +2,7 @@ module github.com/anycable/anycable-go
 
 go 1.26.0
 
-toolchain go1.26.2
+toolchain go1.26.3
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
