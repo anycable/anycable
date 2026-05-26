@@ -50,8 +50,8 @@ func (*PostgresBroadcaster) IsFanout() bool {
 	return false
 }
 
-// Start ensures the schema, subscribes to wake-up
-// notifications, and starts the polling/cleanup loops.
+// Start ensures the schema, subscribes to wake-up notifications, and starts the
+// polling/cleanup loops. NOTIFY only wakes polling; rows remain the source of truth.
 func (b *PostgresBroadcaster) Start(done chan error) error {
 	if err := pgadapter.ValidateIdentifiers(b.config); err != nil {
 		return err
@@ -178,52 +178,29 @@ func (b *PostgresBroadcaster) drain() {
 	}
 }
 
+// pollOnce claims a fair batch while preserving per-stream order. Final-attempt
+// timeouts are finalized first so skip policy only advances past terminal rows.
 func (b *PostgresBroadcaster) pollOnce() (int, error) {
 	table, err := pgadapter.QuoteTableName(b.config.BroadcastsTable)
 	if err != nil {
 		return 0, err
 	}
 
-	if err := b.finalizeExpiredFinalAttempts(table); err != nil {
+	queries := newPostgresBroadcastQueries(table)
+
+	if err := b.finalizeExpiredFinalAttempts(queries); err != nil {
 		return 0, err
 	}
 
-	query := fmt.Sprintf(`
-WITH candidates AS (
-  SELECT broadcasts.stream, broadcasts."offset"
-  FROM %s broadcasts
-  WHERE broadcasts.attempts < $4
-    AND broadcasts.exhausted_at IS NULL
-    AND (
-      broadcasts.claimed_at IS NULL
-      OR broadcasts.claimed_at < now() - ($1::bigint * interval '1 second')
-    )
-    AND NOT EXISTS (
-      SELECT 1
-      FROM %s older
-      WHERE older.stream = broadcasts.stream
-        AND older."offset" < broadcasts."offset"
-        AND (
-          older.exhausted_at IS NULL
-          OR $5 = 'block'
-        )
-    )
-  ORDER BY broadcasts.created_at, broadcasts.stream, broadcasts."offset"
-  LIMIT $2
-  FOR UPDATE SKIP LOCKED
-)
-UPDATE %s AS broadcasts
-SET claimed_by = $3,
-    claimed_at = now(),
-    attempts = broadcasts.attempts + 1,
-    last_error = NULL
-FROM candidates
-WHERE broadcasts.stream = candidates.stream
-  AND broadcasts."offset" = candidates."offset"
-RETURNING broadcasts.stream, broadcasts."offset", broadcasts.payload, broadcasts.attempts
-`, table, table, table)
-
-	rows, err := b.pool.Query(b.ctx, query, b.config.ClaimTimeout(), b.config.BatchLimit(), b.config.NodeID(), b.config.AttemptsLimit(), b.config.ExhaustedPolicy())
+	rows, err := b.pool.Query(
+		b.ctx,
+		queries.claim,
+		b.config.ClaimTimeout(),
+		b.config.BatchLimit(),
+		b.config.NodeID(),
+		b.config.AttemptsLimit(),
+		b.config.ExhaustedPolicy(),
+	)
 	if err != nil {
 		return 0, err
 	}
@@ -246,11 +223,11 @@ RETURNING broadcasts.stream, broadcasts."offset", broadcasts.payload, broadcasts
 			b.log.Warn("failed to handle Postgres broadcast", "stream", stream, "offset", offset, "attempts", attempts, "error", err)
 
 			if attempts >= b.config.AttemptsLimit() {
-				if err := b.fail(stream, offset, err); err != nil {
+				if err := b.fail(queries, stream, offset, err); err != nil {
 					return count, err
 				}
 			} else {
-				if err := b.release(stream, offset, err); err != nil {
+				if err := b.release(queries, stream, offset, err); err != nil {
 					return count, err
 				}
 			}
@@ -258,7 +235,7 @@ RETURNING broadcasts.stream, broadcasts."offset", broadcasts.payload, broadcasts
 			continue
 		}
 
-		if err := b.ack(stream, offset); err != nil {
+		if err := b.ack(queries, stream, offset); err != nil {
 			return count, err
 		}
 	}
@@ -270,46 +247,34 @@ RETURNING broadcasts.stream, broadcasts."offset", broadcasts.payload, broadcasts
 	return count, nil
 }
 
-func (b *PostgresBroadcaster) finalizeExpiredFinalAttempts(table string) error {
-	query := fmt.Sprintf(`
-UPDATE %s
-SET exhausted_at = now(),
-    last_error = COALESCE(last_error, 'claim timed out on final attempt')
-WHERE exhausted_at IS NULL
-  AND attempts >= $1
-  AND claimed_at IS NOT NULL
-  AND claimed_at < now() - ($2::bigint * interval '1 second')
-`, table)
-
-	_, err := b.pool.Exec(b.ctx, query, b.config.AttemptsLimit(), b.config.ClaimTimeout())
+// finalizeExpiredFinalAttempts marks abandoned final claims as exhausted before
+// the claim query evaluates whether later offsets can pass them.
+func (b *PostgresBroadcaster) finalizeExpiredFinalAttempts(queries postgresBroadcastQueries) error {
+	_, err := b.pool.Exec(
+		b.ctx,
+		queries.finalizeExpiredFinalAttempts,
+		b.config.AttemptsLimit(),
+		b.config.ClaimTimeout(),
+	)
 	return err
 }
 
-func (b *PostgresBroadcaster) ack(stream string, offset int64) error {
-	table, err := pgadapter.QuoteTableName(b.config.BroadcastsTable)
-	if err != nil {
-		return err
-	}
-
-	query := fmt.Sprintf("DELETE FROM %s WHERE stream = $1 AND \"offset\" = $2 AND claimed_by = $3", table)
-	_, err = b.pool.Exec(b.ctx, query, stream, offset, b.config.NodeID())
+func (b *PostgresBroadcaster) ack(queries postgresBroadcastQueries, stream string, offset int64) error {
+	_, err := b.pool.Exec(b.ctx, queries.ack, stream, offset, b.config.NodeID())
 	return err
 }
 
-func (b *PostgresBroadcaster) release(stream string, offset int64, cause error) error {
-	return b.updateFailure(stream, offset, cause, false)
+func (b *PostgresBroadcaster) release(queries postgresBroadcastQueries, stream string, offset int64, cause error) error {
+	return b.updateFailure(queries, stream, offset, cause, false)
 }
 
-func (b *PostgresBroadcaster) fail(stream string, offset int64, cause error) error {
-	return b.updateFailure(stream, offset, cause, true)
+func (b *PostgresBroadcaster) fail(queries postgresBroadcastQueries, stream string, offset int64, cause error) error {
+	return b.updateFailure(queries, stream, offset, cause, true)
 }
 
-func (b *PostgresBroadcaster) updateFailure(stream string, offset int64, cause error, final bool) error {
-	table, err := pgadapter.QuoteTableName(b.config.BroadcastsTable)
-	if err != nil {
-		return err
-	}
-
+// updateFailure records handler errors under the active claim. Retriable rows
+// release ownership; exhausted rows keep claim metadata for inspection.
+func (b *PostgresBroadcaster) updateFailure(queries postgresBroadcastQueries, stream string, offset int64, cause error, final bool) error {
 	lastError := cause.Error()
 	if len(lastError) > 2048 {
 		lastError = lastError[:2048]
@@ -317,38 +282,16 @@ func (b *PostgresBroadcaster) updateFailure(stream string, offset int64, cause e
 
 	if final {
 		b.log.Error("Postgres broadcast attempts exhausted", "stream", stream, "offset", offset, "error", lastError)
-	}
-
-	// Non-final failures clear the claim so the row can be retried later. Final
-	// failures are left in the table until cleanup for operator inspection.
-	if final {
-		query := fmt.Sprintf(`
-UPDATE %s
-SET last_error = $3,
-    exhausted_at = now()
-WHERE stream = $1
-  AND "offset" = $2
-  AND claimed_by = $4
-`, table)
-
-		_, err = b.pool.Exec(b.ctx, query, stream, offset, lastError, b.config.NodeID())
+		_, err := b.pool.Exec(b.ctx, queries.fail, stream, offset, lastError, b.config.NodeID())
 		return err
 	}
 
-	query := fmt.Sprintf(`
-UPDATE %s
-SET claimed_by = NULL,
-    claimed_at = NULL,
-    last_error = $3
-WHERE stream = $1
-  AND "offset" = $2
-  AND claimed_by = $4
-`, table)
-
-	_, err = b.pool.Exec(b.ctx, query, stream, offset, lastError, b.config.NodeID())
+	_, err := b.pool.Exec(b.ctx, queries.release, stream, offset, lastError, b.config.NodeID())
 	return err
 }
 
+// cleanup deletes exhausted rows only when the configured policy lets later
+// same-stream offsets move past terminal failures.
 func (b *PostgresBroadcaster) cleanup() error {
 	table, err := pgadapter.QuoteTableName(b.config.BroadcastsTable)
 	if err != nil {
@@ -359,13 +302,12 @@ func (b *PostgresBroadcaster) cleanup() error {
 		return nil
 	}
 
-	query := fmt.Sprintf(`
-DELETE FROM %s
-WHERE exhausted_at IS NOT NULL
-  AND exhausted_at < now() - ($1::bigint * interval '1 second')
-`, table)
-
-	_, err = b.pool.Exec(b.ctx, query, int64(b.config.RetentionDuration().Seconds()))
+	queries := newPostgresBroadcastQueries(table)
+	_, err = b.pool.Exec(
+		b.ctx,
+		queries.cleanup,
+		int64(b.config.RetentionDuration().Seconds()),
+	)
 	return err
 }
 
@@ -380,3 +322,102 @@ func (b *PostgresBroadcaster) wake() {
 func (b *PostgresBroadcaster) String() string {
 	return strings.Join([]string{"postgres", b.config.BroadcastsTable}, ":")
 }
+
+// postgresBroadcastQueries contains SQL rendered with a validated, quoted table
+// identifier. Runtime values continue to flow through query parameters.
+type postgresBroadcastQueries struct {
+	claim                        string
+	finalizeExpiredFinalAttempts string
+	ack                          string
+	release                      string
+	fail                         string
+	cleanup                      string
+}
+
+func newPostgresBroadcastQueries(table string) postgresBroadcastQueries {
+	return postgresBroadcastQueries{
+		claim:                        fmt.Sprintf(claimPostgresBroadcastsSQL, table),
+		finalizeExpiredFinalAttempts: fmt.Sprintf(finalizeExpiredFinalAttemptsSQL, table),
+		ack:                          fmt.Sprintf(ackPostgresBroadcastSQL, table),
+		release:                      fmt.Sprintf(releasePostgresBroadcastSQL, table),
+		fail:                         fmt.Sprintf(failPostgresBroadcastSQL, table),
+		cleanup:                      fmt.Sprintf(cleanupPostgresBroadcastsSQL, table),
+	}
+}
+
+const claimPostgresBroadcastsSQL = `
+WITH candidates AS (
+  SELECT broadcasts.stream, broadcasts."offset"
+  FROM %[1]s broadcasts
+  WHERE broadcasts.attempts < $4
+    AND broadcasts.exhausted_at IS NULL
+    AND (
+      broadcasts.claimed_at IS NULL
+      OR broadcasts.claimed_at < now() - ($1::bigint * interval '1 second')
+    )
+    AND NOT EXISTS (
+      SELECT 1
+      FROM %[1]s older
+      WHERE older.stream = broadcasts.stream
+        AND older."offset" < broadcasts."offset"
+        AND (
+          older.exhausted_at IS NULL
+          OR $5 = 'block'
+        )
+    )
+  ORDER BY broadcasts.created_at, broadcasts.stream, broadcasts."offset"
+  LIMIT $2
+  FOR UPDATE SKIP LOCKED
+)
+UPDATE %[1]s AS broadcasts
+SET claimed_by = $3,
+    claimed_at = now(),
+    attempts = broadcasts.attempts + 1,
+    last_error = NULL
+FROM candidates
+WHERE broadcasts.stream = candidates.stream
+  AND broadcasts."offset" = candidates."offset"
+RETURNING broadcasts.stream, broadcasts."offset", broadcasts.payload, broadcasts.attempts
+`
+
+const finalizeExpiredFinalAttemptsSQL = `
+UPDATE %[1]s
+SET exhausted_at = now(),
+    last_error = COALESCE(last_error, 'claim timed out on final attempt')
+WHERE exhausted_at IS NULL
+  AND attempts >= $1
+  AND claimed_at IS NOT NULL
+  AND claimed_at < now() - ($2::bigint * interval '1 second')
+`
+
+const ackPostgresBroadcastSQL = `
+DELETE FROM %[1]s
+WHERE stream = $1
+  AND "offset" = $2
+  AND claimed_by = $3
+`
+
+const releasePostgresBroadcastSQL = `
+UPDATE %[1]s
+SET claimed_by = NULL,
+    claimed_at = NULL,
+    last_error = $3
+WHERE stream = $1
+  AND "offset" = $2
+  AND claimed_by = $4
+`
+
+const failPostgresBroadcastSQL = `
+UPDATE %[1]s
+SET last_error = $3,
+    exhausted_at = now()
+WHERE stream = $1
+  AND "offset" = $2
+  AND claimed_by = $4
+`
+
+const cleanupPostgresBroadcastsSQL = `
+DELETE FROM %[1]s
+WHERE exhausted_at IS NOT NULL
+  AND exhausted_at < now() - ($1::bigint * interval '1 second')
+`
