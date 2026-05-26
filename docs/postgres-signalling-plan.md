@@ -373,7 +373,9 @@ Minimum SQL input validation:
 There is no batch SQL function in the first version. Producers that batch at the
 application API layer should decompose the batch into one SQL function call per
 message. This matches the existing AnyCable path where batches are decomposed
-before broker/pub-sub delivery and keeps the SQL contract narrow.
+before broker/pub-sub delivery and keeps the SQL contract narrow. That producer
+behavior belongs to the Ruby/Rails producer-side PRs rather than the
+anycable-go server test plan.
 
 Payload and metadata columns should be `text`. The payload is an opaque
 serialized AnyCable message; routing and queue behavior should rely on explicit
@@ -448,7 +450,6 @@ Core coverage:
   created stream offset;
 - changing `postgres_internal_stream` causes schema ensure to actualize
   `anycable_remote_command` with the new internal stream;
-- producer-side batches are decomposed into one SQL function call per message;
 - app-to-server and node-to-node wakeups use distinct notification channels;
 - app-to-server wakeups include JSON text with `v`, `stream`, and the
   `broadcast` offset;
@@ -485,6 +486,12 @@ Core coverage:
 - cursors advance independently per stream after terminal handling outcomes;
 - malformed fanout payloads are logged and skipped without repeatedly blocking
   the same stream.
+
+Cross-PR producer coverage:
+
+- producer-side batches are decomposed into one SQL function call per message in
+  the Ruby producer adapter tests. This is an input contract for anycable-go, not
+  anycable-go server behavior.
 
 Batching and stress cases:
 

@@ -634,7 +634,11 @@ SELECT EXISTS (
     AND position('pg_notify' in p.prosrc) > 0
     AND position($2 in p.prosrc) > 0
     AND position('json_build_object' in p.prosrc) > 0
+    AND position('''v''' in p.prosrc) > 0
+    AND p.prosrc ~ '''v''[[:space:]]*,[[:space:]]*1'
+    AND position('''stream''' in p.prosrc) > 0
     AND position('NEW.stream' in p.prosrc) > 0
+    AND position('''offset''' in p.prosrc) > 0
     AND position('NEW."offset"' in p.prosrc) > 0
 )`, name, channel).Scan(&exists)
 	if err != nil {

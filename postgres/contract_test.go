@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/url"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -228,6 +230,36 @@ BEGIN
 END;
 $$;
 `, broadcastFn))
+		require.NoError(t, err)
+
+		config.EnsureSchema = false
+		err = EnsureSchema(ctx, pool, config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "payload contract")
+	})
+
+	t.Run("trigger function payload version", func(t *testing.T) {
+		ctx := context.Background()
+		config, pool := setupContractTest(t)
+		defer pool.Close()
+		defer dropContractTestTables(t, pool, config)
+
+		require.NoError(t, EnsureSchema(ctx, pool, config))
+
+		broadcastFn, err := QuoteIdentifier(triggerFunctionName(config.BroadcastsTable, broadcastScope))
+		require.NoError(t, err)
+		broadcastChannel := strings.ReplaceAll(config.BroadcastNotifyChannel, "'", "''")
+		_, err = pool.Exec(ctx, fmt.Sprintf(`
+CREATE OR REPLACE FUNCTION %s()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  PERFORM pg_notify('%s', json_build_object('stream', NEW.stream, 'offset', NEW."offset")::text);
+  RETURN NEW;
+END;
+$$;
+`, broadcastFn, broadcastChannel))
 		require.NoError(t, err)
 
 		config.EnsureSchema = false
@@ -561,6 +593,28 @@ func TestPostgresBroadcastAndPubSubOffsetsAreScopedIndependently(t *testing.T) {
 	assert.Equal(t, map[string]int64{"broadcast": 2, "pubsub": 2}, scopes)
 }
 
+func TestPostgresTriggerNotificationsIncludeVersionStreamAndOffset(t *testing.T) {
+	ctx := context.Background()
+	config, pool := setupContractTest(t)
+	defer pool.Close()
+	defer dropContractTestTables(t, pool, config)
+
+	require.NoError(t, EnsureSchema(ctx, pool, config))
+
+	broadcastConn := listenForContractNotification(t, config, config.BroadcastNotifyChannel)
+	defer broadcastConn.Close(context.Background()) // nolint:errcheck
+
+	broadcastOffset, err := callPublish(ctx, pool, "notification_stream", "payload", "meta")
+	require.NoError(t, err)
+	assertNotificationPayload(t, broadcastConn, config.BroadcastNotifyChannel, "notification_stream", broadcastOffset)
+
+	pubsubConn := listenForContractNotification(t, config, config.PubSubNotifyChannel)
+	defer pubsubConn.Close(context.Background()) // nolint:errcheck
+
+	pubsubOffset := insertPubSubPublication(t, ctx, pool, config, "fanout_stream", `{"type":"message"}`)
+	assertNotificationPayload(t, pubsubConn, config.PubSubNotifyChannel, "fanout_stream", pubsubOffset)
+}
+
 func setupContractTest(t *testing.T) (*Config, *pgxpool.Pool) {
 	t.Helper()
 
@@ -708,6 +762,42 @@ func assertBroadcastRow(t *testing.T, ctx context.Context, pool *pgxpool.Pool, c
 	require.NoError(t, err)
 	assert.Equal(t, payload, storedPayload)
 	assert.Equal(t, meta, storedMeta)
+}
+
+func listenForContractNotification(t *testing.T, config *Config, channel string) *pgx.Conn {
+	t.Helper()
+
+	ctx := context.Background()
+	conn, err := pgx.Connect(ctx, config.URL)
+	require.NoError(t, err)
+
+	quotedChannel, err := QuoteIdentifier(channel)
+	require.NoError(t, err)
+	_, err = conn.Exec(ctx, fmt.Sprintf("LISTEN %s", quotedChannel))
+	require.NoError(t, err)
+
+	return conn
+}
+
+func assertNotificationPayload(t *testing.T, conn *pgx.Conn, channel string, stream string, offset int64) {
+	t.Helper()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	notification, err := conn.WaitForNotification(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, channel, notification.Channel)
+
+	var payload struct {
+		Version int    `json:"v"`
+		Stream  string `json:"stream"`
+		Offset  int64  `json:"offset"`
+	}
+	require.NoError(t, json.Unmarshal([]byte(notification.Payload), &payload))
+	assert.Equal(t, 1, payload.Version)
+	assert.Equal(t, stream, payload.Stream)
+	assert.Equal(t, offset, payload.Offset)
 }
 
 func insertPubSubPublication(t *testing.T, ctx context.Context, pool *pgxpool.Pool, config *Config, stream string, payload string) int64 {
