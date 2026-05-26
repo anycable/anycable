@@ -106,6 +106,40 @@ func TestValidateIdentifiersRejectsInvalidExhaustedPolicy(t *testing.T) {
 	assert.Contains(t, err.Error(), "invalid postgres exhausted broadcast policy")
 }
 
+func TestActualizeSchemaSQLRendersQuotedIdentifiersAndLiterals(t *testing.T) {
+	config := NewConfig()
+	config.BroadcastsTable = "tenant.anycable_broadcasts;drop"
+	config.PubSubTable = "tenant.anycable_pubsub;drop"
+	config.StreamOffsetsTable = "tenant.anycable_stream_offsets;drop"
+	config.BroadcastNotifyChannel = "broadcast's"
+	config.PubSubNotifyChannel = "pubsub's"
+	config.InternalStream = "__internal_'stream__"
+
+	names, err := newSchemaSQLNames(&config)
+	require.NoError(t, err)
+
+	sql, err := renderActualizeSchemaSQL(names)
+	require.NoError(t, err)
+
+	assert.NotContains(t, sql, "{{")
+	assert.Contains(t, sql, `CREATE TABLE IF NOT EXISTS "tenant"."anycable_stream_offsets;drop"`)
+	assert.Contains(t, sql, `CREATE TABLE IF NOT EXISTS "tenant"."anycable_broadcasts;drop"`)
+	assert.Contains(t, sql, `CREATE TABLE IF NOT EXISTS "tenant"."anycable_pubsub;drop"`)
+	assert.Contains(t, sql, `PERFORM pg_notify('broadcast''s'`)
+	assert.Contains(t, sql, `PERFORM pg_notify('pubsub''s'`)
+	assert.Contains(t, sql, `IF target_stream = '__internal_''stream__' THEN`)
+	assert.Contains(t, sql, `VALUES ('broadcast', '__internal_''stream__', 1)`)
+}
+
+func TestActualizeSchemaSQLRejectsInvalidIdentifiers(t *testing.T) {
+	config := NewConfig()
+	config.BroadcastsTable = "bad\nname"
+
+	_, err := newSchemaSQLNames(&config)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid control character")
+}
+
 func TestPostgresEnsureSchema(t *testing.T) {
 	ctx := context.Background()
 	config, pool := setupContractTest(t)

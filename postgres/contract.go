@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"text/template"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -232,61 +233,154 @@ func QuoteTableName(name string) (string, error) {
 }
 
 func actualizeSchema(ctx context.Context, pool *pgxpool.Pool, config *Config) error {
-	offsetsTable, err := QuoteTableName(config.StreamOffsetsTable)
+	names, err := newSchemaSQLNames(config)
 	if err != nil {
 		return err
+	}
+
+	sql, err := renderActualizeSchemaSQL(names)
+	if err != nil {
+		return err
+	}
+
+	if _, err := pool.Exec(ctx, sql); err != nil {
+		return fmt.Errorf("failed to ensure postgres signalling schema: %w", err)
+	}
+
+	return nil
+}
+
+type schemaSQLNames struct {
+	OffsetsTable            string
+	BroadcastsTable         string
+	PubSubTable             string
+	BroadcastTriggerFn      string
+	PubSubTriggerFn         string
+	BroadcastTrigger        string
+	PubSubTrigger           string
+	BroadcastOffsetIndex    string
+	BroadcastClaimIndex     string
+	BroadcastCleanupIndex   string
+	PubSubOffsetIndex       string
+	PubSubCreatedIndex      string
+	BroadcastChannelLiteral string
+	PubSubChannelLiteral    string
+	InternalStreamLiteral   string
+}
+
+func newSchemaSQLNames(config *Config) (schemaSQLNames, error) {
+	if err := ValidateIdentifiers(config); err != nil {
+		return schemaSQLNames{}, err
+	}
+
+	offsetsTable, err := QuoteTableName(config.StreamOffsetsTable)
+	if err != nil {
+		return schemaSQLNames{}, err
 	}
 	broadcastsTable, err := QuoteTableName(config.BroadcastsTable)
 	if err != nil {
-		return err
+		return schemaSQLNames{}, err
 	}
 	pubsubTable, err := QuoteTableName(config.PubSubTable)
 	if err != nil {
-		return err
+		return schemaSQLNames{}, err
 	}
 	broadcastTriggerFn, err := QuoteIdentifier(triggerFunctionName(config.BroadcastsTable, broadcastScope))
 	if err != nil {
-		return err
+		return schemaSQLNames{}, err
 	}
 	pubsubTriggerFn, err := QuoteIdentifier(triggerFunctionName(config.PubSubTable, pubSubScope))
 	if err != nil {
-		return err
+		return schemaSQLNames{}, err
 	}
 	broadcastTrigger, err := QuoteIdentifier(BroadcastsTriggerName)
 	if err != nil {
-		return err
+		return schemaSQLNames{}, err
 	}
 	pubsubTrigger, err := QuoteIdentifier(PubSubTriggerName)
 	if err != nil {
-		return err
+		return schemaSQLNames{}, err
 	}
 	broadcastOffsetIndex, err := QuoteIdentifier(indexName(config.BroadcastsTable, "stream_offset_idx"))
 	if err != nil {
-		return err
+		return schemaSQLNames{}, err
 	}
 	broadcastClaimIndex, err := QuoteIdentifier(indexName(config.BroadcastsTable, "claim_idx"))
 	if err != nil {
-		return err
+		return schemaSQLNames{}, err
 	}
 	broadcastCleanupIndex, err := QuoteIdentifier(indexName(config.BroadcastsTable, "cleanup_idx"))
 	if err != nil {
-		return err
+		return schemaSQLNames{}, err
 	}
 	pubsubOffsetIndex, err := QuoteIdentifier(indexName(config.PubSubTable, "stream_offset_idx"))
 	if err != nil {
-		return err
+		return schemaSQLNames{}, err
 	}
 	pubsubCreatedIndex, err := QuoteIdentifier(indexName(config.PubSubTable, "created_at_idx"))
 	if err != nil {
-		return err
+		return schemaSQLNames{}, err
 	}
 
-	broadcastChannel := sqlLiteral(config.BroadcastNotifyChannel)
-	pubsubChannel := sqlLiteral(config.PubSubNotifyChannel)
-	internalStream := sqlLiteral(config.InternalStream)
+	return schemaSQLNames{
+		OffsetsTable:            offsetsTable,
+		BroadcastsTable:         broadcastsTable,
+		PubSubTable:             pubsubTable,
+		BroadcastTriggerFn:      broadcastTriggerFn,
+		PubSubTriggerFn:         pubsubTriggerFn,
+		BroadcastTrigger:        broadcastTrigger,
+		PubSubTrigger:           pubsubTrigger,
+		BroadcastOffsetIndex:    broadcastOffsetIndex,
+		BroadcastClaimIndex:     broadcastClaimIndex,
+		BroadcastCleanupIndex:   broadcastCleanupIndex,
+		PubSubOffsetIndex:       pubsubOffsetIndex,
+		PubSubCreatedIndex:      pubsubCreatedIndex,
+		BroadcastChannelLiteral: sqlLiteral(config.BroadcastNotifyChannel),
+		PubSubChannelLiteral:    sqlLiteral(config.PubSubNotifyChannel),
+		InternalStreamLiteral:   sqlLiteral(config.InternalStream),
+	}, nil
+}
 
-	sql := fmt.Sprintf(`
-CREATE TABLE IF NOT EXISTS %s (
+func renderActualizeSchemaSQL(names schemaSQLNames) (string, error) {
+	sections := []struct {
+		name   string
+		source string
+	}{
+		{"stream offsets table", streamOffsetsSchemaSQL},
+		{"broadcasts table", broadcastsSchemaSQL},
+		{"pubsub table", pubsubSchemaSQL},
+		{"notification triggers", notificationTriggersSchemaSQL},
+		{"publisher functions", publisherFunctionsSchemaSQL},
+	}
+
+	var sql strings.Builder
+	for _, section := range sections {
+		rendered, err := renderSchemaSQL(section.name, section.source, names)
+		if err != nil {
+			return "", err
+		}
+		sql.WriteString(rendered)
+	}
+
+	return sql.String(), nil
+}
+
+func renderSchemaSQL(name string, source string, data schemaSQLNames) (string, error) {
+	tmpl, err := template.New(name).Parse(source)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse postgres schema SQL template %s: %w", name, err)
+	}
+
+	var rendered strings.Builder
+	if err := tmpl.Execute(&rendered, data); err != nil {
+		return "", fmt.Errorf("failed to render postgres schema SQL template %s: %w", name, err)
+	}
+
+	return rendered.String(), nil
+}
+
+const streamOffsetsSchemaSQL = `
+CREATE TABLE IF NOT EXISTS {{.OffsetsTable}} (
   scope text NOT NULL,
   stream text NOT NULL,
   "offset" bigint NOT NULL DEFAULT 0,
@@ -294,22 +388,24 @@ CREATE TABLE IF NOT EXISTS %s (
   PRIMARY KEY (scope, stream)
 );
 
-ALTER TABLE %s ADD COLUMN IF NOT EXISTS scope text;
-ALTER TABLE %s ADD COLUMN IF NOT EXISTS stream text;
-ALTER TABLE %s ADD COLUMN IF NOT EXISTS "offset" bigint DEFAULT 0;
-ALTER TABLE %s ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
-UPDATE %s SET scope = '' WHERE scope IS NULL;
-UPDATE %s SET stream = '' WHERE stream IS NULL;
-UPDATE %s SET "offset" = 0 WHERE "offset" IS NULL;
-UPDATE %s SET updated_at = now() WHERE updated_at IS NULL;
-ALTER TABLE %s ALTER COLUMN scope SET NOT NULL;
-ALTER TABLE %s ALTER COLUMN stream SET NOT NULL;
-ALTER TABLE %s ALTER COLUMN "offset" SET DEFAULT 0;
-ALTER TABLE %s ALTER COLUMN "offset" SET NOT NULL;
-ALTER TABLE %s ALTER COLUMN updated_at SET DEFAULT now();
-ALTER TABLE %s ALTER COLUMN updated_at SET NOT NULL;
+ALTER TABLE {{.OffsetsTable}} ADD COLUMN IF NOT EXISTS scope text;
+ALTER TABLE {{.OffsetsTable}} ADD COLUMN IF NOT EXISTS stream text;
+ALTER TABLE {{.OffsetsTable}} ADD COLUMN IF NOT EXISTS "offset" bigint DEFAULT 0;
+ALTER TABLE {{.OffsetsTable}} ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
+UPDATE {{.OffsetsTable}} SET scope = '' WHERE scope IS NULL;
+UPDATE {{.OffsetsTable}} SET stream = '' WHERE stream IS NULL;
+UPDATE {{.OffsetsTable}} SET "offset" = 0 WHERE "offset" IS NULL;
+UPDATE {{.OffsetsTable}} SET updated_at = now() WHERE updated_at IS NULL;
+ALTER TABLE {{.OffsetsTable}} ALTER COLUMN scope SET NOT NULL;
+ALTER TABLE {{.OffsetsTable}} ALTER COLUMN stream SET NOT NULL;
+ALTER TABLE {{.OffsetsTable}} ALTER COLUMN "offset" SET DEFAULT 0;
+ALTER TABLE {{.OffsetsTable}} ALTER COLUMN "offset" SET NOT NULL;
+ALTER TABLE {{.OffsetsTable}} ALTER COLUMN updated_at SET DEFAULT now();
+ALTER TABLE {{.OffsetsTable}} ALTER COLUMN updated_at SET NOT NULL;
+`
 
-CREATE TABLE IF NOT EXISTS %s (
+const broadcastsSchemaSQL = `
+CREATE TABLE IF NOT EXISTS {{.BroadcastsTable}} (
   id bigserial PRIMARY KEY,
   stream text NOT NULL,
   "offset" bigint NOT NULL,
@@ -323,37 +419,39 @@ CREATE TABLE IF NOT EXISTS %s (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
-ALTER TABLE %s ADD COLUMN IF NOT EXISTS stream text;
-ALTER TABLE %s ADD COLUMN IF NOT EXISTS "offset" bigint;
-ALTER TABLE %s ADD COLUMN IF NOT EXISTS payload text;
-ALTER TABLE %s ADD COLUMN IF NOT EXISTS meta text NOT NULL DEFAULT '{}';
-ALTER TABLE %s ADD COLUMN IF NOT EXISTS claimed_by text;
-ALTER TABLE %s ADD COLUMN IF NOT EXISTS claimed_at timestamptz;
-ALTER TABLE %s ADD COLUMN IF NOT EXISTS attempts integer DEFAULT 0;
-ALTER TABLE %s ADD COLUMN IF NOT EXISTS last_error text;
-ALTER TABLE %s ADD COLUMN IF NOT EXISTS exhausted_at timestamptz;
-ALTER TABLE %s ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
-UPDATE %s SET stream = '' WHERE stream IS NULL;
-UPDATE %s SET "offset" = id WHERE "offset" IS NULL;
-UPDATE %s SET payload = '' WHERE payload IS NULL;
-UPDATE %s SET meta = '{}' WHERE meta IS NULL;
-UPDATE %s SET attempts = 0 WHERE attempts IS NULL;
-UPDATE %s SET created_at = now() WHERE created_at IS NULL;
-ALTER TABLE %s ALTER COLUMN stream SET NOT NULL;
-ALTER TABLE %s ALTER COLUMN "offset" SET NOT NULL;
-ALTER TABLE %s ALTER COLUMN payload SET NOT NULL;
-ALTER TABLE %s ALTER COLUMN meta SET DEFAULT '{}';
-ALTER TABLE %s ALTER COLUMN meta SET NOT NULL;
-ALTER TABLE %s ALTER COLUMN attempts SET DEFAULT 0;
-ALTER TABLE %s ALTER COLUMN attempts SET NOT NULL;
-ALTER TABLE %s ALTER COLUMN created_at SET DEFAULT now();
-ALTER TABLE %s ALTER COLUMN created_at SET NOT NULL;
+ALTER TABLE {{.BroadcastsTable}} ADD COLUMN IF NOT EXISTS stream text;
+ALTER TABLE {{.BroadcastsTable}} ADD COLUMN IF NOT EXISTS "offset" bigint;
+ALTER TABLE {{.BroadcastsTable}} ADD COLUMN IF NOT EXISTS payload text;
+ALTER TABLE {{.BroadcastsTable}} ADD COLUMN IF NOT EXISTS meta text NOT NULL DEFAULT '{}';
+ALTER TABLE {{.BroadcastsTable}} ADD COLUMN IF NOT EXISTS claimed_by text;
+ALTER TABLE {{.BroadcastsTable}} ADD COLUMN IF NOT EXISTS claimed_at timestamptz;
+ALTER TABLE {{.BroadcastsTable}} ADD COLUMN IF NOT EXISTS attempts integer DEFAULT 0;
+ALTER TABLE {{.BroadcastsTable}} ADD COLUMN IF NOT EXISTS last_error text;
+ALTER TABLE {{.BroadcastsTable}} ADD COLUMN IF NOT EXISTS exhausted_at timestamptz;
+ALTER TABLE {{.BroadcastsTable}} ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
+UPDATE {{.BroadcastsTable}} SET stream = '' WHERE stream IS NULL;
+UPDATE {{.BroadcastsTable}} SET "offset" = id WHERE "offset" IS NULL;
+UPDATE {{.BroadcastsTable}} SET payload = '' WHERE payload IS NULL;
+UPDATE {{.BroadcastsTable}} SET meta = '{}' WHERE meta IS NULL;
+UPDATE {{.BroadcastsTable}} SET attempts = 0 WHERE attempts IS NULL;
+UPDATE {{.BroadcastsTable}} SET created_at = now() WHERE created_at IS NULL;
+ALTER TABLE {{.BroadcastsTable}} ALTER COLUMN stream SET NOT NULL;
+ALTER TABLE {{.BroadcastsTable}} ALTER COLUMN "offset" SET NOT NULL;
+ALTER TABLE {{.BroadcastsTable}} ALTER COLUMN payload SET NOT NULL;
+ALTER TABLE {{.BroadcastsTable}} ALTER COLUMN meta SET DEFAULT '{}';
+ALTER TABLE {{.BroadcastsTable}} ALTER COLUMN meta SET NOT NULL;
+ALTER TABLE {{.BroadcastsTable}} ALTER COLUMN attempts SET DEFAULT 0;
+ALTER TABLE {{.BroadcastsTable}} ALTER COLUMN attempts SET NOT NULL;
+ALTER TABLE {{.BroadcastsTable}} ALTER COLUMN created_at SET DEFAULT now();
+ALTER TABLE {{.BroadcastsTable}} ALTER COLUMN created_at SET NOT NULL;
 
-CREATE UNIQUE INDEX IF NOT EXISTS %s ON %s (stream, "offset");
-CREATE INDEX IF NOT EXISTS %s ON %s (claimed_at, stream, "offset") WHERE exhausted_at IS NULL;
-CREATE INDEX IF NOT EXISTS %s ON %s (exhausted_at) WHERE exhausted_at IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS {{.BroadcastOffsetIndex}} ON {{.BroadcastsTable}} (stream, "offset");
+CREATE INDEX IF NOT EXISTS {{.BroadcastClaimIndex}} ON {{.BroadcastsTable}} (claimed_at, stream, "offset") WHERE exhausted_at IS NULL;
+CREATE INDEX IF NOT EXISTS {{.BroadcastCleanupIndex}} ON {{.BroadcastsTable}} (exhausted_at) WHERE exhausted_at IS NOT NULL;
+`
 
-CREATE TABLE IF NOT EXISTS %s (
+const pubsubSchemaSQL = `
+CREATE TABLE IF NOT EXISTS {{.PubSubTable}} (
   id bigserial PRIMARY KEY,
   stream text NOT NULL,
   "offset" bigint NOT NULL,
@@ -362,57 +460,61 @@ CREATE TABLE IF NOT EXISTS %s (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
-ALTER TABLE %s ADD COLUMN IF NOT EXISTS "offset" bigint;
-ALTER TABLE %s ADD COLUMN IF NOT EXISTS stream text;
-ALTER TABLE %s ADD COLUMN IF NOT EXISTS payload text;
-ALTER TABLE %s ADD COLUMN IF NOT EXISTS meta text NOT NULL DEFAULT '{}';
-ALTER TABLE %s ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
-UPDATE %s SET "offset" = id WHERE "offset" IS NULL;
-UPDATE %s SET stream = '' WHERE stream IS NULL;
-UPDATE %s SET payload = '' WHERE payload IS NULL;
-UPDATE %s SET meta = '{}' WHERE meta IS NULL;
-UPDATE %s SET created_at = now() WHERE created_at IS NULL;
-ALTER TABLE %s ALTER COLUMN "offset" SET NOT NULL;
-ALTER TABLE %s ALTER COLUMN stream SET NOT NULL;
-ALTER TABLE %s ALTER COLUMN payload SET NOT NULL;
-ALTER TABLE %s ALTER COLUMN meta SET DEFAULT '{}';
-ALTER TABLE %s ALTER COLUMN meta SET NOT NULL;
-ALTER TABLE %s ALTER COLUMN created_at SET DEFAULT now();
-ALTER TABLE %s ALTER COLUMN created_at SET NOT NULL;
+ALTER TABLE {{.PubSubTable}} ADD COLUMN IF NOT EXISTS "offset" bigint;
+ALTER TABLE {{.PubSubTable}} ADD COLUMN IF NOT EXISTS stream text;
+ALTER TABLE {{.PubSubTable}} ADD COLUMN IF NOT EXISTS payload text;
+ALTER TABLE {{.PubSubTable}} ADD COLUMN IF NOT EXISTS meta text NOT NULL DEFAULT '{}';
+ALTER TABLE {{.PubSubTable}} ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
+UPDATE {{.PubSubTable}} SET "offset" = id WHERE "offset" IS NULL;
+UPDATE {{.PubSubTable}} SET stream = '' WHERE stream IS NULL;
+UPDATE {{.PubSubTable}} SET payload = '' WHERE payload IS NULL;
+UPDATE {{.PubSubTable}} SET meta = '{}' WHERE meta IS NULL;
+UPDATE {{.PubSubTable}} SET created_at = now() WHERE created_at IS NULL;
+ALTER TABLE {{.PubSubTable}} ALTER COLUMN "offset" SET NOT NULL;
+ALTER TABLE {{.PubSubTable}} ALTER COLUMN stream SET NOT NULL;
+ALTER TABLE {{.PubSubTable}} ALTER COLUMN payload SET NOT NULL;
+ALTER TABLE {{.PubSubTable}} ALTER COLUMN meta SET DEFAULT '{}';
+ALTER TABLE {{.PubSubTable}} ALTER COLUMN meta SET NOT NULL;
+ALTER TABLE {{.PubSubTable}} ALTER COLUMN created_at SET DEFAULT now();
+ALTER TABLE {{.PubSubTable}} ALTER COLUMN created_at SET NOT NULL;
 
-CREATE UNIQUE INDEX IF NOT EXISTS %s ON %s (stream, "offset");
-CREATE INDEX IF NOT EXISTS %s ON %s (created_at);
+CREATE UNIQUE INDEX IF NOT EXISTS {{.PubSubOffsetIndex}} ON {{.PubSubTable}} (stream, "offset");
+CREATE INDEX IF NOT EXISTS {{.PubSubCreatedIndex}} ON {{.PubSubTable}} (created_at);
+`
 
-CREATE OR REPLACE FUNCTION %s()
+const notificationTriggersSchemaSQL = `
+CREATE OR REPLACE FUNCTION {{.BroadcastTriggerFn}}()
 RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 BEGIN
-  PERFORM pg_notify(%s, json_build_object('v', 1, 'stream', NEW.stream, 'offset', NEW."offset")::text);
+  PERFORM pg_notify({{.BroadcastChannelLiteral}}, json_build_object('v', 1, 'stream', NEW.stream, 'offset', NEW."offset")::text);
   RETURN NEW;
 END;
 $$;
 
-DROP TRIGGER IF EXISTS %s ON %s;
-CREATE TRIGGER %s
-AFTER INSERT ON %s
-FOR EACH ROW EXECUTE FUNCTION %s();
+DROP TRIGGER IF EXISTS {{.BroadcastTrigger}} ON {{.BroadcastsTable}};
+CREATE TRIGGER {{.BroadcastTrigger}}
+AFTER INSERT ON {{.BroadcastsTable}}
+FOR EACH ROW EXECUTE FUNCTION {{.BroadcastTriggerFn}}();
 
-CREATE OR REPLACE FUNCTION %s()
+CREATE OR REPLACE FUNCTION {{.PubSubTriggerFn}}()
 RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 BEGIN
-  PERFORM pg_notify(%s, json_build_object('v', 1, 'stream', NEW.stream, 'offset', NEW."offset")::text);
+  PERFORM pg_notify({{.PubSubChannelLiteral}}, json_build_object('v', 1, 'stream', NEW.stream, 'offset', NEW."offset")::text);
   RETURN NEW;
 END;
 $$;
 
-DROP TRIGGER IF EXISTS %s ON %s;
-CREATE TRIGGER %s
-AFTER INSERT ON %s
-FOR EACH ROW EXECUTE FUNCTION %s();
+DROP TRIGGER IF EXISTS {{.PubSubTrigger}} ON {{.PubSubTable}};
+CREATE TRIGGER {{.PubSubTrigger}}
+AFTER INSERT ON {{.PubSubTable}}
+FOR EACH ROW EXECUTE FUNCTION {{.PubSubTriggerFn}}();
+`
 
+const publisherFunctionsSchemaSQL = `
 CREATE OR REPLACE FUNCTION anycable_publish(target_stream text, payload text, meta text DEFAULT '{}')
 RETURNS bigint
 LANGUAGE plpgsql
@@ -423,7 +525,7 @@ BEGIN
   IF target_stream IS NULL OR target_stream = '' THEN
     RAISE EXCEPTION 'anycable_publish stream cannot be null or empty';
   END IF;
-  IF target_stream = %s THEN
+  IF target_stream = {{.InternalStreamLiteral}} THEN
     RAISE EXCEPTION 'anycable_publish stream cannot use the configured internal stream';
   END IF;
   IF payload IS NULL THEN
@@ -433,14 +535,14 @@ BEGIN
     RAISE EXCEPTION 'anycable_publish meta cannot be null';
   END IF;
 
-  INSERT INTO %s AS offsets (scope, stream, "offset")
+  INSERT INTO {{.OffsetsTable}} AS offsets (scope, stream, "offset")
   VALUES ('broadcast', target_stream, 1)
   ON CONFLICT (scope, stream)
   DO UPDATE SET "offset" = offsets."offset" + 1,
                 updated_at = now()
   RETURNING "offset" INTO next_offset;
 
-  INSERT INTO %s (stream, "offset", payload, meta)
+  INSERT INTO {{.BroadcastsTable}} (stream, "offset", payload, meta)
   VALUES (target_stream, next_offset, payload, meta);
 
   RETURN next_offset;
@@ -454,7 +556,7 @@ AS $$
 DECLARE
   next_offset bigint;
 BEGIN
-  IF %s IS NULL OR %s = '' THEN
+  IF {{.InternalStreamLiteral}} IS NULL OR {{.InternalStreamLiteral}} = '' THEN
     RAISE EXCEPTION 'anycable_remote_command internal stream cannot be null or empty';
   END IF;
   IF payload IS NULL THEN
@@ -464,51 +566,20 @@ BEGIN
     RAISE EXCEPTION 'anycable_remote_command meta cannot be null';
   END IF;
 
-  INSERT INTO %s AS offsets (scope, stream, "offset")
-  VALUES ('broadcast', %s, 1)
+  INSERT INTO {{.OffsetsTable}} AS offsets (scope, stream, "offset")
+  VALUES ('broadcast', {{.InternalStreamLiteral}}, 1)
   ON CONFLICT (scope, stream)
   DO UPDATE SET "offset" = offsets."offset" + 1,
                 updated_at = now()
   RETURNING "offset" INTO next_offset;
 
-  INSERT INTO %s (stream, "offset", payload, meta)
-  VALUES (%s, next_offset, payload, meta);
+  INSERT INTO {{.BroadcastsTable}} (stream, "offset", payload, meta)
+  VALUES ({{.InternalStreamLiteral}}, next_offset, payload, meta);
 
   RETURN next_offset;
 END;
 $$;
-`, offsetsTable,
-		offsetsTable, offsetsTable, offsetsTable, offsetsTable,
-		offsetsTable, offsetsTable, offsetsTable, offsetsTable,
-		offsetsTable, offsetsTable, offsetsTable, offsetsTable, offsetsTable, offsetsTable,
-		broadcastsTable,
-		broadcastsTable, broadcastsTable, broadcastsTable, broadcastsTable, broadcastsTable,
-		broadcastsTable, broadcastsTable, broadcastsTable, broadcastsTable, broadcastsTable,
-		broadcastsTable, broadcastsTable, broadcastsTable, broadcastsTable, broadcastsTable, broadcastsTable,
-		broadcastsTable, broadcastsTable, broadcastsTable, broadcastsTable, broadcastsTable, broadcastsTable, broadcastsTable, broadcastsTable, broadcastsTable,
-		broadcastOffsetIndex, broadcastsTable, broadcastClaimIndex, broadcastsTable, broadcastCleanupIndex, broadcastsTable,
-		pubsubTable,
-		pubsubTable, pubsubTable, pubsubTable, pubsubTable, pubsubTable,
-		pubsubTable, pubsubTable, pubsubTable, pubsubTable, pubsubTable,
-		pubsubTable, pubsubTable, pubsubTable, pubsubTable, pubsubTable, pubsubTable, pubsubTable,
-		pubsubOffsetIndex, pubsubTable, pubsubCreatedIndex, pubsubTable,
-		broadcastTriggerFn, broadcastChannel,
-		broadcastTrigger, broadcastsTable, broadcastTrigger, broadcastsTable, broadcastTriggerFn,
-		pubsubTriggerFn, pubsubChannel,
-		pubsubTrigger, pubsubTable, pubsubTrigger, pubsubTable, pubsubTriggerFn,
-		internalStream,
-		offsetsTable,
-		broadcastsTable,
-		internalStream, internalStream,
-		offsetsTable, internalStream,
-		broadcastsTable, internalStream)
-
-	if _, err := pool.Exec(ctx, sql); err != nil {
-		return fmt.Errorf("failed to ensure postgres signalling schema: %w", err)
-	}
-
-	return nil
-}
+`
 
 func validateColumns(ctx context.Context, pool *pgxpool.Pool, table string, expected []ColumnSpec) error {
 	rows, err := pool.Query(ctx, `
