@@ -55,6 +55,46 @@ func (q *Queue[T]) Add(i Item[T]) bool {
 	return true
 }
 
+// PushResult is returned by Push to describe the outcome.
+type PushResult int
+
+const (
+	// PushOK — item was enqueued.
+	PushOK PushResult = iota
+	// PushClosed — queue is closed; item dropped.
+	PushClosed
+	// PushOverflow — current size would exceed maxSize; queue cleared and item dropped.
+	PushOverflow
+)
+
+// Push enqueues an item under a single write lock, combining the closed/size/add
+// checks that callers (e.g. session.sendFrame) would otherwise do via three
+// separate lock acquisitions. If maxSize > 0 and the current total size is
+// already >= maxSize, the queue is cleared and PushOverflow is returned so the
+// caller can disconnect the slow client without another lock pass.
+func (q *Queue[T]) Push(i Item[T], maxSize uint64) PushResult {
+	q.mu.Lock()
+	if q.closed {
+		q.mu.Unlock()
+		return PushClosed
+	}
+	if maxSize > 0 && q.size >= maxSize {
+		q.clearLocked()
+		q.mu.Unlock()
+		return PushOverflow
+	}
+	if q.cnt == len(q.nodes) {
+		q.resize(q.cnt * 2)
+	}
+	q.nodes[q.tail] = i
+	q.tail = (q.tail + 1) % len(q.nodes)
+	q.size += i.Size
+	q.cnt++
+	q.cond.Signal()
+	q.mu.Unlock()
+	return PushOK
+}
+
 // Close the queue and discard all entries in the queue
 // all goroutines in wait() will return
 func (q *Queue[T]) Close() {
@@ -78,7 +118,12 @@ func (q *Queue[T]) Closed() bool {
 // Clear removes all items from the queue but does not close the queue.
 func (q *Queue[T]) Clear() {
 	q.mu.Lock()
-	defer q.mu.Unlock()
+	q.clearLocked()
+	q.mu.Unlock()
+}
+
+// clearLocked resets the queue contents. Callers must hold q.mu.
+func (q *Queue[T]) clearLocked() {
 	q.closed = false
 	q.cnt = 0
 	q.nodes = make([]Item[T], q.initCap)

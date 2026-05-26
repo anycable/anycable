@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/anycable/anycable-go/broker"
@@ -156,7 +157,7 @@ type Session struct {
 
 	writeQueue     *utils.Queue[*ws.SentFrame]
 	writeTimeout   time.Duration
-	maxPendingSize uint64
+	maxPendingSize atomic.Uint64
 
 	timers *SessionTimers
 
@@ -257,7 +258,7 @@ func WithWriteTimeout(timeout time.Duration) SessionOption {
 // WithMaxPendingSize allows to set a custom max pending size for a session
 func WithMaxPendingSize(size uint64) SessionOption {
 	return func(s *Session) {
-		s.maxPendingSize = size
+		s.maxPendingSize.Store(size)
 	}
 }
 
@@ -681,9 +682,7 @@ func (s *Session) disconnectNow(reason string, code int) {
 		CloseCode:   code,
 	})
 
-	if !s.writeQueue.Closed() {
-		s.writeQueue.Close()
-	}
+	s.writeQueue.Close()
 
 	s.close()
 }
@@ -720,34 +719,18 @@ func (s *Session) sendClose(reason string, code int) {
 }
 
 func (s *Session) sendFrame(message *ws.SentFrame) {
-	if s.writeQueue.Closed() {
+	maxPending := s.maxPendingSize.Load()
+	size := uint64(len(message.Payload))
+	item := utils.Item[*ws.SentFrame]{Data: message, Size: size}
+
+	switch s.writeQueue.Push(item, maxPending) {
+	case utils.PushOK, utils.PushClosed:
 		return
-	}
-
-	pendingTotal := s.writeQueue.Size()
-	s.mu.Lock()
-	maxPending := s.maxPendingSize
-	s.mu.Unlock()
-
-	if maxPending > 0 && pendingTotal >= maxPending {
-		s.writeQueue.Clear()
-		s.mu.Lock()
-		s.maxPendingSize = 0
-		s.mu.Unlock()
-
-		s.Log.Debug("slow client detected, disconnecting", "pending", pendingTotal, "max", s.maxPendingSize)
-
+	case utils.PushOverflow:
+		s.maxPendingSize.Store(0)
+		s.Log.Debug("slow client detected, disconnecting", "max", maxPending)
 		s.metrics.CounterIncrement(metricsDisconnectedSlowClients)
 		s.DisconnectWithMessage(common.NewDisconnectMessage(common.SLOW_CLIENT_REASON, true), common.SLOW_CLIENT_REASON)
-		return
-	}
-
-	size := len(message.Payload)
-
-	item := utils.Item[*ws.SentFrame]{Data: message, Size: uint64(size)}
-
-	if !s.writeQueue.Add(item) {
-		defer s.Disconnect("Write failed", ws.CloseAbnormalClosure)
 	}
 }
 

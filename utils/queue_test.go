@@ -102,6 +102,32 @@ func TestByteQueueClose(t *testing.T) {
 	require.Equal(t, true, q.Closed())
 }
 
+func TestByteQueuePush(t *testing.T) {
+	t.Run("returns PushOK and enqueues when open and under cap", func(t *testing.T) {
+		q := NewQueue[[]byte](initialCapacity)
+		require.Equal(t, PushOK, q.Push(testByteQueueItem([]byte("a")), 0))
+		require.Equal(t, PushOK, q.Push(testByteQueueItem([]byte("b")), 100))
+		require.Equal(t, 2, q.Len())
+		require.EqualValues(t, 2, q.Size())
+	})
+
+	t.Run("returns PushClosed without enqueueing", func(t *testing.T) {
+		q := NewQueue[[]byte](initialCapacity)
+		q.Close()
+		require.Equal(t, PushClosed, q.Push(testByteQueueItem([]byte("a")), 0))
+	})
+
+	t.Run("returns PushOverflow and clears when size >= maxSize", func(t *testing.T) {
+		q := NewQueue[[]byte](initialCapacity)
+		q.Add(testByteQueueItem([]byte("12345")))
+		require.EqualValues(t, 5, q.Size())
+		require.Equal(t, PushOverflow, q.Push(testByteQueueItem([]byte("6")), 5))
+		require.Equal(t, 0, q.Len())
+		require.EqualValues(t, 0, q.Size())
+		require.False(t, q.Closed())
+	})
+}
+
 func TestByteQueueClear(t *testing.T) {
 	q := NewQueue[[]byte](initialCapacity)
 

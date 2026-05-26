@@ -1,4 +1,7 @@
 name: Publish binaries
+permissions:
+  contents: write
+
 on:
   release:
     types: [published]

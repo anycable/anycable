@@ -246,7 +246,7 @@ func TestSend__maxPendingSize(t *testing.T) {
 	t.Run("Disconnect when queue size at least maxPendingSize", func(t *testing.T) {
 		node := NewMockNode()
 		session := NewMockSession("123", node)
-		session.maxPendingSize = 37
+		session.maxPendingSize.Store(37)
 
 		sendTestMessages(session)
 
@@ -259,7 +259,7 @@ func TestSend__maxPendingSize(t *testing.T) {
 	t.Run("Allow when queue size less than maxPendingSize", func(t *testing.T) {
 		node := NewMockNode()
 		session := NewMockSession("123", node)
-		session.maxPendingSize = 38
+		session.maxPendingSize.Store(38)
 
 		sendTestMessages(session)
 
@@ -275,7 +275,7 @@ func TestSend__maxPendingSize(t *testing.T) {
 	t.Run("Allow when maxPendingSize is 0 (unlimited)", func(t *testing.T) {
 		node := NewMockNode()
 		session := NewMockSession("123", node)
-		session.maxPendingSize = 0
+		session.maxPendingSize.Store(0)
 
 		sendTestMessages(session)
 

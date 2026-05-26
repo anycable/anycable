@@ -1,0 +1,78 @@
+x-app: &app
+  build:
+    context: .
+    dockerfile: Dockerfile
+    args:
+      GO_VERSION: '1.26'
+      DISTRO_NAME: 'bookworm'
+  image: anycable-go-dev:1.0
+  environment: &env
+    MRUBY_GO: 'false'
+    GOPATH: /go
+    GOCACHE: /root/.cache/go-build
+    GOMODCACHE: /go/pkg/mod
+    # Bind to all interfaces so the port mapping reaches the host.
+    ANYCABLE_HOST: 0.0.0.0
+    # Conformance test defaults — the Makefile detects REDIS_URL and uses redisx broadcaster.
+    REDIS_URL: redis://redis:6379/0
+    ANYCABLE_REDIS_URL: redis://redis:6379/0
+
+x-backend: &backend
+  <<: *app
+  stdin_open: true
+  tty: true
+  working_dir: /app
+  volumes:
+    - ..:/app:cached
+    - gopath:/go
+    - gocache:/root/.cache/go-build
+    - bundle:/usr/local/bundle
+    - dist:/app/dist
+    - tmp:/app/tmp
+    - history:/usr/local/hist
+    # Claude state (sessions, settings.json, todos, project data) — named volume.
+    - claude:/root/.claude
+    # Claude main config (auth tokens, project list) — bind-mounted so it persists
+    # on the host and can be inspected/edited. Seeded by `dip provision` from
+    # .claude.json.example.
+    - ./.claude.json:/root/.claude.json
+  environment:
+    <<: *env
+    HISTFILE: /usr/local/hist/.bash_history
+    EDITOR: vi
+  depends_on:
+    redis:
+      condition: service_healthy
+
+services:
+  app:
+    <<: *backend
+    command: /bin/bash
+
+  server:
+    <<: *backend
+    command: make run
+    ports:
+      - '8080:8080'
+
+  redis:
+    image: redis:7.4-alpine
+    volumes:
+      - redis:/data
+    ports:
+      - '6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 1s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  gopath:
+  gocache:
+  bundle:
+  dist:
+  tmp:
+  history:
+  redis:
+  claude:

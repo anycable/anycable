@@ -1,3 +1,10 @@
 {
-    "postCreateCommand": "/bin/bash ./.devcontainer/post-create.sh > ~/post-create.log"
+    "name": "anycable-go",
+    "dockerComposeFile": [
+        "../.dockerdev/compose.yml"
+    ],
+    "service": "app",
+    "workspaceFolder": "/app",
+    "shutdownAction": "stopCompose",
+    "postCreateCommand": "/bin/bash ./.devcontainer/post-create.sh"
 }

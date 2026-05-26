@@ -1,4 +1,6 @@
 name: Benchmark
+permissions:
+  contents: read
 
 on:
   push:

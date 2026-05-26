@@ -1,6 +1,8 @@
-sudo apt-get install bison graphviz redis-server -yq --no-install-recommends
-redis-server --daemonize yes
-make prepare prepare-mruby
-env GO111MODULE=off go get github.com/anycable/websocket-bench
-env GO111MODULE=off go get github.com/google/gops
-env GO111MODULE=off go get github.com/evilmartians/lefthook
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Conformance test dependencies.
+bundle check || bundle install
+
+# Pre-download Go modules so the first build is fast.
+go mod download

@@ -2,6 +2,12 @@
 
 - Add Postgres broadcast and pub/sub signalling adapters. ([@TikiTDO][])
 
+## 1.6.14 (2026-06-26)
+
+- Minor perf improvements in broadcasting hub.
+
+- Upgrade to go1.26.3 toolchain.
+
 ## 1.6.13 (2026-04-30)
 
 - Upgrade dependencies.
