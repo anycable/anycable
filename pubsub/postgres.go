@@ -75,7 +75,9 @@ func NewPostgresSubscriber(node Handler, config *pgadapter.Config, l *slog.Logge
 	}, nil
 }
 
-// Start ensures the shared schema and starts the cursor polling loop.
+// Start ensures the shared schema, subscribes to wake-up notifications, and
+// starts the cursor polling loop. NOTIFY only scopes catch-up work; rows and
+// local cursors remain the source of truth.
 func (s *PostgresSubscriber) Start(done chan error) error {
 	s.ctx, s.cancel = context.WithCancel(context.Background())
 
@@ -197,38 +199,21 @@ func (s *PostgresSubscriber) BroadcastCommand(cmd *common.RemoteCommandMessage) 
 	s.publish(s.config.InternalStream, cmd)
 }
 
+// publish allocates the next per-stream pub/sub offset and inserts the fanout
+// row in one statement so cleanup never resets stream ordering metadata.
 func (s *PostgresSubscriber) publish(stream string, msg interface{}) {
 	pool := s.currentPool()
 	if pool == nil {
 		return
 	}
 
-	table, err := pgadapter.QuoteTableName(s.config.PubSubTable)
+	query, err := newPostgresPubSubPublishSQL(s.config)
 	if err != nil {
-		s.log.Error("invalid Postgres pub/sub table", "error", err)
+		s.log.Error("invalid Postgres pub/sub SQL identifiers", "error", err)
 		return
 	}
 
 	payload := string(utils.ToJSON(msg))
-	offsetsTable, err := pgadapter.QuoteTableName(s.config.StreamOffsetsTable)
-	if err != nil {
-		s.log.Error("invalid Postgres stream offsets table", "error", err)
-		return
-	}
-
-	query := fmt.Sprintf(`
-WITH next_offset AS (
-  INSERT INTO %s AS offsets (scope, stream, "offset")
-  VALUES ('pubsub', $1, 1)
-  ON CONFLICT (scope, stream)
-  DO UPDATE SET "offset" = offsets."offset" + 1,
-                updated_at = now()
-  RETURNING "offset"
-)
-INSERT INTO %s (stream, "offset", payload, meta)
-SELECT $1, "offset", $2, '{}'
-FROM next_offset
-`, offsetsTable, table)
 
 	s.log.With("stream", stream).Debug("publish Postgres pub/sub message", "data", msg)
 
@@ -295,12 +280,14 @@ func (s *PostgresSubscriber) pollOnce(all bool) {
 	}
 }
 
+// pollStreams batches local stream cursors and interleaves results by per-stream
+// position so one busy stream cannot consume the whole batch.
 func (s *PostgresSubscriber) pollStreams(pool *pgxpool.Pool, cursors map[string]int64) (int, error) {
 	if len(cursors) == 0 {
 		return 0, nil
 	}
 
-	table, err := pgadapter.QuoteTableName(s.config.PubSubTable)
+	queries, err := newPostgresPubSubQueries(s.config)
 	if err != nil {
 		return 0, err
 	}
@@ -312,34 +299,7 @@ func (s *PostgresSubscriber) pollStreams(pool *pgxpool.Pool, cursors map[string]
 		offsets = append(offsets, cursor)
 	}
 
-	query := fmt.Sprintf(`
-WITH cursors AS (
-  SELECT *
-  FROM unnest($1::text[], $2::bigint[]) AS c(stream, cursor_offset)
-),
-publications AS (
-  SELECT
-    cursors.stream,
-    rows."offset",
-    rows.payload,
-    row_number() OVER (PARTITION BY cursors.stream ORDER BY rows."offset") AS stream_position
-  FROM cursors
-  JOIN LATERAL (
-    SELECT "offset", payload
-    FROM %s
-    WHERE stream = cursors.stream
-      AND "offset" > cursors.cursor_offset
-    ORDER BY "offset"
-    LIMIT $3
-  ) rows ON true
-)
-SELECT stream, "offset", payload
-FROM publications
-ORDER BY stream_position, stream, "offset"
-LIMIT $3
-`, table)
-
-	rows, err := pool.Query(s.ctx, query, streams, offsets, s.config.BatchLimit())
+	rows, err := pool.Query(s.ctx, queries.poll, streams, offsets, s.config.BatchLimit())
 	if err != nil {
 		return 0, err
 	}
@@ -358,9 +318,13 @@ LIMIT $3
 		count++
 
 		if !s.isSubscribed(stream) {
+			// A snapshot can race an unsubscribe. Once local interest is gone,
+			// there is no cursor left to advance for that stream.
 			continue
 		}
 
+		// deliver logs malformed payloads as a terminal local outcome. Advancing
+		// after the call keeps a poison row from pinning this node's cursor.
 		s.deliver(stream, []byte(payload))
 		s.advanceCursor(stream, offset)
 	}
@@ -385,42 +349,43 @@ func (s *PostgresSubscriber) deliver(stream string, payload []byte) {
 	}
 }
 
+// cleanup trims old fanout rows only. Stream offsets remain in the shared
+// offsets table so new publications continue from the last allocated cursor.
 func (s *PostgresSubscriber) cleanup() error {
 	pool := s.currentPool()
 	if pool == nil {
 		return nil
 	}
 
-	table, err := pgadapter.QuoteTableName(s.config.PubSubTable)
+	queries, err := newPostgresPubSubQueries(s.config)
 	if err != nil {
 		return err
 	}
 
-	query := fmt.Sprintf(`
-DELETE FROM %s
-WHERE created_at < now() - ($1::bigint * interval '1 second')
-`, table)
-
-	_, err = pool.Exec(s.ctx, query, int64(s.config.RetentionDuration().Seconds()))
+	_, err = pool.Exec(
+		s.ctx,
+		queries.cleanup,
+		int64(s.config.RetentionDuration().Seconds()),
+	)
 	return err
 }
 
+// currentCursor starts new local subscriptions at the current stream tail. The
+// Postgres pub/sub table is a catch-up log, not a durable replay source.
 func (s *PostgresSubscriber) currentCursor(stream string) int64 {
 	pool := s.currentPool()
 	if pool == nil {
 		return 0
 	}
 
-	table, err := pgadapter.QuoteTableName(s.config.PubSubTable)
+	queries, err := newPostgresPubSubQueries(s.config)
 	if err != nil {
-		s.log.Error("invalid Postgres pub/sub table", "error", err)
+		s.log.Error("invalid Postgres pub/sub SQL identifiers", "error", err)
 		return 0
 	}
 
-	query := fmt.Sprintf("SELECT COALESCE(MAX(\"offset\"), 0) FROM %s WHERE stream = $1", table)
-
 	var cursor int64
-	if err := pool.QueryRow(context.Background(), query, stream).Scan(&cursor); err != nil {
+	if err := pool.QueryRow(context.Background(), queries.currentCursor, stream).Scan(&cursor); err != nil {
 		s.log.Warn("failed to initialize Postgres pub/sub cursor", "stream", stream, "error", err)
 		return 0
 	}
@@ -435,6 +400,8 @@ func (s *PostgresSubscriber) currentPool() *pgxpool.Pool {
 	return s.pool
 }
 
+// subscriptionSnapshot returns either all subscribed cursors for fallback polls
+// or the coalesced streams marked by NOTIFY wakeups since the last snapshot.
 func (s *PostgresSubscriber) subscriptionSnapshot(all bool) map[string]int64 {
 	s.subMu.Lock()
 	defer s.subMu.Unlock()
@@ -498,9 +465,13 @@ func (s *PostgresSubscriber) wakePayload(payload string) {
 		return
 	}
 
+	// The notification offset is a latency hint only. Cursor-based polling owns
+	// correctness, so we only use the stream name to scope catch-up work.
 	s.wakeStream(notification.Stream)
 }
 
+// wakeStream records a coalesced catch-up request for subscribed streams. The
+// polling loop drains the changed set under subscriptionSnapshot.
 func (s *PostgresSubscriber) wakeStream(stream string) {
 	s.subMu.Lock()
 	if _, ok := s.subscriptions[stream]; !ok {
@@ -512,6 +483,93 @@ func (s *PostgresSubscriber) wakeStream(stream string) {
 
 	s.wake()
 }
+
+// postgresPubSubQueries contains SQL rendered with a validated, quoted pub/sub
+// table identifier. Runtime values continue to flow through query parameters.
+type postgresPubSubQueries struct {
+	poll          string
+	cleanup       string
+	currentCursor string
+}
+
+func newPostgresPubSubQueries(config *pgadapter.Config) (postgresPubSubQueries, error) {
+	pubsubTable, err := pgadapter.QuoteTableName(config.PubSubTable)
+	if err != nil {
+		return postgresPubSubQueries{}, fmt.Errorf("invalid Postgres pub/sub table: %w", err)
+	}
+
+	return postgresPubSubQueries{
+		poll:          fmt.Sprintf(pollPostgresPubSubSQL, pubsubTable),
+		cleanup:       fmt.Sprintf(cleanupPostgresPubSubSQL, pubsubTable),
+		currentCursor: fmt.Sprintf(currentPostgresPubSubCursorSQL, pubsubTable),
+	}, nil
+}
+
+func newPostgresPubSubPublishSQL(config *pgadapter.Config) (string, error) {
+	pubsubTable, err := pgadapter.QuoteTableName(config.PubSubTable)
+	if err != nil {
+		return "", fmt.Errorf("invalid Postgres pub/sub table: %w", err)
+	}
+
+	offsetsTable, err := pgadapter.QuoteTableName(config.StreamOffsetsTable)
+	if err != nil {
+		return "", fmt.Errorf("invalid Postgres stream offsets table: %w", err)
+	}
+
+	return fmt.Sprintf(publishPostgresPubSubSQL, offsetsTable, pubsubTable), nil
+}
+
+const publishPostgresPubSubSQL = `
+WITH next_offset AS (
+  INSERT INTO %[1]s AS offsets (scope, stream, "offset")
+  VALUES ('pubsub', $1, 1)
+  ON CONFLICT (scope, stream)
+  DO UPDATE SET "offset" = offsets."offset" + 1,
+                updated_at = now()
+  RETURNING "offset"
+)
+INSERT INTO %[2]s (stream, "offset", payload, meta)
+SELECT $1, "offset", $2, '{}'
+FROM next_offset
+`
+
+const pollPostgresPubSubSQL = `
+WITH cursors AS (
+  SELECT c.stream, c.cursor_offset
+  FROM unnest($1::text[], $2::bigint[]) AS c(stream, cursor_offset)
+),
+publications AS (
+  SELECT
+    cursors.stream,
+    rows."offset",
+    rows.payload,
+    row_number() OVER (PARTITION BY cursors.stream ORDER BY rows."offset") AS stream_position
+  FROM cursors
+  JOIN LATERAL (
+    SELECT "offset", payload
+    FROM %[1]s
+    WHERE stream = cursors.stream
+      AND "offset" > cursors.cursor_offset
+    ORDER BY "offset"
+    LIMIT $3
+  ) rows ON true
+)
+SELECT stream, "offset", payload
+FROM publications
+ORDER BY stream_position, stream, "offset"
+LIMIT $3
+`
+
+const cleanupPostgresPubSubSQL = `
+DELETE FROM %[1]s
+WHERE created_at < now() - ($1::bigint * interval '1 second')
+`
+
+const currentPostgresPubSubCursorSQL = `
+SELECT COALESCE(MAX("offset"), 0)
+FROM %[1]s
+WHERE stream = $1
+`
 
 // test-only
 func (s *PostgresSubscriber) trackEvent(event string, channel string) {
