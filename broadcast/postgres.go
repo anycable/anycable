@@ -12,6 +12,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// PostgresBroadcaster claims app-published broadcast rows from Postgres and
+// passes each row to exactly one AnyCable node.
 type PostgresBroadcaster struct {
 	node   Handler
 	config *pgadapter.Config
@@ -374,6 +376,7 @@ func (b *PostgresBroadcaster) wake() {
 	}
 }
 
+// String returns a human-readable adapter identifier.
 func (b *PostgresBroadcaster) String() string {
 	return strings.Join([]string{"postgres", b.config.BroadcastsTable}, ":")
 }

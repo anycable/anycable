@@ -7,7 +7,11 @@ import (
 )
 
 const (
-	ExhaustedBroadcastPolicySkip  = "skip"
+	// ExhaustedBroadcastPolicySkip allows later messages on the same stream to
+	// proceed after a broadcast reaches the attempts limit.
+	ExhaustedBroadcastPolicySkip = "skip"
+	// ExhaustedBroadcastPolicyBlock keeps later messages on the same stream
+	// blocked until the exhausted broadcast row is resolved externally.
 	ExhaustedBroadcastPolicyBlock = "block"
 )
 
@@ -113,6 +117,7 @@ func (c Config) AttemptsLimit() int {
 	return c.MaxAttempts
 }
 
+// ExhaustedPolicy returns the configured final-failure behavior.
 func (c Config) ExhaustedPolicy() string {
 	if c.ExhaustedBroadcastPolicy == ExhaustedBroadcastPolicyBlock {
 		return ExhaustedBroadcastPolicyBlock

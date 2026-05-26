@@ -25,6 +25,8 @@ type postgresNotification struct {
 	Offset int64  `json:"offset"`
 }
 
+// PostgresSubscriber distributes node-to-node publications through Postgres
+// rows while using NOTIFY only as a polling wake-up signal.
 type PostgresSubscriber struct {
 	node   Handler
 	config *pgadapter.Config
@@ -154,6 +156,8 @@ func (*PostgresSubscriber) IsMultiNode() bool {
 	return true
 }
 
+// Subscribe registers local interest in a stream starting from the current
+// stream tail.
 func (s *PostgresSubscriber) Subscribe(stream string) {
 	// Subscriptions start at the current tail. The pub/sub table is not a
 	// durable replay log for newly subscribed streams.
@@ -167,6 +171,7 @@ func (s *PostgresSubscriber) Subscribe(stream string) {
 	s.trackEvent("subscribe", stream)
 }
 
+// Unsubscribe removes local interest in a stream.
 func (s *PostgresSubscriber) Unsubscribe(stream string) {
 	s.subMu.Lock()
 	if _, ok := s.subscriptions[stream]; !ok {
@@ -181,10 +186,13 @@ func (s *PostgresSubscriber) Unsubscribe(stream string) {
 	s.trackEvent("unsubscribe", stream)
 }
 
+// Broadcast publishes a stream message through the Postgres pub/sub log.
 func (s *PostgresSubscriber) Broadcast(msg *common.StreamMessage) {
 	s.publish(msg.Stream, msg)
 }
 
+// BroadcastCommand publishes a remote command through the configured internal
+// stream.
 func (s *PostgresSubscriber) BroadcastCommand(cmd *common.RemoteCommandMessage) {
 	s.publish(s.config.InternalStream, cmd)
 }

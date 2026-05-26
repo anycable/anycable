@@ -10,13 +10,18 @@ import (
 )
 
 const (
+	// BroadcastsTriggerName is the trigger name used for app-to-server broadcast
+	// notifications.
 	BroadcastsTriggerName = "anycable_broadcasts_notify_insert"
-	PubSubTriggerName     = "anycable_pubsub_notify_insert"
+	// PubSubTriggerName is the trigger name used for node-to-node pub/sub
+	// notifications.
+	PubSubTriggerName = "anycable_pubsub_notify_insert"
 
 	broadcastScope = "broadcast"
 	pubSubScope    = "pubsub"
 )
 
+// ColumnSpec describes the required shape of a Postgres signalling table column.
 type ColumnSpec struct {
 	Name                 string
 	Types                []string
@@ -32,6 +37,7 @@ type columnInfo struct {
 	defaultExpr string
 }
 
+// NewPool opens a pgx connection pool from the Postgres signalling config.
 func NewPool(ctx context.Context, config *Config) (*pgxpool.Pool, error) {
 	poolConfig, err := pgxpool.ParseConfig(config.URL)
 	if err != nil {
@@ -41,6 +47,8 @@ func NewPool(ctx context.Context, config *Config) (*pgxpool.Pool, error) {
 	return pgxpool.NewWithConfig(ctx, poolConfig)
 }
 
+// EnsureSchema verifies connectivity, optionally actualizes the signalling
+// schema, and validates the resulting contract.
 func EnsureSchema(ctx context.Context, pool *pgxpool.Pool, config *Config) error {
 	if err := ValidateIdentifiers(config); err != nil {
 		return err
@@ -59,6 +67,8 @@ func EnsureSchema(ctx context.Context, pool *pgxpool.Pool, config *Config) error
 	return ValidateSchema(ctx, pool, config)
 }
 
+// ValidateSchema checks that all required tables, indexes, triggers, and SQL
+// functions match the Postgres signalling contract.
 func ValidateSchema(ctx context.Context, pool *pgxpool.Pool, config *Config) error {
 	if err := validateColumns(ctx, pool, config.StreamOffsetsTable, []ColumnSpec{
 		{Name: "scope", Types: []string{"text"}, NotNull: true},
@@ -171,6 +181,7 @@ func ValidateSchema(ctx context.Context, pool *pgxpool.Pool, config *Config) err
 	return nil
 }
 
+// ValidateIdentifiers rejects unsafe or unsupported configured identifiers.
 func ValidateIdentifiers(config *Config) error {
 	for label, name := range map[string]string{
 		"broadcast notify channel": config.BroadcastNotifyChannel,
@@ -201,6 +212,7 @@ func ValidateIdentifiers(config *Config) error {
 	return nil
 }
 
+// QuoteIdentifier validates and quotes a single Postgres identifier.
 func QuoteIdentifier(name string) (string, error) {
 	if err := validateIdentifier("identifier", name); err != nil {
 		return "", err
@@ -209,6 +221,7 @@ func QuoteIdentifier(name string) (string, error) {
 	return pgx.Identifier{name}.Sanitize(), nil
 }
 
+// QuoteTableName validates and quotes a table name, optionally schema-qualified.
 func QuoteTableName(name string) (string, error) {
 	if err := validateTableIdentifier("table", name); err != nil {
 		return "", err

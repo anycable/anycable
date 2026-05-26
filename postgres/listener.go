@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+// Listener owns a dedicated Postgres LISTEN connection for one wake-up channel.
 type Listener struct {
 	config  *Config
 	channel string
