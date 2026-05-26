@@ -135,6 +135,49 @@ func TestPostgresSubscriberRepeatedFallbackPollsDoNotDuplicateDelivery(t *testin
 	assert.Equal(t, int64(1), subscriber.subscriptions["dedupe"].cursor)
 }
 
+func TestPostgresSubscriberCleanupDoesNotResetStreamOffsets(t *testing.T) {
+	config, pool := setupPostgresPubSubTest(t)
+	defer pool.Close()
+	defer dropPostgresPubSubTestTables(t, pool, config)
+
+	config.RetentionTTLSeconds = 1
+	require.NoError(t, pgadapter.EnsureSchema(context.Background(), pool, config))
+
+	subscriber, err := NewPostgresSubscriber(NewTestHandler(), config, slog.Default())
+	require.NoError(t, err)
+	subscriber.pool = pool
+	subscriber.ctx = context.Background()
+
+	subscriber.publish("retained_offset", &common.StreamMessage{Stream: "retained_offset", Data: "old-1"})
+	subscriber.publish("retained_offset", &common.StreamMessage{Stream: "retained_offset", Data: "old-2"})
+
+	pubsubTable, err := pgadapter.QuoteTableName(config.PubSubTable)
+	require.NoError(t, err)
+	offsetsTable, err := pgadapter.QuoteTableName(config.StreamOffsetsTable)
+	require.NoError(t, err)
+
+	_, err = pool.Exec(context.Background(), fmt.Sprintf("UPDATE %s SET created_at = now() - interval '1 hour' WHERE stream = $1", pubsubTable), "retained_offset")
+	require.NoError(t, err)
+	require.NoError(t, subscriber.cleanup())
+
+	var rows int
+	err = pool.QueryRow(context.Background(), fmt.Sprintf("SELECT count(*) FROM %s WHERE stream = $1", pubsubTable), "retained_offset").Scan(&rows)
+	require.NoError(t, err)
+	assert.Equal(t, 0, rows)
+
+	subscriber.publish("retained_offset", &common.StreamMessage{Stream: "retained_offset", Data: "new"})
+
+	var rowOffset int64
+	err = pool.QueryRow(context.Background(), fmt.Sprintf("SELECT \"offset\" FROM %s WHERE stream = $1", pubsubTable), "retained_offset").Scan(&rowOffset)
+	require.NoError(t, err)
+	assert.Equal(t, int64(3), rowOffset)
+
+	var cursor int64
+	err = pool.QueryRow(context.Background(), fmt.Sprintf("SELECT \"offset\" FROM %s WHERE scope = 'pubsub' AND stream = $1", offsetsTable), "retained_offset").Scan(&cursor)
+	require.NoError(t, err)
+	assert.Equal(t, int64(3), cursor)
+}
+
 func waitPostgresSubscription(subscriber Subscriber, stream string) error {
 	postgresSubscriber, ok := subscriber.(*PostgresSubscriber)
 	if !ok {

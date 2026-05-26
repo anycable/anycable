@@ -124,6 +124,56 @@ func TestPostgresBroadcasterFinalFailureKeepsClaim(t *testing.T) {
 	}, time.Second, 25*time.Millisecond)
 }
 
+func TestPostgresBroadcasterRetriableFailureReleasesClaim(t *testing.T) {
+	config, pool := setupPostgresBroadcastTest(t)
+	defer pool.Close()
+	defer dropPostgresBroadcastTestTables(t, pool, config)
+
+	config.MaxAttempts = 2
+	require.NoError(t, pgadapter.EnsureSchema(context.Background(), pool, config))
+
+	offset, err := insertPostgresBroadcast(pool, config, map[string]string{"stream": "any_test", "data": "retry"})
+	require.NoError(t, err)
+
+	handler := &postgresRecordingHandler{
+		failures: map[string]error{"retry": errors.New("boom")},
+	}
+	broadcaster := newPollingPostgresBroadcaster(handler, config, pool)
+
+	count, err := broadcaster.pollOnce()
+	require.NoError(t, err)
+	assert.Equal(t, 1, count)
+
+	table, err := pgadapter.QuoteTableName(config.BroadcastsTable)
+	require.NoError(t, err)
+
+	var claimCleared bool
+	var attempts int
+	var lastError string
+	var exhausted bool
+	err = pool.QueryRow(
+		context.Background(),
+		fmt.Sprintf("SELECT claimed_by IS NULL AND claimed_at IS NULL, attempts, last_error, exhausted_at IS NOT NULL FROM %s WHERE stream = $1 AND \"offset\" = $2", table),
+		"any_test",
+		offset,
+	).Scan(&claimCleared, &attempts, &lastError, &exhausted)
+	require.NoError(t, err)
+	assert.True(t, claimCleared)
+	assert.Equal(t, 1, attempts)
+	assert.Equal(t, "boom", lastError)
+	assert.False(t, exhausted)
+
+	delete(handler.failures, "retry")
+	count, err = broadcaster.pollOnce()
+	require.NoError(t, err)
+	assert.Equal(t, 1, count)
+
+	var rows int
+	err = pool.QueryRow(context.Background(), fmt.Sprintf("SELECT count(*) FROM %s WHERE stream = $1", table), "any_test").Scan(&rows)
+	require.NoError(t, err)
+	assert.Equal(t, 0, rows)
+}
+
 func TestPostgresBroadcasterPollsBatchAcrossStreams(t *testing.T) {
 	config, pool := setupPostgresBroadcastTest(t)
 	defer pool.Close()
