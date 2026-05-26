@@ -6,7 +6,9 @@ import (
 	"log/slog"
 	"net/url"
 	"os"
+	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -344,6 +346,221 @@ CREATE UNIQUE INDEX %s ON %s (stream, "offset") WHERE stream <> 'excluded';
 	})
 }
 
+func TestPostgresSQLFunctionInputValidation(t *testing.T) {
+	ctx := context.Background()
+	config, pool := setupContractTest(t)
+	defer pool.Close()
+	defer dropContractTestTables(t, pool, config)
+
+	require.NoError(t, EnsureSchema(ctx, pool, config))
+
+	for _, tc := range []struct {
+		name  string
+		query string
+		args  []interface{}
+		want  string
+	}{
+		{
+			name:  "publish rejects null stream",
+			query: "SELECT anycable_publish(NULL::text, $1, $2)",
+			args:  []interface{}{"payload", "{}"},
+			want:  "stream cannot be null or empty",
+		},
+		{
+			name:  "publish rejects empty stream",
+			query: "SELECT anycable_publish($1, $2, $3)",
+			args:  []interface{}{"", "payload", "{}"},
+			want:  "stream cannot be null or empty",
+		},
+		{
+			name:  "publish rejects internal stream",
+			query: "SELECT anycable_publish($1, $2, $3)",
+			args:  []interface{}{config.InternalStream, "payload", "{}"},
+			want:  "configured internal stream",
+		},
+		{
+			name:  "publish rejects null payload",
+			query: "SELECT anycable_publish($1, NULL::text, $2)",
+			args:  []interface{}{"stream", "{}"},
+			want:  "payload cannot be null",
+		},
+		{
+			name:  "publish rejects null meta",
+			query: "SELECT anycable_publish($1, $2, NULL::text)",
+			args:  []interface{}{"stream", "payload"},
+			want:  "meta cannot be null",
+		},
+		{
+			name:  "remote command rejects null payload",
+			query: "SELECT anycable_remote_command(NULL::text, $1)",
+			args:  []interface{}{"{}"},
+			want:  "payload cannot be null",
+		},
+		{
+			name:  "remote command rejects null meta",
+			query: "SELECT anycable_remote_command($1, NULL::text)",
+			args:  []interface{}{"payload"},
+			want:  "meta cannot be null",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var offset int64
+			err := pool.QueryRow(ctx, tc.query, tc.args...).Scan(&offset)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tc.want)
+		})
+	}
+
+	offset, err := callPublish(ctx, pool, "opaque", `{"not":"validated"`, "not-json")
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), offset)
+}
+
+func TestPostgresRemoteCommandUsesConfiguredInternalStream(t *testing.T) {
+	ctx := context.Background()
+	config, pool := setupContractTest(t)
+	defer pool.Close()
+	defer dropContractTestTables(t, pool, config)
+
+	config.InternalStream = "__anycable_test_internal_one__"
+	require.NoError(t, EnsureSchema(ctx, pool, config))
+
+	offset := callRemoteCommand(t, ctx, pool, "payload-one", "meta-one")
+	assert.Equal(t, int64(1), offset)
+	assertBroadcastRow(t, ctx, pool, config, "__anycable_test_internal_one__", 1, "payload-one", "meta-one")
+
+	config.InternalStream = "__anycable_test_internal_two__"
+	require.NoError(t, EnsureSchema(ctx, pool, config))
+
+	offset = callRemoteCommand(t, ctx, pool, "payload-two", "meta-two")
+	assert.Equal(t, int64(1), offset)
+	assertBroadcastRow(t, ctx, pool, config, "__anycable_test_internal_two__", 1, "payload-two", "meta-two")
+
+	_, err := callPublish(ctx, pool, "__anycable_test_internal_two__", "payload", "{}")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "configured internal stream")
+}
+
+func TestPostgresPublishRollbackDoesNotLeaveOffsetGap(t *testing.T) {
+	ctx := context.Background()
+	config, pool := setupContractTest(t)
+	defer pool.Close()
+	defer dropContractTestTables(t, pool, config)
+
+	require.NoError(t, EnsureSchema(ctx, pool, config))
+
+	tx, err := pool.Begin(ctx)
+	require.NoError(t, err)
+
+	var rolledBackOffset int64
+	err = tx.QueryRow(ctx, "SELECT anycable_publish($1, $2, $3)", "rollback", "discarded", "{}").Scan(&rolledBackOffset)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), rolledBackOffset)
+	require.NoError(t, tx.Rollback(ctx))
+
+	offset, err := callPublish(ctx, pool, "rollback", "committed-one", "{}")
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), offset)
+
+	offset, err = callPublish(ctx, pool, "rollback", "committed-two", "{}")
+	require.NoError(t, err)
+	assert.Equal(t, int64(2), offset)
+}
+
+func TestPostgresConcurrentSameStreamPublishersGetUniqueOrderedOffsets(t *testing.T) {
+	ctx := context.Background()
+	config, pool := setupContractTest(t)
+	defer pool.Close()
+	defer dropContractTestTables(t, pool, config)
+
+	require.NoError(t, EnsureSchema(ctx, pool, config))
+
+	const publications = 12
+	offsets := make(chan int64, publications)
+	errs := make(chan error, publications)
+	var wg sync.WaitGroup
+
+	for i := 0; i < publications; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			offset, err := callPublish(ctx, pool, "concurrent", fmt.Sprintf("payload-%02d", i), "{}")
+			if err != nil {
+				errs <- err
+				return
+			}
+			offsets <- offset
+		}(i)
+	}
+
+	wg.Wait()
+	close(offsets)
+	close(errs)
+
+	for err := range errs {
+		require.NoError(t, err)
+	}
+
+	got := make([]int, 0, publications)
+	for offset := range offsets {
+		got = append(got, int(offset))
+	}
+	sort.Ints(got)
+	assert.Equal(t, []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}, got)
+
+	broadcastsTable, err := QuoteTableName(config.BroadcastsTable)
+	require.NoError(t, err)
+	rows, err := pool.Query(ctx, fmt.Sprintf("SELECT \"offset\" FROM %s WHERE stream = $1 ORDER BY \"offset\"", broadcastsTable), "concurrent")
+	require.NoError(t, err)
+	defer rows.Close()
+
+	stored := []int{}
+	for rows.Next() {
+		var offset int
+		require.NoError(t, rows.Scan(&offset))
+		stored = append(stored, offset)
+	}
+	require.NoError(t, rows.Err())
+	assert.Equal(t, got, stored)
+}
+
+func TestPostgresBroadcastAndPubSubOffsetsAreScopedIndependently(t *testing.T) {
+	ctx := context.Background()
+	config, pool := setupContractTest(t)
+	defer pool.Close()
+	defer dropContractTestTables(t, pool, config)
+
+	require.NoError(t, EnsureSchema(ctx, pool, config))
+
+	offset, err := callPublish(ctx, pool, "shared", "broadcast-one", "{}")
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), offset)
+	offset, err = callPublish(ctx, pool, "shared", "broadcast-two", "{}")
+	require.NoError(t, err)
+	assert.Equal(t, int64(2), offset)
+
+	pubsubOffset := insertPubSubPublication(t, ctx, pool, config, "shared", "pubsub-one")
+	assert.Equal(t, int64(1), pubsubOffset)
+	pubsubOffset = insertPubSubPublication(t, ctx, pool, config, "shared", "pubsub-two")
+	assert.Equal(t, int64(2), pubsubOffset)
+
+	offsetsTable, err := QuoteTableName(config.StreamOffsetsTable)
+	require.NoError(t, err)
+	rows, err := pool.Query(ctx, fmt.Sprintf("SELECT scope, \"offset\" FROM %s WHERE stream = $1 ORDER BY scope", offsetsTable), "shared")
+	require.NoError(t, err)
+	defer rows.Close()
+
+	scopes := map[string]int64{}
+	for rows.Next() {
+		var scope string
+		var offset int64
+		require.NoError(t, rows.Scan(&scope, &offset))
+		scopes[scope] = offset
+	}
+	require.NoError(t, rows.Err())
+	assert.Equal(t, map[string]int64{"broadcast": 2, "pubsub": 2}, scopes)
+}
+
 func setupContractTest(t *testing.T) (*Config, *pgxpool.Pool) {
 	t.Helper()
 
@@ -463,4 +680,60 @@ func callPublish(ctx context.Context, pool *pgxpool.Pool, stream string, payload
 	var offset int64
 	err := pool.QueryRow(ctx, "SELECT anycable_publish($1, $2, $3)", stream, payload, meta).Scan(&offset)
 	return offset, err
+}
+
+func callRemoteCommand(t *testing.T, ctx context.Context, pool *pgxpool.Pool, payload string, meta string) int64 {
+	t.Helper()
+
+	var offset int64
+	err := pool.QueryRow(ctx, "SELECT anycable_remote_command($1, $2)", payload, meta).Scan(&offset)
+	require.NoError(t, err)
+	return offset
+}
+
+func assertBroadcastRow(t *testing.T, ctx context.Context, pool *pgxpool.Pool, config *Config, stream string, offset int64, payload string, meta string) {
+	t.Helper()
+
+	broadcastsTable, err := QuoteTableName(config.BroadcastsTable)
+	require.NoError(t, err)
+
+	var storedPayload string
+	var storedMeta string
+	err = pool.QueryRow(
+		ctx,
+		fmt.Sprintf("SELECT payload, meta FROM %s WHERE stream = $1 AND \"offset\" = $2", broadcastsTable),
+		stream,
+		offset,
+	).Scan(&storedPayload, &storedMeta)
+	require.NoError(t, err)
+	assert.Equal(t, payload, storedPayload)
+	assert.Equal(t, meta, storedMeta)
+}
+
+func insertPubSubPublication(t *testing.T, ctx context.Context, pool *pgxpool.Pool, config *Config, stream string, payload string) int64 {
+	t.Helper()
+
+	offsetsTable, err := QuoteTableName(config.StreamOffsetsTable)
+	require.NoError(t, err)
+	pubsubTable, err := QuoteTableName(config.PubSubTable)
+	require.NoError(t, err)
+
+	var offset int64
+	err = pool.QueryRow(ctx, fmt.Sprintf(`
+WITH next_offset AS (
+  INSERT INTO %s AS offsets (scope, stream, "offset")
+  VALUES ('pubsub', $1, 1)
+  ON CONFLICT (scope, stream)
+  DO UPDATE SET "offset" = offsets."offset" + 1,
+                updated_at = now()
+  RETURNING "offset"
+)
+INSERT INTO %s (stream, "offset", payload, meta)
+SELECT $1, "offset", $2, '{}'
+FROM next_offset
+RETURNING "offset"
+`, offsetsTable, pubsubTable), stream, payload).Scan(&offset)
+	require.NoError(t, err)
+
+	return offset
 }

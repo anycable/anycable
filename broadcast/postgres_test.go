@@ -248,6 +248,59 @@ func TestPostgresBroadcasterFinalAttemptTimeoutUnblocksSkipPolicy(t *testing.T) 
 	assert.Equal(t, "claim timed out on final attempt", lastError)
 }
 
+func TestPostgresBroadcasterCleanupRespectsExhaustedPolicy(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		policy     string
+		expectRows int
+	}{
+		{
+			name:       "skip removes expired exhausted rows",
+			policy:     pgadapter.ExhaustedBroadcastPolicySkip,
+			expectRows: 0,
+		},
+		{
+			name:       "block leaves exhausted rows for operator action",
+			policy:     pgadapter.ExhaustedBroadcastPolicyBlock,
+			expectRows: 1,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			config, pool := setupPostgresBroadcastTest(t)
+			defer pool.Close()
+			defer dropPostgresBroadcastTestTables(t, pool, config)
+
+			config.ExhaustedBroadcastPolicy = tc.policy
+			config.RetentionTTLSeconds = 1
+			require.NoError(t, pgadapter.EnsureSchema(context.Background(), pool, config))
+
+			offset, err := insertPostgresBroadcast(pool, config, map[string]string{"stream": "cleanup", "data": "expired"})
+			require.NoError(t, err)
+
+			table, err := pgadapter.QuoteTableName(config.BroadcastsTable)
+			require.NoError(t, err)
+			_, err = pool.Exec(
+				context.Background(),
+				fmt.Sprintf("UPDATE %s SET claimed_by = $3, claimed_at = now() - interval '1 hour', attempts = $4, last_error = $5, exhausted_at = now() - interval '1 hour' WHERE stream = $1 AND \"offset\" = $2", table),
+				"cleanup",
+				offset,
+				config.NodeID(),
+				config.AttemptsLimit(),
+				"expired",
+			)
+			require.NoError(t, err)
+
+			broadcaster := newPollingPostgresBroadcaster(&postgresRecordingHandler{}, config, pool)
+			require.NoError(t, broadcaster.cleanup())
+
+			var rows int
+			err = pool.QueryRow(context.Background(), fmt.Sprintf("SELECT count(*) FROM %s WHERE stream = $1", table), "cleanup").Scan(&rows)
+			require.NoError(t, err)
+			assert.Equal(t, tc.expectRows, rows)
+		})
+	}
+}
+
 func setupPostgresBroadcastTest(t *testing.T) (*pgadapter.Config, *pgxpool.Pool) {
 	t.Helper()
 

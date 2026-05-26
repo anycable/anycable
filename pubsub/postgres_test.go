@@ -107,6 +107,34 @@ func TestPostgresSubscriberMalformedPayloadAdvancesCursor(t *testing.T) {
 	assert.Len(t, handler.messages, 0)
 }
 
+func TestPostgresSubscriberRepeatedFallbackPollsDoNotDuplicateDelivery(t *testing.T) {
+	config, pool := setupPostgresPubSubTest(t)
+	defer pool.Close()
+	defer dropPostgresPubSubTestTables(t, pool, config)
+
+	require.NoError(t, pgadapter.EnsureSchema(context.Background(), pool, config))
+
+	handler := NewTestHandler()
+	subscriber, err := NewPostgresSubscriber(handler, config, slog.Default())
+	require.NoError(t, err)
+	subscriber.pool = pool
+	subscriber.ctx = context.Background()
+	subscriber.subscriptions["dedupe"] = &postgresSubscriptionEntry{cursor: 0}
+
+	subscriber.publish("dedupe", &common.StreamMessage{Stream: "dedupe", Data: "once"})
+
+	count, err := subscriber.pollStreams(pool, subscriber.subscriptionSnapshot(true))
+	require.NoError(t, err)
+	assert.Equal(t, 1, count)
+	assert.Len(t, handler.messages, 1)
+
+	count, err = subscriber.pollStreams(pool, subscriber.subscriptionSnapshot(true))
+	require.NoError(t, err)
+	assert.Equal(t, 0, count)
+	assert.Len(t, handler.messages, 1)
+	assert.Equal(t, int64(1), subscriber.subscriptions["dedupe"].cursor)
+}
+
 func waitPostgresSubscription(subscriber Subscriber, stream string) error {
 	postgresSubscriber, ok := subscriber.(*PostgresSubscriber)
 	if !ok {
