@@ -18,14 +18,18 @@ const (
 )
 
 type ColumnSpec struct {
-	Name    string
-	Types   []string
-	NotNull bool
+	Name                 string
+	Types                []string
+	NotNull              bool
+	AutoValue            bool
+	DefaultExprFragments []string
 }
 
 type columnInfo struct {
-	typ     string
-	notNull bool
+	typ         string
+	notNull     bool
+	identity    bool
+	defaultExpr string
 }
 
 func NewPool(ctx context.Context, config *Config) (*pgxpool.Pool, error) {
@@ -60,34 +64,34 @@ func ValidateSchema(ctx context.Context, pool *pgxpool.Pool, config *Config) err
 		{Name: "scope", Types: []string{"text"}, NotNull: true},
 		{Name: "stream", Types: []string{"text"}, NotNull: true},
 		{Name: "offset", Types: []string{"bigint"}, NotNull: true},
-		{Name: "updated_at", Types: []string{"timestamp with time zone"}, NotNull: true},
+		{Name: "updated_at", Types: []string{"timestamp with time zone"}, NotNull: true, DefaultExprFragments: []string{"now()"}},
 	}); err != nil {
 		return err
 	}
 
 	if err := validateColumns(ctx, pool, config.BroadcastsTable, []ColumnSpec{
-		{Name: "id", Types: []string{"bigint"}, NotNull: true},
+		{Name: "id", Types: []string{"bigint"}, NotNull: true, AutoValue: true},
 		{Name: "stream", Types: []string{"text"}, NotNull: true},
 		{Name: "offset", Types: []string{"bigint"}, NotNull: true},
 		{Name: "payload", Types: []string{"text"}, NotNull: true},
 		{Name: "meta", Types: []string{"text"}, NotNull: true},
 		{Name: "claimed_by", Types: []string{"text"}, NotNull: false},
 		{Name: "claimed_at", Types: []string{"timestamp with time zone"}, NotNull: false},
-		{Name: "attempts", Types: []string{"integer"}, NotNull: true},
+		{Name: "attempts", Types: []string{"integer"}, NotNull: true, DefaultExprFragments: []string{"0"}},
 		{Name: "last_error", Types: []string{"text"}, NotNull: false},
 		{Name: "exhausted_at", Types: []string{"timestamp with time zone"}, NotNull: false},
-		{Name: "created_at", Types: []string{"timestamp with time zone"}, NotNull: true},
+		{Name: "created_at", Types: []string{"timestamp with time zone"}, NotNull: true, DefaultExprFragments: []string{"now()"}},
 	}); err != nil {
 		return err
 	}
 
 	if err := validateColumns(ctx, pool, config.PubSubTable, []ColumnSpec{
-		{Name: "id", Types: []string{"bigint"}, NotNull: true},
+		{Name: "id", Types: []string{"bigint"}, NotNull: true, AutoValue: true},
 		{Name: "stream", Types: []string{"text"}, NotNull: true},
 		{Name: "offset", Types: []string{"bigint"}, NotNull: true},
 		{Name: "payload", Types: []string{"text"}, NotNull: true},
 		{Name: "meta", Types: []string{"text"}, NotNull: true},
-		{Name: "created_at", Types: []string{"timestamp with time zone"}, NotNull: true},
+		{Name: "created_at", Types: []string{"timestamp with time zone"}, NotNull: true, DefaultExprFragments: []string{"now()"}},
 	}); err != nil {
 		return err
 	}
@@ -495,8 +499,14 @@ $$;
 
 func validateColumns(ctx context.Context, pool *pgxpool.Pool, table string, expected []ColumnSpec) error {
 	rows, err := pool.Query(ctx, `
-SELECT a.attname, pg_catalog.format_type(a.atttypid, a.atttypmod), a.attnotnull
+SELECT
+  a.attname,
+  pg_catalog.format_type(a.atttypid, a.atttypmod),
+  a.attnotnull,
+  a.attidentity <> '',
+  COALESCE(pg_get_expr(d.adbin, d.adrelid), '')
 FROM pg_catalog.pg_attribute a
+LEFT JOIN pg_catalog.pg_attrdef d ON d.adrelid = a.attrelid AND d.adnum = a.attnum
 WHERE a.attrelid = to_regclass($1)
   AND a.attnum > 0
   AND NOT a.attisdropped
@@ -508,12 +518,13 @@ WHERE a.attrelid = to_regclass($1)
 
 	columns := map[string]columnInfo{}
 	for rows.Next() {
-		var name, typ string
+		var name, typ, defaultExpr string
 		var notNull bool
-		if err := rows.Scan(&name, &typ, &notNull); err != nil {
+		var identity bool
+		if err := rows.Scan(&name, &typ, &notNull, &identity, &defaultExpr); err != nil {
 			return fmt.Errorf("failed to inspect %s: %w", table, err)
 		}
-		columns[name] = columnInfo{typ: typ, notNull: notNull}
+		columns[name] = columnInfo{typ: typ, notNull: notNull, identity: identity, defaultExpr: defaultExpr}
 	}
 
 	if err := rows.Err(); err != nil {
@@ -535,6 +546,12 @@ WHERE a.attrelid = to_regclass($1)
 		if spec.NotNull && !info.notNull {
 			return fmt.Errorf("postgres signalling table %s column %s must be NOT NULL", table, spec.Name)
 		}
+		if spec.AutoValue && !info.identity && !strings.Contains(info.defaultExpr, "nextval(") {
+			return fmt.Errorf("postgres signalling table %s column %s must use an identity or sequence default", table, spec.Name)
+		}
+		if len(spec.DefaultExprFragments) > 0 && !matchesAnyFragment(info.defaultExpr, spec.DefaultExprFragments) {
+			return fmt.Errorf("postgres signalling table %s column %s must define a default containing one of %s", table, spec.Name, strings.Join(spec.DefaultExprFragments, ", "))
+		}
 	}
 
 	return nil
@@ -549,6 +566,8 @@ SELECT EXISTS (
   WHERE i.indrelid = to_regclass($1)
     AND i.indisvalid
     AND i.indisunique
+    AND i.indpred IS NULL
+    AND i.indexprs IS NULL
     AND (
       SELECT array_agg(a.attname::text ORDER BY keys.ordinality)
       FROM unnest(i.indkey) WITH ORDINALITY AS keys(attnum, ordinality)
@@ -562,6 +581,16 @@ SELECT EXISTS (
 		return fmt.Errorf("postgres signalling table %s is missing required unique index on %s", table, strings.Join(columns, ", "))
 	}
 	return nil
+}
+
+func matchesAnyFragment(value string, fragments []string) bool {
+	for _, fragment := range fragments {
+		if strings.Contains(value, fragment) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func validateTrigger(ctx context.Context, pool *pgxpool.Pool, table string, trigger string, functionName string) error {

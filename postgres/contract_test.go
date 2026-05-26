@@ -298,6 +298,52 @@ CREATE TABLE %s (
 	require.NoError(t, ValidateSchema(ctx, pool, config))
 }
 
+func TestPostgresEnsureSchemaValidatesExternalTableContracts(t *testing.T) {
+	t.Run("missing runtime default", func(t *testing.T) {
+		ctx := context.Background()
+		config, pool := setupContractTest(t)
+		defer pool.Close()
+		defer dropContractTestTables(t, pool, config)
+
+		require.NoError(t, EnsureSchema(ctx, pool, config))
+
+		broadcastsTable, err := QuoteTableName(config.BroadcastsTable)
+		require.NoError(t, err)
+		_, err = pool.Exec(ctx, fmt.Sprintf("ALTER TABLE %s ALTER COLUMN id DROP DEFAULT", broadcastsTable))
+		require.NoError(t, err)
+
+		config.EnsureSchema = false
+		err = EnsureSchema(ctx, pool, config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "column id must use an identity or sequence default")
+	})
+
+	t.Run("partial unique index", func(t *testing.T) {
+		ctx := context.Background()
+		config, pool := setupContractTest(t)
+		defer pool.Close()
+		defer dropContractTestTables(t, pool, config)
+
+		require.NoError(t, EnsureSchema(ctx, pool, config))
+
+		broadcastsTable, err := QuoteTableName(config.BroadcastsTable)
+		require.NoError(t, err)
+		broadcastOffsetIndex, err := QuoteIdentifier(indexName(config.BroadcastsTable, "stream_offset_idx"))
+		require.NoError(t, err)
+
+		_, err = pool.Exec(ctx, fmt.Sprintf(`
+DROP INDEX %s;
+CREATE UNIQUE INDEX %s ON %s (stream, "offset") WHERE stream <> 'excluded';
+`, broadcastOffsetIndex, broadcastOffsetIndex, broadcastsTable))
+		require.NoError(t, err)
+
+		config.EnsureSchema = false
+		err = EnsureSchema(ctx, pool, config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "missing required unique index")
+	})
+}
+
 func setupContractTest(t *testing.T) (*Config, *pgxpool.Pool) {
 	t.Helper()
 
