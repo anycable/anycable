@@ -44,7 +44,7 @@ type Config struct {
 	MaxAttempts int `toml:"max_attempts"`
 	// Policy for exhausted broadcast rows: skip or block.
 	ExhaustedBroadcastPolicy string `toml:"exhausted_broadcast_policy"`
-	// Seconds to keep old pub/sub rows before cleanup.
+	// Seconds to keep old pub/sub rows and exhausted broadcast rows before cleanup.
 	RetentionTTLSeconds int64 `toml:"retention_ttl"`
 	// How often to run cleanup.
 	CleanupIntervalSeconds int64 `toml:"cleanup_interval"`
@@ -217,7 +217,7 @@ func (c Config) ToToml() string {
 	result.WriteString("# Policy for exhausted broadcast rows: skip or block\n")
 	result.WriteString(fmt.Sprintf("exhausted_broadcast_policy = \"%s\"\n", c.ExhaustedPolicy()))
 
-	result.WriteString("# Seconds to keep old pub/sub rows before cleanup\n")
+	result.WriteString("# Seconds to keep old pub/sub rows and exhausted broadcast rows before cleanup\n")
 	result.WriteString(fmt.Sprintf("retention_ttl = %d\n", c.RetentionTTL()))
 
 	result.WriteString("# Cleanup interval in seconds\n")

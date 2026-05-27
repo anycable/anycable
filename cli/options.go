@@ -911,7 +911,7 @@ func postgresCLIFlags(c *config.Config) []cli.Flag {
 		},
 		&cli.Int64Flag{
 			Name:        "postgres_retention_ttl",
-			Usage:       "Seconds to keep old Postgres signalling rows before cleanup",
+			Usage:       "Seconds to keep old Postgres pub/sub rows and exhausted broadcast rows before cleanup",
 			Value:       c.Postgres.RetentionTTLSeconds,
 			Destination: &c.Postgres.RetentionTTLSeconds,
 		},

@@ -203,7 +203,7 @@ Policy for exhausted broadcast rows. `skip` lets later same-stream rows proceed 
 
 **--postgres_retention_ttl** (`ANYCABLE_POSTGRES_RETENTION_TTL`)
 
-Seconds to keep old Postgres signalling rows before cleanup (default: `300`).
+Seconds to keep old Postgres pub/sub rows and exhausted broadcast rows before cleanup (default: `300`).
 
 **--postgres_cleanup_interval** (`ANYCABLE_POSTGRES_CLEANUP_INTERVAL`)
 
