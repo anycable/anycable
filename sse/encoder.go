@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/encoders"
@@ -51,9 +52,9 @@ func (e *Encoder) Encode(msg encoders.EncodedMessage) (*ws.SentFrame, error) {
 		} else {
 			data = string(utils.ToJSON(reply.Message))
 		}
-		payload = "data: " + data
+		payload = encodeSSEData(data)
 	} else {
-		payload = "data: " + string(b)
+		payload = encodeSSEData(string(b))
 	}
 
 	if msgType != "" {
@@ -78,6 +79,24 @@ func (e *Encoder) Encode(msg encoders.EncodedMessage) (*ws.SentFrame, error) {
 	}
 
 	return &ws.SentFrame{FrameType: ws.TextFrame, Payload: []byte(payload)}, nil
+}
+
+// sseDataLineBreak rewrites every line terminator into a new `data:` field
+// boundary. Order matters: CRLF is matched before lone CR/LF.
+var sseDataLineBreak = strings.NewReplacer("\r\n", "\ndata: ", "\r", "\ndata: ", "\n", "\ndata: ")
+
+// encodeSSEData formats a payload as one or more SSE `data:` fields.
+//
+// Per the SSE specification, an event's data is encoded as one `data:` field
+// per line; the client (e.g. EventSource) rejoins the fields with "\n". A raw
+// line terminator after a single `data:` prefix would truncate the payload at
+// the first line break, because the following lines are parsed as fields other
+// than `data` and ignored. LF, CR and CRLF are all line terminators per the
+// spec, so all three are normalized. This matters for unwrapped payloads, which
+// may be arbitrary multi-line strings; JSON-encoded payloads are unaffected
+// (their newlines are already escaped).
+func encodeSSEData(payload string) string {
+	return "data: " + sseDataLineBreak.Replace(payload)
 }
 
 func (e Encoder) EncodeTransmission(raw string) (*ws.SentFrame, error) {

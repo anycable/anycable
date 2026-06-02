@@ -43,6 +43,52 @@ func TestEncoder_Encode(t *testing.T) {
 		assert.Equal(t, expected, string(actual.Payload))
 	})
 
+	t.Run("without type + unwrap data + multiline payload", func(t *testing.T) {
+		getCoder := Encoder{UnwrapData: true}
+		// Multi-line payloads (e.g. Turbo Stream HTML) must be split across
+		// multiple `data:` fields, otherwise EventSource truncates at the first
+		// newline. The client rejoins the fields with "\n".
+		msg := &common.Reply{Identifier: "test_channel", Message: "<turbo-stream>\n<template>\nhi\n</template>\n</turbo-stream>"}
+		expected := "data: <turbo-stream>\n" +
+			"data: <template>\n" +
+			"data: hi\n" +
+			"data: </template>\n" +
+			"data: </turbo-stream>"
+
+		actual, err := getCoder.Encode(msg)
+
+		assert.NoError(t, err)
+		assert.Equal(t, expected, string(actual.Payload))
+	})
+
+	t.Run("without type + unwrap data + CRLF and CR terminators", func(t *testing.T) {
+		getCoder := Encoder{UnwrapData: true}
+		// LF, CR and CRLF are all SSE line terminators and must each start a
+		// new data: field.
+		msg := &common.Reply{Identifier: "test_channel", Message: "a\r\nb\rc\nd"}
+		expected := "data: a\n" +
+			"data: b\n" +
+			"data: c\n" +
+			"data: d"
+
+		actual, err := getCoder.Encode(msg)
+
+		assert.NoError(t, err)
+		assert.Equal(t, expected, string(actual.Payload))
+	})
+
+	t.Run("with type + multiline payload preserves event and id", func(t *testing.T) {
+		msg := &common.Reply{Type: "test", Identifier: "test_channel", Message: "a\nb", StreamID: "stream-test", Epoch: "bc320", Offset: 321}
+		expected := "event: test\n" +
+			`data: {"type":"test","identifier":"test_channel","message":"a\nb","stream_id":"stream-test","epoch":"bc320","offset":321}` + "\n" +
+			"id: 321/bc320/stream-test"
+
+		actual, err := coder.Encode(msg)
+
+		assert.NoError(t, err)
+		assert.Equal(t, expected, string(actual.Payload))
+	})
+
 	t.Run("with type", func(t *testing.T) {
 		rawCoder := Encoder{RawData: true}
 		msg := &common.Reply{Type: "test", Identifier: "test_channel", Message: "hello"}
