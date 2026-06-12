@@ -123,19 +123,39 @@ func (m *Metrics) RegisterWriter(w IntervalWriter) {
 
 // Run periodically updates counters delta (and logs metrics if necessary)
 func (m *Metrics) Run() error {
+	serverErr := make(chan error, 1)
+
 	if m.server != nil {
 		m.log.Info(fmt.Sprintf("Serve metrics at %s%s", m.server.Address(), m.httpPath))
 
-		if err := m.server.StartAndAnnounce("Metrics server"); err != nil {
-			if !m.server.Stopped() {
-				return fmt.Errorf("metrics HTTP server at %s stopped: %v", m.server.Address(), err)
+		// Serve blocks until shutdown, so the server must run in its own
+		// goroutine — otherwise the rotation loop below is never reached and
+		// the interval writers (metrics logging, StatsD) are silently disabled
+		// whenever a dedicated (not yet running) metrics server is configured.
+		go func() {
+			if err := m.server.StartAndAnnounce("Metrics server"); err != nil {
+				if !m.server.Stopped() {
+					serverErr <- fmt.Errorf("metrics HTTP server at %s stopped: %v", m.server.Address(), err)
+				}
 			}
-		}
+		}()
 	}
 
 	if len(m.writers) == 0 {
 		m.log.Debug("no metrics writers, disabling metrics rotation")
-		return nil
+
+		if m.server == nil {
+			return nil
+		}
+
+		// No rotation to drive, but keep surfacing a dedicated-server failure
+		// the way the blocking version did.
+		select {
+		case err := <-serverErr:
+			return err
+		case <-m.shutdownCh:
+			return nil
+		}
 	}
 
 	if m.rotateInterval == 0 {
@@ -150,6 +170,8 @@ func (m *Metrics) Run() error {
 
 	for {
 		select {
+		case err := <-serverErr:
+			return err
 		case <-m.shutdownCh:
 			return nil
 		case <-time.After(m.rotateInterval):

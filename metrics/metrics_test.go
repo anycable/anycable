@@ -1,10 +1,14 @@
 package metrics
 
 import (
+	"context"
 	"log/slog"
 	"testing"
+	"time"
 
+	"github.com/anycable/anycable-go/server"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMetricsSnapshot(t *testing.T) {
@@ -84,4 +88,43 @@ func TestMetrics_EachCounter(t *testing.T) {
 			}
 		}
 	})
+}
+
+type signalWriter struct {
+	ran chan struct{}
+}
+
+func (w *signalWriter) Run(interval int) error {
+	close(w.ran)
+	return nil
+}
+
+func (w *signalWriter) Write(m *Metrics) error { return nil }
+
+func (w *signalWriter) Stop() {}
+
+// Regression test: with a dedicated metrics HTTP server configured, Run() must
+// still reach the interval writers / rotation loop. Previously the server was
+// started synchronously and its blocking Serve starved the rotation loop, so
+// metrics logging and StatsD were silently disabled.
+func TestRunWithDedicatedServerStartsRotation(t *testing.T) {
+	w := &signalWriter{ran: make(chan struct{})}
+	m := NewMetrics([]IntervalWriter{w}, 1, slog.Default())
+
+	srv, err := server.NewServer("127.0.0.1", "0", server.SSL, 0)
+	require.NoError(t, err)
+	m.server = srv
+
+	done := make(chan error, 1)
+	go func() { done <- m.Run() }()
+	defer m.Shutdown(context.Background()) // nolint:errcheck
+
+	select {
+	case <-w.ran:
+		// rotation started — the server did not block Run
+	case err := <-done:
+		t.Fatalf("Run returned before starting the interval writers: %v", err)
+	case <-time.After(2 * time.Second):
+		t.Fatal("rotation loop never started: the metrics server start is blocking Run")
+	}
 }
