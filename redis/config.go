@@ -183,6 +183,9 @@ func (config *RedisConfig) parseSentinels() (*rueidis.ClientOption, error) {
 	if masterErr == nil {
 		options.Username = masterOpts.Username
 		options.Password = masterOpts.Password
+		if redisURLHasDB(config.URL) {
+			options.SelectDB = masterOpts.SelectDB
+		}
 	} else {
 		options.Username = ""
 		options.Password = ""
@@ -273,6 +276,17 @@ func parseRedisURL(url string) (options *rueidis.ClientOption, err error) {
 	}
 
 	return options, nil
+}
+
+func redisURLHasDB(rawURL string) bool {
+	urls := strings.Split(rawURL, ",")
+	parsedURL, err := url.Parse(ensureRedisScheme(chompTrailingSlashHostname(urls[0])))
+
+	if err != nil {
+		return false
+	}
+
+	return parsedURL.Path != "" && parsedURL.Path != "/"
 }
 
 // TODO: upstream this change to `rueidis` URL parsing
