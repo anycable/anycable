@@ -355,6 +355,18 @@ func TestSentinelNoAuth(t *testing.T) {
 	assert.Equal(t, "", options.Sentinel.Password)
 	assert.Equal(t, "", options.Username)
 	assert.Equal(t, "", options.Password)
+	assert.Equal(t, 0, options.SelectDB)
+}
+
+func TestSentinelConfigPreservesRedisDB(t *testing.T) {
+	config := NewRedisConfig()
+	config.URL = "redis://mymaster/5"
+	config.Sentinels = "localhost:26379"
+
+	options, err := config.ToRueidisOptions()
+	require.NoError(t, err)
+
+	assert.Equal(t, 5, options.SelectDB)
 }
 
 func TestSentinelAuthOnly(t *testing.T) {
