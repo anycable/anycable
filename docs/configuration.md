@@ -113,6 +113,10 @@ You can specify on which port to receive broadcasting requests (NOTE: it could b
 
 Redis URL to connect to (default: `"redis://localhost:6379/5"`). Used by the corresponding pub/sub, broadcasting, and broker adapters.
 
+**--redis_sentinels** (`ANYCABLE_REDIS_SENTINELS`)
+
+Comma-separated list of Redis Sentinel addresses (e.g., `sentinel-1:26379,sentinel-2:26379`) enabling Sentinel mode. When set, the host part of `--redis_url` is treated as the Sentinel master name, and the database number from the URL is respected (e.g., `redis://mymaster/5` connects to db `5` of the resolved master). Sentinel credentials may be provided inline: `:password@host:port`.
+
 **--redis_channel** (`ANYCABLE_REDIS_CHANNEL`)
 
 Redis channel for broadcasting (default: `"__anycable__"`). When using the `redisx` adapter, it's used as a name of the Redis stream.
