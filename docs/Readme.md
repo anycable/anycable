@@ -14,4 +14,5 @@
 * [Signed streams](signed_streams.md)
 * [Presence](presence.md)
 * [Embedded NATS](embedded_nats.md)
+* [Postgres signalling](postgres.md)
 * [Using as a library](library.md)

@@ -1,0 +1,88 @@
+digraph PostgresSignallingDataModel {
+  graph [
+    rankdir=LR,
+    bgcolor="#ffffff",
+    pad=0.35,
+    nodesep=0.52,
+    ranksep=0.72,
+    splines=true,
+    fontname="Helvetica",
+    fontsize=14
+  ];
+
+  node [
+    shape=box,
+    style="rounded,filled",
+    fontname="Helvetica",
+    fontsize=12,
+    color="#506070",
+    fillcolor="#f8fafc",
+    penwidth=1.4
+  ];
+
+  edge [
+    fontname="Helvetica",
+    fontsize=10,
+    color="#5f6b7a",
+    arrowsize=0.7,
+    penwidth=1.2
+  ];
+
+  app [label="Publishing application", fillcolor="#eef7ff"];
+  subscribers [label="Local subscribers", fillcolor="#eef7ff"];
+
+  subgraph cluster_sql_functions {
+    label="Public SQL functions";
+    color="#b7c9dd";
+    fillcolor="#f6fbff";
+    style="rounded,filled";
+    fontsize=12;
+    anycable_publish [label="anycable_publish(stream, payload, meta)\nreturns broadcast offset", fillcolor="#ffffff"];
+    anycable_remote_command [label="anycable_remote_command(payload, meta)\nuses configured internal stream", fillcolor="#ffffff"];
+  }
+
+  subgraph cluster_postgres {
+    label="Server-owned PostgreSQL schema";
+    color="#c9d7bd";
+    fillcolor="#fbfdf8";
+    style="rounded,filled";
+    fontsize=12;
+
+    stream_offsets [shape=cylinder, label="anycable_stream_offsets\n(scope, stream) -> offset", fillcolor="#f4fbef"];
+    broadcasts [shape=cylinder, label="anycable_broadcasts\nsingle-consumer queue\n(stream, offset, payload, meta,\nclaim state, exhausted_at)", fillcolor="#f4fbef"];
+    pubsub [shape=cylinder, label="anycable_pubsub\nfanout catch-up log\n(stream, offset, payload)", fillcolor="#f4fbef"];
+    broadcast_notify [shape=component, label="broadcast notify channel\nJSON {v, stream, offset}\nscope: broadcast", fillcolor="#fff9e8"];
+    pubsub_notify [shape=component, label="pubsub notify channel\nJSON {v, stream, offset}\nscope: pubsub", fillcolor="#fff9e8"];
+  }
+
+  subgraph cluster_anycable {
+    label="AnyCable Go";
+    color="#d3c4e3";
+    fillcolor="#fbf8ff";
+    style="rounded,filled";
+    fontsize=12;
+
+    broadcast_poller [label="Broadcast poller\nFOR UPDATE SKIP LOCKED\nper-stream ordering", fillcolor="#ffffff"];
+    broker_path [label="Broker path\nhandle publication", fillcolor="#ffffff"];
+    fanout_poller [label="Fanout poller\nbatched stream catch-up", fillcolor="#ffffff"];
+  }
+
+  app -> anycable_publish [label="broadcast"];
+  app -> anycable_remote_command [label="remote command"];
+
+  anycable_publish -> stream_offsets [label="allocate broadcast offset"];
+  anycable_remote_command -> stream_offsets [label="allocate broadcast offset"];
+  anycable_publish -> broadcasts [label="insert queue row"];
+  anycable_remote_command -> broadcasts [label="insert internal-stream row"];
+  broadcasts -> broadcast_notify [style=dashed, label="NOTIFY"];
+  broadcast_notify -> broadcast_poller [style=dashed, label="wake"];
+
+  broadcast_poller -> broadcasts [label="claim / ack / finalize timeout"];
+  broadcast_poller -> broker_path [label="winning node"];
+  broker_path -> stream_offsets [label="allocate pubsub offset"];
+  broker_path -> pubsub [label="append fanout row"];
+  pubsub -> pubsub_notify [style=dashed, label="NOTIFY"];
+  pubsub_notify -> fanout_poller [style=dashed, label="wake changed stream"];
+  fanout_poller -> pubsub [label="batch fetch by cursor"];
+  fanout_poller -> subscribers [label="deliver in stream order"];
+}
