@@ -2,7 +2,11 @@
 
 ## master
 
+- Pusher REST API improvements (fix body_md5 verification, verify auth_timestamp). ([@palkan][])
+
 - Honor the Redis database number from the URL in Sentinel mode. ([@paderinandrey][])
+
+- Upgrade to go1.26.4 tool chain.
 
 ## 1.6.14 (2026-06-26)
 

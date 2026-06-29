@@ -2,6 +2,7 @@ package pusher
 
 import (
 	"context"
+	"crypto/md5" // #nosec G501
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/anycable/anycable-go/broadcast"
 	"github.com/anycable/anycable-go/broker"
@@ -18,6 +20,10 @@ import (
 	"github.com/anycable/anycable-go/server"
 	"github.com/anycable/anycable-go/utils"
 )
+
+// authTimestampGracePeriod is the maximum allowed difference between the request's
+// auth_timestamp and the server's current time, in seconds (matches Pusher's REST API spec).
+const authTimestampGracePeriod = 600
 
 // Server manages the Pusher HTTP API server
 type Server struct {
@@ -154,6 +160,12 @@ func (api *RestAPI) Handler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if r.Method != http.MethodPost && r.Method != http.MethodGet {
+		api.log.Debug("invalid request method", "method", r.Method)
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		return
+	}
+
 	// See https://pusher.com/docs/channels/library_auth_reference/rest-api/#worked-authentication-example
 	path := r.URL.Path
 	queryParams := r.URL.Query()
@@ -162,27 +174,51 @@ func (api *RestAPI) Handler(w http.ResponseWriter, r *http.Request) {
 	authVersion := queryParams.Get("auth_version")
 	signature := queryParams.Get("auth_signature")
 
-	var stringToSign string
+	ts, err := strconv.ParseInt(authTimestamp, 10, 64)
+	if err != nil {
+		api.log.Debug("invalid auth_timestamp", "timestamp", authTimestamp)
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
 
-	switch r.Method {
-	case http.MethodPost:
+	if delta := time.Now().Unix() - ts; delta > authTimestampGracePeriod || delta < -authTimestampGracePeriod {
+		api.log.Debug("auth_timestamp out of range", "timestamp", authTimestamp, "delta", delta)
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	var stringToSign string
+	var body []byte
+
+	if r.Method == http.MethodPost {
 		bodyMD5 := queryParams.Get("body_md5")
+
+		body, err = io.ReadAll(r.Body)
+		if err != nil {
+			api.log.Error("failed to read request body")
+			w.WriteHeader(http.StatusUnprocessableEntity)
+			return
+		}
+
+		actualMD5 := fmt.Sprintf("%x", md5.Sum(body)) // #nosec G401
+		if actualMD5 != bodyMD5 {
+			api.log.Debug("body_md5 mismatch", "expected", bodyMD5, "actual", actualMD5)
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
 		stringToSign = "POST\n" +
 			path + "\n" +
 			"auth_key=" + key +
 			"&auth_timestamp=" + authTimestamp +
 			"&auth_version=" + authVersion +
 			"&body_md5=" + bodyMD5
-	case http.MethodGet:
+	} else {
 		stringToSign = "GET\n" +
 			path + "\n" +
 			"auth_key=" + key +
 			"&auth_timestamp=" + authTimestamp +
 			"&auth_version=" + authVersion
-	default:
-		api.log.Debug("invalid request method", "method", r.Method)
-		w.WriteHeader(http.StatusUnprocessableEntity)
-		return
 	}
 
 	if !api.verifier.Verify(stringToSign, signature) {
@@ -192,24 +228,16 @@ func (api *RestAPI) Handler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodPost:
-		api.handleEvents(w, r)
+		api.handleEvents(w, body)
 	case http.MethodGet:
 		api.handleGetUsers(w, r)
 	}
 }
 
-func (api *RestAPI) handleEvents(w http.ResponseWriter, r *http.Request) {
-	body, err := io.ReadAll(r.Body)
-
-	if err != nil {
-		api.log.Error("failed to read request body")
-		w.WriteHeader(http.StatusUnprocessableEntity)
-		return
-	}
-
+func (api *RestAPI) handleEvents(w http.ResponseWriter, body []byte) {
 	var pusherEvent *PusherEvent
 
-	err = json.Unmarshal(body, &pusherEvent)
+	err := json.Unmarshal(body, &pusherEvent)
 
 	if err != nil {
 		api.log.Error("failed to parse Pusher event")
