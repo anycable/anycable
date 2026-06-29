@@ -8,7 +8,7 @@
 
 - Minor perf improvements in broadcasting hub.
 
-- Upgrade to go1.26.3 toolchain.
+- Upgrade to go1.26.3 tool chain.
 
 ## 1.6.13 (2026-04-30)
 
