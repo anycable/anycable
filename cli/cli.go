@@ -318,10 +318,12 @@ func (r *Runner) runNode() (*node.Node, error) {
 	if r.telemetryEnabled {
 		tracker := telemetry.NewTracker(metrics, r.config, r.telemetryConfig)
 
-		r.log.With("context", "telemetry").Info(tracker.Announce())
-		go tracker.Collect()
+		if tracker.Enabled() {
+			r.log.With("context", "telemetry").Info(tracker.Announce())
+			go tracker.Collect()
 
-		r.shutdownables = append(r.shutdownables, tracker)
+			r.shutdownables = append(r.shutdownables, tracker)
+		}
 	}
 
 	subscriber, err := r.subscriberFactory(appNode, r.config, r.log)

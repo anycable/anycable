@@ -124,14 +124,11 @@ func (m *Metrics) RegisterWriter(w IntervalWriter) {
 // Run periodically updates counters delta (and logs metrics if necessary)
 func (m *Metrics) Run() error {
 	serverErr := make(chan error, 1)
+	defer close(serverErr)
 
 	if m.server != nil {
 		m.log.Info(fmt.Sprintf("Serve metrics at %s%s", m.server.Address(), m.httpPath))
 
-		// Serve blocks until shutdown, so the server must run in its own
-		// goroutine — otherwise the rotation loop below is never reached and
-		// the interval writers (metrics logging, StatsD) are silently disabled
-		// whenever a dedicated (not yet running) metrics server is configured.
 		go func() {
 			if err := m.server.StartAndAnnounce("Metrics server"); err != nil {
 				if !m.server.Stopped() {

@@ -57,6 +57,7 @@ func TestTracking(t *testing.T) {
 
 	conf := config.NewConfig()
 	tconf := NewConfig()
+	tconf.Token = "secret"
 	tconf.Endpoint = ts.URL
 	tconf.CustomProps["distro"] = "testo"
 

@@ -51,9 +51,15 @@ type Tracker struct {
 	// Observed metrics values
 	observations   map[string]interface{}
 	customizations map[string]string
+
+	enabled bool
 }
 
 func NewTracker(instrumenter *metrics.Metrics, c *config.Config, tc *Config) *Tracker {
+	if tc.Token == "" {
+		return &Tracker{}
+	}
+
 	id, _ := nanoid.Nanoid(8)
 
 	client := &http.Client{}
@@ -69,6 +75,7 @@ func NewTracker(instrumenter *metrics.Metrics, c *config.Config, tc *Config) *Tr
 	fingerprint := clusterFingerprint(c)
 
 	return &Tracker{
+		enabled:        true,
 		client:         client,
 		url:            tc.Endpoint,
 		authToken:      tc.Token,
@@ -80,6 +87,10 @@ func NewTracker(instrumenter *metrics.Metrics, c *config.Config, tc *Config) *Tr
 		observations:   make(map[string]interface{}),
 		customizations: tc.CustomProps,
 	}
+}
+
+func (t *Tracker) Enabled() bool {
+	return t.enabled
 }
 
 func (t *Tracker) Announce() string {

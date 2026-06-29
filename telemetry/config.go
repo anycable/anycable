@@ -9,11 +9,11 @@ type Config struct {
 	Debug       bool
 }
 
-var authToken = "secret" // make it overridable during build time
+var auth = "" // provide a secret token during the build time to enable tracking
 
 func NewConfig() *Config {
 	return &Config{
-		Token:       authToken,
+		Token:       auth,
 		Endpoint:    "https://telemetry.anycable.io",
 		Debug:       os.Getenv("ANYCABLE_TELEMETRY_DEBUG") == "1",
 		CustomProps: map[string]string{},
