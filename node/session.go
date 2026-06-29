@@ -724,8 +724,10 @@ func (s *Session) sendFrame(message *ws.SentFrame) {
 	item := utils.Item[*ws.SentFrame]{Data: message, Size: size}
 
 	switch s.writeQueue.Push(item, maxPending) {
-	case utils.PushOK, utils.PushClosed:
+	case utils.PushClosed:
 		return
+	case utils.PushOK:
+		break
 	case utils.PushOverflow:
 		s.maxPendingSize.Store(0)
 		s.Log.Debug("slow client detected, disconnecting", "max", maxPending)
