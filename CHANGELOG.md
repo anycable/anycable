@@ -2,6 +2,8 @@
 
 ## master
 
+## 1.6.15 (2026-06-29)
+
 - Pusher REST API improvements (fix body_md5 verification, verify auth_timestamp). ([@palkan][])
 
 - Honor the Redis database number from the URL in Sentinel mode. ([@paderinandrey][])
