@@ -28,7 +28,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install bison
-      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: vendor
           key: vendor-${{ hashFiles('**/go.sum') }}
@@ -72,7 +72,7 @@ jobs:
       - name: Install system deps
         run: |
           brew install bison
-      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: vendor
           key: vendor-${{ hashFiles('**/go.sum') }}
@@ -156,7 +156,7 @@ jobs:
           # Use <3.0 since go-mruby's Rakefile has some problems with keyword arguments compatibility
           ruby-version: 2.7
           bundler-cache: true
-      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: vendor
           key: vendor-${{ hashFiles('**/go.sum') }}
