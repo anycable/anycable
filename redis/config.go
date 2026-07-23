@@ -58,10 +58,12 @@ func NewRedisConfig() RedisConfig {
 }
 
 func (config *RedisConfig) IsCluster() bool {
+	sentinel := config.IsSentinel()
+
 	config.mu.RLock()
 	defer config.mu.RUnlock()
 
-	return len(config.hosts) > 1 && !config.IsSentinel()
+	return len(config.hosts) > 1 && !sentinel
 }
 
 func (config *RedisConfig) IsSentinel() bool {
@@ -79,10 +81,12 @@ func (config *RedisConfig) Hostnames() []string {
 }
 
 func (config *RedisConfig) Hostname() string {
+	sentinel := config.IsSentinel()
+
 	config.mu.RLock()
 	defer config.mu.RUnlock()
 
-	if config.IsSentinel() {
+	if sentinel {
 		return config.sentinelMaster
 	} else {
 		return config.hosts[0]

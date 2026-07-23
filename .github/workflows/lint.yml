@@ -21,3 +21,5 @@ jobs:
         with:
           version: v2.11.2
           args: --timeout 3m
+      - name: mulint
+        uses: palkan/mulint@v1.0.0
