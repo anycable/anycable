@@ -14,6 +14,10 @@ AnyCable is a realtime server for two-way reliable communication over WebSockets
 > [!NOTE]
 > You can find all the necessary information about AnyCable in our documentation: [docs.anycable.io](https://docs.anycable.io).
 
+<br/>
+
+<img src="https://cdn.evilmartians.com/badges/logo-no-label.svg" alt="Evil Martians logo" width="22" height="16" /> <b>AnyCable</b> is built by <b><a href="https://evilmartians.com/">Evil Martians</a></b>, an American design and engineering consultancy for <b>developer tools, AI, and cybersecurity startups</b>.
+
 ## Contributing
 
 Bug reports and pull requests are welcome on GitHub at [https://github.com/anycable/anycable](https://github.com/anycable/anycable).
