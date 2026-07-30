@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"maps"
 	"net/http"
 	"os"
@@ -21,7 +22,6 @@ import (
 	"github.com/anycable/anycable-go/version"
 	"github.com/hofstadter-io/cinful"
 	"github.com/posthog/posthog-go"
-	"golang.org/x/exp/slog"
 
 	nanoid "github.com/matoous/go-nanoid"
 )

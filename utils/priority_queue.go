@@ -3,13 +3,12 @@ package utils
 // Based on https://pkg.go.dev/container/heap
 
 import (
+	"cmp"
 	"container/heap"
-
-	"golang.org/x/exp/constraints"
 )
 
 // An PriorityQueueItem is something we manage in a priority queue.
-type PriorityQueueItem[T any, P constraints.Ordered] struct {
+type PriorityQueueItem[T any, P cmp.Ordered] struct {
 	value    T
 	priority P
 	// The index is needed by update and is maintained by the heap.Interface methods.
@@ -24,9 +23,9 @@ func (pq PriorityQueueItem[T, P]) Priority() P {
 	return pq.priority
 }
 
-type PriorityQueue[T any, P constraints.Ordered] []*PriorityQueueItem[T, P]
+type PriorityQueue[T any, P cmp.Ordered] []*PriorityQueueItem[T, P]
 
-func NewPriorityQueue[T any, P constraints.Ordered]() *PriorityQueue[T, P] {
+func NewPriorityQueue[T any, P cmp.Ordered]() *PriorityQueue[T, P] {
 	pq := &PriorityQueue[T, P]{}
 	heap.Init(pq)
 	return pq
