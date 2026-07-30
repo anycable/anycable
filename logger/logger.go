@@ -27,7 +27,7 @@ func InitLogger(format string, level string) (slog.Handler, error) {
 				TimeFormat:  "2006-01-02 15:04:05.000",
 				ReplaceAttr: transformAttr,
 			}
-			handler = tint.NewHandler(os.Stdout, opts)
+			handler = tint.NewTextHandler(os.Stdout, opts)
 		}
 	case "json":
 		{
