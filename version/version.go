@@ -8,7 +8,7 @@ var (
 
 func init() {
 	if version == "" {
-		version = "1.6.15"
+		version = "1.6.16"
 	}
 
 	if modifier != "" {

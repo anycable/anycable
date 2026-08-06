@@ -2,6 +2,10 @@
 
 ## master
 
+## 1.6.16 (2026-08-05)
+
+- Upgrade to go1.26.5 tool chain.
+
 ## 1.6.15 (2026-06-29)
 
 - Pusher REST API improvements (fix body_md5 verification, verify auth_timestamp). ([@palkan][])
