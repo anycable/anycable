@@ -80,27 +80,20 @@ func (g *Gate) Subscribe(session HubSession, stream string, identifier string) {
 
 // Unsubscribe removes a session from the stream.
 func (g *Gate) Unsubscribe(session HubSession, stream string, identifier string) {
-	g.mu.RLock()
+	g.mu.Lock()
+	defer g.mu.Unlock()
 
 	if _, ok := g.streams[stream]; !ok {
-		g.mu.RUnlock()
 		return
 	}
 
 	if _, ok := g.streams[stream][session]; !ok {
-		g.mu.RUnlock()
 		return
 	}
 
 	if _, ok := g.streams[stream][session][identifier]; !ok {
-		g.mu.RUnlock()
 		return
 	}
-
-	g.mu.RUnlock()
-
-	g.mu.Lock()
-	defer g.mu.Unlock()
 
 	delete(g.streams[stream][session], identifier)
 

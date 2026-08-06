@@ -135,11 +135,6 @@ func (h *Hub) Run() {
 	}
 }
 
-// RemoveSession enqueues session un-registration
-func (h *Hub) RemoveSessionLater(s HubSession) {
-	h.register <- HubRegistration{event: "remove", session: s}
-}
-
 // Broadcast enqueues data broadcasting to a stream
 func (h *Hub) Broadcast(stream string, data string) {
 	h.broadcast <- &common.StreamMessage{Stream: stream, Data: data}
@@ -328,13 +323,17 @@ func (h *Hub) disconnectSessions(identifier string, reconnect bool) {
 
 	h.pool.Schedule(func() {
 		h.mu.RLock()
-		defer h.mu.RUnlock()
 
 		for id := range ids {
 			if sinfo, ok := h.sessions[id]; ok {
+				h.mu.RUnlock()
+
 				sinfo.session.DisconnectWithMessage(msg, common.REMOTE_DISCONNECT_REASON)
+				return
 			}
 		}
+
+		h.mu.RUnlock()
 	})
 }
 

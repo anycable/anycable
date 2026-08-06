@@ -452,8 +452,8 @@ func (n *Node) TryRestoreSession(s *Session) (restored bool) {
 	n.hub.AddSession(s)
 
 	// Resubscribe to streams
-	for identifier, channel_streams := range s.subscriptions.channels {
-		for stream := range channel_streams {
+	for identifier, channel_streams := range s.subscriptions.ToMap() {
+		for _, stream := range channel_streams {
 			streamId := n.broker.Subscribe(stream)
 			n.hub.SubscribeSession(s, streamId, identifier)
 		}
@@ -479,25 +479,24 @@ func (n *Node) TryRestoreSession(s *Session) (restored bool) {
 // Subscribe subscribes session to a channel
 func (n *Node) Subscribe(s *Session, msg *common.Message) (*common.CommandResult, error) {
 	s.smu.Lock()
-
 	if ok := s.subscriptions.HasChannel(msg.Identifier); ok {
 		s.smu.Unlock()
 		return nil, fmt.Errorf("already subscribed to %s", msg.Identifier)
 	}
+	s.smu.Unlock()
 
 	res, err := n.controller.Subscribe(s.closeCtx, s.GetID(), s.env, s.GetIdentifiers(), msg.Identifier)
 
 	if s.IsClosed() {
-		s.smu.Unlock()
 		s.Log.Debug("skip subscribe result: closed")
 		return nil, nil
 	}
 
 	if res == nil && err == nil {
-		s.smu.Unlock()
 		return nil, nil
 	}
 
+	s.smu.Lock()
 	s.Log.Debug("controller subscribe", "response", res, "err", err)
 
 	var confirmed bool
@@ -548,25 +547,24 @@ func (n *Node) Subscribe(s *Session, msg *common.Message) (*common.CommandResult
 // Unsubscribe unsubscribes session from a channel
 func (n *Node) Unsubscribe(s *Session, msg *common.Message) (*common.CommandResult, error) {
 	s.smu.Lock()
-
 	if ok := s.subscriptions.HasChannel(msg.Identifier); !ok {
 		s.smu.Unlock()
 		return nil, fmt.Errorf("unknown subscription: %s", msg.Identifier)
 	}
+	s.smu.Unlock()
 
 	res, err := n.controller.Unsubscribe(s.closeCtx, s.GetID(), s.env, s.GetIdentifiers(), msg.Identifier)
 
 	if s.IsClosed() {
-		s.smu.Unlock()
 		s.Log.Debug("skip unsubscribe result: closed")
 		return nil, nil
 	}
 
 	if res == nil && err == nil {
-		s.smu.Unlock()
 		return nil, nil
 	}
 
+	s.smu.Lock()
 	s.Log.Debug("controller unsubscribe", "response", res, "err", err)
 
 	presenceStream := ""
@@ -614,12 +612,10 @@ func (n *Node) Unsubscribe(s *Session, msg *common.Message) (*common.CommandResu
 // Perform executes client command
 func (n *Node) Perform(s *Session, msg *common.Message) (*common.CommandResult, error) {
 	s.smu.Lock()
-
 	if ok := s.subscriptions.HasChannel(msg.Identifier); !ok {
 		s.smu.Unlock()
 		return nil, fmt.Errorf("unknown subscription %s", msg.Identifier)
 	}
-
 	s.smu.Unlock()
 
 	data, ok := msg.Data.(string)
@@ -663,14 +659,11 @@ func (n *Node) Perform(s *Session, msg *common.Message) (*common.CommandResult, 
 // History fetches the stream history for the specified identifier
 func (n *Node) History(s *Session, msg *common.Message) error {
 	s.smu.Lock()
-
 	if ok := s.subscriptions.HasChannel(msg.Identifier); !ok {
 		s.smu.Unlock()
 		return fmt.Errorf("unknown subscription %s", msg.Identifier)
 	}
-
 	subscriptionStreams := s.subscriptions.StreamsFor(msg.Identifier)
-
 	s.smu.Unlock()
 
 	history := msg.History
@@ -905,17 +898,15 @@ func (n *Node) Disconnect(s *Session) error {
 
 	n.broker.TouchPresence(s.GetID()) // nolint:errcheck
 
-	if n.IsShuttingDown() {
-		// Make sure session is removed from hub, so we don't try to send
-		// broadcast messages to them
-		n.hub.RemoveSession(s)
+	// Make sure session is removed from hub, so we don't try to send
+	// broadcast messages to them
+	n.hub.RemoveSession(s)
 
+	if n.IsShuttingDown() {
 		if s.IsDisconnectable() {
 			return n.DisconnectNow(s)
 		}
 	} else {
-		n.hub.RemoveSessionLater(s)
-
 		if s.IsDisconnectable() {
 			return n.disconnector.Enqueue(s)
 		}

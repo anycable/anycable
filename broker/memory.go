@@ -439,14 +439,14 @@ func (b *Memory) Peak(name string) (*common.StreamMessage, error) {
 }
 
 func (b *Memory) CommitSession(sid string, session Cacheable) error {
-	b.sessionsMu.Lock()
-	defer b.sessionsMu.Unlock()
-
 	cached, err := session.ToCacheEntry()
 
 	if err != nil {
 		return err
 	}
+
+	b.sessionsMu.Lock()
+	defer b.sessionsMu.Unlock()
 
 	deadline := time.Now().UnixMilli() + (b.config.SessionsTTL * 1000)
 	var expiration *utils.PriorityQueueItem[string, int64]
@@ -502,7 +502,6 @@ func (b *Memory) SupportsPresence() bool {
 
 func (b *Memory) PresenceAdd(stream string, sid string, pid string, info interface{}) (*common.PresenceEvent, error) {
 	b.presence.mu.Lock()
-	defer b.presence.mu.Unlock()
 
 	if _, ok := b.presence.streams[stream]; !ok {
 		b.presence.streams[stream] = make(map[string]*presenceEntry)
@@ -516,6 +515,7 @@ func (b *Memory) PresenceAdd(stream string, sid string, pid string, info interfa
 	}
 
 	if oldPid, ok := b.presence.sessions[sid].streams[stream]; ok && oldPid != pid {
+		b.presence.mu.Unlock()
 		return nil, errors.New("presence ID mismatch")
 	}
 
@@ -538,6 +538,8 @@ func (b *Memory) PresenceAdd(stream string, sid string, pid string, info interfa
 
 	streamSessionPresence.add(sid, info)
 
+	b.presence.mu.Unlock()
+
 	if newPresence {
 		ev := &common.PresenceEvent{
 			Type: common.PresenceJoinType,
@@ -557,9 +559,9 @@ func (b *Memory) PresenceAdd(stream string, sid string, pid string, info interfa
 
 func (b *Memory) PresenceRemove(stream string, sid string) (*common.PresenceEvent, error) {
 	b.presence.mu.Lock()
-	defer b.presence.mu.Unlock()
 
 	if _, ok := b.presence.streams[stream]; !ok {
+		b.presence.mu.Unlock()
 		return nil, errors.New("stream not found")
 	}
 
@@ -567,6 +569,7 @@ func (b *Memory) PresenceRemove(stream string, sid string) (*common.PresenceEven
 
 	if ses, ok := b.presence.sessions[sid]; ok {
 		if id, ok := ses.streams[stream]; !ok {
+			b.presence.mu.Unlock()
 			return nil, errors.New("presence info not found")
 		} else {
 			pid = id
@@ -582,6 +585,7 @@ func (b *Memory) PresenceRemove(stream string, sid string) (*common.PresenceEven
 	streamPresence := b.presence.streams[stream]
 
 	if _, ok := streamPresence[pid]; !ok {
+		b.presence.mu.Unlock()
 		return nil, errors.New("presence record not found")
 	}
 
@@ -596,6 +600,8 @@ func (b *Memory) PresenceRemove(stream string, sid string) (*common.PresenceEven
 	if len(streamPresence) == 0 {
 		delete(b.presence.streams, stream)
 	}
+
+	b.presence.mu.Unlock()
 
 	if empty {
 		ev := &common.PresenceEvent{
