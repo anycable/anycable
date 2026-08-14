@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"os"
 	"runtime"
 	"sync"
@@ -938,7 +939,7 @@ func (n *Node) DisconnectNow(s *Session) error {
 
 	ids := s.GetIdentifiers()
 
-	s.Log.Debug("disconnect", "ids", ids, "url", s.env.URL, "headers", s.env.Headers, "subscriptions", sessionSubscriptions)
+	s.Log.Debug("disconnect", "ids", ids, "url", s.env.URL, "headers", maps.Keys(*s.env.Headers), "subscriptions", len(sessionSubscriptions))
 
 	err := n.controller.Disconnect(
 		context.Background(),
