@@ -2,12 +2,15 @@ version: 2
 updates:
   - package-ecosystem: gomod
     directory: /
+    exclude-paths:
+      - etc/
+      - features/
     schedule:
       interval: weekly
     open-pull-requests-limit: 1
 
   - package-ecosystem: github-actions
-    directory: /
+    directory: /.github
     schedule:
-      interval: weekly
+      interval: monthly
     open-pull-requests-limit: 1
