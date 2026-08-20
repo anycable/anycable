@@ -6,9 +6,50 @@ on:
   push:
     branches:
       - main
+      - "codex/**"
   pull_request:
 
 jobs:
+  test-redis-broker:
+    name: Redis broker (${{ matrix.backend.name }})
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        backend:
+          - name: Redis 7.4
+            image: redis:7.4-alpine
+          - name: Dragonfly 1.39
+            image: docker.dragonflydb.io/dragonflydb/dragonfly:v1.39.0
+    env:
+      GO111MODULE: on
+      REDIS_URL: redis://localhost:6379/14
+    services:
+      redis:
+        image: ${{ matrix.backend.image }}
+        ports: ["6379:6379"]
+        options: --ulimit memlock=-1
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: Wait for Redis-compatible backend
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes redis-tools
+          for attempt in {1..30}; do
+            if redis-cli -h 127.0.0.1 ping; then
+              exit 0
+            fi
+            sleep 1
+          done
+          exit 1
+      - name: Run Redis broker contracts and node integrations
+        run: |
+          go test -race -count=1 -timeout=120s ./broker ./redis ./node \
+            -run '^(TestRedisBroker_.*|TestToGoRedisUniversalOptions.*|TestIntegration(Restore|History|Presence)_Redis)$'
+
   test:
     if: "!contains(github.event.head_commit.message, '[ci skip tests]')"
     runs-on: ubuntu-22.04

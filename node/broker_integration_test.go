@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"os"
 	"testing"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/mocks"
 	"github.com/anycable/anycable-go/pubsub"
+	redisconfig "github.com/anycable/anycable-go/redis"
 	"github.com/anycable/anycable-go/ws"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -94,6 +96,23 @@ func TestIntegrationRestore_NATS(t *testing.T) {
 	sharedIntegrationRestore(t, node, controller)
 }
 
+func TestIntegrationRestore_Redis(t *testing.T) {
+	node, controller := setupIntegrationNode()
+
+	bconf := broker.NewConfig()
+	bconf.SessionsTTL = 2
+
+	broadcaster := pubsub.NewLegacySubscriber(node)
+	redisBroker := setupRedisIntegrationBroker(t, broadcaster, node, &bconf)
+	node.SetBroker(redisBroker)
+
+	require.NoError(t, node.Start())
+	require.NoError(t, redisBroker.SetEpoch("2022"))
+	defer node.Shutdown(context.Background()) // nolint:errcheck
+
+	sharedIntegrationRestore(t, node, controller)
+}
+
 func sharedIntegrationRestore(t *testing.T, node *Node, controller *mocks.Controller) {
 	sid := "s18"
 	ids := "user:jack"
@@ -157,10 +176,12 @@ func sharedIntegrationRestore(t *testing.T, node *Node, controller *mocks.Contro
 	)
 
 	require.NoError(t, node.HandleBroadcast([]byte(`{"stream": "messages_1", "data": "Alice: Hey!"}`)))
-	requireReceive(t, prev_session, `{"identifier":"chat_1","message":"Alice: Hey!","stream_id":"messages_1","epoch":"2022","offset":1}`)
+	messagesOffset := resolveStreamOffset(t, node, "messages_1", 1)
+	requireReceive(t, prev_session, fmt.Sprintf(`{"identifier":"chat_1","message":"Alice: Hey!","stream_id":"messages_1","epoch":"2022","offset":%d}`, messagesOffset))
 
 	require.NoError(t, node.HandleBroadcast([]byte(`{"stream": "u_jack", "data": "New message from Alice"}`)))
-	requireReceive(t, prev_session, `{"identifier":"user_jack","message":"New message from Alice","stream_id":"u_jack","epoch":"2022","offset":1}`)
+	userOffset := resolveStreamOffset(t, node, "u_jack", 1)
+	requireReceive(t, prev_session, fmt.Sprintf(`{"identifier":"user_jack","message":"New message from Alice","stream_id":"u_jack","epoch":"2022","offset":%d}`, userOffset))
 
 	// wait before disconnecting to ensure that the session's cache is not expired
 	// while the session is still connected
@@ -188,13 +209,16 @@ func sharedIntegrationRestore(t *testing.T, node *Node, controller *mocks.Contro
 
 	t.Run("Restore hub subscriptions", func(t *testing.T) {
 		require.NoError(t, node.HandleBroadcast([]byte(`{"stream": "messages_1", "data": "Lorenzo: Ciao"}`)))
-		requireReceive(t, session, `{"identifier":"chat_1","message":"Lorenzo: Ciao","stream_id":"messages_1","epoch":"2022","offset":2}`)
+		messagesOffset = resolveStreamOffset(t, node, "messages_1", 2)
+		requireReceive(t, session, fmt.Sprintf(`{"identifier":"chat_1","message":"Lorenzo: Ciao","stream_id":"messages_1","epoch":"2022","offset":%d}`, messagesOffset))
 
 		node.HandleBroadcast([]byte(`{"stream": "presence_1", "data": "@lorenzo:join"}`)) // nolint:errcheck
-		requireReceive(t, session, `{"identifier":"chat_1","message":"@lorenzo:join","stream_id":"presence_1","epoch":"2022","offset":1}`)
+		presenceOffset := resolveStreamOffset(t, node, "presence_1", 1)
+		requireReceive(t, session, fmt.Sprintf(`{"identifier":"chat_1","message":"@lorenzo:join","stream_id":"presence_1","epoch":"2022","offset":%d}`, presenceOffset))
 
 		node.HandleBroadcast([]byte(`{"stream": "u_jack", "data": "1:1"}`)) // nolint:errcheck
-		requireReceive(t, session, `{"identifier":"user_jack","message":"1:1","stream_id":"u_jack","epoch":"2022","offset":2}`)
+		userOffset = resolveStreamOffset(t, node, "u_jack", 2)
+		requireReceive(t, session, fmt.Sprintf(`{"identifier":"user_jack","message":"1:1","stream_id":"u_jack","epoch":"2022","offset":%d}`, userOffset))
 	})
 
 	t.Run("Restore session connection and channels state", func(t *testing.T) {
@@ -308,6 +332,21 @@ func TestIntegrationHistory_NATS(t *testing.T) {
 	sharedIntegrationHistory(t, node, controller)
 }
 
+func TestIntegrationHistory_Redis(t *testing.T) {
+	node, controller := setupIntegrationNode()
+
+	bconf := broker.NewConfig()
+	broadcaster := pubsub.NewLegacySubscriber(node)
+	redisBroker := setupRedisIntegrationBroker(t, broadcaster, node, &bconf)
+	node.SetBroker(redisBroker)
+
+	require.NoError(t, node.Start())
+	require.NoError(t, redisBroker.SetEpoch("2022"))
+	defer node.Shutdown(context.Background()) // nolint:errcheck
+
+	sharedIntegrationHistory(t, node, controller)
+}
+
 func sharedIntegrationHistory(t *testing.T, node *Node, controller *mocks.Controller) {
 	node.HandleBroadcast([]byte(`{"stream": "messages_1","data":"Lorenzo: Ciao"}`)) // nolint:errcheck
 
@@ -317,15 +356,17 @@ func sharedIntegrationHistory(t *testing.T, node *Node, controller *mocks.Contro
 	ts := time.Now().Unix()
 
 	node.HandleBroadcast([]byte(`{"stream": "messages_1","data":"Flavia: buona sera"}`)) // nolint:errcheck
+	flaviaOffset := resolveStreamOffset(t, node, "messages_1", 2)
 	// Transient messages must not be stored in the history
 	node.HandleBroadcast([]byte(`{"stream": "messages_1","data":"Who's there?","meta":{"transient":true}}`)) // nolint:errcheck
 	node.HandleBroadcast([]byte(`{"stream": "messages_1","data":"Mario: ta-dam!"}`))                         // nolint:errcheck
+	marioOffset := resolveStreamOffset(t, node, "messages_1", 3)
 
-	node.HandleBroadcast([]byte(`{"stream": "presence_1","data":"1 new notification"}`))     // nolint:errcheck
-	node.HandleBroadcast([]byte(`{"stream": "presence_1","data":"2 new notifications"}`))    // nolint:errcheck
-	node.HandleBroadcast([]byte(`{"stream": "presence_1","data":"3 new notifications"}`))    // nolint:errcheck
-	node.HandleBroadcast([]byte(`{"stream": "presence_1","data":"4 new notifications"}`))    // nolint:errcheck
-	node.HandleBroadcast([]byte(`{"stream": "presence_1","data":"100+ new notifications"}`)) // nolint:errcheck
+	presenceOffsets := make([]uint64, 0, 5)
+	for index, data := range []string{"1 new notification", "2 new notifications", "3 new notifications", "4 new notifications", "100+ new notifications"} {
+		require.NoError(t, node.HandleBroadcast([]byte(fmt.Sprintf(`{"stream":"presence_1","data":%q}`, data))))
+		presenceOffsets = append(presenceOffsets, resolveStreamOffset(t, node, "presence_1", uint64(index+1)))
+	}
 
 	t.Run("Subscribe with history", func(t *testing.T) {
 		session := requireAuthenticatedSession(t, node, "alice")
@@ -351,8 +392,8 @@ func sharedIntegrationHistory(t *testing.T, node *Node, controller *mocks.Contro
 		require.NoError(t, err)
 
 		assertReceive(t, session, `{"type":"confirm","identifier":"chat_1"}`)
-		assertReceive(t, session, `{"identifier":"chat_1","message":"Flavia: buona sera","stream_id":"messages_1","epoch":"2022","offset":2}`)
-		assertReceive(t, session, `{"identifier":"chat_1","message":"Mario: ta-dam!","stream_id":"messages_1","epoch":"2022","offset":3}`)
+		assertReceive(t, session, fmt.Sprintf(`{"identifier":"chat_1","message":"Flavia: buona sera","stream_id":"messages_1","epoch":"2022","offset":%d}`, flaviaOffset))
+		assertReceive(t, session, fmt.Sprintf(`{"identifier":"chat_1","message":"Mario: ta-dam!","stream_id":"messages_1","epoch":"2022","offset":%d}`, marioOffset))
 		assertReceive(t, session, `{"type":"confirm_history","identifier":"chat_1"}`)
 	})
 
@@ -385,7 +426,7 @@ func sharedIntegrationHistory(t *testing.T, node *Node, controller *mocks.Contro
 				Command:    "history",
 				History: common.HistoryRequest{
 					Streams: map[string]common.HistoryPosition{
-						"presence_1": {Epoch: "2022", Offset: 2},
+						"presence_1": {Epoch: "2022", Offset: presenceOffsets[1]},
 					},
 				},
 			},
@@ -393,9 +434,9 @@ func sharedIntegrationHistory(t *testing.T, node *Node, controller *mocks.Contro
 
 		require.NoError(t, err)
 
-		assertReceive(t, session, `{"identifier":"chat_1","message":"3 new notifications","stream_id":"presence_1","epoch":"2022","offset":3}`)
-		assertReceive(t, session, `{"identifier":"chat_1","message":"4 new notifications","stream_id":"presence_1","epoch":"2022","offset":4}`)
-		assertReceive(t, session, `{"identifier":"chat_1","message":"100+ new notifications","stream_id":"presence_1","epoch":"2022","offset":5}`)
+		assertReceive(t, session, fmt.Sprintf(`{"identifier":"chat_1","message":"3 new notifications","stream_id":"presence_1","epoch":"2022","offset":%d}`, presenceOffsets[2]))
+		assertReceive(t, session, fmt.Sprintf(`{"identifier":"chat_1","message":"4 new notifications","stream_id":"presence_1","epoch":"2022","offset":%d}`, presenceOffsets[3]))
+		assertReceive(t, session, fmt.Sprintf(`{"identifier":"chat_1","message":"100+ new notifications","stream_id":"presence_1","epoch":"2022","offset":%d}`, presenceOffsets[4]))
 		assertReceive(t, session, `{"type":"confirm_history","identifier":"chat_1"}`)
 	})
 }
@@ -435,6 +476,22 @@ func TestIntegrationPresence_Memory(t *testing.T) {
 	require.NoError(t, br.Start(nil))
 
 	go node.Start()                           // nolint:errcheck
+	defer node.Shutdown(context.Background()) // nolint:errcheck
+
+	sharedIntegrationPresence(t, node, controller)
+}
+
+func TestIntegrationPresence_Redis(t *testing.T) {
+	node, controller := setupIntegrationNode()
+
+	bconf := broker.NewConfig()
+	bconf.PresenceTTL = 2
+
+	broadcaster := pubsub.NewLegacySubscriber(node)
+	redisBroker := setupRedisIntegrationBroker(t, broadcaster, node, &bconf)
+	node.SetBroker(redisBroker)
+
+	require.NoError(t, node.Start())
 	defer node.Shutdown(context.Background()) // nolint:errcheck
 
 	sharedIntegrationPresence(t, node, controller)
@@ -599,6 +656,18 @@ func setupIntegrationNode() (*Node, *mocks.Controller) {
 	return node, controller
 }
 
+func resolveStreamOffset(t *testing.T, node *Node, stream string, fallback uint64) uint64 {
+	t.Helper()
+
+	peak, err := node.broker.Peak(stream)
+	require.NoError(t, err)
+	if peak == nil {
+		return fallback
+	}
+
+	return peak.Offset
+}
+
 func requireReceive(t *testing.T, s *Session, expected string) {
 	msg, err := s.conn.Read()
 	require.NoError(t, err)
@@ -680,4 +749,27 @@ func startNATSServer(t *testing.T, addr string) (*enats.Service, error) {
 	}
 
 	return service, nil
+}
+
+func setupRedisIntegrationBroker(t *testing.T, broadcaster broker.Broadcaster, presenter broker.Presenter, config *broker.Config) *broker.RedisBroker {
+	t.Helper()
+
+	redisURL := os.Getenv("REDIS_URL")
+	if redisURL == "" {
+		t.Skip("REDIS_URL is required for Redis broker integration tests")
+	}
+
+	redisConfig := redisconfig.NewRedisConfig()
+	redisConfig.URL = redisURL
+	prefix := fmt.Sprintf("__anycable_node_test__:%s:%d", t.Name(), time.Now().UnixNano())
+	instance, err := broker.NewRedisBroker(broadcaster, presenter, config, &redisConfig, slog.Default(), broker.WithRedisBrokerPrefix(prefix))
+	require.NoError(t, err)
+	require.NoError(t, instance.Start(nil))
+
+	t.Cleanup(func() {
+		require.NoError(t, instance.DeleteNamespace(context.Background()))
+		require.NoError(t, instance.Shutdown(context.Background()))
+	})
+
+	return instance
 }

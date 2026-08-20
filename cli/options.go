@@ -630,7 +630,7 @@ func broadcastCLIFlags(c *config.Config, adapters *string) []cli.Flag {
 		},
 		&cli.StringFlag{
 			Name:        "broker",
-			Usage:       "Broker engine to use (memory)",
+			Usage:       "Broker engine to use (memory, nats, or redis)",
 			Value:       c.Broker.Adapter,
 			Destination: &c.Broker.Adapter,
 		},
@@ -691,6 +691,12 @@ func brokerCLIFlags(c *config.Config) []cli.Flag {
 			Usage:       "TTL for presence information (seconds)",
 			Value:       c.Broker.PresenceTTL,
 			Destination: &c.Broker.PresenceTTL,
+		},
+		&cli.StringFlag{
+			Name:        "redis_broker_prefix",
+			Usage:       "Key namespace used by the Redis broker",
+			Value:       c.Broker.RedisPrefix,
+			Destination: &c.Broker.RedisPrefix,
 		},
 	})
 }
