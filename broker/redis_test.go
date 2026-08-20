@@ -423,6 +423,9 @@ func TestRedisBroker_HistoryFrom(t *testing.T) {
 
 	offsets := make([]uint64, 0, 7)
 	for _, data := range []string{"y", "z", "a", "b", "c", "d", "e"} {
+		if data == "c" {
+			time.Sleep(5 * time.Millisecond)
+		}
 		message := &common.StreamMessage{Stream: "test", Data: data}
 		require.NoError(t, instance.HandleBroadcast(message))
 		offsets = append(offsets, message.Offset)
@@ -440,10 +443,27 @@ func TestRedisBroker_HistoryFrom(t *testing.T) {
 		assert.Equal(t, "e", history[2].Data)
 	})
 
+	t.Run("When offset falls between messages", func(t *testing.T) {
+		requestedOffset := offsets[4] - 1
+		require.Greater(t, requestedOffset, offsets[3])
+
+		history, err := instance.HistoryFrom("test", instance.Epoch(), requestedOffset)
+		require.NoError(t, err)
+		require.Len(t, history, 3)
+		assert.EqualValues(t, offsets[4], history[0].Offset)
+		assert.Equal(t, "c", history[0].Data)
+	})
+
 	t.Run("When no new messages", func(t *testing.T) {
 		history, err := instance.HistoryFrom("test", instance.Epoch(), offsets[6])
 		require.NoError(t, err)
 		assert.Empty(t, history)
+	})
+
+	t.Run("When offset is older than retained history", func(t *testing.T) {
+		history, err := instance.HistoryFrom("test", instance.Epoch(), offsets[0]-1)
+		require.Error(t, err)
+		assert.Nil(t, history)
 	})
 
 	t.Run("When no stream", func(t *testing.T) {

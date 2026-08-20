@@ -200,21 +200,20 @@ func (b *RedisBroker) HistoryFrom(stream string, epoch string, offset uint64) ([
 	}
 
 	key := b.historyKey(stream)
-	found, err := b.client.Exists(context.Background(), key).Result()
+	oldest, err := b.client.XRangeN(context.Background(), key, "-", "+", 1).Result()
 	if err != nil {
 		return nil, err
 	}
-	if found == 0 {
+	if len(oldest) == 0 {
 		return nil, errors.New("stream not found")
 	}
 	if offset != 0 {
-		id := redisOffsetToStreamID(offset)
-		position, positionErr := b.client.XRangeN(context.Background(), key, id, id, 1).Result()
-		if positionErr != nil {
-			return nil, positionErr
+		lowestOffset, _, parseErr := redisStreamIDToOffset(oldest[0].ID)
+		if parseErr != nil {
+			return nil, parseErr
 		}
-		if len(position) == 0 {
-			return nil, fmt.Errorf("requested offset couldn't be found: %d", offset)
+		if offset < lowestOffset {
+			return nil, fmt.Errorf("requested offset couldn't be found: %d, lowest: %d", offset, lowestOffset)
 		}
 	}
 
