@@ -176,6 +176,8 @@ func WithDefaultBroker() Option {
 			c.EmbeddedNats.JetStream = true
 			b := broker.NewNATSBroker(br, &c.Broker, &c.NATS, l)
 			return b, nil
+		case "redis":
+			return broker.NewRedisBroker(br, pr, &c.Broker, &c.Redis, l)
 		default:
 			return nil, errorx.IllegalArgument.New("Unsupported broker adapter: %s", c.Broker.Adapter)
 		}

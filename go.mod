@@ -37,12 +37,14 @@ require (
 	github.com/durable-streams/durable-streams/packages/client-go v0.1.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/pusher/pusher-http-go/v5 v5.1.1
+	github.com/redis/go-redis/v9 v9.22.0
 	github.com/sony/gobreaker v1.0.0
 )
 
 require (
 	github.com/andybalholm/brotli v1.2.2 // indirect
 	github.com/antithesishq/antithesis-sdk-go v0.7.2 // indirect
+	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/goccy/go-json v0.10.6 // indirect
 	github.com/google/go-tpm v0.9.8 // indirect
 	github.com/google/uuid v1.6.0 // indirect
@@ -51,6 +53,7 @@ require (
 	github.com/klauspost/compress v1.19.1 // indirect
 	github.com/minio/highwayhash v1.0.4 // indirect
 	github.com/nats-io/jwt/v2 v2.8.2 // indirect
+	go.uber.org/atomic v1.11.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260729162451-8efbd57d26e0 // indirect
 )

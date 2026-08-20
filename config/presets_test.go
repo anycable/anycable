@@ -128,7 +128,7 @@ func TestBrokerWhenRedisConfigured(t *testing.T) {
 
 	require.NoError(t, err)
 
-	assert.Equal(t, "memory", config.Broker.Adapter)
+	assert.Equal(t, "redis", config.Broker.Adapter)
 	assert.Equal(t, []string{"http", "redisx", "redis"}, config.BroadcastAdapters)
 	assert.Equal(t, "redis", config.PubSubAdapter)
 }

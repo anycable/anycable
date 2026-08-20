@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	goredis "github.com/redis/go-redis/v9"
 	"github.com/redis/rueidis"
 )
 
@@ -158,6 +159,31 @@ func (config *RedisConfig) ToRueidisOptions() (options *rueidis.ClientOption, er
 	options.DisableCache = config.DisableCache
 
 	return options, nil
+}
+
+// ToGoRedisUniversalOptions translates AnyCable's Redis configuration into
+// go-redis options. UniversalOptions preserves the existing standalone,
+// Sentinel, cluster, authentication, database, and TLS behavior.
+func (config *RedisConfig) ToGoRedisUniversalOptions() (*goredis.UniversalOptions, error) {
+	options, err := config.ToRueidisOptions()
+	if err != nil {
+		return nil, err
+	}
+
+	return &goredis.UniversalOptions{
+		Addrs:            append([]string{}, options.InitAddress...),
+		DB:               options.SelectDB,
+		Username:         options.Username,
+		Password:         options.Password,
+		SentinelUsername: options.Sentinel.Username,
+		SentinelPassword: options.Sentinel.Password,
+		MaxRetries:       config.MaxReconnectAttempts,
+		DialTimeout:      options.Dialer.Timeout,
+		TLSConfig:        options.TLSConfig,
+		MasterName:       options.Sentinel.MasterSet,
+		RouteRandomly:    config.IsCluster(),
+		IsClusterMode:    config.IsCluster(),
+	}, nil
 }
 
 func (config *RedisConfig) parseSentinels() (*rueidis.ClientOption, error) {
