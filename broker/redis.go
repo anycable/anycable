@@ -562,8 +562,8 @@ func (b *RedisBroker) initializeEpoch(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if err := b.client.SetNX(ctx, b.epochKey(), epoch, 0).Err(); err != nil {
-		return err
+	if setErr := b.client.SetNX(ctx, b.epochKey(), epoch, 0).Err(); setErr != nil {
+		return setErr
 	}
 	value, err := b.client.Get(ctx, b.epochKey()).Result()
 	if err != nil {
@@ -615,8 +615,8 @@ func (b *RedisBroker) sessionConfig(ctx context.Context) (int64, int64, error) {
 		return 0, 0, err
 	}
 	if len(values) != 2 || values[0] == nil || values[1] == nil {
-		if err := b.initializeSessionConfig(ctx); err != nil {
-			return 0, 0, err
+		if initErr := b.initializeSessionConfig(ctx); initErr != nil {
+			return 0, 0, initErr
 		}
 		values, err = b.client.HMGet(ctx, b.sessionsMetaKey(), "generation", "ttl").Result()
 		if err != nil {
@@ -703,9 +703,11 @@ func (b *RedisBroker) expirePresence(ctx context.Context) {
 
 func (b *RedisBroker) cleanupPresenceStream(ctx context.Context, stream string, token string) {
 	keys := b.presenceStreamKeys(token)
-	expired, err := b.client.ZRangeByScore(ctx, keys[3], &goredis.ZRangeBy{
-		Min: "-inf",
-		Max: strconv.FormatInt(time.Now().UnixMilli(), 10),
+	expired, err := b.client.ZRangeArgs(ctx, goredis.ZRangeArgs{
+		Key:     keys[3],
+		Start:   "-inf",
+		Stop:    strconv.FormatInt(time.Now().UnixMilli(), 10),
+		ByScore: true,
 	}).Result()
 	if err != nil || len(expired) == 0 {
 		return
@@ -719,9 +721,11 @@ func (b *RedisBroker) cleanupPresenceStream(ctx context.Context, stream string, 
 	var leaves []string
 	err = b.watch(ctx, watchKeys, func(tx *goredis.Tx) error {
 		leaves = leaves[:0]
-		stillExpired, txErr := tx.ZRangeByScore(ctx, keys[3], &goredis.ZRangeBy{
-			Min: "-inf",
-			Max: strconv.FormatInt(time.Now().UnixMilli(), 10),
+		stillExpired, txErr := tx.ZRangeArgs(ctx, goredis.ZRangeArgs{
+			Key:     keys[3],
+			Start:   "-inf",
+			Stop:    strconv.FormatInt(time.Now().UnixMilli(), 10),
+			ByScore: true,
 		}).Result()
 		if txErr != nil {
 			return txErr

@@ -157,11 +157,12 @@ func (c *Config) loadBrokerPreset(defaults *Config) error {
 	enatsEnabled := c.EmbeddedNats.Enabled
 
 	if c.Broker.Adapter == defaults.Broker.Adapter {
-		if enatsEnabled {
+		switch {
+		case enatsEnabled:
 			c.Broker.Adapter = "nats"
-		} else if redisEnabled {
+		case redisEnabled:
 			c.Broker.Adapter = "redis"
-		} else {
+		default:
 			c.Broker.Adapter = "memory"
 		}
 	}
