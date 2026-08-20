@@ -51,7 +51,7 @@ You can also enable multiple adapters at once by specifying them separated by co
 
 **--broker** (`ANYCABLE_BROKER`, default: `none`)
 
-[Broker](./broker.md) adapter to use.
+[Broker](./broker.md) adapter to use. Available options: `memory`, `nats`, and `redis`.
 
 **--pubsub** (`ANYCABLE_PUBSUB`, default: `none`)
 
@@ -112,6 +112,10 @@ You can specify on which port to receive broadcasting requests (NOTE: it could b
 **--redis_url** (`ANYCABLE_REDIS_URL` or `REDIS_URL`)
 
 Redis URL to connect to (default: `"redis://localhost:6379/5"`). Used by the corresponding pub/sub, broadcasting, and broker adapters.
+
+**--redis_broker_prefix** (`ANYCABLE_REDIS_BROKER_PREFIX`, default: `"__anycable_broker__"`)
+
+Key namespace used by the Redis broker. Set a distinct prefix when multiple AnyCable deployments share one Redis database.
 
 **--redis_sentinels** (`ANYCABLE_REDIS_SENTINELS`)
 

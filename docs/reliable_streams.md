@@ -147,21 +147,20 @@ $ anycable-go --embed_nats --broker=nats
 
 ### Redis
 
-<p class="pro-badge-header"></p>
-
-AnyCable Pro comes with a Redis-based broker adapter. It stores all data in Redis and, thus, can be used in multi-node installations.
+The Redis broker stores streams history, resumable sessions, presence, and the shared epoch in Redis, so it can be used in multi-node installations. It uses the [`go-redis`](https://github.com/redis/go-redis) client and is compatible with Redis 7.4 and Dragonfly 1.39.
 
 To use Redis broker, you need to provide the `--broker` option with the `redis` adapter name:
 
 ```sh
 $ anycable-go --broker=redis
 
- INFO 2023-07-08T00:46:55.491Z context=main Starting AnyCable 1.6.0-pro-eed05bc (with mruby 1.2.0 (2015-11-17)) (pid: 78585, open file limit: 122880, gomaxprocs: 8, netpoll: true)
- INFO 2023-07-08T00:46:55.492Z context=main Using Redis broker at localhost:6379 (history limit: 100, history ttl: 300s, sessions ttl: 300s, presence ttl: 15s)
+ INFO context=main Using Redis broker (history limit: 100, history ttl: 300s, sessions ttl: 300s, presence ttl: 15s, prefix: __anycable_broker__)
  ...
 ```
 
 When you use the `broker` preset with AnyCable, it automatically configures the Redis broker (if Redis credentials are configured).
+
+The adapter does not use Lua scripts. It relies on Redis primitives—Streams, hashes, sets, sorted sets, key expiration, pipelines, and optimistic `WATCH`/`MULTI`/`EXEC` transactions. All keys for one broker namespace use the same Redis hash tag so transactions also remain valid with Redis Cluster and Dragonfly Cluster.
 
 To estimate the required amount of memory for Redis, you can use the following formula:
 
