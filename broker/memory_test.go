@@ -3,6 +3,7 @@ package broker
 import (
 	"slices"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/anycable/anycable-go/common"
@@ -12,39 +13,41 @@ import (
 )
 
 func TestMemory_Expire(t *testing.T) {
-	config := NewConfig()
-	config.HistoryTTL = 1
+	synctest.Test(t, func(t *testing.T) {
+		config := NewConfig()
+		config.HistoryTTL = 1
 
-	broker := NewMemoryBroker(nil, nil, &config)
+		broker := NewMemoryBroker(nil, nil, &config)
 
-	start := time.Now().Unix() - 10
+		start := time.Now().Unix() - 10
 
-	broker.add("test", "a")
-	broker.add("test", "b")
+		broker.add("test", "a")
+		broker.add("test", "b")
 
-	time.Sleep(2 * time.Second)
+		time.Sleep(2 * time.Second)
 
-	broker.add("test", "c")
-	broker.add("test", "d")
+		broker.add("test", "c")
+		broker.add("test", "d")
 
-	broker.expire()
+		broker.expire()
 
-	history, err := broker.HistorySince("test", start)
-	require.NoError(t, err)
+		history, err := broker.HistorySince("test", start)
+		require.NoError(t, err)
 
-	assert.Len(t, history, 2)
-	assert.EqualValues(t, 3, history[0].Offset)
-	assert.Equal(t, "c", history[0].Data)
-	assert.EqualValues(t, 4, history[1].Offset)
-	assert.Equal(t, "d", history[1].Data)
+		assert.Len(t, history, 2)
+		assert.EqualValues(t, 3, history[0].Offset)
+		assert.Equal(t, "c", history[0].Data)
+		assert.EqualValues(t, 4, history[1].Offset)
+		assert.Equal(t, "d", history[1].Data)
 
-	time.Sleep(2 * time.Second)
+		time.Sleep(2 * time.Second)
 
-	broker.expire()
+		broker.expire()
 
-	history, err = broker.HistorySince("test", start)
-	require.NoError(t, err)
-	assert.Empty(t, history)
+		history, err = broker.HistorySince("test", start)
+		require.NoError(t, err)
+		assert.Empty(t, history)
+	})
 }
 
 func TestMemory_Limit(t *testing.T) {
@@ -130,62 +133,66 @@ func TestMemory_Peak(t *testing.T) {
 }
 
 func TestMemstream_filterByOffset(t *testing.T) {
-	ms := &memstream{
-		ttl:   1,
-		limit: 5,
-	}
+	synctest.Test(t, func(t *testing.T) {
+		ms := &memstream{
+			ttl:   1,
+			limit: 5,
+		}
 
-	ms.add("test1")
-	ms.add("test2")
+		ms.add("test1")
+		ms.add("test2")
 
-	// Should return error if offset is out of range
-	err := ms.filterByOffset(10, func(e *entry) {})
-	require.Error(t, err)
+		// Should return error if offset is out of range
+		err := ms.filterByOffset(10, func(e *entry) {})
+		require.Error(t, err)
 
-	err = ms.filterByOffset(1, func(e *entry) {
-		assert.Equal(t, "test2", e.data)
+		err = ms.filterByOffset(1, func(e *entry) {
+			assert.Equal(t, "test2", e.data)
+		})
+		require.NoError(t, err)
+
+		time.Sleep(2 * time.Second)
+
+		ms.expire()
+
+		err = ms.filterByOffset(1, func(e *entry) {
+			assert.Failf(t, "entry should be expired", "entry: %v", e)
+		})
+		require.Error(t, err)
 	})
-	require.NoError(t, err)
-
-	time.Sleep(2 * time.Second)
-
-	ms.expire()
-
-	err = ms.filterByOffset(1, func(e *entry) {
-		assert.Failf(t, "entry should be expired", "entry: %v", e)
-	})
-	require.Error(t, err)
 }
 
 func TestMemory_RestoreSession(t *testing.T) {
-	config := NewConfig()
-	config.SessionsTTL = 1
+	synctest.Test(t, func(t *testing.T) {
+		config := NewConfig()
+		config.SessionsTTL = 1
 
-	broker := NewMemoryBroker(nil, nil, &config)
+		broker := NewMemoryBroker(nil, nil, &config)
 
-	require.NoError(t, broker.CommitSession("123", &TestCacheable{"cache-me"}))
+		require.NoError(t, broker.CommitSession("123", &TestCacheable{"cache-me"}))
 
-	data, err := broker.RestoreSession("123")
-	require.NoError(t, err)
-	assert.Equal(t, []byte("cache-me"), data)
+		data, err := broker.RestoreSession("123")
+		require.NoError(t, err)
+		assert.Equal(t, []byte("cache-me"), data)
 
-	time.Sleep(500 * time.Millisecond)
-	broker.expire()
+		time.Sleep(500 * time.Millisecond)
+		broker.expire()
 
-	require.NoError(t, broker.TouchSession("123"))
-	time.Sleep(500 * time.Millisecond)
-	broker.expire()
+		require.NoError(t, broker.TouchSession("123"))
+		time.Sleep(500 * time.Millisecond)
+		broker.expire()
 
-	data, err = broker.RestoreSession("123")
-	require.NoError(t, err)
-	assert.Equal(t, []byte("cache-me"), data)
+		data, err = broker.RestoreSession("123")
+		require.NoError(t, err)
+		assert.Equal(t, []byte("cache-me"), data)
 
-	time.Sleep(1 * time.Second)
-	broker.expire()
+		time.Sleep(1 * time.Second)
+		broker.expire()
 
-	data, err = broker.RestoreSession("123")
-	require.NoError(t, err)
-	assert.Nil(t, data)
+		data, err = broker.RestoreSession("123")
+		require.NoError(t, err)
+		assert.Nil(t, data)
+	})
 }
 
 func TestMemory_Presence(t *testing.T) {
@@ -282,47 +289,49 @@ func TestMemory_Presence(t *testing.T) {
 }
 
 func TestMemory_expirePresence(t *testing.T) {
-	config := NewConfig()
-	config.PresenceTTL = 1
+	synctest.Test(t, func(t *testing.T) {
+		config := NewConfig()
+		config.PresenceTTL = 1
 
-	broker := NewMemoryBroker(nil, nil, &config)
+		broker := NewMemoryBroker(nil, nil, &config)
 
-	broker.PresenceAdd("a", "s1", "user_1", "john") // nolint: errcheck
-	broker.PresenceAdd("a", "s2", "user_2", "kate") // nolint: errcheck
+		broker.PresenceAdd("a", "s1", "user_1", "john") // nolint: errcheck
+		broker.PresenceAdd("a", "s2", "user_2", "kate") // nolint: errcheck
 
-	info, err := broker.PresenceInfo("a")
-	require.NoError(t, err)
+		info, err := broker.PresenceInfo("a")
+		require.NoError(t, err)
 
-	assert.Equal(t, 2, info.Total)
+		assert.Equal(t, 2, info.Total)
 
-	time.Sleep(500 * time.Millisecond)
-	broker.TouchPresence("s1") // nolint: errcheck
+		time.Sleep(500 * time.Millisecond)
+		broker.TouchPresence("s1") // nolint: errcheck
 
-	time.Sleep(500 * time.Millisecond)
-	broker.TouchPresence("s1") // nolint: errcheck
+		time.Sleep(500 * time.Millisecond)
+		broker.TouchPresence("s1") // nolint: errcheck
 
-	time.Sleep(500 * time.Millisecond)
-	broker.TouchPresence("s1") // nolint: errcheck
+		time.Sleep(500 * time.Millisecond)
+		broker.TouchPresence("s1") // nolint: errcheck
 
-	time.Sleep(500 * time.Millisecond)
-	broker.expire()
+		time.Sleep(500 * time.Millisecond)
+		broker.expire()
 
-	info, err = broker.PresenceInfo("a")
-	require.NoError(t, err)
+		info, err = broker.PresenceInfo("a")
+		require.NoError(t, err)
 
-	assert.Equal(t, 1, info.Total)
-	assert.Equal(t, "user_1", info.Records[0].ID)
+		assert.Equal(t, 1, info.Total)
+		assert.Equal(t, "user_1", info.Records[0].ID)
 
-	time.Sleep(1000 * time.Millisecond)
+		time.Sleep(1000 * time.Millisecond)
 
-	broker.PresenceAdd("a", "s3", "user_1", "jack") // nolint: errcheck
+		broker.PresenceAdd("a", "s3", "user_1", "jack") // nolint: errcheck
 
-	broker.expire()
+		broker.expire()
 
-	info, err = broker.PresenceInfo("a")
-	require.NoError(t, err)
+		info, err = broker.PresenceInfo("a")
+		require.NoError(t, err)
 
-	assert.Equal(t, 1, info.Total)
-	assert.Equal(t, "user_1", info.Records[0].ID)
-	assert.Equal(t, "jack", info.Records[0].Info)
+		assert.Equal(t, 1, info.Total)
+		assert.Equal(t, "user_1", info.Records[0].ID)
+		assert.Equal(t, "jack", info.Records[0].Info)
+	})
 }

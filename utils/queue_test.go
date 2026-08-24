@@ -210,18 +210,19 @@ func TestQueue_vs_GC(t *testing.T) {
 
 	runtime.GC()
 
-	// Let finalizers to trigger
-	time.Sleep(500 * time.Millisecond)
+	require.Eventually(t, func() bool {
+		return tracker.get("a")
+	}, 2*time.Second, 100*time.Millisecond)
 
-	assert.True(t, tracker.get("a"))
 	assert.False(t, tracker.get("b"))
 
 	q.Remove()
 
 	runtime.GC()
 
-	// Let finalizers to trigger
-	time.Sleep(500 * time.Millisecond)
+	require.Eventually(t, func() bool {
+		return tracker.get("b")
+	}, 2*time.Second, 100*time.Millisecond)
 
 	assert.True(t, tracker.get("a"))
 	assert.True(t, tracker.get("b"))
