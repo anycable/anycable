@@ -8,6 +8,7 @@ import (
 
 	"github.com/nats-io/nats.go"
 
+	"github.com/anycable/anycable-go/logger"
 	nconfig "github.com/anycable/anycable-go/nats"
 )
 
@@ -63,7 +64,7 @@ func (s *LegacyNATSBroadcaster) Start(done chan (error)) error {
 			}
 		}),
 		nats.ReconnectHandler(func(nc *nats.Conn) {
-			s.log.Info("connection restored", "url", nc.ConnectedUrl())
+			s.log.Info("connection restored", "url", logger.FilteredURL(nc.ConnectedUrl()))
 		}),
 	}
 

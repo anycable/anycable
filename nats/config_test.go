@@ -28,3 +28,10 @@ func TestNATSConfig_ToToml(t *testing.T) {
 
 	assert.Equal(t, conf, conf2)
 }
+
+func TestNATSConfig_FilteredServers(t *testing.T) {
+	conf := NewNATSConfig()
+	conf.Servers = "nats://anycable:s3cr3t-passw0rd@nats-1:4222, nats://nats-2:4222"
+
+	assert.Equal(t, "nats://a***e:s3***rd@nats-1:4222, nats://nats-2:4222", conf.FilteredServers())
+}

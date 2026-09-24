@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/anycable/anycable-go/common"
+	"github.com/anycable/anycable-go/logger"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -107,7 +108,11 @@ func (i *JWTIdentifier) Identify(sid string, env *common.SessionEnv) (*common.Co
 	}
 
 	if rawToken == "" {
-		i.log.Debug("no token is found", "url", env.URL, "headers", env.Headers)
+		var headers map[string]string
+		if env.Headers != nil {
+			headers = *env.Headers
+		}
+		i.log.Debug("no token is found", "url", logger.FilteredURL(env.URL), "headers", logger.FilteredMap(headers))
 
 		if i.required {
 			return unauthorizedResponse(), nil
@@ -141,7 +146,7 @@ func (i *JWTIdentifier) Identify(sid string, env *common.SessionEnv) (*common.Co
 		if v, ok := claims["ext"].(string); ok {
 			ids = v
 		} else {
-			return nil, fmt.Errorf("JWT token doesn't contain identifiers: %v", claims)
+			return nil, errors.New("JWT token doesn't contain identifiers: ext claim is missing")
 		}
 	} else {
 		return nil, err

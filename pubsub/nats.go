@@ -69,7 +69,7 @@ func (s *NATSSubscriber) Start(done chan (error)) error {
 			}
 		}),
 		nats.ReconnectHandler(func(nc *nats.Conn) {
-			s.log.Info("connection restored", "url", nc.ConnectedUrl())
+			s.log.Info("connection restored", "url", logger.FilteredURL(nc.ConnectedUrl()))
 		}),
 	}
 
@@ -83,7 +83,7 @@ func (s *NATSSubscriber) Start(done chan (error)) error {
 		return err
 	}
 
-	s.log.Info(fmt.Sprintf("Starting NATS pub/sub: %s", s.config.NATS.Servers))
+	s.log.Info(fmt.Sprintf("Starting NATS pub/sub: %s", s.config.NATS.FilteredServers()))
 
 	s.conn = nc
 

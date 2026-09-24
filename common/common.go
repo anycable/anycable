@@ -206,12 +206,12 @@ func (c *ConnectResult) LogValue() slog.Value {
 
 	return slog.GroupValue(
 		slog.String("status", StatusName(c.Status)),
-		slog.Any("transmissions", logger.CompactValues(c.Transmissions)),
+		slog.Any("transmissions", filteredTransmissions(c.Transmissions)),
 		slog.Any("broadcasts", c.Broadcasts),
 		slog.String("identifier", c.Identifier),
 		slog.Int("disconnect_interest", c.DisconnectInterest),
-		slog.Any("cstate", c.CState),
-		slog.Any("istate", c.IState),
+		slog.Any("cstate", logger.FilteredMap(c.CState)),
+		slog.Any("istate", logger.FilteredMap(c.IState)),
 	)
 }
 
@@ -272,14 +272,14 @@ func (c *CommandResult) LogValue() slog.Value {
 	return slog.GroupValue(
 		slog.String("status", StatusName(c.Status)),
 		slog.Any("streams", logger.CompactValues(c.Streams)),
-		slog.Any("transmissions", logger.CompactValues(c.Transmissions)),
+		slog.Any("transmissions", filteredTransmissions(c.Transmissions)),
 		slog.Any("stopped_streams", logger.CompactValues(c.StoppedStreams)),
 		slog.Bool("stop_all_streams", c.StopAllStreams),
 		slog.Any("broadcasts", c.Broadcasts),
 		slog.Bool("disconnect", c.Disconnect),
 		slog.Int("disconnect_interest", c.DisconnectInterest),
-		slog.Any("cstate", c.CState),
-		slog.Any("istate", c.IState),
+		slog.Any("cstate", logger.FilteredMap(c.CState)),
+		slog.Any("istate", logger.FilteredMap(c.IState)),
 	)
 }
 
@@ -341,7 +341,7 @@ func (m *Message) LogValue() slog.Value {
 
 	return slog.GroupValue(
 		slog.String("command", m.Command),
-		slog.String("identifier", m.Identifier),
+		slog.Any("identifier", FilteredIdentifier(m.Identifier)),
 		slog.Any("data", logger.CompactAny(m.Data)),
 		slog.Any("history", m.History),
 	)
@@ -521,7 +521,7 @@ func (r *Reply) LogValue() slog.Value {
 	}
 
 	if r.Identifier != "" {
-		attrs = append(attrs, slog.String("identifier", r.Identifier))
+		attrs = append(attrs, slog.Any("identifier", FilteredIdentifier(r.Identifier)))
 	}
 
 	if r.Message != nil {

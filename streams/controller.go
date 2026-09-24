@@ -56,7 +56,7 @@ func (c *Controller) Subscribe(ctx context.Context, sid string, env *common.Sess
 	request, stream, err := c.VerifiedStream(identifier)
 
 	if err != nil {
-		c.log.With("identifier", identifier).Debug("subscription failed", "error", err)
+		c.log.With("identifier", common.FilteredIdentifier(identifier)).Debug("subscription failed", "error", err)
 
 		return &common.CommandResult{
 				Status:        common.FAILURE,
@@ -66,9 +66,9 @@ func (c *Controller) Subscribe(ctx context.Context, sid string, env *common.Sess
 	}
 
 	if request.SignedStreamName != "" {
-		c.log.With("identifier", identifier).Debug("subscribed verified", "stream", stream)
+		c.log.With("identifier", common.FilteredIdentifier(identifier)).Debug("subscribed verified", "stream", stream)
 	} else {
-		c.log.With("identifier", identifier).Debug("", "stream", stream)
+		c.log.With("identifier", common.FilteredIdentifier(identifier)).Debug("", "stream", stream)
 	}
 
 	var state map[string]string
@@ -127,7 +127,7 @@ func (c *Controller) VerifiedStream(identifier string) (*SubscribeRequest, strin
 	if request.SignedStreamName == "" {
 		stream = request.StreamName
 
-		c.log.With("identifier", identifier).Debug("unsigned", "stream", stream)
+		c.log.With("identifier", common.FilteredIdentifier(identifier)).Debug("unsigned", "stream", stream)
 	} else {
 		verified, err := c.verifier.Verified(request.SignedStreamName)
 
