@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/anycable/anycable-go/logger"
 	natsgo "github.com/nats-io/nats.go"
 )
 
@@ -18,6 +19,17 @@ func NewNATSConfig() NATSConfig {
 		Servers:              natsgo.DefaultURL,
 		MaxReconnectAttempts: 5,
 	}
+}
+
+// FilteredServers returns the list of servers with sensitive information masked (for logging)
+func (c NATSConfig) FilteredServers() string {
+	servers := strings.Split(c.Servers, ",")
+
+	for i, server := range servers {
+		servers[i] = logger.FilteredURL(strings.TrimSpace(server)).String()
+	}
+
+	return strings.Join(servers, ", ")
 }
 
 func (c NATSConfig) ToToml() string {

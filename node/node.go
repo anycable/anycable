@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"maps"
 	"os"
 	"runtime"
 	"sync"
@@ -482,7 +481,7 @@ func (n *Node) Subscribe(s *Session, msg *common.Message) (*common.CommandResult
 	s.smu.Lock()
 	if ok := s.subscriptions.HasChannel(msg.Identifier); ok {
 		s.smu.Unlock()
-		return nil, fmt.Errorf("already subscribed to %s", msg.Identifier)
+		return nil, fmt.Errorf("already subscribed to %s", common.FilteredIdentifier(msg.Identifier))
 	}
 	s.smu.Unlock()
 
@@ -505,14 +504,14 @@ func (n *Node) Subscribe(s *Session, msg *common.Message) (*common.CommandResult
 	if err != nil { // nolint: gocritic
 		if res == nil || res.Status == common.ERROR {
 			s.smu.Unlock()
-			return nil, errorx.Decorate(err, "subscribe failed for %s", msg.Identifier)
+			return nil, errorx.Decorate(err, "subscribe failed for %s", common.FilteredIdentifier(msg.Identifier))
 		}
 	} else if res.Status == common.SUCCESS {
 		confirmed = true
 		s.subscriptions.AddChannel(msg.Identifier)
-		s.Log.Debug("subscribed", "identifier", msg.Identifier)
+		s.Log.Debug("subscribed", "identifier", common.FilteredIdentifier(msg.Identifier))
 	} else {
-		s.Log.Debug("subscription rejected", "identifier", msg.Identifier)
+		s.Log.Debug("subscription rejected", "identifier", common.FilteredIdentifier(msg.Identifier))
 	}
 
 	s.smu.Unlock()
@@ -531,13 +530,13 @@ func (n *Node) Subscribe(s *Session, msg *common.Message) (*common.CommandResult
 
 		if msg.History.Since > 0 || msg.History.Streams != nil {
 			if err := n.History(s, msg); err != nil {
-				s.Log.Warn("couldn't retrieve history", "identifier", msg.Identifier, "error", err)
+				s.Log.Warn("couldn't retrieve history", "identifier", common.FilteredIdentifier(msg.Identifier), "error", err)
 			}
 		}
 
 		if msg.Presence != nil {
 			if err := n.handlePresenceReply(s, msg.Identifier, common.PresenceJoinType, msg.Presence); err != nil {
-				s.Log.Warn("couldn't process presence join", "identifier", msg.Identifier, "error", err)
+				s.Log.Warn("couldn't process presence join", "identifier", common.FilteredIdentifier(msg.Identifier), "error", err)
 			}
 		}
 	}
@@ -550,7 +549,7 @@ func (n *Node) Unsubscribe(s *Session, msg *common.Message) (*common.CommandResu
 	s.smu.Lock()
 	if ok := s.subscriptions.HasChannel(msg.Identifier); !ok {
 		s.smu.Unlock()
-		return nil, fmt.Errorf("unknown subscription: %s", msg.Identifier)
+		return nil, fmt.Errorf("unknown subscription: %s", common.FilteredIdentifier(msg.Identifier))
 	}
 	s.smu.Unlock()
 
@@ -573,7 +572,7 @@ func (n *Node) Unsubscribe(s *Session, msg *common.Message) (*common.CommandResu
 	if err != nil {
 		if res == nil || res.Status == common.ERROR {
 			s.smu.Unlock()
-			return nil, errorx.Decorate(err, "failed to unsubscribe from %s", msg.Identifier)
+			return nil, errorx.Decorate(err, "failed to unsubscribe from %s", common.FilteredIdentifier(msg.Identifier))
 		}
 	} else {
 		// Make sure to remove all streams subscriptions
@@ -584,7 +583,7 @@ func (n *Node) Unsubscribe(s *Session, msg *common.Message) (*common.CommandResu
 		s.env.RemoveChannelState(msg.Identifier)
 		s.subscriptions.RemoveChannel(msg.Identifier)
 
-		s.Log.Debug("unsubscribed", "identifier", msg.Identifier)
+		s.Log.Debug("unsubscribed", "identifier", common.FilteredIdentifier(msg.Identifier))
 	}
 
 	s.smu.Unlock()
@@ -615,7 +614,7 @@ func (n *Node) Perform(s *Session, msg *common.Message) (*common.CommandResult, 
 	s.smu.Lock()
 	if ok := s.subscriptions.HasChannel(msg.Identifier); !ok {
 		s.smu.Unlock()
-		return nil, fmt.Errorf("unknown subscription %s", msg.Identifier)
+		return nil, fmt.Errorf("unknown subscription %s", common.FilteredIdentifier(msg.Identifier))
 	}
 	s.smu.Unlock()
 
@@ -640,7 +639,7 @@ func (n *Node) Perform(s *Session, msg *common.Message) (*common.CommandResult, 
 
 	if err != nil {
 		if res == nil || res.Status == common.ERROR {
-			return nil, errorx.Decorate(err, "perform failed for %s", msg.Identifier)
+			return nil, errorx.Decorate(err, "perform failed for %s", common.FilteredIdentifier(msg.Identifier))
 		}
 	}
 
@@ -662,7 +661,7 @@ func (n *Node) History(s *Session, msg *common.Message) error {
 	s.smu.Lock()
 	if ok := s.subscriptions.HasChannel(msg.Identifier); !ok {
 		s.smu.Unlock()
-		return fmt.Errorf("unknown subscription %s", msg.Identifier)
+		return fmt.Errorf("unknown subscription %s", common.FilteredIdentifier(msg.Identifier))
 	}
 	subscriptionStreams := s.subscriptions.StreamsFor(msg.Identifier)
 	s.smu.Unlock()
@@ -748,7 +747,7 @@ func (n *Node) Whisper(s *Session, msg *common.Message) error {
 	stream := env.GetChannelStateField(msg.Identifier, common.WHISPER_STREAM_STATE)
 
 	if stream == "" {
-		s.Log.Debug("whisper stream not found", "identifier", msg.Identifier)
+		s.Log.Debug("whisper stream not found", "identifier", common.FilteredIdentifier(msg.Identifier))
 		return nil
 	}
 
@@ -778,7 +777,7 @@ func (n *Node) Presence(s *Session, msg *common.Message) error {
 
 	if ok := s.subscriptions.HasChannel(msg.Identifier); !ok {
 		s.smu.Unlock()
-		return fmt.Errorf("unknown subscription %s", msg.Identifier)
+		return fmt.Errorf("unknown subscription %s", common.FilteredIdentifier(msg.Identifier))
 	}
 
 	// Check that the presence stream is configured (thus, the feature is enabled)
@@ -792,7 +791,7 @@ func (n *Node) Presence(s *Session, msg *common.Message) error {
 
 	if stream == "" {
 		s.smu.Unlock()
-		return fmt.Errorf("presence stream not found for identifier: %s", msg.Identifier)
+		return fmt.Errorf("presence stream not found for identifier: %s", common.FilteredIdentifier(msg.Identifier))
 	}
 
 	s.smu.Unlock()
@@ -838,7 +837,7 @@ func (n *Node) PresenceJoin(s *Session, msg *common.Message) error {
 
 	if ok := s.subscriptions.HasChannel(msg.Identifier); !ok {
 		s.smu.Unlock()
-		return fmt.Errorf("unknown subscription %s", msg.Identifier)
+		return fmt.Errorf("unknown subscription %s", common.FilteredIdentifier(msg.Identifier))
 	}
 
 	s.smu.Unlock()
@@ -852,7 +851,7 @@ func (n *Node) PresenceLeave(s *Session, msg *common.Message) error {
 
 	if ok := s.subscriptions.HasChannel(msg.Identifier); !ok {
 		s.smu.Unlock()
-		return fmt.Errorf("unknown subscription %s", msg.Identifier)
+		return fmt.Errorf("unknown subscription %s", common.FilteredIdentifier(msg.Identifier))
 	}
 
 	s.smu.Unlock()
@@ -939,7 +938,11 @@ func (n *Node) DisconnectNow(s *Session) error {
 
 	ids := s.GetIdentifiers()
 
-	s.Log.Debug("disconnect", "ids", ids, "url", s.env.URL, "headers", maps.Keys(*s.env.Headers), "subscriptions", len(sessionSubscriptions))
+	var headers map[string]string
+	if s.env.Headers != nil {
+		headers = *s.env.Headers
+	}
+	s.Log.Debug("disconnect", "ids", ids, "url", logger.FilteredURL(s.env.URL), "headers", logger.FilteredMap(headers), "subscriptions", len(sessionSubscriptions))
 
 	err := n.controller.Disconnect(
 		context.Background(),

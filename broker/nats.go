@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/anycable/anycable-go/common"
+	"github.com/anycable/anycable-go/logger"
 	natsconfig "github.com/anycable/anycable-go/nats"
 	"github.com/anycable/anycable-go/utils"
 	"github.com/joomcode/errorx"
@@ -115,7 +116,7 @@ func (n *NATS) Start(done chan (error)) error {
 			}
 		}),
 		nats.ReconnectHandler(func(nc *nats.Conn) {
-			n.log.Info("connection restored", "url", nc.ConnectedUrl())
+			n.log.Info("connection restored", "url", logger.FilteredURL(nc.ConnectedUrl()))
 		}),
 	}
 
@@ -271,7 +272,7 @@ func (n *NATS) Shutdown(ctx context.Context) error {
 func (n *NATS) Announce() string {
 	brokerParams := fmt.Sprintf("(history limit: %d, history ttl: %ds, sessions ttl: %ds)", n.conf.HistoryLimit, n.conf.HistoryTTL, n.conf.SessionsTTL)
 
-	return fmt.Sprintf("Using NATS broker: %s %s", n.nconf.Servers, brokerParams)
+	return fmt.Sprintf("Using NATS broker: %s %s", n.nconf.FilteredServers(), brokerParams)
 }
 
 func (n *NATS) Epoch() string {

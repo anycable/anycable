@@ -270,7 +270,7 @@ func (h *Hub) UnsubscribeSessionFromChannel(session HubSession, targetIdentifier
 		}
 	}
 
-	h.log.With("sid", sid).Debug("unsubscribed", "identifier", targetIdentifier)
+	h.log.With("sid", sid).Debug("unsubscribed", "identifier", common.FilteredIdentifier(targetIdentifier))
 }
 
 func (h *Hub) SubscribeSession(session HubSession, stream string, identifier string) {
@@ -287,7 +287,7 @@ func (h *Hub) SubscribeSession(session HubSession, stream string, identifier str
 
 	h.sessions[sid].AddStream(stream, identifier)
 
-	h.log.With("sid", sid).Debug("subscribed", "identifier", identifier, "stream", stream)
+	h.log.With("sid", sid).Debug("subscribed", "identifier", common.FilteredIdentifier(identifier), "stream", stream)
 }
 
 func (h *Hub) UnsubscribeSession(session HubSession, stream string, identifier string) {
@@ -302,7 +302,7 @@ func (h *Hub) UnsubscribeSession(session HubSession, stream string, identifier s
 		info.RemoveStream(stream, identifier)
 	}
 
-	h.log.With("sid", sid).Debug("unsubscribed", "identifier", identifier, "stream", stream)
+	h.log.With("sid", sid).Debug("unsubscribed", "identifier", common.FilteredIdentifier(identifier), "stream", stream)
 }
 
 func (h *Hub) broadcastToStream(streamMsg *common.StreamMessage) {
