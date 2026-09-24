@@ -32,6 +32,8 @@ x-backend: &backend
     - history:/usr/local/hist
     # Claude state (sessions, settings.json, todos, project data) — named volume.
     - claude:/root/.claude
+    # Claude CLI binaries (~/.local/bin/claude -> ~/.local/share/claude/versions/X).
+    - claude_cli:/root/.local
     # Claude main config (auth tokens, project list) — bind-mounted so it persists
     # on the host and can be inspected/edited. Seeded by `dip provision` from
     # .claude.json.example.
@@ -39,6 +41,7 @@ x-backend: &backend
   environment:
     <<: *env
     HISTFILE: /usr/local/hist/.bash_history
+    CLAUDE_CODE_TMPDIR: /root/.claude/__tmp__
     EDITOR: vi
   depends_on:
     redis:
@@ -76,3 +79,4 @@ volumes:
   history:
   redis:
   claude:
+  claude_cli:
