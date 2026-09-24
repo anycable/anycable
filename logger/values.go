@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"log/slog"
 	"net/url"
+	"os"
 	"slices"
+	"strconv"
 	"strings"
 )
 
@@ -67,6 +69,24 @@ func CompactAny(val interface{}) *compactAny {
 	return &compactAny{val}
 }
 
+// Sensitive data filtering could be disabled via the ANYCABLE_FILTER_LOGS=false env var (e.g., for debugging)
+var filteringEnabled = filteringEnabledFromEnv(os.Getenv("ANYCABLE_FILTER_LOGS"))
+
+func filteringEnabledFromEnv(val string) bool {
+	enabled, err := strconv.ParseBool(val)
+
+	if err != nil {
+		return true
+	}
+
+	return enabled
+}
+
+// FilteringEnabled returns true if sensitive data must be filtered out from logs
+func FilteringEnabled() bool {
+	return filteringEnabled
+}
+
 const (
 	filteredMask = "***"
 	// Values up to this length are masked completely
@@ -80,6 +100,10 @@ type filteredURL struct {
 }
 
 func (f *filteredURL) String() string {
+	if !filteringEnabled {
+		return f.val
+	}
+
 	u, err := url.Parse(f.val)
 
 	if err != nil {
@@ -129,8 +153,8 @@ func FilteredURL(val string) *filteredURL {
 
 // MaskValue hides the value, keeping only the first and the last characters visible (if the value is long enough)
 func MaskValue(val string) string {
-	if val == "" {
-		return ""
+	if val == "" || !filteringEnabled {
+		return val
 	}
 
 	visible := 2
@@ -149,6 +173,10 @@ type filteredMap[T any] struct {
 }
 
 func (f *filteredMap[T]) LogValue() slog.Value {
+	if !filteringEnabled {
+		return slog.AnyValue(f.val)
+	}
+
 	keys := make([]string, 0, len(f.val))
 
 	for k := range f.val {
@@ -160,7 +188,7 @@ func (f *filteredMap[T]) LogValue() slog.Value {
 	return slog.AnyValue(keys)
 }
 
-// FilteredMap wraps a map to show only its keys in log
+// FilteredMap wraps a map to show only its keys in log (or the whole map if filtering is disabled)
 func FilteredMap[T any](val map[string]T) *filteredMap[T] {
 	return &filteredMap[T]{val}
 }

@@ -19,6 +19,10 @@ type filteredIdentifier struct {
 }
 
 func (f *filteredIdentifier) String() string {
+	if !logger.FilteringEnabled() {
+		return f.val
+	}
+
 	matches := signedStreamDigestRx.FindAllStringSubmatchIndex(f.val, -1)
 
 	if matches == nil {
