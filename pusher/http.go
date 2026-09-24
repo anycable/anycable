@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/md5" // #nosec G501
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -190,23 +191,9 @@ func (api *RestAPI) Handler(w http.ResponseWriter, r *http.Request) {
 	var stringToSign string
 	var body []byte
 
+	bodyMD5 := queryParams.Get("body_md5")
+
 	if r.Method == http.MethodPost {
-		bodyMD5 := queryParams.Get("body_md5")
-
-		body, err = io.ReadAll(r.Body)
-		if err != nil {
-			api.log.Error("failed to read request body")
-			w.WriteHeader(http.StatusUnprocessableEntity)
-			return
-		}
-
-		actualMD5 := fmt.Sprintf("%x", md5.Sum(body)) // #nosec G401
-		if actualMD5 != bodyMD5 {
-			api.log.Debug("body_md5 mismatch", "expected", bodyMD5, "actual", actualMD5)
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-
 		stringToSign = "POST\n" +
 			path + "\n" +
 			"auth_key=" + key +
@@ -221,9 +208,36 @@ func (api *RestAPI) Handler(w http.ResponseWriter, r *http.Request) {
 			"&auth_version=" + authVersion
 	}
 
+	// Verify the signature before reading the body: body_md5 is a part of the signed string,
+	// so we can authenticate the request without materializing the body
 	if !api.verifier.Verify(stringToSign, signature) {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
+	}
+
+	if r.Method == http.MethodPost {
+		r.Body = http.MaxBytesReader(w, r.Body, api.conf.MaxBodySize)
+
+		body, err = io.ReadAll(r.Body)
+		if err != nil {
+			var maxBytesErr *http.MaxBytesError
+			if errors.As(err, &maxBytesErr) {
+				api.log.Debug("request body is too large", "limit", maxBytesErr.Limit)
+				w.WriteHeader(http.StatusRequestEntityTooLarge)
+				return
+			}
+
+			api.log.Error("failed to read request body")
+			w.WriteHeader(http.StatusUnprocessableEntity)
+			return
+		}
+
+		actualMD5 := fmt.Sprintf("%x", md5.Sum(body)) // #nosec G401
+		if actualMD5 != bodyMD5 {
+			api.log.Debug("body_md5 mismatch", "expected", bodyMD5, "actual", actualMD5)
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
 	}
 
 	switch r.Method {

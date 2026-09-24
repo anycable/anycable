@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/md5" // #nosec G501
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -127,6 +128,40 @@ func TestHttpHandler(t *testing.T) {
 
 		assert.Equal(t, http.StatusUnauthorized, rr.Code)
 	})
+
+	t.Run("Rejects large body with invalid signature without reading it", func(t *testing.T) {
+		smallConfig := config
+		smallConfig.MaxBodySize = 16
+
+		smallAPI := NewRestAPI(handler, brokerMock, &smallConfig, slog.Default())
+
+		authParams := "auth_key=" + config.AppKey +
+			"&auth_timestamp=" + strconv.FormatInt(time.Now().Unix(), 10) +
+			"&auth_version=1.0" +
+			"&body_md5=deadbeef"
+
+		body := &countingReader{r: strings.NewReader(strings.Repeat("x", 1024))}
+
+		req, err := http.NewRequest("POST", "/events?"+authParams+"&auth_signature=deadbeef", body)
+		require.NoError(t, err)
+
+		rr := httptest.NewRecorder()
+		http.HandlerFunc(smallAPI.Handler).ServeHTTP(rr, req)
+
+		assert.Equal(t, http.StatusUnauthorized, rr.Code)
+		assert.Equal(t, 0, body.n)
+	})
+}
+
+type countingReader struct {
+	r io.Reader
+	n int
+}
+
+func (c *countingReader) Read(p []byte) (int, error) {
+	n, err := c.r.Read(p)
+	c.n += n
+	return n, err
 }
 
 func TestGetUsersIntegration(t *testing.T) {
