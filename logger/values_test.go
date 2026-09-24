@@ -120,3 +120,23 @@ func TestFilteredMap(t *testing.T) {
 	assert.Equal(t, "[a b c]", FilteredMap(map[string]string{"c": "3", "a": "1", "b": "2"}).LogValue().String())
 	assert.Equal(t, "[]", FilteredMap[string](nil).LogValue().String())
 }
+
+func TestFilteringEnabledFromEnv(t *testing.T) {
+	assert.True(t, filteringEnabledFromEnv(""))
+	assert.True(t, filteringEnabledFromEnv("true"))
+	assert.True(t, filteringEnabledFromEnv("whatever"))
+	assert.False(t, filteringEnabledFromEnv("false"))
+	assert.False(t, filteringEnabledFromEnv("0"))
+}
+
+func TestFilteringDisabled(t *testing.T) {
+	filteringEnabled = false
+	defer func() { filteringEnabled = true }()
+
+	rawURL := "nats://anycable:secret-password@nats:4222/cable?jwt=eyJhbGciOiJIUzI1NiJ9"
+
+	assert.Equal(t, rawURL, FilteredURL(rawURL).LogValue().String())
+	assert.Equal(t, "http://[::1", FilteredURL("http://[::1").LogValue().String())
+	assert.Equal(t, "secret-password", MaskValue("secret-password"))
+	assert.Equal(t, "map[a:1 b:2]", FilteredMap(map[string]string{"b": "2", "a": "1"}).LogValue().String())
+}

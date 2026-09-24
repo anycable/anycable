@@ -157,6 +157,10 @@ Logging level (default: `"info"`).
 
 Enable debug mode (more verbose logging).
 
+**`ANYCABLE_FILTER_LOGS`** (env var only)
+
+By default, AnyCable masks sensitive data in logs: connection URL query parameters, credentials in server URLs (e.g., NATS), signed stream digests, as well as header, connection and channel state values (only keys are logged). Set `ANYCABLE_FILTER_LOGS=false` to log these values as is (for example, for debugging). **Don't use it in production**.
+
 ## Presets
 
 AnyCable-Go comes with a few built-in configuration presets for particular deployments environments, such as Heroku or Fly. The presets are detected and activated automatically. As an indication, you can find a line in the logs:

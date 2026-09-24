@@ -2,6 +2,12 @@
 
 ## master
 
+## 1.6.17 (2026-09-24)
+
+- Add logs filtering.
+
+- Upgrade to go1.26.8 tool chain.
+
 ## 1.6.16 (2026-08-05)
 
 - Upgrade to go1.26.5 tool chain.
