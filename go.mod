@@ -33,7 +33,7 @@ replace github.com/mitchellh/go-mruby => ./vendorlib/go-mruby
 
 require (
 	github.com/BurntSushi/toml v1.6.0
-	github.com/durable-streams/durable-streams/packages/client-go v0.1.0
+	github.com/durable-streams/durable-streams/packages/client-go v0.2.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/pusher/pusher-http-go/v5 v5.1.1
 	github.com/sony/gobreaker v1.0.0
