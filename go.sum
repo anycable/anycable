@@ -13,8 +13,8 @@ github.com/cpuguy83/go-md2man/v2 v2.0.7/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6N
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/durable-streams/durable-streams/packages/client-go v0.1.0 h1:upn2H0zJ/QX/nWpbFFzUS9KkC5KgXm5rBtdUco2MIWA=
-github.com/durable-streams/durable-streams/packages/client-go v0.1.0/go.mod h1:G9l/FuZz1LWA1IhuCg6epPrMKU7Yd9805L4yC+0iuHc=
+github.com/durable-streams/durable-streams/packages/client-go v0.2.0 h1:s5QL0QEu06m954GVbV76Hl21sXCq2M9883PaoMI0oh4=
+github.com/durable-streams/durable-streams/packages/client-go v0.2.0/go.mod h1:G9l/FuZz1LWA1IhuCg6epPrMKU7Yd9805L4yC+0iuHc=
 github.com/fullstorydev/grpchan v1.1.2 h1:Bmo6KbPe/xvftY/8tCbV3MmX/5Z87zcXu+5Xus7EDz4=
 github.com/fullstorydev/grpchan v1.1.2/go.mod h1:GrXuhvxw+EM9Z1c7pHQY7SOWn8cv1+SamuCsdNH0j9A=
 github.com/go-chi/chi/v5 v5.3.2 h1:5YQkICvTCSZ25hoRsyJazN0scjzKGiu4VAUc7H1o1nY=
