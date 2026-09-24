@@ -5,6 +5,10 @@ import (
 	"strings"
 )
 
+const (
+	defaultMaxBodySize = 1048576 // 1 MB
+)
+
 type Config struct {
 	// Pusher application ID
 	AppID string `toml:"app_id"`
@@ -19,11 +23,15 @@ type Config struct {
 	AddCORSHeaders bool
 	// CORSHosts contains a list of hostnames for CORS (comma-separated)
 	CORSHosts string
+	// MaxBodySize is the maximum allowed size of the HTTP API request body (in bytes)
+	MaxBodySize int64 `toml:"max_body_size"`
 }
 
 // NewConfig returns a new Config
 func NewConfig() Config {
-	return Config{}
+	return Config{
+		MaxBodySize: defaultMaxBodySize,
+	}
 }
 
 func (c *Config) Enabled() bool {
@@ -60,6 +68,9 @@ func (c Config) ToToml() string {
 	} else {
 		result.WriteString("# api_port = 0\n")
 	}
+
+	result.WriteString("# Maximum allowed size of the HTTP API request body (in bytes)\n")
+	result.WriteString(fmt.Sprintf("max_body_size = %d\n", c.MaxBodySize))
 
 	result.WriteString("\n")
 
