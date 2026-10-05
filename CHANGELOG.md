@@ -2,6 +2,8 @@
 
 ## master
 
+- Fix broadcast message data losing integer precision for numbers larger than 2^53 (e.g., Facebook/Snowflake-style ids) when re-encoded for delivery to clients.
+
 ## 1.6.17 (2026-09-24)
 
 - Add logs filtering.

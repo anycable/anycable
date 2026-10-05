@@ -94,6 +94,42 @@ func TestRejectionMessage(t *testing.T) {
 	assert.Equal(t, "{\"type\":\"reject_subscription\",\"identifier\":\"test_channel\"}", RejectionMessage("test_channel"))
 }
 
+func TestStreamMessageToReplyFor(t *testing.T) {
+	t.Run("preserves int64 precision for large numbers", func(t *testing.T) {
+		sm := StreamMessage{Stream: "s", Data: `{"sender_id":2675291807195071852,"name":"test"}`}
+
+		reply := sm.ToReplyFor("test_channel")
+
+		b, err := json.Marshal(reply.Message)
+		assert.NoError(t, err)
+		assert.JSONEq(t, `{"sender_id":2675291807195071852,"name":"test"}`, string(b))
+	})
+
+	t.Run("falls back to plain string for non-JSON data", func(t *testing.T) {
+		sm := StreamMessage{Stream: "s", Data: "just a string"}
+
+		reply := sm.ToReplyFor("test_channel")
+
+		assert.Equal(t, "just a string", reply.Message)
+	})
+
+	t.Run("falls back to plain string for a numeric-looking string with trailing garbage", func(t *testing.T) {
+		sm := StreamMessage{Stream: "s", Data: "123abc"}
+
+		reply := sm.ToReplyFor("test_channel")
+
+		assert.Equal(t, "123abc", reply.Message)
+	})
+
+	t.Run("decodes plain JSON objects as before", func(t *testing.T) {
+		sm := StreamMessage{Stream: "s", Data: `{"foo":"bar"}`}
+
+		reply := sm.ToReplyFor("test_channel")
+
+		assert.Equal(t, map[string]interface{}{"foo": "bar"}, reply.Message)
+	})
+}
+
 func TestMessageJSONSerialization(t *testing.T) {
 	command := `{
 		"command": "subscribe",

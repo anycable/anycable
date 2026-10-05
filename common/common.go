@@ -4,7 +4,9 @@ package common
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"log/slog"
+	"strings"
 
 	"github.com/anycable/anycable-go/logger"
 	"github.com/anycable/anycable-go/utils"
@@ -397,12 +399,9 @@ func (sm *StreamMessage) LogValue() slog.Value {
 func (sm *StreamMessage) ToReplyFor(identifier string) *Reply {
 	data := sm.Data
 
-	var msg interface{}
+	msg, ok := decodeJSONPreservingNumbers(data)
 
-	// We ignore JSON deserialization failures and consider the message to be a string
-	json.Unmarshal([]byte(data), &msg) // nolint:errcheck
-
-	if msg == nil {
+	if !ok {
 		msg = sm.Data
 	}
 
@@ -420,6 +419,26 @@ func (sm *StreamMessage) ToReplyFor(identifier string) *Reply {
 		Offset:     sm.Offset,
 		Epoch:      sm.Epoch,
 	}
+}
+
+// decodeJSONPreservingNumbers unmarshals data into an interface{}, using json.Number to
+// prevent precision loss for large integers. It returns ok=false if data isn't a single,
+// complete JSON value.
+func decodeJSONPreservingNumbers(data string) (msg interface{}, ok bool) {
+	dec := json.NewDecoder(strings.NewReader(data))
+	dec.UseNumber()
+
+	if err := dec.Decode(&msg); err != nil {
+		return nil, false
+	}
+
+	// Reject trailing garbage after the decoded value, just like json.Unmarshal would:
+	// nothing but EOF should remain.
+	if _, err := dec.Token(); err != io.EOF {
+		return nil, false
+	}
+
+	return msg, true
 }
 
 // RemoteCommandMessage represents a pub/sub message with a remote command (e.g., disconnect)
