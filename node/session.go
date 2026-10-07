@@ -913,8 +913,6 @@ func (s *Session) resetPong() {
 }
 
 func (s *Session) HandleNativePong() {
-	s.Log.Warn("received native pong")
-
 	s.resetPong()
 }
 
