@@ -3,6 +3,7 @@ package encoders
 import (
 	"bytes"
 	"encoding/json"
+	"reflect"
 
 	"github.com/vmihailenco/msgpack/v5"
 
@@ -11,6 +12,24 @@ import (
 )
 
 const msgpackEncoderID = "msgpack"
+
+func init() {
+	// By default, msgpack encodes json.Number as a string
+	msgpack.Register(json.Number(""), func(e *msgpack.Encoder, v reflect.Value) error {
+		n := json.Number(v.String())
+
+		if i, err := n.Int64(); err == nil {
+			return e.EncodeInt(i)
+		}
+
+		f, err := n.Float64()
+		if err != nil {
+			return err
+		}
+
+		return e.EncodeFloat64(f)
+	}, nil)
+}
 
 type Msgpack struct {
 }

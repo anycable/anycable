@@ -1,6 +1,8 @@
 package encoders
 
 import (
+	"bytes"
+	"encoding/json"
 	"testing"
 
 	"github.com/anycable/anycable-go/common"
@@ -55,6 +57,24 @@ func TestMsgpackEncoder(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, expected, actual.Payload)
 		assert.Equal(t, ws.BinaryFrame, actual.FrameType)
+	})
+
+	t.Run(".Encode w/ json.Number", func(t *testing.T) {
+		msg := &common.Reply{Identifier: "test_channel", Message: []interface{}{json.Number("2675291807195071852"), json.Number("1.5")}}
+
+		actual, err := coder.Encode(msg)
+		require.NoError(t, err)
+
+		var decoded testReply
+		dec := msgpack.NewDecoder(bytes.NewReader(actual.Payload))
+		dec.UseLooseInterfaceDecoding(true)
+		require.NoError(t, dec.Decode(&decoded))
+
+		values, ok := decoded.Message.([]interface{})
+		require.True(t, ok)
+		require.Len(t, values, 2)
+		assert.EqualValues(t, uint64(2675291807195071852), values[0])
+		assert.Equal(t, 1.5, values[1])
 	})
 
 	t.Run(".Encode w/ stream meta", func(t *testing.T) {
