@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"strings"
 
 	"github.com/anycable/anycable-go/logger"
 	"github.com/anycable/anycable-go/utils"
@@ -400,7 +401,12 @@ func (sm *StreamMessage) ToReplyFor(identifier string) *Reply {
 	var msg interface{}
 
 	// We ignore JSON deserialization failures and consider the message to be a string
-	json.Unmarshal([]byte(data), &msg) // nolint:errcheck
+	if json.Valid([]byte(data)) {
+		dec := json.NewDecoder(strings.NewReader(data))
+		// Preserve large integers (> 2^53) precision
+		dec.UseNumber()
+		dec.Decode(&msg) // nolint:errcheck
+	}
 
 	if msg == nil {
 		msg = sm.Data

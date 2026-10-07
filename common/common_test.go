@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/anycable/anycable-go/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -92,6 +93,24 @@ func TestConfirmationMessage(t *testing.T) {
 
 func TestRejectionMessage(t *testing.T) {
 	assert.Equal(t, "{\"type\":\"reject_subscription\",\"identifier\":\"test_channel\"}", RejectionMessage("test_channel"))
+}
+
+func TestStreamMessageToReplyFor(t *testing.T) {
+	t.Run("preserves large integers precision", func(t *testing.T) {
+		sm := StreamMessage{Stream: "s", Data: `{"sender_id":2675291807195071852,"name":"test"}`}
+
+		reply := sm.ToReplyFor("test_channel")
+
+		assert.JSONEq(t, `{"sender_id":2675291807195071852,"name":"test"}`, string(utils.ToJSON(reply.Message)))
+	})
+
+	t.Run("with trailing garbage", func(t *testing.T) {
+		sm := StreamMessage{Stream: "s", Data: "123abc"}
+
+		reply := sm.ToReplyFor("test_channel")
+
+		assert.Equal(t, "123abc", reply.Message)
+	})
 }
 
 func TestMessageJSONSerialization(t *testing.T) {

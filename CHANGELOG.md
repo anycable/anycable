@@ -2,6 +2,8 @@
 
 ## master
 
+- Fix precision loss for large integers (> 2^53) in broadcast messages. ([@budnik][])
+
 ## 1.6.17 (2026-09-24)
 
 - Add logs filtering.
@@ -541,3 +543,4 @@ See [Changelog](https://github.com/anycable/anycable-go/blob/0-6-stable/CHANGELO
 [@gzigzigzeo]: https://github.com/gzigzigzeo
 [@ardecvz]: https://github.com/ardecvz
 [@paderinandrey]: https://github.com/paderinandrey
+[@budnik]: https://github.com/budnik
