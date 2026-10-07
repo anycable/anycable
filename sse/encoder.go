@@ -28,8 +28,19 @@ type Encoder struct {
 	UnwrapData bool
 }
 
-func (Encoder) ID() string {
-	return sseEncoderID
+// ID returns a unique identifier for the encoder configuration
+func (e Encoder) ID() string {
+	id := sseEncoderID
+
+	if e.UnwrapData {
+		id += ":u"
+	}
+
+	if e.RawData {
+		id += ":r"
+	}
+
+	return id
 }
 
 func (e *Encoder) Encode(msg encoders.EncodedMessage) (*ws.SentFrame, error) {

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/anycable/anycable-go/common"
+	"github.com/anycable/anycable-go/encoders"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -179,4 +180,26 @@ func TestEncoder_Decode(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Nil(t, actual)
+}
+
+func TestEncoder_ID(t *testing.T) {
+	assert.Equal(t, "sse", (&Encoder{}).ID())
+	assert.Equal(t, "sse:u", (&Encoder{UnwrapData: true}).ID())
+	assert.Equal(t, "sse:r", (&Encoder{RawData: true}).ID())
+	assert.Equal(t, "sse:u:r", (&Encoder{UnwrapData: true, RawData: true}).ID())
+}
+
+func TestEncoder_CachedEncodedMessage(t *testing.T) {
+	wrapped := &Encoder{}
+	unwrapped := &Encoder{UnwrapData: true}
+
+	msg := encoders.NewCachedEncodedMessage(&common.Reply{Identifier: "test_channel", Message: "hello"})
+
+	actual, err := msg.Fetch(wrapped.ID(), wrapped.Encode)
+	assert.NoError(t, err)
+	assert.Equal(t, `data: {"identifier":"test_channel","message":"hello"}`, string(actual.Payload))
+
+	actual, err = msg.Fetch(unwrapped.ID(), unwrapped.Encode)
+	assert.NoError(t, err)
+	assert.Equal(t, `data: hello`, string(actual.Payload))
 }
