@@ -10,6 +10,7 @@ import (
 
 	"github.com/anycable/anycable-go/config"
 	"github.com/anycable/anycable-go/node"
+	"github.com/anycable/anycable-go/sse"
 	"github.com/anycable/anycable-go/version"
 	"github.com/nats-io/nats.go"
 	"github.com/urfave/cli/v2"
@@ -259,6 +260,19 @@ Use shutdown_timeout instead.`)
 		slices.Contains(c.BroadcastAdapters, "redisx") ||
 		(c.Broker.Adapter == "redis")) {
 		c.PubSubAdapter = "redis"
+	}
+
+	ssePingInterval := sse.DefaultPingInterval
+	if c.App.PingInterval != defaults.App.PingInterval {
+		ssePingInterval = c.App.PingInterval
+	}
+
+	if c.SSE.PingInterval == 0 {
+		c.SSE.PingInterval = ssePingInterval
+	}
+
+	if c.DS.SSEPingInterval == 0 {
+		c.DS.SSEPingInterval = ssePingInterval
 	}
 
 	// Propagate allowed origins to all the components

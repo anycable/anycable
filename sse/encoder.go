@@ -19,6 +19,9 @@ const retryNoReconnect = int64(31536000000)
 
 const lastIdDelimeter = "/"
 
+// SSE comment line used as a keepalive message (ignored by EventSource)
+const CommentPing = ": ping"
+
 // Encoder is responsible for converting messages to SSE format (event:, data:, etc.)
 // NOTE: It's only used to encode messages from server to client.
 type Encoder struct {
@@ -45,6 +48,11 @@ func (e Encoder) ID() string {
 
 func (e *Encoder) Encode(msg encoders.EncodedMessage) (*ws.SentFrame, error) {
 	msgType := msg.GetType()
+
+	// Raw mode doesn't expose protocol events, so we use comments for keepalive
+	if msgType == common.PingType && e.RawData {
+		return &ws.SentFrame{FrameType: ws.TextFrame, Payload: []byte(CommentPing)}, nil
+	}
 
 	b, err := json.Marshal(&msg)
 	if err != nil {

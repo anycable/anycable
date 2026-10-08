@@ -81,7 +81,7 @@ func SSEHandler(n *node.Node, m metrics.Instrumenter, shutdownCtx context.Contex
 		}
 
 		// Finally, we can establish a session
-		session, err := NewSSESession(n, w, r, info)
+		session, err := NewSSESession(n, config, w, r, info)
 
 		if err != nil {
 			sessionCtx.Error("failed to establish sesssion", "error", err)

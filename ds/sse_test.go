@@ -34,6 +34,18 @@ func TestSSEEncoder_Encode(t *testing.T) {
 		assert.Contains(t, payload, `"streamCursor":"test-cursor"`)
 	})
 
+	t.Run("encodes ping as comment", func(t *testing.T) {
+		encoder := &SSEEncoder{}
+
+		msg := &common.PingMessage{Type: "ping", Message: 1694041735}
+
+		frame, err := encoder.Encode(msg)
+		require.NoError(t, err)
+		require.NotNil(t, frame)
+
+		assert.Equal(t, ": ping", string(frame.Payload))
+	})
+
 	t.Run("skips non-data messages", func(t *testing.T) {
 		encoder := &SSEEncoder{}
 

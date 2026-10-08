@@ -100,6 +100,27 @@ func TestEncoder_Encode(t *testing.T) {
 		assert.Nil(t, actual)
 	})
 
+	t.Run("ping", func(t *testing.T) {
+		msg := &common.PingMessage{Type: "ping", Message: 1694041735}
+		expected := "event: ping\n" +
+			`data: {"type":"ping","message":1694041735}`
+
+		actual, err := coder.Encode(msg)
+
+		assert.NoError(t, err)
+		assert.Equal(t, expected, string(actual.Payload))
+	})
+
+	t.Run("ping + raw data", func(t *testing.T) {
+		rawCoder := Encoder{RawData: true}
+		msg := &common.PingMessage{Type: "ping", Message: 1694041735}
+
+		actual, err := rawCoder.Encode(msg)
+
+		assert.NoError(t, err)
+		assert.Equal(t, ": ping", string(actual.Payload))
+	})
+
 	t.Run("with type + raw data", func(t *testing.T) {
 		msg := &common.Reply{Type: "test", Identifier: "test_channel", Message: "hello"}
 		expected := "event: test\n" +

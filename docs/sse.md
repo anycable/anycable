@@ -181,10 +181,19 @@ In some cases, you may not want to receive protocol-level events (`welcome`, `co
 ```sh
 $ curl -N "http://localhost:8080/events?channel=ChatChannel&raw=1"
 
-// no welcome or confirm_subscription or ping messages
+// no welcome or confirm_subscription messages
 
 data: {"message":"hello"}
+
+: ping
 ...
 ```
 
 **NOTE:** This is only applicable to GET requests.
+
+In raw mode, pings are sent as SSE comments (`: ping`), which are ignored by `EventSource` and only used to keep the connection alive. They're sent every 15 seconds by default (or using the global `ping_interval` value if it's been changed). You can configure the interval via the configuration file:
+
+```toml
+[sse]
+ping_interval = 30
+```

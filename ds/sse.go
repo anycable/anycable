@@ -7,6 +7,7 @@ import (
 
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/encoders"
+	"github.com/anycable/anycable-go/sse"
 	"github.com/anycable/anycable-go/ws"
 )
 
@@ -22,6 +23,10 @@ func (e *SSEEncoder) ID() string {
 }
 
 func (e *SSEEncoder) Encode(msg encoders.EncodedMessage) (*ws.SentFrame, error) {
+	if msg.GetType() == common.PingType {
+		return &ws.SentFrame{FrameType: ws.TextFrame, Payload: []byte(sse.CommentPing)}, nil
+	}
+
 	reply, isReply := msg.(*common.Reply)
 
 	if !isReply || reply.Type != "" {

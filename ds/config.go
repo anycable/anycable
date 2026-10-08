@@ -3,6 +3,8 @@ package ds
 import (
 	"fmt"
 	"strings"
+
+	"github.com/anycable/anycable-go/sse"
 )
 
 // Durable Streams configuration
@@ -15,8 +17,11 @@ type Config struct {
 	// Poll interval  for live=poll mode (in seconds)
 	PollInterval int `toml:"poll_interval"`
 	// Max time to live for a SSE connection (in seconds)
-	SSETTL         int    `toml:"sse_ttl"`
-	AllowedOrigins string `toml:"-"`
+	SSETTL int `toml:"sse_ttl"`
+	// Keepalive interval for comment-based pings in live=sse mode (in seconds).
+	// Zero means using the global ping interval (if it's been changed) or sse.DefaultPingInterval.
+	SSEPingInterval int    `toml:"sse_ping_interval"`
+	AllowedOrigins  string `toml:"-"`
 }
 
 // NewConfig creates a new Config with default values.
@@ -55,6 +60,14 @@ func (c Config) ToToml() string {
 
 	result.WriteString("# Max time to live for a SSE connection (in seconds)\n")
 	result.WriteString(fmt.Sprintf("sse_ttl = %d\n", c.SSETTL))
+
+	result.WriteString("# Keepalive interval for comment-based pings in live=sse mode (in seconds)\n")
+	result.WriteString("# Defaults to the global ping_interval (if changed) or " + fmt.Sprintf("%d", sse.DefaultPingInterval) + "\n")
+	if c.SSEPingInterval > 0 {
+		result.WriteString(fmt.Sprintf("sse_ping_interval = %d\n", c.SSEPingInterval))
+	} else {
+		result.WriteString(fmt.Sprintf("# sse_ping_interval = %d\n", sse.DefaultPingInterval))
+	}
 
 	result.WriteString("\n")
 

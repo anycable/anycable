@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/node"
@@ -26,7 +27,7 @@ const (
 	metricsClientsNum   = "sse_clients_num"
 )
 
-func NewSSESession(n *node.Node, w http.ResponseWriter, r *http.Request, info *server.RequestInfo) (*node.Session, error) {
+func NewSSESession(n *node.Node, c *Config, w http.ResponseWriter, r *http.Request, info *server.RequestInfo) (*node.Session, error) {
 	conn := NewConnection(w)
 
 	unwrapData := r.Method == http.MethodGet
@@ -35,7 +36,13 @@ func NewSSESession(n *node.Node, w http.ResponseWriter, r *http.Request, info *s
 
 	enc := &Encoder{UnwrapData: unwrapData, RawData: rawData}
 
-	session := node.NewSession(n, conn, info.URL, info.Headers, info.UID, node.WithEncoder(enc))
+	opts := []node.SessionOption{node.WithEncoder(enc)}
+
+	if rawData && c.PingInterval > 0 {
+		opts = append(opts, node.WithPingInterval(time.Duration(c.PingInterval)*time.Second))
+	}
+
+	session := node.NewSession(n, conn, info.URL, info.Headers, info.UID, opts...)
 	res, err := n.Authenticate(session)
 
 	if err != nil {

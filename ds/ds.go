@@ -227,6 +227,10 @@ func NewDSSession(n *node.Node, c *Config, w http.ResponseWriter, info *server.R
 		conn = sse.NewConnection(w)
 		sseEncoder := &SSEEncoder{Cursor: stream.NextCursor()}
 		sopts = append(sopts, node.WithEncoder(sseEncoder))
+
+		if c.SSEPingInterval > 0 {
+			sopts = append(sopts, node.WithPingInterval(time.Duration(c.SSEPingInterval)*time.Second))
+		}
 	default:
 		return nil, pollConn, fmt.Errorf("unsupported live mode: %s", sp.LiveMode)
 	}
