@@ -3,6 +3,7 @@ package ds
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -20,7 +21,11 @@ import (
 )
 
 // DSHandler generates a new http handler for Durable Streams connections
-func DSHandler(n *node.Node, brk broker.Broker, st *streams.Controller, m metrics.Instrumenter, shutdownCtx context.Context, headersExtractor server.HeadersExtractor, c *Config, l *slog.Logger) http.Handler {
+func DSHandler(n *node.Node, brk broker.Broker, st *streams.Controller, m metrics.Instrumenter, shutdownCtx context.Context, headersExtractor server.HeadersExtractor, c *Config, l *slog.Logger) (http.Handler, error) {
+	if st == nil {
+		return nil, errors.New("streams controller is required")
+	}
+
 	var allowedHosts []string
 
 	if c.AllowedOrigins == "" {
@@ -81,7 +86,15 @@ func DSHandler(n *node.Node, brk broker.Broker, st *streams.Controller, m metric
 		// Perform stream access check
 		identifier := streamParams.ToSubscribeCommand().Identifier
 
-		if _, _, serr := st.VerifiedStream(identifier); serr != nil {
+		_, verifiedStream, serr := st.VerifiedStream(identifier)
+
+		// The verified stream (e.g., from a signed stream name) must match the requested one,
+		// since the data is read using the stream name from the URL
+		if serr == nil && verifiedStream != streamParams.Name {
+			serr = fmt.Errorf("stream mismatch: requested %q, authorized %q", streamParams.Name, verifiedStream)
+		}
+
+		if serr != nil {
 			stream.Session.Log.Debug("unauthorized", "err", serr)
 			pollConn.Close(http.StatusUnauthorized, "unauthorized")
 			// Ensure its removed from the node
@@ -130,7 +143,7 @@ func DSHandler(n *node.Node, brk broker.Broker, st *streams.Controller, m metric
 			}
 			return
 		}
-	})
+	}), nil
 }
 
 func handleHTTP(n *node.Node, brk broker.Broker, c *Config, m metrics.Instrumenter, w http.ResponseWriter, r *http.Request, s *Stream, pollConn *PollConnection, tail *common.StreamMessage, shutdownCtx context.Context) {
