@@ -215,10 +215,17 @@ When returning messages, `Stream-Next-Offset` is set to the offset of the last r
 
 ### Cache-Control headers
 
-- **HEAD requests**: `Cache-Control: no-store` (tail offset should not be cached)
-- **Catch-up reads**: `Cache-Control: public, max-age=60, stale-while-revalidate=300`
+Per DS spec §10.1:
 
-> **Note**: The current implementation uses `public` caching. For streams containing user-specific or confidential data, consider implementing authentication-aware cache keys at the CDN level.
+- **HEAD requests**: `Cache-Control: no-store` (tail offset should not be cached)
+- **Catch-up and long-poll reads (200)**: `Cache-Control: <public|private>, max-age=60, stale-while-revalidate=300`
+  - `public` is only used when access is fully determined by the request URL: authentication is skipped (`ds.skip_auth`) and the stream is either unsigned or signed via the `signed` query parameter.
+  - `private` is used otherwise (authentication enabled or a signed stream name passed via the `X-Signed` header), since access may depend on credentials which are not a part of the CDN cache key.
+- **`offset=now` reads**: `Cache-Control: no-store` (the tail offset changes with each append)
+- **Non-200 responses** (long-poll `204 No Content`, errors): `Cache-Control: no-store`
+- **SSE**: see [SSE headers](#sse-headers)
+
+> **Note**: `ETag` / `If-None-Match` (`304 Not Modified`) support required by DS spec §10.1 is not implemented yet.
 
 ### Cursor-based CDN collapsing
 

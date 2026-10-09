@@ -1,6 +1,7 @@
 package ds
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
@@ -80,6 +81,17 @@ func TestPollConnection_Write(t *testing.T) {
 		assert.Equal(t, "[{\"text\":\"line1\\nline2\"}]", w.Body.String())
 	})
 
+	t.Run("sets cache control header", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		conn := NewPollConnection(w)
+		conn.CacheControl = "public, max-age=60"
+
+		err := conn.Write([]byte("123::epoch1\n{\"data\":\"test\"}"), time.Time{})
+		require.NoError(t, err)
+
+		assert.Equal(t, "public, max-age=60", w.Header().Get("Cache-Control"))
+	})
+
 	t.Run("returns error for invalid format", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		conn := NewPollConnection(w)
@@ -104,4 +116,37 @@ func TestPollConnection_Close(t *testing.T) {
 
 	// But should not write anything
 	assert.Equal(t, 0, w.Body.Len())
+}
+
+func TestPollConnection_CloseCacheControl(t *testing.T) {
+	t.Run("disables caching for no content", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		conn := NewPollConnection(w)
+		conn.CacheControl = "public, max-age=60"
+
+		conn.Close(http.StatusNoContent, "No content")
+
+		assert.Equal(t, http.StatusNoContent, w.Code)
+		assert.Equal(t, "no-store", w.Header().Get("Cache-Control"))
+	})
+
+	t.Run("disables caching for errors", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		conn := NewPollConnection(w)
+
+		conn.Close(http.StatusGone, "")
+
+		assert.Equal(t, http.StatusGone, w.Code)
+		assert.Equal(t, "no-store", w.Header().Get("Cache-Control"))
+	})
+
+	t.Run("keeps cache control for OK", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		w.Header().Set("Cache-Control", "public, max-age=60")
+		conn := NewPollConnection(w)
+
+		conn.Close(http.StatusOK, "")
+
+		assert.Equal(t, "public, max-age=60", w.Header().Get("Cache-Control"))
+	})
 }

@@ -165,6 +165,30 @@ func TestDSHandler_GET(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 		assert.Equal(t, `[{"id":1},{"id":2}]`, w.Body.String())
+		assert.Equal(t, "public, max-age=60, stale-while-revalidate=300", w.Header().Get("Cache-Control"))
+	})
+
+	t.Run("catch-up with signed stream name in header", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/ds/test-stream?offset=10::epoch1", nil)
+		req.Header.Set(SignedStreamHeader, "s1t2r3e4a5m")
+
+		handler.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, "private, max-age=60, stale-while-revalidate=300", w.Header().Get("Cache-Control"))
+	})
+
+	t.Run("catch-up with now offset", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/ds/test-stream?offset=now", nil)
+
+		handler.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, "[]", w.Body.String())
+		assert.Equal(t, "true", w.Header().Get(StreamUpToDateHeader))
+		assert.Equal(t, "no-store", w.Header().Get("Cache-Control"))
 	})
 
 	t.Run("catch-up with stale offset", func(t *testing.T) {
@@ -178,6 +202,7 @@ func TestDSHandler_GET(t *testing.T) {
 		handler.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusGone, w.Code)
+		assert.Equal(t, "no-store", w.Header().Get("Cache-Control"))
 	})
 
 	t.Run("requires stream path", func(t *testing.T) {
@@ -206,6 +231,41 @@ func TestDSHandler_GET(t *testing.T) {
 
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
+}
+
+func TestReadCacheControl(t *testing.T) {
+	const cacheable = "max-age=60, stale-while-revalidate=300"
+
+	for _, tc := range []struct {
+		name     string
+		skipAuth bool
+		url      string
+		header   string
+		expected string
+	}{
+		{"public stream w/o auth", true, "/ds/test?offset=-1", "", "public, " + cacheable},
+		{"signed stream in query w/o auth", true, "/ds/test?offset=-1&signed=abc", "", "public, " + cacheable},
+		{"signed stream in query and header w/o auth", true, "/ds/test?offset=-1&signed=abc", "abc", "public, " + cacheable},
+		{"signed stream in header w/o auth", true, "/ds/test?offset=-1", "abc", "private, " + cacheable},
+		{"with auth", false, "/ds/test?offset=-1&signed=abc", "", "private, " + cacheable},
+		{"now offset", true, "/ds/test?offset=now", "", "no-store"},
+		{"now offset in long-poll mode", true, "/ds/test?offset=now&live=long-poll", "", "no-store"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			conf := NewConfig()
+			conf.SkipAuth = tc.skipAuth
+
+			req, _ := http.NewRequest("GET", tc.url, nil)
+			if tc.header != "" {
+				req.Header.Set(SignedStreamHeader, tc.header)
+			}
+
+			sp, err := StreamParamsFromReq(req, &conf)
+			require.NoError(t, err)
+
+			assert.Equal(t, tc.expected, readCacheControl(&conf, req, sp))
+		})
+	}
 }
 
 func buildNode() (*node.Node, *mocks.Broker, *streams.Controller) {

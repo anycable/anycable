@@ -303,19 +303,26 @@ func TestDSIntegration_LongPoll(t *testing.T) {
 			)
 			defer it.Close()
 
-			chunk, itErr := it.Next()
-			if itErr != nil {
-				if itErr != durablestreams.Done {
-					readErr = itErr
+			// Client may perform a non-live catch-up request first (fetch-then-live),
+			// so skip empty chunks until we receive live data
+			for {
+				chunk, itErr := it.Next()
+				if itErr != nil {
+					if itErr != durablestreams.Done {
+						readErr = itErr
+					}
+					return
 				}
-				return
-			}
 
-			if len(chunk.Data) > 0 {
+				if len(chunk.Data) == 0 || string(chunk.Data) == "[]" {
+					continue
+				}
+
 				var messages []map[string]interface{}
 				if jerr := json.Unmarshal(chunk.Data, &messages); jerr == nil {
 					receivedData = messages
 				}
+				return
 			}
 		}()
 
@@ -419,12 +426,16 @@ func TestDSIntegration_SSE(t *testing.T) {
 		streamName := "sse-catchup-test"
 		brk.Subscribe(streamName)
 
-		controller.On("Subscribe", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		// Clients using fetch-then-live do not subscribe during catch-up,
+		// so scope the expectation to this stream to avoid leaking it into other tests
+		controller.On("Subscribe", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.MatchedBy(func(channel string) bool {
+			return strings.Contains(channel, streamName)
+		})).
 			Return(&common.CommandResult{
 				Status:        common.SUCCESS,
 				Transmissions: []string{`{"type":"confirm","identifier":"chat_1"}`},
 				Streams:       []string{streamName},
-			}, nil).Once()
+			}, nil).Maybe()
 
 		err := brk.HandleBroadcast(&common.StreamMessage{
 			Stream: streamName,
