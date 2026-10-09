@@ -669,11 +669,18 @@ func setupIntegrationServer(t *testing.T) (*node.Node, broker.Broker, *mocks.Con
 			return nil, errors.New("unauthenticated")
 		}
 
+		var request streams.SubscribeRequest
+
+		if err := json.Unmarshal([]byte(identifier), &request); err != nil {
+			return nil, err
+		}
+
 		return &streams.SubscribeRequest{
-			StreamName: "a",
+			StreamName: request.StreamName,
 		}, nil
 	}, slog.Default())
-	handler := DSHandler(n, brk, streamCtrl, nil, context.Background(), headersExtractor, &dsConfig, logger)
+	handler, err := DSHandler(n, brk, streamCtrl, nil, context.Background(), headersExtractor, &dsConfig, logger)
+	require.NoError(t, err)
 
 	mux := http.NewServeMux()
 	mux.Handle("/ds/", handler)

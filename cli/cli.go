@@ -600,9 +600,13 @@ func (r *Runner) defaultDSHandler(n *node.Node, m metricspkg.Instrumenter, ctx c
 	if c.JWT.Enabled() {
 		extractor.AuthHeader = c.JWT.HeaderKey()
 	}
-	handler := ds.DSHandler(n, r.broker, r.streams, m, ctx, &extractor, &c.DS, r.log)
 
-	return handler, nil
+	st := r.streams
+	if st == nil {
+		st = streams.NewStreamsController(&c.Streams, r.log)
+	}
+
+	return ds.DSHandler(n, r.broker, st, m, ctx, &extractor, &c.DS, r.log)
 }
 
 func (r *Runner) pusherWebsocketHandler(n *node.Node, c *config.Config) http.Handler {

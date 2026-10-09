@@ -29,7 +29,8 @@ func TestDSHandler_HEAD(t *testing.T) {
 
 	headersExtractor := &server.DefaultHeadersExtractor{}
 
-	handler := DSHandler(appNode, brk, streamCtrl, nil, context.Background(), headersExtractor, &conf, slog.Default())
+	handler, err := DSHandler(appNode, brk, streamCtrl, nil, context.Background(), headersExtractor, &conf, slog.Default())
+	require.NoError(t, err)
 
 	t.Run("returns stream metadata for unknown stream", func(t *testing.T) {
 		w := httptest.NewRecorder()
@@ -94,7 +95,8 @@ func TestDSHandler_HEAD(t *testing.T) {
 			}, nil
 		}, slog.Default())
 
-		handler := DSHandler(appNode, brk, streamCtrl, nil, context.Background(), headersExtractor, &conf, slog.Default())
+		handler, err := DSHandler(appNode, brk, streamCtrl, nil, context.Background(), headersExtractor, &conf, slog.Default())
+		require.NoError(t, err)
 
 		req, _ := http.NewRequest("HEAD", "/ds/test-stream?signed=s1t2r3e4a5m", nil)
 		handler.ServeHTTP(w, req)
@@ -127,7 +129,8 @@ func TestDSHandler_GET(t *testing.T) {
 	defer appNode.Shutdown(context.Background()) // nolint: errcheck
 
 	headersExtractor := &server.DefaultHeadersExtractor{}
-	handler := DSHandler(appNode, brk, streamCtrl, nil, context.Background(), headersExtractor, &conf, slog.Default())
+	handler, err := DSHandler(appNode, brk, streamCtrl, nil, context.Background(), headersExtractor, &conf, slog.Default())
+	require.NoError(t, err)
 
 	t.Run("catch-up mode w/ empty stream", func(t *testing.T) {
 		brk.
@@ -285,8 +288,14 @@ func buildNode() (*node.Node, *mocks.Broker, *streams.Controller) {
 	n.SetBroker(brk)
 
 	streamCtrl := streams.NewController("", func(identifier string) (*streams.SubscribeRequest, error) {
+		var request streams.SubscribeRequest
+
+		if err := json.Unmarshal([]byte(identifier), &request); err != nil {
+			return nil, err
+		}
+
 		return &streams.SubscribeRequest{
-			StreamName: "a",
+			StreamName: request.StreamName,
 		}, nil
 	}, slog.Default())
 
