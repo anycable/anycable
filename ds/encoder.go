@@ -18,6 +18,8 @@ const (
 	offsetSeparator = "::"
 
 	StartOffset = "-1"
+	// NowOffset is a special offset to start reading from the current tail position
+	NowOffset = "now"
 )
 
 // EncodeOffset encodes offset and epoch into a single opaque offset string
@@ -33,7 +35,7 @@ func EncodeOffset(offset uint64, epoch string) string {
 // DecodeOffset decodes an opaque offset string into offset number and epoch
 // Returns (0, "", nil) for start-of-stream markers: "", "0", "-1", "now"
 func DecodeOffset(offsetStr string) (uint64, string, error) {
-	if offsetStr == "" || offsetStr == "0" || offsetStr == StartOffset || offsetStr == "now" {
+	if offsetStr == "" || offsetStr == "0" || offsetStr == StartOffset || offsetStr == NowOffset {
 		return 0, "", nil
 	}
 

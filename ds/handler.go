@@ -135,8 +135,6 @@ func DSHandler(n *node.Node, brk broker.Broker, st *streams.Controller, m metric
 
 func handleHTTP(n *node.Node, brk broker.Broker, c *Config, m metrics.Instrumenter, w http.ResponseWriter, r *http.Request, s *Stream, pollConn *PollConnection, tail *common.StreamMessage, shutdownCtx context.Context) {
 	w.Header().Set("Content-Type", "application/json")
-	// TODO: how to distinguish private streams?
-	w.Header().Set("Cache-Control", "public, max-age=60, stale-while-revalidate=300")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 
 	w.Header().Set(StreamCursorHeader, s.NextCursor())
@@ -154,7 +152,10 @@ func handleHTTP(n *node.Node, brk broker.Broker, c *Config, m metrics.Instrument
 		tail = &backlog[len(backlog)-1]
 	}
 
+	cacheControl := readCacheControl(c, r, s.Params)
+
 	if len(backlog) > 0 || s.Params.LiveMode != LongPollMode {
+		w.Header().Set("Cache-Control", cacheControl)
 		w.Header().Set(StreamOffsetHeader, EncodeOffset(tail.Offset, tail.Epoch))
 		w.Header().Set(StreamUpToDateHeader, "true")
 
@@ -169,6 +170,9 @@ func handleHTTP(n *node.Node, brk broker.Broker, c *Config, m metrics.Instrument
 		m.GaugeIncrement(metricsPollNum)
 		defer m.GaugeDecrement(metricsPollNum)
 	}
+
+	// Must be set before subscribing, since the response could be written right away
+	pollConn.CacheControl = cacheControl
 
 	_, err = n.Subscribe(s.Session, s.Params.ToSubscribeCommand())
 
@@ -279,6 +283,9 @@ func handleSSE(n *node.Node, brk broker.Broker, c *Config, m metrics.Instrumente
 			return
 		case <-disconnectNotify:
 			s.Session.Log.Debug("client disconnected")
+			// Close synchronously to wait for in-flight writes and prevent further ones,
+			// since writing to the response after the handler returns is not allowed
+			conn.Close(ws.CloseNormalClosure, "Client disconnected")
 			return
 		case <-connClosed:
 			s.Session.Log.Debug("connection closed")
@@ -290,6 +297,34 @@ func handleSSE(n *node.Node, brk broker.Broker, c *Config, m metrics.Instrumente
 	}
 }
 
+// readCacheControl returns the Cache-Control header value for successful catch-up and long-poll reads (DS spec §10.1)
+func readCacheControl(c *Config, r *http.Request, sp *StreamParams) string {
+	// The tail offset changes with each append, so it must not be cached
+	if sp.RawOffset == NowOffset {
+		return "no-store"
+	}
+
+	visibility := "private"
+
+	if isSharedCacheable(c, r) {
+		visibility = "public"
+	}
+
+	return visibility + ", max-age=60, stale-while-revalidate=300"
+}
+
+// isSharedCacheable returns true if access to the stream is fully determined by the request URL,
+// and, thus, the response can be stored in shared caches (CDNs).
+// Authentication (unless skipped) and signed stream names passed via headers may depend
+// on credentials which are not a part of the cache key.
+func isSharedCacheable(c *Config, r *http.Request) bool {
+	if !c.SkipAuth {
+		return false
+	}
+
+	return r.URL.Query().Get(SignedStreamParam) != "" || r.Header.Get(SignedStreamHeader) == ""
+}
+
 // fetchHistory retrieves history from broker
 // If epoch is empty (initial read), uses HistorySince with timestamp 0 to get all history
 // Otherwise uses HistoryFrom with the provided epoch and offset
@@ -299,7 +334,7 @@ func fetchHistory(brk broker.Broker, sp *StreamParams) ([]common.StreamMessage, 
 		return brk.HistorySince(sp.Path, 0)
 	}
 
-	if sp.RawOffset == "now" {
+	if sp.RawOffset == NowOffset {
 		return []common.StreamMessage{}, nil
 	}
 

@@ -2,6 +2,12 @@
 
 ## master
 
+- Durable Streams: improve `Cache-Control` compliance with the spec. ([@palkan][])
+
+  Use `private` caching unless stream access is fully determined by the URL (authentication skipped and no `X-Signed` header), and `no-store` for `offset=now` reads, long-poll `204 No Content` and error responses.
+
+- Durable Streams: fix writing to SSE response after client disconnects. ([@palkan][])
+
 - Add `--sse_comment_pings` to deliver pings as small comments (to reduce payload sizes). ([@palkan][])
 
   It's also possible to configure a different ping interval for SSE in the TOML configuration.

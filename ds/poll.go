@@ -70,6 +70,9 @@ type PollConnection struct {
 	ctx      context.Context
 	cancelFn context.CancelFunc
 
+	// CacheControl is the Cache-Control header value for data responses
+	CacheControl string
+
 	done bool
 
 	mu sync.Mutex
@@ -114,6 +117,10 @@ func (c *PollConnection) Write(msg []byte, deadline time.Time) error {
 	c.writer.Header().Set(StreamOffsetHeader, offset)
 	c.writer.Header().Set(StreamUpToDateHeader, "true")
 
+	if c.CacheControl != "" {
+		c.writer.Header().Set("Cache-Control", c.CacheControl)
+	}
+
 	_, err := c.writer.Write(body.Bytes())
 
 	if err != nil {
@@ -136,7 +143,14 @@ func (c *PollConnection) Close(code int, reason string) {
 	c.done = true
 	defer c.cancelFn()
 
-	c.writer.WriteHeader(wsCodeToHTTP(code, reason))
+	status := wsCodeToHTTP(code, reason)
+
+	// Only data responses could be cached (204 No Content, errors, etc. must not)
+	if status != http.StatusOK {
+		c.writer.Header().Set("Cache-Control", "no-store")
+	}
+
+	c.writer.WriteHeader(status)
 }
 
 func (c *PollConnection) Context() context.Context {
