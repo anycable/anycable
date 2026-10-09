@@ -171,6 +171,48 @@ func TestDSHandler_GET(t *testing.T) {
 		assert.Equal(t, "public, max-age=60, stale-while-revalidate=300", w.Header().Get("Cache-Control"))
 	})
 
+	t.Run("catch-up sets ETag", func(t *testing.T) {
+		brk.
+			On("HistoryFrom", "test-stream", "epoch1", uint64(20)).
+			Return([]common.StreamMessage{
+				{Data: `{"id":21}`, Offset: 21, Epoch: "epoch1"},
+				{Data: `{"id":22}`, Offset: 22, Epoch: "epoch1"},
+			}, nil)
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/ds/test-stream?offset=20::epoch1", nil)
+
+		handler.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, `"dGVzdC1zdHJlYW0=:20::epoch1:22::epoch1"`, w.Header().Get("ETag"))
+	})
+
+	t.Run("catch-up with matching If-None-Match", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/ds/test-stream?offset=20::epoch1", nil)
+		req.Header.Set("If-None-Match", `"dGVzdC1zdHJlYW0=:20::epoch1:22::epoch1"`)
+
+		handler.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusNotModified, w.Code)
+		assert.Empty(t, w.Body.String())
+		assert.Equal(t, `"dGVzdC1zdHJlYW0=:20::epoch1:22::epoch1"`, w.Header().Get("ETag"))
+		assert.Equal(t, "22::epoch1", w.Header().Get(StreamOffsetHeader))
+		assert.Equal(t, "public, max-age=60, stale-while-revalidate=300", w.Header().Get("Cache-Control"))
+	})
+
+	t.Run("catch-up with outdated If-None-Match", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/ds/test-stream?offset=20::epoch1", nil)
+		req.Header.Set("If-None-Match", `"dGVzdC1zdHJlYW0=:20::epoch1:21::epoch1"`)
+
+		handler.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, `[{"id":21},{"id":22}]`, w.Body.String())
+	})
+
 	t.Run("catch-up with signed stream name in header", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/ds/test-stream?offset=10::epoch1", nil)
@@ -192,6 +234,18 @@ func TestDSHandler_GET(t *testing.T) {
 		assert.Equal(t, "[]", w.Body.String())
 		assert.Equal(t, "true", w.Header().Get(StreamUpToDateHeader))
 		assert.Equal(t, "no-store", w.Header().Get("Cache-Control"))
+		assert.Empty(t, w.Header().Get("ETag"))
+	})
+
+	t.Run("catch-up with now offset ignores If-None-Match", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/ds/test-stream?offset=now", nil)
+		req.Header.Set("If-None-Match", "*")
+
+		handler.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, "[]", w.Body.String())
 	})
 
 	t.Run("catch-up with stale offset", func(t *testing.T) {
@@ -206,6 +260,7 @@ func TestDSHandler_GET(t *testing.T) {
 
 		assert.Equal(t, http.StatusGone, w.Code)
 		assert.Equal(t, "no-store", w.Header().Get("Cache-Control"))
+		assert.Empty(t, w.Header().Get("ETag"))
 	})
 
 	t.Run("requires stream path", func(t *testing.T) {
@@ -267,6 +322,28 @@ func TestReadCacheControl(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.Equal(t, tc.expected, readCacheControl(&conf, req, sp))
+		})
+	}
+}
+
+func TestETagMatches(t *testing.T) {
+	const etag = `"abc:-1:1::e"`
+
+	for _, tc := range []struct {
+		name        string
+		ifNoneMatch string
+		expected    bool
+	}{
+		{"empty", "", false},
+		{"exact", `"abc:-1:1::e"`, true},
+		{"weak", `W/"abc:-1:1::e"`, true},
+		{"list", `"other", "abc:-1:1::e"`, true},
+		{"wildcard", "*", true},
+		{"different", `"abc:-1:2::e"`, false},
+		{"unquoted", "abc:-1:1::e", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, etagMatches(tc.ifNoneMatch, etag))
 		})
 	}
 }
