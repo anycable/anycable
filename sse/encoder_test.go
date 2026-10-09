@@ -121,6 +121,28 @@ func TestEncoder_Encode(t *testing.T) {
 		assert.Equal(t, ": ping", string(actual.Payload))
 	})
 
+	t.Run("ping + comment pings", func(t *testing.T) {
+		commentCoder := Encoder{CommentPings: true}
+		msg := &common.PingMessage{Type: "ping", Message: 1694041735}
+
+		actual, err := commentCoder.Encode(msg)
+
+		assert.NoError(t, err)
+		assert.Equal(t, ": ping", string(actual.Payload))
+	})
+
+	t.Run("with type + comment pings", func(t *testing.T) {
+		commentCoder := Encoder{CommentPings: true}
+		msg := &common.Reply{Type: "test", Identifier: "test_channel", Message: "hello"}
+		expected := "event: test\n" +
+			`data: {"type":"test","identifier":"test_channel","message":"hello"}`
+
+		actual, err := commentCoder.Encode(msg)
+
+		assert.NoError(t, err)
+		assert.Equal(t, expected, string(actual.Payload))
+	})
+
 	t.Run("with type + raw data", func(t *testing.T) {
 		msg := &common.Reply{Type: "test", Identifier: "test_channel", Message: "hello"}
 		expected := "event: test\n" +
@@ -208,6 +230,8 @@ func TestEncoder_ID(t *testing.T) {
 	assert.Equal(t, "sse:u", (&Encoder{UnwrapData: true}).ID())
 	assert.Equal(t, "sse:r", (&Encoder{RawData: true}).ID())
 	assert.Equal(t, "sse:u:r", (&Encoder{UnwrapData: true, RawData: true}).ID())
+	assert.Equal(t, "sse:c", (&Encoder{CommentPings: true}).ID())
+	assert.Equal(t, "sse:u:r:c", (&Encoder{UnwrapData: true, RawData: true, CommentPings: true}).ID())
 }
 
 func TestEncoder_CachedEncodedMessage(t *testing.T) {

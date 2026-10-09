@@ -2,6 +2,10 @@
 
 ## master
 
+- Add `--sse_comment_pings` to deliver pings as small comments (to reduce payload sizes). ([@palkan][])
+
+  It's also possible to configure a different ping interval for SSE in the TOML configuration.
+
 - Fix precision loss for large integers (> 2^53) in broadcast messages. ([@budnik][])
 
 ## 1.6.17 (2026-09-24)

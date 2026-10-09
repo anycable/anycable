@@ -1492,6 +1492,12 @@ func sseCLIFlags(c *config.Config) []cli.Flag {
 			Value:       c.SSE.Path,
 			Destination: &c.SSE.Path,
 		},
+		&cli.BoolFlag{
+			Name:        "sse_comment_pings",
+			Usage:       "Send pings as SSE comments instead of ping events",
+			Value:       c.SSE.CommentPings,
+			Destination: &c.SSE.CommentPings,
+		},
 	})
 }
 

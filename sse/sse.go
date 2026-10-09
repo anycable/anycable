@@ -34,11 +34,13 @@ func NewSSESession(n *node.Node, c *Config, w http.ResponseWriter, r *http.Reque
 	rawParam := strings.ToLower(r.URL.Query().Get("raw"))
 	rawData := rawParam == "true" || rawParam == "1" || rawParam == "t" || rawParam == "y"
 
-	enc := &Encoder{UnwrapData: unwrapData, RawData: rawData}
+	commentPings := rawData || c.CommentPings
+
+	enc := &Encoder{UnwrapData: unwrapData, RawData: rawData, CommentPings: c.CommentPings}
 
 	opts := []node.SessionOption{node.WithEncoder(enc)}
 
-	if rawData && c.PingInterval > 0 {
+	if commentPings && c.PingInterval > 0 {
 		opts = append(opts, node.WithPingInterval(time.Duration(c.PingInterval)*time.Second))
 	}
 

@@ -29,6 +29,8 @@ type Encoder struct {
 	RawData bool
 	// Whether to send only the "message" field of the payload as data or the whole payload
 	UnwrapData bool
+	// Whether to send pings as SSE comments (invisible to clients) instead of ping events
+	CommentPings bool
 }
 
 // ID returns a unique identifier for the encoder configuration
@@ -43,6 +45,10 @@ func (e Encoder) ID() string {
 		id += ":r"
 	}
 
+	if e.CommentPings {
+		id += ":c"
+	}
+
 	return id
 }
 
@@ -50,7 +56,7 @@ func (e *Encoder) Encode(msg encoders.EncodedMessage) (*ws.SentFrame, error) {
 	msgType := msg.GetType()
 
 	// Raw mode doesn't expose protocol events, so we use comments for keepalive
-	if msgType == common.PingType && e.RawData {
+	if msgType == common.PingType && (e.RawData || e.CommentPings) {
 		return &ws.SentFrame{FrameType: ws.TextFrame, Payload: []byte(CommentPing)}, nil
 	}
 

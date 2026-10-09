@@ -495,6 +495,64 @@ func TestSSEHandler(t *testing.T) {
 		require.Equal(t, http.StatusOK, w.Code)
 	})
 
+	t.Run("GET request with comment pings", func(t *testing.T) {
+		defer assertNoSessions(t, appNode)
+
+		controller.
+			On("Authenticate", mock.Anything, "sid-gut-comment-ping", mock.Anything).
+			Return(&common.ConnectResult{
+				Identifier:    "se2023",
+				Status:        common.SUCCESS,
+				Transmissions: []string{`{"type":"welcome"}`},
+			}, nil)
+
+		controller.
+			On("Subscribe", mock.Anything, "sid-gut-comment-ping", mock.Anything, "se2023", "chat_1").
+			Return(&common.CommandResult{
+				Status:        common.SUCCESS,
+				Transmissions: []string{`{"type":"confirm","identifier":"chat_1"}`},
+				Streams:       []string{"messages_1"},
+			}, nil)
+
+		pingConf := NewConfig()
+		pingConf.CommentPings = true
+		pingConf.PingInterval = 1
+
+		pingHandler := SSEHandler(appNode, nil, context.Background(), headersExtractor, &pingConf, slog.Default())
+
+		req, _ := http.NewRequest("GET", "/?identifier=chat_1", nil)
+		req.Header.Set("X-Request-ID", "sid-gut-comment-ping")
+
+		// The node's ping interval is 3s, so the first ping would arrive in 1.5-4.5s if the custom interval wasn't applied
+		ctx_, release := context.WithTimeout(context.Background(), 2*time.Second)
+		defer release()
+
+		ctx, cancel := context.WithCancel(ctx_)
+		defer cancel()
+
+		req = req.WithContext(ctx)
+
+		w := httptest.NewRecorder()
+		sw := newStreamingWriter(w)
+
+		go pingHandler.ServeHTTP(sw, req)
+
+		// Protocol events are still sent
+		msg, err := sw.ReadEvent(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, "event: welcome\n"+`data: {"type":"welcome"}`, msg)
+
+		msg, err = sw.ReadEvent(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, "event: confirm\n"+`data: {"type":"confirm","identifier":"chat_1"}`, msg)
+
+		msg, err = sw.ReadEvent(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, ": ping", msg)
+
+		require.Equal(t, http.StatusOK, w.Code)
+	})
+
 	t.Run("POST request without commands + server shutdown", func(t *testing.T) {
 		defer assertNoSessions(t, appNode)
 

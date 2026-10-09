@@ -33,6 +33,14 @@ func TestCommentPingIntervals(t *testing.T) {
 		assert.Equal(t, 30, c.DS.SSEPingInterval)
 	})
 
+	t.Run("sse comment pings flag", func(t *testing.T) {
+		c, err, _ := NewConfigFromCLI([]string{"", "--ignore-config-path", "--sse_comment_pings"})
+		require.NoError(t, err)
+
+		assert.True(t, c.SSE.CommentPings)
+		assert.Equal(t, 15, c.SSE.PingInterval)
+	})
+
 	t.Run("component-specific values take precedence", func(t *testing.T) {
 		path := filepath.Join(t.TempDir(), "anycable.toml")
 		conf := "[app]\nping_interval = 30\n\n[sse]\nping_interval = 20\n\n[ds]\nsse_ping_interval = 25\n"

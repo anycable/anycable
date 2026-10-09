@@ -25,3 +25,21 @@ func TestConfig_ToToml(t *testing.T) {
 
 	assert.Equal(t, conf, conf2)
 }
+
+func TestConfig_ToToml_CommentPings(t *testing.T) {
+	conf := NewConfig()
+
+	assert.Contains(t, conf.ToToml(), "# comment_pings = true")
+
+	conf.CommentPings = true
+	tomlStr := conf.ToToml()
+
+	assert.Contains(t, tomlStr, "\ncomment_pings = true")
+
+	conf2 := Config{}
+
+	_, err := toml.Decode(tomlStr, &conf2)
+	require.NoError(t, err)
+
+	assert.Equal(t, conf, conf2)
+}
