@@ -2,6 +2,8 @@
 
 ## master
 
+## 1.6.18 (2026-10-09)
+
 - Durable Streams: improve `Cache-Control` compliance with the spec. ([@palkan][])
 
   Use `private` caching unless stream access is fully determined by the URL (authentication skipped and no `X-Signed` header), and `no-store` for `offset=now` reads, long-poll `204 No Content` and error responses.
