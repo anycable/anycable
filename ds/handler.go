@@ -2,6 +2,7 @@ package ds
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -168,9 +169,22 @@ func handleHTTP(n *node.Node, brk broker.Broker, c *Config, m metrics.Instrument
 	cacheControl := readCacheControl(c, r, s.Params)
 
 	if len(backlog) > 0 || s.Params.LiveMode != LongPollMode {
+		nextOffset := EncodeOffset(tail.Offset, tail.Epoch)
+
 		w.Header().Set("Cache-Control", cacheControl)
-		w.Header().Set(StreamOffsetHeader, EncodeOffset(tail.Offset, tail.Epoch))
+		w.Header().Set(StreamOffsetHeader, nextOffset)
 		w.Header().Set(StreamUpToDateHeader, "true")
+
+		if s.Params.RawOffset != NowOffset {
+			etag := streamETag(s.Params, nextOffset)
+			w.Header().Set("ETag", etag)
+
+			if etagMatches(r.Header.Get("If-None-Match"), etag) {
+				s.Session.Log.Debug("not modified")
+				pollConn.Close(http.StatusNotModified, "")
+				return
+			}
+		}
 
 		s.Session.Log.Debug("write history", "len", len(backlog))
 		pollConn.Close(http.StatusOK, "")
@@ -186,6 +200,10 @@ func handleHTTP(n *node.Node, brk broker.Broker, c *Config, m metrics.Instrument
 
 	// Must be set before subscribing, since the response could be written right away
 	pollConn.CacheControl = cacheControl
+
+	if s.Params.RawOffset != NowOffset {
+		pollConn.ETag = func(nextOffset string) string { return streamETag(s.Params, nextOffset) }
+	}
 
 	_, err = n.Subscribe(s.Session, s.Params.ToSubscribeCommand())
 
@@ -336,6 +354,26 @@ func isSharedCacheable(c *Config, r *http.Request) bool {
 	}
 
 	return r.URL.Query().Get(SignedStreamParam) != "" || r.Header.Get(SignedStreamHeader) == ""
+}
+
+func streamETag(sp *StreamParams, nextOffset string) string {
+	return `"` + base64.StdEncoding.EncodeToString([]byte(sp.Path)) + ":" + sp.RawOffset + ":" + nextOffset + `"`
+}
+
+func etagMatches(ifNoneMatch string, etag string) bool {
+	if ifNoneMatch == "" {
+		return false
+	}
+
+	for _, candidate := range strings.Split(ifNoneMatch, ",") {
+		candidate = strings.TrimSpace(candidate)
+
+		if candidate == "*" || strings.TrimPrefix(candidate, "W/") == etag {
+			return true
+		}
+	}
+
+	return false
 }
 
 // fetchHistory retrieves history from broker

@@ -222,10 +222,14 @@ Per DS spec §10.1:
   - `public` is only used when access is fully determined by the request URL: authentication is skipped (`ds.skip_auth`) and the stream is either unsigned or signed via the `signed` query parameter.
   - `private` is used otherwise (authentication enabled or a signed stream name passed via the `X-Signed` header), since access may depend on credentials which are not a part of the CDN cache key.
 - **`offset=now` reads**: `Cache-Control: no-store` (the tail offset changes with each append)
-- **Non-200 responses** (long-poll `204 No Content`, errors): `Cache-Control: no-store`
+- **Non-200 responses** (long-poll `204 No Content`, errors): `Cache-Control: no-store` (except `304 Not Modified`, which keeps the headers of the response it stands for)
 - **SSE**: see [SSE headers](#sse-headers)
 
-> **Note**: `ETag` / `If-None-Match` (`304 Not Modified`) support required by DS spec §10.1 is not implemented yet.
+### ETag and conditional requests
+
+Catch-up and long-poll reads (200) include an `ETag` header of the form `"<base64(path)>:<requested offset>:<next offset>"` (the path is encoded, since it may contain characters not allowed in entity tags). `offset=now` responses have no `ETag`.
+
+When a catch-up request (including a long-poll request served from history) carries an `If-None-Match` header matching the current `ETag`, the server responds with `304 Not Modified` and no body.
 
 ### Cursor-based CDN collapsing
 

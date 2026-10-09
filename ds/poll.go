@@ -73,6 +73,9 @@ type PollConnection struct {
 	// CacheControl is the Cache-Control header value for data responses
 	CacheControl string
 
+	// ETag generates the ETag header value for data responses from the next offset
+	ETag func(nextOffset string) string
+
 	done bool
 
 	mu sync.Mutex
@@ -121,6 +124,10 @@ func (c *PollConnection) Write(msg []byte, deadline time.Time) error {
 		c.writer.Header().Set("Cache-Control", c.CacheControl)
 	}
 
+	if c.ETag != nil {
+		c.writer.Header().Set("ETag", c.ETag(offset))
+	}
+
 	_, err := c.writer.Write(body.Bytes())
 
 	if err != nil {
@@ -145,8 +152,9 @@ func (c *PollConnection) Close(code int, reason string) {
 
 	status := wsCodeToHTTP(code, reason)
 
-	// Only data responses could be cached (204 No Content, errors, etc. must not)
-	if status != http.StatusOK {
+	// Only data responses could be cached (204 No Content, errors, etc. must not);
+	// 304 Not Modified keeps the headers of the data response it stands for
+	if status != http.StatusOK && status != http.StatusNotModified {
 		c.writer.Header().Set("Cache-Control", "no-store")
 	}
 

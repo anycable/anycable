@@ -92,6 +92,17 @@ func TestPollConnection_Write(t *testing.T) {
 		assert.Equal(t, "public, max-age=60", w.Header().Get("Cache-Control"))
 	})
 
+	t.Run("sets ETag header", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		conn := NewPollConnection(w)
+		conn.ETag = func(nextOffset string) string { return `"test:` + nextOffset + `"` }
+
+		err := conn.Write([]byte("123::epoch1\n{\"data\":\"test\"}"), time.Time{})
+		require.NoError(t, err)
+
+		assert.Equal(t, `"test:123::epoch1"`, w.Header().Get("ETag"))
+	})
+
 	t.Run("returns error for invalid format", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		conn := NewPollConnection(w)
@@ -138,6 +149,17 @@ func TestPollConnection_CloseCacheControl(t *testing.T) {
 
 		assert.Equal(t, http.StatusGone, w.Code)
 		assert.Equal(t, "no-store", w.Header().Get("Cache-Control"))
+	})
+
+	t.Run("keeps cache control for not modified", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		w.Header().Set("Cache-Control", "public, max-age=60")
+		conn := NewPollConnection(w)
+
+		conn.Close(http.StatusNotModified, "")
+
+		assert.Equal(t, http.StatusNotModified, w.Code)
+		assert.Equal(t, "public, max-age=60", w.Header().Get("Cache-Control"))
 	})
 
 	t.Run("keeps cache control for OK", func(t *testing.T) {
