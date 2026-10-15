@@ -3,9 +3,9 @@ x-app: &app
     context: .
     dockerfile: Dockerfile
     args:
-      GO_VERSION: '1.26'
+      GO_VERSION: '1.27'
       DISTRO_NAME: 'bookworm'
-  image: anycable-go-dev:1.0
+  image: anycable-go-dev:1.1
   environment: &env
     MRUBY_GO: 'false'
     GOPATH: /go

@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-ARG GO_VERSION=1.26
+ARG GO_VERSION=1.27
 ARG DISTRO_NAME=bookworm
 
 FROM golang:${GO_VERSION}-${DISTRO_NAME}
