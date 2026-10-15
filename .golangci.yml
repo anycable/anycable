@@ -7,9 +7,15 @@ linters:
     - gosec
     - grouper
     - misspell
+    - mulint
     - staticcheck
     - unconvert
   settings:
+    custom:
+      mulint:
+        type: module
+        description: Detects mutex misuses (reentrant locks, missing unlocks)
+        original-url: github.com/palkan/mulint
     gosec:
       excludes:
         - G115

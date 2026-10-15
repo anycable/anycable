@@ -240,13 +240,20 @@ gen-ssl:
 	openssl genrsa -out tmp/ssl/server.key 2048
 	openssl req -new -x509 -sha256 -key tmp/ssl/server.key -out tmp/ssl/server.crt -days 3650
 
+GOLANGCI_LINT_VERSION := $(shell awk '/^version:/ { print $$2 }' .custom-gcl.yml)
+
 bin/golangci-lint:
 	@test -x $$(go env GOPATH)/bin/golangci-lint && \
-		($$(go env GOPATH)/bin/golangci-lint version | grep 2.11.2) || \
-		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v2.11.2
+		($$(go env GOPATH)/bin/golangci-lint version | grep -q $(GOLANGCI_LINT_VERSION:v%=%)) || \
+		go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 
-lint: bin/golangci-lint
-	$$(go env GOPATH)/bin/golangci-lint run
+# Custom golangci-lint build with plugins (mulint); see .custom-gcl.yml
+tmp/bin/custom-gcl: .custom-gcl.yml
+	@$(MAKE) bin/golangci-lint
+	$$(go env GOPATH)/bin/golangci-lint custom
+
+lint: tmp/bin/custom-gcl
+	tmp/bin/custom-gcl run
 
 fmt:
 	go fmt ./...
