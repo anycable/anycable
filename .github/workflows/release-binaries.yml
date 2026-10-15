@@ -6,9 +6,18 @@ on:
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      platform:
+        description: "Platform to publish for"
+        type: choice
+        options:
+          - all
+          - npm
+        default: all
 
 jobs:
   upload_binaries:
+    if: ${{ inputs.platform != 'npm' }}
     runs-on: ubuntu-22.04
     env:
       GO111MODULE: on
@@ -66,6 +75,7 @@ jobs:
 
   upload_macos_binaries:
     needs: [upload_binaries]
+    if: ${{ inputs.platform != 'npm' }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -123,3 +133,22 @@ jobs:
         with:
           file: "dist/anycable-go-*"
           tags: true
+
+  publish_npm:
+    needs: [upload_binaries, upload_macos_binaries]
+    if: ${{ !cancelled() && !failure() && github.repository == 'anycable/anycable' }}
+    runs-on: ubuntu-latest
+    permissions:
+      # Required for npm trusted publishing (OIDC)
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - run: npm install -g npm@latest
+      - name: Publish
+        working-directory: packaging/npm
+        run: npm publish --access public

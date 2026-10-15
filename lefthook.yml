@@ -5,3 +5,7 @@ pre-commit:
         jobs:
           - run: make fmt
           - run: make lint
+    - name: check-npm-version
+      glob: "version/version.go"
+      script: check-npm-version
+      runner: ruby

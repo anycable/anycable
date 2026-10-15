@@ -1,0 +1,19 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Fails if the npm package version differs from the one in version/version.go.
+# Runs as a lefthook pre-commit hook (see lefthook.yml).
+
+ROOT = File.expand_path("../..", __dir__)
+VERSION_FILE = File.join(ROOT, "version", "version.go")
+PACKAGE_FILE = File.join(ROOT, "packaging", "npm", "package.json")
+
+version = File.read(VERSION_FILE)[/version\s*=\s*"([^"]+)"/, 1]
+abort "Cannot detect version from #{VERSION_FILE}" unless version
+
+pkg_version = File.read(PACKAGE_FILE)[/^  "version":\s*"([^"]+)"/, 1]
+abort "Cannot detect version from #{PACKAGE_FILE}" unless pkg_version
+
+return if pkg_version == version
+
+abort "packaging/npm/package.json version (#{pkg_version}) does not match version/version.go (#{version})"

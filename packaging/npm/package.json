@@ -9,7 +9,11 @@
   "engines": {
     "node": ">=20.0.0"
   },
-  "repository": "https://github.com/anycable/anycable-go",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anycable/anycable.git",
+    "directory": "packaging/npm"
+  },
   "keywords": [
     "websockets",
     "anycable",
@@ -18,7 +22,7 @@
   "author": "Vladimir Dementyev",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/anycable/anycable-go/issues"
+    "url": "https://github.com/anycable/anycable/issues"
   },
   "homepage": "https://anycable.io",
   "os": [
