@@ -2,6 +2,10 @@
 
 ## master
 
+## 1.6.19 (2026-10-15)
+
+- Upgrade to Go 1.27.
+
 ## 1.6.18 (2026-10-09)
 
 - Durable Streams: improve `Cache-Control` compliance with the spec. ([@palkan][])
