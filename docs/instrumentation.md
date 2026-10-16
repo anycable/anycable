@@ -36,6 +36,8 @@ The `rpc_timeouts_total` shows the number of timed out RPC requests. Use this me
 
 The `rpc_canceled_total` shows the number of RPC calls that were discarded due to the initiator (the connection) being terminated. Higher values could indicate either misbehaving clients (connecting, subscribing and disconnecting too quickly) or lack of RPC capacity to process all incoming commands (in this case, it should correlate with timeouts).
 
+The `rpc_wait_timeout_total` shows the number of RPC calls that failed because they waited in an RPC calls queue for longer than `--rpc_wait_timeout`. Non-zero values mean the RPC capacity cannot keep up with incoming calls.
+
 The `rpc_pending_num` is the **key latency metrics** of AnyCable-Go. We limit the number of concurrent RPC requests (to prevent the RPC server exhaustion and retries). If the number of pending requests grows (which means we can not keep up with the rate of incoming messages), you should consider either tuning concurrency settings or scale up your cluster.
 
 ### `publications_total` / `broadcast_msg_total` / `remote_commands_total`

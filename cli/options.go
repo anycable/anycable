@@ -1029,6 +1029,13 @@ func rpcCLIFlags(c *config.Config, headers, cookieFilter *string, isNone *bool) 
 			Hidden:      true,
 		},
 
+		&cli.IntFlag{
+			Name:        "rpc_wait_timeout",
+			Usage:       "Max time to wait in an RPC queue (in ms); zero means no limit",
+			Value:       c.RPC.WaitTimeout,
+			Destination: &c.RPC.WaitTimeout,
+		},
+
 		&cli.StringFlag{
 			Name:        "headers",
 			Usage:       "List of headers to proxy to RPC",
