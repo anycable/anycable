@@ -150,7 +150,7 @@ func TestHandleCommand(t *testing.T) {
 
 func buildSession(conn node.Connection, n *node.Node, executor node.Executor) *node.Session {
 	s := node.NewSession(n, conn, "ws://anycable.io/pusher/app-id", nil, "1234.1234", node.WithEncoder(&Encoder{}), node.WithExecutor(executor))
-	s.Connected = true
+	n.Authenticated(s, "")
 	s.Log = slog.With("context", "test")
 	return s
 }

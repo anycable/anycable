@@ -403,15 +403,18 @@ func (n *Node) Authenticate(s *Session, options ...AuthOption) (*common.ConnectR
 // Mark session as authenticated and register it with a hub.
 // Useful when you perform authentication manually, not using a controller.
 func (n *Node) Authenticated(s *Session, ids string) {
+	s.connectedMu.Lock()
+	defer s.connectedMu.Unlock()
+
 	if s.IsClosed() {
 		return
 	}
 
 	s.SetIdentifiers(ids)
-	s.Connected = true
 	if !s.inactive {
 		n.hub.AddSession(s)
 	}
+	s.connected.Store(true)
 }
 
 func (n *Node) TryRestoreSession(s *Session) (restored bool) {
@@ -448,8 +451,14 @@ func (n *Node) TryRestoreSession(s *Session) (restored bool) {
 
 	s.Log.Debug("session restored", "old_sid", prev_sid)
 
-	s.Connected = true
+	s.connectedMu.Lock()
+	if s.IsClosed() {
+		s.connectedMu.Unlock()
+		return false
+	}
 	n.hub.AddSession(s)
+	s.connected.Store(true)
+	s.connectedMu.Unlock()
 
 	// Resubscribe to streams
 	for identifier, channel_streams := range s.subscriptions.ToMap() {
