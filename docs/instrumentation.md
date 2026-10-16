@@ -58,6 +58,12 @@ The `disconnect_queue_size` shows the current number of pending Disconnect calls
 
 During the normal operation, the value should be close to zero most of the a time. Larger values or growth could indicate inefficient client-side connection management (high re-connection rate). Spikes could indicate mass disconnect events.
 
+The queue size is limited by the `--max_disconnect_backlog_size` option (default: 8192).
+
+### `disconnect_queue_discarded_total`
+
+The `disconnect_queue_discarded_total` shows the total number of Disconnect calls discarded because the disconnect queue was full. The RPC server does not receive these disconnection events (`disconnect` and `unsubscribed` callbacks).
+
 ### ⏱ `goroutines_num`
 
 The `goroutines_num` metrics is meant for debugging Go routines leak purposes. The number should be O(N), where N is the `clients_num` value for the OSS version and should be O(1) for the PRO version (unless IO polling is disabled).

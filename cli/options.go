@@ -1093,8 +1093,15 @@ func disconnectorCLIFlags(c *config.Config) []cli.Flag {
 		},
 
 		&cli.IntFlag{
+			Name:        "max_disconnect_backlog_size",
+			Usage:       "The max size of the disconnect requests queue; over limit discards new items",
+			Value:       c.DisconnectQueue.MaxBacklog,
+			Destination: &c.DisconnectQueue.MaxBacklog,
+		},
+
+		&cli.IntFlag{
 			Name:        "disconnect_backlog_size",
-			Usage:       "The size of the channel's buffer for disconnect requests",
+			Usage:       "DEPRECATED: The size of the channel's buffer for disconnect requests",
 			Value:       c.DisconnectQueue.Backlog,
 			Destination: &c.DisconnectQueue.Backlog,
 			Hidden:      true,

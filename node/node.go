@@ -38,6 +38,7 @@ const (
 	metricsReceivedMsg             = "client_msg_total"
 	metricsFailedCommandReceived   = "failed_client_msg_total"
 	metricsDisconnectedSlowClients = "disconnected_slow_clients_total"
+	metricsDisconnectDiscarded     = "disconnect_queue_discarded_total"
 	metricsPublications            = "publications_total"
 	metricsBroadcastMsg            = "broadcast_msg_total"
 	metricsRemoteCommands          = "remote_commands_total"
@@ -1255,6 +1256,7 @@ func (n *Node) registerMetrics() {
 	n.metrics.RegisterCounter(metricsFailedAuths, "The total number of failed authentication attempts")
 	n.metrics.RegisterCounter(metricsReceivedMsg, "The total number of received messages from clients")
 	n.metrics.RegisterCounter(metricsDisconnectedSlowClients, "The total number of disconnected slow clients")
+	n.metrics.RegisterCounter(metricsDisconnectDiscarded, "The total number of Disconnect calls discarded because the disconnect queue was full")
 	n.metrics.RegisterCounter(metricsFailedCommandReceived, "The total number of unrecognized messages received from clients")
 	n.metrics.RegisterCounter(metricsPublications, "The total number of publications received (from the application)")
 	n.metrics.RegisterCounter(metricsBroadcastMsg, "The total number of messages received through PubSub (for broadcast)")

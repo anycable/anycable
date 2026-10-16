@@ -244,6 +244,12 @@ If you rely on `disconnect` callbacks in your code, you can tune the default dis
 
 The max number of `Disconnect` calls per-second (default: 100).
 
+**--max_disconnect_backlog_size** (`ANYCABLE_MAX_DISCONNECT_BACKLOG_SIZE`)
+
+The max number of pending `Disconnect` calls in the queue (default: 8192). When the queue is full, AnyCable discards new `Disconnect` calls, and the RPC server does not receive these disconnection events. Set it to 0 to remove the limit. The `disconnect_queue_discarded_total` metric counts the discarded calls.
+
+A larger limit keeps more disconnection events during reconnect floods. Each pending call keeps the closed session in memory until the call is made.
+
 **--disconnect_mode** (`ANYCABLE_DISCONNECT_MODE`)
 
 This parameter defines when a Disconnect call should be made for a session. The default is "auto", which means that the Disconnect call is made only if we detected the client _interest_ in it. Currently, we only skip Disconnect calls for sessions authenticated via [JWT](./jwt_identification.md) and using [signed streams](./signed_streams.md) (Hotwire or CableReady).
