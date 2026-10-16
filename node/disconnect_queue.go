@@ -7,21 +7,25 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/anycable/anycable-go/utils"
 )
 
 // DisconnectQueueConfig contains DisconnectQueue configuration
 type DisconnectQueueConfig struct {
 	// Limit the number of Disconnect RPC calls per second
 	Rate int
-	// The size of the channel's buffer for disconnect requests
+	// The size of the channel's buffer for disconnect requests [DEPREACTED]
 	Backlog int
+	// The max number of waiting Disconnect calls in the queue; when it's hit, new items are discarded with warning
+	MaxBacklog int `toml:"max_backlog"`
 	// How much time wait to call all enqueued calls at exit (in seconds) [DEPREACTED]
 	ShutdownTimeout int
 }
 
 // NewDisconnectQueueConfig builds a new config
 func NewDisconnectQueueConfig() DisconnectQueueConfig {
-	return DisconnectQueueConfig{Rate: 100, Backlog: 4096}
+	return DisconnectQueueConfig{Rate: 100, MaxBacklog: 8192}
 }
 
 func (c DisconnectQueueConfig) ToToml() string {
@@ -30,8 +34,8 @@ func (c DisconnectQueueConfig) ToToml() string {
 	result.WriteString("# Limit the number of Disconnect RPC calls per second\n")
 	result.WriteString(fmt.Sprintf("rate = %d\n", c.Rate))
 
-	result.WriteString("# Queue size for disconnect requests\n")
-	result.WriteString(fmt.Sprintf("backlog = %d\n", c.Backlog))
+	result.WriteString("# Max queue size for disconnect requests (new items are discarded when the limit is reached)\n")
+	result.WriteString(fmt.Sprintf("max_backlog = %d\n", c.MaxBacklog))
 
 	result.WriteString("\n")
 
@@ -44,11 +48,10 @@ type DisconnectQueue struct {
 	// Throttling rate
 	rate time.Duration
 	// Call RPC Disconnect for connections
-	disconnect chan *Session
+	disconnect *utils.Queue[*Session]
+	limit      int
 	// Logger with context
 	log *slog.Logger
-	// Control channel to shutdown the executer
-	shutdown chan struct{}
 	// Executer stopped status
 	isStopped bool
 	// Mutex to work with stopped status concurrently
@@ -63,12 +66,18 @@ func NewDisconnectQueue(node *Node, config *DisconnectQueueConfig, l *slog.Logge
 
 	ctx.Debug("calls rate", "rate", rateDuration)
 
+	capacity := config.MaxBacklog / 8
+
+	if capacity < 512 {
+		capacity = 512
+	}
+
 	return &DisconnectQueue{
 		node:       node,
-		disconnect: make(chan *Session, config.Backlog),
+		disconnect: utils.NewQueue[*Session](capacity),
+		limit:      config.MaxBacklog,
 		rate:       rateDuration,
 		log:        ctx,
-		shutdown:   make(chan struct{}, 1),
 	}
 }
 
@@ -78,13 +87,19 @@ func (d *DisconnectQueue) Run() error {
 	defer throttle.Stop()
 
 	for {
-		select {
-		case session := <-d.disconnect:
-			<-throttle.C
-			d.node.DisconnectNow(session) //nolint:errcheck
-		case <-d.shutdown:
+		if !d.disconnect.Wait() {
 			return nil
 		}
+
+		item, ok := d.disconnect.Remove()
+		if !ok {
+			return nil
+		}
+
+		session := item.Data
+
+		d.node.DisconnectNow(session) //nolint:errcheck
+		<-throttle.C
 	}
 }
 
@@ -97,11 +112,22 @@ func (d *DisconnectQueue) Shutdown(ctx context.Context) error {
 	}
 
 	d.isStopped = true
-	d.shutdown <- struct{}{}
+	sessions := make([]*Session, 0, d.disconnect.Len())
+
+	for {
+		item, ok := d.disconnect.Remove()
+		if !ok {
+			break
+		}
+
+		sessions = append(sessions, item.Data)
+	}
+
+	d.disconnect.Close()
 	d.mu.Unlock()
 
-	left := len(d.disconnect)
 	actual := 0
+	left := len(sessions)
 
 	if left == 0 {
 		return nil
@@ -121,18 +147,19 @@ func (d *DisconnectQueue) Shutdown(ctx context.Context) error {
 		d.log.Info("invoking remaining disconnects", "num", left)
 	}
 
-	for {
+	for _, session := range sessions {
 		select {
-		case session := <-d.disconnect:
-			d.node.DisconnectNow(session) // nolint:errcheck
-
-			actual++
 		case <-ctx.Done():
-			return fmt.Errorf("had no time to invoke Disconnect calls: ~%d", len(d.disconnect))
+			return fmt.Errorf("had no time to invoke Disconnect calls: ~%d", left-actual)
 		default:
-			return nil
 		}
+
+		d.node.DisconnectNow(session) // nolint:errcheck
+
+		actual++
 	}
+
+	return nil
 }
 
 // Enqueue adds session to the disconnect queue
@@ -147,12 +174,17 @@ func (d *DisconnectQueue) Enqueue(s *Session) error {
 
 	d.mu.Unlock()
 
-	d.disconnect <- s
+	if d.limit > 0 && d.Size() >= d.limit {
+		d.node.metrics.CounterIncrement(metricsDisconnectDiscarded)
+		return fmt.Errorf("disconnect queue is full, discarding Disconnect")
+	}
+
+	d.disconnect.Add(utils.Item[*Session]{Data: s, Size: 1})
 
 	return nil
 }
 
 // Size returns the number of enqueued tasks
 func (d *DisconnectQueue) Size() int {
-	return len(d.disconnect)
+	return int(d.disconnect.Size())
 }

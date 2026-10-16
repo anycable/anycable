@@ -2,6 +2,10 @@
 
 ## master
 
+- Make scheduling Disconnect requests non-blocking and add `--max_disconnect_backlog_size` to control the max queue size. ([@palkan][])
+
+  Requests above the limit are discarded. You can track them using the new `disconnect_queue_discarded_total` metrics.
+
 - Add `--rpc_wait_timeout` to limit the time a command waits in an RPC queue. ([@palkan][])
 
   It defaults to the RPC command timeout (3s). Calls that wait longer fail without reaching the RPC server, and calls for closed sessions leave the queue at once. Disconnect calls are not affected. The new `rpc_wait_timeout_total` metric counts the timed out calls.

@@ -454,7 +454,9 @@ func TestDisconnect(t *testing.T) {
 
 		assert.Equal(t, 1, node.disconnector.Size(), "Expected disconnect to have 1 task in a queue")
 
-		task := <-node.disconnector.(*DisconnectQueue).disconnect
+		item, ok := node.disconnector.(*DisconnectQueue).disconnect.Remove()
+		require.True(t, ok)
+		task := item.Data
 		assert.Equal(t, session, task, "Expected to disconnect session")
 	})
 

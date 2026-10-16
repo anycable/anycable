@@ -2,11 +2,16 @@ package node
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"runtime"
+	"strconv"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/BurntSushi/toml"
+	"github.com/anycable/anycable-go/metrics"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -58,6 +63,56 @@ func TestDisconnectQueue_Shutdown(t *testing.T) {
 			q.Shutdown(ctx) // nolint:errcheck
 		}
 	})
+
+	t.Run("Does not block when sessions are enqueued concurrently", func(t *testing.T) {
+		ctx := context.Background()
+
+		for i := 0; i < 100; i++ {
+			q := newQueue()
+
+			for j := 0; j < 100; j++ {
+				require.NoError(t, q.Enqueue(NewMockSession(strconv.Itoa(j), q.node)))
+			}
+
+			// Keep enqueueing until shutdown completes, so some Enqueue calls
+			// pass the stopped check before Shutdown and add items during it
+			stop := make(chan struct{})
+			var wg sync.WaitGroup
+
+			for j := 0; j < 8; j++ {
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+
+					for k := 0; ; k++ {
+						select {
+						case <-stop:
+							return
+						default:
+						}
+
+						q.Enqueue(NewMockSession(fmt.Sprintf("c-%d-%d", j, k), q.node)) // nolint:errcheck
+					}
+				}()
+			}
+
+			done := make(chan error, 1)
+
+			go func() {
+				done <- q.Shutdown(ctx)
+			}()
+
+			select {
+			case err := <-done:
+				require.NoError(t, err)
+			case <-time.After(5 * time.Second):
+				t.Fatal("Shutdown is blocked")
+			}
+
+			close(stop)
+			wg.Wait()
+		}
+	})
 }
 
 func TestDisconnectQueue_Enqueue(t *testing.T) {
@@ -76,6 +131,42 @@ func TestDisconnectQueue_Enqueue(t *testing.T) {
 		assert.Nil(t, q.Enqueue(NewMockSession("1", q.node)))
 		assert.Equal(t, 0, q.Size())
 	})
+
+	t.Run("Discards sessions over the limit", func(t *testing.T) {
+		node := NewMockNode()
+		config := NewDisconnectQueueConfig()
+		config.MaxBacklog = 2
+		q := NewDisconnectQueue(node, &config, slog.Default())
+
+		assert.Nil(t, q.Enqueue(NewMockSession("1", node)))
+		assert.Nil(t, q.Enqueue(NewMockSession("2", node)))
+		assert.Error(t, q.Enqueue(NewMockSession("3", node)))
+		assert.Error(t, q.Enqueue(NewMockSession("4", node)))
+
+		assert.Equal(t, 2, q.Size())
+		assert.Equal(t, uint64(2), node.metrics.(*metrics.Metrics).Counter(metricsDisconnectDiscarded).Value())
+
+		item, ok := q.disconnect.Remove()
+		require.True(t, ok)
+		assert.Equal(t, "1", item.Data.GetID())
+
+		assert.Nil(t, q.Enqueue(NewMockSession("5", node)))
+		assert.Equal(t, 2, q.Size())
+	})
+
+	t.Run("Does not limit the queue when max backlog is zero", func(t *testing.T) {
+		node := NewMockNode()
+		config := NewDisconnectQueueConfig()
+		config.MaxBacklog = 0
+		q := NewDisconnectQueue(node, &config, slog.Default())
+
+		for i := 0; i < 1000; i++ {
+			require.NoError(t, q.Enqueue(NewMockSession(strconv.Itoa(i), node)))
+		}
+
+		assert.Equal(t, 1000, q.Size())
+		assert.Equal(t, uint64(0), node.metrics.(*metrics.Metrics).Counter(metricsDisconnectDiscarded).Value())
+	})
 }
 
 func newQueue() *DisconnectQueue {
@@ -90,12 +181,12 @@ func newQueue() *DisconnectQueue {
 func TestDisconnectQueueConfig_ToToml(t *testing.T) {
 	conf := NewDisconnectQueueConfig()
 	conf.Rate = 50
-	conf.Backlog = 2048
+	conf.MaxBacklog = 2048
 
 	tomlStr := conf.ToToml()
 
 	assert.Contains(t, tomlStr, "rate = 50")
-	assert.Contains(t, tomlStr, "backlog = 2048")
+	assert.Contains(t, tomlStr, "max_backlog = 2048")
 
 	// Round-trip test
 	conf2 := NewDisconnectQueueConfig()
