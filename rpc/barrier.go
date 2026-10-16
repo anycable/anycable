@@ -1,11 +1,12 @@
 package rpc
 
 import (
+	"context"
 	"fmt"
 )
 
 type Barrier interface {
-	Acquire()
+	Acquire(ctx context.Context) error
 	Release()
 	BusyCount() int
 	Capacity() int
@@ -42,8 +43,13 @@ func NewFixedSizeBarrier(capacity int) (*FixedSizeBarrier, error) {
 	}, nil
 }
 
-func (b *FixedSizeBarrier) Acquire() {
-	<-b.sem
+func (b *FixedSizeBarrier) Acquire(ctx context.Context) error {
+	select {
+	case <-b.sem:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 func (b *FixedSizeBarrier) Release() {

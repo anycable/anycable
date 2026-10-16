@@ -45,12 +45,16 @@ const (
 	metricsRPCFailures     = "rpc_error_total"
 	metricsRPCTimeouts     = "rpc_timeout_total"
 	metricsRPCCanceled     = "rpc_canceled_total"
+	metricsRPCWaitTimeouts = "rpc_wait_timeout_total"
 	metricsRPCPending      = "rpc_pending_num"
 	metricsRPCCapacity     = "rpc_capacity_num"
 	metricsGRPCActiveConns = "grpc_active_conn_num"
 
 	secretKeyPhrase = "rpc-cable"
 )
+
+// ErrWaitTimeout is returned when an RPC call waits for a free slot longer than the wait timeout
+var ErrWaitTimeout = errors.New("RPC wait timeout: no free slot")
 
 type grpcClientHelper struct {
 	conn       *grpc.ClientConn
@@ -166,6 +170,8 @@ type Controller struct {
 	requestTimeout time.Duration
 	// Timeout for an RPC command that may retry a few times
 	commandTimeout time.Duration
+	// Timeout for waiting for a free RPC slot
+	waitTimeout time.Duration
 
 	timerMu      sync.Mutex
 	metricsTimer *time.Timer
@@ -178,6 +184,7 @@ func NewController(metrics metrics.Instrumenter, config *Config, l *slog.Logger)
 	metrics.RegisterCounter(metricsRPCFailures, "The total number of failed RPC calls")
 	metrics.RegisterCounter(metricsRPCTimeouts, "The total number of RPC call that timed out")
 	metrics.RegisterCounter(metricsRPCCanceled, "The total number of canceled RPC calls")
+	metrics.RegisterCounter(metricsRPCWaitTimeouts, "The total number of RPC calls that timed out waiting in a queue")
 	metrics.RegisterGauge(metricsRPCPending, "The number of pending RPC calls")
 
 	capacity := config.Concurrency
@@ -208,6 +215,11 @@ func NewController(metrics metrics.Instrumenter, config *Config, l *slog.Logger)
 	}
 
 	commandTimeout := time.Duration(config.CommandTimeout) * time.Millisecond
+	waitTimeout := time.Duration(config.WaitTimeout) * time.Millisecond
+
+	if config.WaitTimeout < 0 {
+		waitTimeout = commandTimeout
+	}
 
 	return &Controller{
 		log:            l.With("context", "rpc"),
@@ -216,6 +228,7 @@ func NewController(metrics metrics.Instrumenter, config *Config, l *slog.Logger)
 		barrier:        barrier,
 		requestTimeout: requestTimeout,
 		commandTimeout: commandTimeout,
+		waitTimeout:    waitTimeout,
 	}, nil
 }
 
@@ -322,16 +335,16 @@ func (c *Controller) Shutdown() error {
 
 // Authenticate performs Connect RPC call
 func (c *Controller) Authenticate(sctx context.Context, sid string, env *common.SessionEnv) (*common.ConnectResult, error) {
-	c.metrics.GaugeIncrement(metricsRPCPending)
-	c.barrier.Acquire()
-	c.metrics.GaugeDecrement(metricsRPCPending)
+	release, err := c.acquire(sctx)
+	if err != nil {
+		return nil, err
+	}
 
-	defer c.barrier.Release()
-
-	if sctx.Err() != nil {
-		c.metrics.CounterIncrement(metricsRPCCanceled)
+	if release == nil {
 		return nil, nil
 	}
+
+	defer release()
 
 	op := func(ctx context.Context) (interface{}, error) {
 		ctx, cancel := c.newRequestContext(ctx, sid)
@@ -368,16 +381,16 @@ func (c *Controller) Authenticate(sctx context.Context, sid string, env *common.
 
 // Subscribe performs Command RPC call with "subscribe" command
 func (c *Controller) Subscribe(sctx context.Context, sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error) {
-	c.metrics.GaugeIncrement(metricsRPCPending)
-	c.barrier.Acquire()
-	c.metrics.GaugeDecrement(metricsRPCPending)
+	release, err := c.acquire(sctx)
+	if err != nil {
+		return nil, err
+	}
 
-	defer c.barrier.Release()
-
-	if sctx.Err() != nil {
-		c.metrics.CounterIncrement(metricsRPCCanceled)
+	if release == nil {
 		return nil, nil
 	}
+
+	defer release()
 
 	op := func(ctx context.Context) (interface{}, error) {
 		ctx, cancel := c.newRequestContext(ctx, sid)
@@ -396,16 +409,16 @@ func (c *Controller) Subscribe(sctx context.Context, sid string, env *common.Ses
 
 // Unsubscribe performs Command RPC call with "unsubscribe" command
 func (c *Controller) Unsubscribe(sctx context.Context, sid string, env *common.SessionEnv, id string, channel string) (*common.CommandResult, error) {
-	c.metrics.GaugeIncrement(metricsRPCPending)
-	c.barrier.Acquire()
-	c.metrics.GaugeDecrement(metricsRPCPending)
+	release, err := c.acquire(sctx)
+	if err != nil {
+		return nil, err
+	}
 
-	defer c.barrier.Release()
-
-	if sctx.Err() != nil {
-		c.metrics.CounterIncrement(metricsRPCCanceled)
+	if release == nil {
 		return nil, nil
 	}
+
+	defer release()
 
 	op := func(ctx context.Context) (interface{}, error) {
 		ctx, cancel := c.newRequestContext(ctx, sid)
@@ -424,16 +437,16 @@ func (c *Controller) Unsubscribe(sctx context.Context, sid string, env *common.S
 
 // Perform performs Command RPC call with "perform" command
 func (c *Controller) Perform(sctx context.Context, sid string, env *common.SessionEnv, id string, channel string, data string) (*common.CommandResult, error) {
-	c.metrics.GaugeIncrement(metricsRPCPending)
-	c.barrier.Acquire()
-	c.metrics.GaugeDecrement(metricsRPCPending)
+	release, err := c.acquire(sctx)
+	if err != nil {
+		return nil, err
+	}
 
-	defer c.barrier.Release()
-
-	if sctx.Err() != nil {
-		c.metrics.CounterIncrement(metricsRPCCanceled)
+	if release == nil {
 		return nil, nil
 	}
+
+	defer release()
 
 	op := func(ctx context.Context) (interface{}, error) {
 		ctx, cancel := c.newRequestContext(ctx, sid)
@@ -452,16 +465,18 @@ func (c *Controller) Perform(sctx context.Context, sid string, env *common.Sessi
 
 // Disconnect performs disconnect RPC call
 func (c *Controller) Disconnect(sctx context.Context, sid string, env *common.SessionEnv, id string, subscriptions []string) error {
+	// Disconnect calls run the application's disconnect callbacks,
+	// so no wait timeout
 	c.metrics.GaugeIncrement(metricsRPCPending)
-	c.barrier.Acquire()
+	err := c.barrier.Acquire(sctx)
 	c.metrics.GaugeDecrement(metricsRPCPending)
 
-	defer c.barrier.Release()
-
-	if sctx.Err() != nil {
+	if err != nil {
 		c.metrics.CounterIncrement(metricsRPCCanceled)
 		return nil
 	}
+
+	defer c.barrier.Release()
 
 	op := func(ctx context.Context) (interface{}, error) {
 		ctx, cancel := c.newRequestContext(ctx, sid)
@@ -527,6 +542,37 @@ func (c *Controller) parseCommandResponse(sid string, response interface{}, err 
 
 func (c *Controller) busy() int {
 	return c.barrier.BusyCount()
+}
+
+func (c *Controller) acquire(ctx context.Context) (func(), error) {
+	waitCtx := ctx
+	cancelWait := noopCancel
+	if c.waitTimeout > 0 {
+		waitCtx, cancelWait = context.WithTimeout(ctx, c.waitTimeout)
+	}
+
+	c.metrics.GaugeIncrement(metricsRPCPending)
+	err := c.barrier.Acquire(waitCtx)
+	c.metrics.GaugeDecrement(metricsRPCPending)
+	cancelWait()
+
+	// select picks randomly when both contexts are ready
+	if err == nil && ctx.Err() != nil {
+		c.barrier.Release()
+		err = ctx.Err()
+	}
+
+	if err != nil {
+		if ctx.Err() != nil {
+			c.metrics.CounterIncrement(metricsRPCCanceled)
+			return nil, nil
+		}
+
+		c.metrics.CounterIncrement(metricsRPCWaitTimeouts)
+		return nil, ErrWaitTimeout
+	}
+
+	return c.barrier.Release, nil
 }
 
 func (c *Controller) retry(ctx context.Context, sid string, callback func(context.Context) (interface{}, error)) (res interface{}, err error) {

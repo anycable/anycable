@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/metrics"
@@ -653,5 +654,109 @@ func TestCustomDialFun(t *testing.T) {
 		require.True(t, ok)
 
 		assert.Equal(t, []string{"42"}, md.Get("sid"))
+	})
+}
+
+func TestWaitTimeout(t *testing.T) {
+	newBusyController := func(t *testing.T) (*Controller, *mocks.RPCClient) {
+		controller := NewTestController()
+		controller.waitTimeout = 50 * time.Millisecond
+		barrier, _ := NewFixedSizeBarrier(1)
+		controller.barrier = barrier
+		client := &mocks.RPCClient{}
+		controller.client = client
+
+		// Take the only slot
+		require.NoError(t, barrier.Acquire(context.Background()))
+
+		return controller, client
+	}
+
+	counter := func(c *Controller, name string) uint64 {
+		return c.metrics.(*metrics.Metrics).Counter(name).Value()
+	}
+
+	t.Run("Defaults to the command timeout", func(t *testing.T) {
+		config := NewConfig()
+		config.CommandTimeout = 1234
+		controller, _ := NewController(metrics.NewMetrics(nil, 0, slog.Default()), &config, slog.Default())
+
+		assert.Equal(t, 1234*time.Millisecond, controller.waitTimeout)
+
+		config.WaitTimeout = 500
+		controller, _ = NewController(metrics.NewMetrics(nil, 0, slog.Default()), &config, slog.Default())
+
+		assert.Equal(t, 500*time.Millisecond, controller.waitTimeout)
+	})
+
+	t.Run("Zero wait timeout means no limit", func(t *testing.T) {
+		controller, client := newBusyController(t)
+		controller.waitTimeout = 0
+
+		client.On("Command", mock.Anything, mock.Anything).Return(
+			&pb.CommandResponse{Status: pb.Status_SUCCESS}, nil)
+
+		time.AfterFunc(100*time.Millisecond, controller.barrier.Release)
+
+		headers := map[string]string{}
+		_, err := controller.Subscribe(context.Background(), "42", &common.SessionEnv{Headers: &headers}, "ids", "test_channel")
+
+		assert.Nil(t, err)
+		client.AssertCalled(t, "Command", mock.Anything, mock.Anything)
+	})
+
+	t.Run("Subscribe times out waiting for a slot", func(t *testing.T) {
+		controller, client := newBusyController(t)
+
+		res, err := controller.Subscribe(context.Background(), "42", &common.SessionEnv{}, "ids", "test_channel")
+
+		assert.Nil(t, res)
+		assert.ErrorIs(t, err, ErrWaitTimeout)
+		client.AssertNotCalled(t, "Command", mock.Anything, mock.Anything)
+		assert.Equal(t, uint64(1), counter(controller, metricsRPCWaitTimeouts))
+		assert.Equal(t, uint64(0), counter(controller, metricsRPCCanceled))
+		assert.Equal(t, uint64(0), controller.metrics.(*metrics.Metrics).Gauge(metricsRPCPending).Value())
+	})
+
+	t.Run("Authenticate times out waiting for a slot", func(t *testing.T) {
+		controller, client := newBusyController(t)
+
+		res, err := controller.Authenticate(context.Background(), "42", &common.SessionEnv{})
+
+		assert.Nil(t, res)
+		assert.ErrorIs(t, err, ErrWaitTimeout)
+		client.AssertNotCalled(t, "Connect", mock.Anything, mock.Anything)
+	})
+
+	t.Run("Session closes while waiting for a slot", func(t *testing.T) {
+		controller, client := newBusyController(t)
+		controller.waitTimeout = 0
+
+		ctx, cancel := context.WithCancel(context.Background())
+		time.AfterFunc(10*time.Millisecond, cancel)
+
+		res, err := controller.Perform(ctx, "42", &common.SessionEnv{}, "ids", "test_channel", "data")
+
+		assert.Nil(t, res)
+		assert.Nil(t, err)
+		client.AssertNotCalled(t, "Command", mock.Anything, mock.Anything)
+		assert.Equal(t, uint64(1), counter(controller, metricsRPCCanceled))
+		assert.Equal(t, uint64(0), counter(controller, metricsRPCWaitTimeouts))
+	})
+
+	t.Run("Disconnect waits longer than the wait timeout", func(t *testing.T) {
+		controller, client := newBusyController(t)
+
+		client.On("Disconnect", mock.Anything, mock.Anything).Return(
+			&pb.DisconnectResponse{Status: pb.Status_SUCCESS}, nil)
+
+		time.AfterFunc(2*controller.waitTimeout, controller.barrier.Release)
+
+		headers := map[string]string{}
+		err := controller.Disconnect(context.Background(), "42", &common.SessionEnv{Headers: &headers}, "ids", []string{})
+
+		assert.Nil(t, err)
+		client.AssertCalled(t, "Disconnect", mock.Anything, mock.Anything)
+		assert.Equal(t, uint64(0), counter(controller, metricsRPCWaitTimeouts))
 	})
 }

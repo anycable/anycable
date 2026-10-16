@@ -2,6 +2,10 @@
 
 ## master
 
+- Add `--rpc_wait_timeout` to limit the time a command waits in an RPC queue. ([@palkan][])
+
+  It defaults to the RPC command timeout (3s). Calls that wait longer fail without reaching the RPC server, and calls for closed sessions leave the queue at once. Disconnect calls are not affected. The new `rpc_wait_timeout_total` metric counts the timed out calls.
+
 ## 1.6.19 (2026-10-15)
 
 - Upgrade to Go 1.27.

@@ -55,11 +55,24 @@ func TestConfig__ToToml(t *testing.T) {
 	assert.Contains(t, tomlStr, "proxy_headers = [\"Cookie\", \"X-Api-Key\"]")
 	assert.Contains(t, tomlStr, "proxy_cookies = [\"_session_id\", \"_csrf_token\"]")
 
-	// Round-trip test
-	conf2 := Config{}
+	// Round-trip test (config files are decoded on top of the defaults)
+	conf2 := NewConfig()
 
 	_, err := toml.Decode(tomlStr, &conf2)
 	require.NoError(t, err)
 
 	assert.Equal(t, conf, conf2)
+
+	t.Run("wait_timeout", func(t *testing.T) {
+		for _, val := range []int{-1, 0, 500} {
+			conf := NewConfig()
+			conf.WaitTimeout = val
+
+			decoded := NewConfig()
+			_, err := toml.Decode(conf.ToToml(), &decoded)
+			require.NoError(t, err)
+
+			assert.Equal(t, val, decoded.WaitTimeout)
+		}
+	})
 }
