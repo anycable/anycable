@@ -10,6 +10,9 @@ import (
 	"sync"
 
 	"github.com/anycable/anycable-go/cli"
+	"github.com/anycable/anycable-go/config"
+	"github.com/anycable/anycable-go/metrics"
+	"github.com/anycable/anycable-go/node"
 )
 
 // ServerConfig configures the embedded AnyCable server built by BuildServer.
@@ -32,12 +35,24 @@ type ServerConfig struct {
 	// after the v1 defaults. Use to attach broadcasters or swap the
 	// subscriber when adding a new scenario.
 	ExtraOptions []cli.Option
+
+	// RPCHost, when non-empty, switches the server from the v1 public-streams
+	// + skip-auth mode to HTTP RPC mode: Connect, Command and Disconnect calls
+	// go to RPCHost (see RPCServer for an in-process fake).
+	RPCHost string
+
+	// Configure, when non-nil, runs after all defaults are applied and
+	// before the runner is built. Use it to tune node settings (ping
+	// interval, disconnect queue, RPC concurrency) for a scenario.
+	Configure func(*config.Config)
 }
 
 // Server wraps cli.Embedded plus a loopback httptest.Server that exposes the
 // WebSocket and HTTP broadcast handlers at known URLs.
 type Server struct {
 	embedded   *cli.Embedded
+	runner     *cli.Runner
+	disconnQ   *node.DisconnectQueue
 	testServer *httptest.Server
 	once       sync.Once
 }
@@ -67,12 +82,33 @@ func BuildServer(cfg ServerConfig) (*Server, error) {
 	c.BroadcastAdapters = []string{"http"}
 	c.PubSubAdapter = "none"
 
+	if cfg.RPCHost != "" {
+		c.SkipAuth = false
+		c.RPC.Implementation = "http"
+		c.RPC.Host = cfg.RPCHost
+		c.Streams.Public = false
+	}
+
+	if cfg.Configure != nil {
+		cfg.Configure(c)
+	}
+
 	logger := cfg.Logger
 	if logger == nil {
 		logger = slog.New(slog.NewTextHandler(io.Discard, nil))
 	}
 
+	// Build the default disconnect queue here to keep a handle on it:
+	// the disconnect_queue_size gauge refreshes only with the node stats.
+	var disconnQ *node.DisconnectQueue
 	opts := []cli.Option{
+		cli.WithDisconnector(func(n *node.Node, c *config.Config, l *slog.Logger) (node.Disconnector, error) {
+			if c.DisconnectorDisabled {
+				return node.NewNoopDisconnector(), nil
+			}
+			disconnQ = node.NewDisconnectQueue(n, &c.DisconnectQueue, l)
+			return disconnQ, nil
+		}),
 		cli.WithName("benchi"),
 		cli.WithDefaultRPCController(),
 		cli.WithDefaultBroker(),
@@ -110,7 +146,17 @@ func BuildServer(cfg ServerConfig) (*Server, error) {
 	ts := httptest.NewUnstartedServer(mux)
 	ts.Start()
 
-	return &Server{embedded: embedded, testServer: ts}, nil
+	return &Server{embedded: embedded, runner: runner, disconnQ: disconnQ, testServer: ts}, nil
+}
+
+// DisconnectQueueSize returns the current number of sessions waiting in the
+// disconnect queue. Unlike the disconnect_queue_size gauge, it is never stale.
+// Returns 0 when the disconnector is disabled or replaced via ExtraOptions.
+func (s *Server) DisconnectQueueSize() int {
+	if s.disconnQ == nil {
+		return 0
+	}
+	return s.disconnQ.Size()
 }
 
 // Run is a no-op kept for symmetry with the brainstorm signature. The
@@ -129,6 +175,37 @@ func (s *Server) Shutdown(ctx context.Context) error {
 		s.testServer.Close()
 	})
 	return err
+}
+
+// Gauge returns the current value of the server metrics gauge with the given
+// name (e.g. "disconnect_queue_size", "clients_num", "rpc_pending_num").
+// Returns 0 for unknown gauges. Gauges refreshed by the node stats collector
+// lag by up to App.StatsRefreshInterval seconds.
+func (s *Server) Gauge(name string) uint64 {
+	m, ok := s.runner.Instrumenter().(*metrics.Metrics)
+	if !ok || m == nil {
+		return 0
+	}
+	g := m.Gauge(name)
+	if g == nil {
+		return 0
+	}
+	return g.Value()
+}
+
+// Counter returns the current total of the server metrics counter with the
+// given name (e.g. "rpc_canceled_total", "rpc_call_total"). Returns 0 for
+// unknown counters.
+func (s *Server) Counter(name string) uint64 {
+	m, ok := s.runner.Instrumenter().(*metrics.Metrics)
+	if !ok || m == nil {
+		return 0
+	}
+	c := m.Counter(name)
+	if c == nil {
+		return 0
+	}
+	return c.Value()
 }
 
 // BroadcastURL returns the URL the publisher should POST broadcasts to.

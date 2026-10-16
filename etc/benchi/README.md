@@ -105,6 +105,219 @@ can consume them without a parser.
 
 ---
 
+## Running `reconnect_floods`
+
+`reconnect_floods` reproduces reconnect storms against an RPC-backed
+server. It is the only scenario that uses RPC: the embedded server calls a
+fake HTTP RPC application (`lib.RPCServer`) with configurable latency.
+
+The run has three steps:
+
+1. **Setup.** `-c` clients connect at `--ramp-rate` per second. Each client
+   subscribes to `-s` RPC-backed channels. Setup ends when all clients are
+   healthy (all subscriptions confirmed).
+2. **Waves.** After `--settle`, each wave drops N random open connections
+   at once, without a close frame (like an LB restart). Waves fire every
+   `--wave-interval`.
+3. **Recovery.** After the last wave, the run waits up to
+   `--recovery-timeout` for all clients to become healthy again.
+4. **Drain.** If the clients recover, the run then waits for the server
+   disconnect queue to become empty. There is no timeout for this step:
+   press Ctrl-C to stop.
+
+Clients behave like browser clients:
+
+- No ping for `--ping-timeout` (default 6s) → reconnect. The watch starts
+  when the socket opens, not after the welcome message.
+- A subscribe command not confirmed in `--sub-retry-interval` (default 5s)
+  → send it again, up to `--sub-retries-max` times (default 2). When the
+  last one is not confirmed in time → reconnect. With the defaults, a
+  client reconnects 15s after the first subscribe command.
+  `--sub-retries-max 0` reconnects after the first interval.
+- Subscribe commands go out all at once after the welcome message. With
+  `--sequential-subscribe`, the client sends the next command only after
+  the previous one is confirmed. Each retry interval then starts at its own
+  command.
+- Reconnects use exponential backoff: `--backoff-min` doubles per failed
+  attempt up to `--backoff-max`, with ±50% jitter.
+
+Example of a scaled-down storm (see "Scaling" below):
+
+```
+cd etc/benchi
+go run ./scenarios/reconnect_floods -c 3000 --waves 1000,1000,3000 \
+  --wave-interval 40s --rpc-latency 100ms \
+  --disconnect-rate 10 --disconnect-backlog 256
+```
+
+In a terminal, the scenario shows a live dashboard on stderr: client
+states, RPC calls per second by method, the disconnect queue, goroutines
+and heap, handshake and confirmation timings, close reasons, and the
+current command stall. Pass `--non-interactive` to get only the summary.
+
+To stop a run early, press Ctrl-C (or send SIGTERM). The run stops
+waiting, prints the summary with `interrupted=true` and writes the
+timeline. A second Ctrl-C kills the process at once. This is useful when
+the disconnect queue drains slowly: the disconnector makes one call at a
+time.
+
+| Exit code | Meaning |
+|---|---|
+| `0` | All clients healthy after the last wave. |
+| `1` | Setup or recovery failed. |
+| `2` | Flag error. |
+| `130` | Interrupted. |
+
+### Scaling
+
+The production incident had tens of thousands of reconnects per wave.
+Thousands of clients show the same dynamics when the ratios stay the
+same. Experiments with `-c 3000`, `-s 3`, 100ms RPC latency show one ratio
+that decides the outcome:
+
+- **Reconnect demand vs. RPC capacity.** Each reconnect costs
+  1 + `-s` RPC calls. Capacity is `--rpc-concurrency` ÷ RPC latency
+  (28 ÷ 100ms ≈ 280 calls/s), shared by Connect, Command and Disconnect.
+  When reconnecting clients × (1 + `-s`) ÷ backoff exceeds capacity,
+  the slot wait grows past the subscribe retries. Clients then time out,
+  reconnect, and keep the storm alive.
+
+Measured before subscribe retries and the disconnect queue limit existed:
+impatient clients (`--sub-retries-max 0`) and a blocking disconnect queue
+of 4096. Single wave, default disconnect settings:
+
+| Wave | Change | Outcome |
+|---|---|---|
+| 500 | — | recovers in ~13s |
+| 1000 | — | recovers in ~74s |
+| 1500 | — | stuck: 1500 clients cycle forever |
+| 1500 | `--rpc-wait-timeout 1s` | recovers in ~46–48s (same with `500ms`) |
+| 2000 | — | stuck |
+| 3000 | `--backoff-max 30s` | recovers in ~160–210s |
+| 3000 | `--rpc-concurrency 112` | recovers in ~50s |
+
+`--disconnect-rate` and `--disconnect-backlog` did not change recovery
+time in these runs. During a storm the disconnector gets almost no RPC
+slots, and the queue stays full. With the blocking queue, every closed
+session then blocked a goroutine in `DisconnectQueue.Enqueue`: this was
+the memory growth. Now the queue discards Disconnect calls over
+`--disconnect-backlog` instead.
+
+The disconnect queue drains long after the clients recover. The
+disconnector makes one call at a time, so its real rate is
+min(`--disconnect-rate`, 1 ÷ Disconnect latency). With 100ms latency that
+is 10 calls/s:
+
+| Wave | Clients healthy | Disconnect queue empty | Peak queue |
+|---|---|---|---|
+| 500 | ~13s | ~101s | 856 |
+| 1500, `--rpc-wait-timeout 1s` | ~48s | >5 min | 3407 |
+| 3000, `--backoff-max 30s` | ~158s | >5 min (still full) | 4096 |
+
+During the drain, Disconnect calls run at a flat rate and Command calls
+are 0. Use `--rpc-disconnect-latency` to change the drain rate.
+
+### Presets
+
+Use these three runs as starting points. All use `-c 3000`, `-s 3`, 100ms
+RPC latency and 28 RPC slots. `--ramp-rate 40` keeps the setup itself from
+starting a storm; setup takes about 75s. `--rpc-disconnect-latency 10ms`
+lets the disconnect queue drain at `--disconnect-rate` (100/s), like in
+production.
+
+**Healthy.** The server absorbs the wave. All clients recover in ~8s; the
+disconnect queue (peak ~480) is empty after ~13s. Some subscribe commands
+are re-sent, but the server answers them without RPC calls.
+
+```
+go run ./scenarios/reconnect_floods -c 3000 --waves 500 \
+  --rpc-latency 100ms --rpc-disconnect-latency 10ms \
+  --ramp-rate 40 --setup-timeout 3m
+```
+
+**Slow recovery.** All clients reconnect at once. The server stays
+saturated and recovers in ~95s (~60s with `--sequential-subscribe`). Most
+failed attempts are Connect calls that wait longer than
+`--rpc-wait-timeout`: the server closes these connections
+(`close_server_closed`).
+
+```
+go run ./scenarios/reconnect_floods -c 3000 --waves 3000 --backoff-max 30s \
+  --rpc-latency 100ms --rpc-disconnect-latency 10ms \
+  --ramp-rate 40 --setup-timeout 3m --recovery-timeout 5m
+```
+
+**Never recovers (impatient clients).** Clients reconnect when a
+subscription is not confirmed in 5s, with no retries. About 1500 clients
+cycle through welcome, subscribe timeout and reconnect. The RPC queue
+stays at ~780 calls, so each call waits ~2.7s. A client needs four calls
+one after another (Connect and three subscribes), so no client becomes
+healthy. The disconnect queue stays at its limit. The run ends with
+`recovered=false` and exit code `1`. With the default retries, the same
+wave recovers in ~23s.
+
+```
+go run ./scenarios/reconnect_floods -c 3000 --waves 1500 \
+  --rpc-latency 100ms --rpc-disconnect-latency 10ms --sub-retries-max 0 \
+  --ramp-rate 40 --setup-timeout 3m --recovery-timeout 5m
+```
+
+To move the threshold, change `--backoff-max`, `--rpc-concurrency` or
+`--rpc-latency`. Add `--timeline run.csv` for a per-second CSV.
+
+### `reconnect_floods` flags
+
+| Flag | Default | Effect |
+|---|---|---|
+| `-c` | — (required) | Number of clients. |
+| `--waves` | — (required) | Comma-separated wave sizes, e.g. `1000,1000,3000`. Each size must be ≤ `-c`. |
+| `-s` | `3` | RPC-backed subscriptions per client. |
+| `--wave-interval` | `60s` | Time between waves. |
+| `--ramp-rate` | `200` | Initial connects per second during setup. |
+| `--setup-timeout` | `2m` | Max time for all clients to become healthy before the first wave. |
+| `--settle` | `5s` | Steady-state time between setup and the first wave. |
+| `--recovery-timeout` | `5m` | Max time after the last wave for all clients to become healthy. The drain step after it has no timeout. |
+| `--rpc-latency` | `100ms` | Default latency of every fake RPC call. |
+| `--rpc-jitter` | `0.3` | Each call takes latency × (1 ± jitter), uniform. |
+| `--rpc-connect-latency`, `--rpc-command-latency`, `--rpc-disconnect-latency` | `0` | Per-method latency; `0` uses `--rpc-latency`. |
+| `--rpc-concurrency` | `28` | Server `rpc_concurrency`. |
+| `--rpc-wait-timeout` | command timeout | Server `rpc_wait_timeout`: max wait for a free RPC slot. A negative value (the default) means the command timeout (3s); `0` means no limit. |
+| `--disconnect-rate` | `100` | Server `disconnect_rate` (calls per second). |
+| `--disconnect-backlog` | `8192` | Server `max_disconnect_backlog_size`: Disconnect calls over the limit are discarded. |
+| `--ping-interval` | `3` | Server `ping_interval`, in seconds. |
+| `--ping-timeout` | `6s` | Client ping watchdog. |
+| `--sub-retry-interval` | `5s` | Wait for a confirmation before the client sends the subscribe command again. |
+| `--sub-retries-max` | `2` | Re-sends per channel. The client reconnects when the last one is not confirmed in `--sub-retry-interval`. |
+| `--sequential-subscribe` | `false` | Send the next subscribe command only after the previous one is confirmed. |
+| `--backoff-min` / `--backoff-max` | `500ms` / `10s` | Client reconnect backoff. |
+| `--seed` | `1` | Seed for wave selection and backoff jitter. |
+| `--timeline` | — | Write a per-second CSV (client states, RPC calls/s by method, server gauges, close reasons, timings) to this path. Use it to see *when* commands stall, not only *how long*. |
+
+### `reconnect_floods` summary keys
+
+| Key | Definition |
+|---|---|
+| `interrupted` | `true` when the run was stopped with Ctrl-C or SIGTERM. Waves after the interrupt do not fire. |
+| `setup_ok`, `recovered` | `setup_ok`: all clients were healthy before the first wave. `recovered`: all clients were healthy after the last wave. |
+| `wave_N_dropped` | Connections the wave closed. Can be lower than `wave_N_size` during a storm: clients in backoff have no connection to drop. |
+| `wave_N_recovery_seconds` | Time from the wave to all clients healthy. `-1` = not recovered before the next wave (or the recovery timeout). |
+| `wave_N_drained_seconds` | Time from the wave to an empty disconnect queue, after recovery. `-1` = not drained before the next wave (or the interrupt). |
+| `connection_attempts` | All connection attempts, setup included. |
+| `reconnects` | Connection attempts after each client's first one: `connection_attempts` minus the first connects. |
+| `subscribe_retries` | Subscribe commands sent again because no confirmation arrived in `--sub-retry-interval`. |
+| `close_<reason>` | Attempts that ended with this reason: `ping_timeout`, `subscribe_timeout`, `dropped` (by a wave), `server_closed`, `server_disconnect`, `rejected`, `dial_error`. |
+| `rpc_<method>_calls` | Calls the fake RPC completed, by method. Disconnects at shutdown are included. |
+| `rpc_canceled_calls` | Server counter `rpc_canceled_total`: calls that waited for an RPC slot and were dropped because the session had closed meanwhile. They never reach the RPC server. |
+| `rpc_wait_timeout_calls` | Server counter `rpc_wait_timeout_total`: calls that waited for an RPC slot longer than `--rpc-wait-timeout`. They never reach the RPC server. |
+| `max_command_stall_seconds` | Longest run of seconds in which clients waited for confirmations but no Command call completed. |
+| `welcome_*_ms` | Dial start → welcome message. |
+| `confirm_*_ms` | First subscribe command for a channel → its confirmation (retries included). |
+| `healthy_*_ms` | Dial start → last confirmation. |
+| `peak_disconnect_queue`, `peak_rpc_pending`, `peak_server_sessions` | Peaks of the server gauges `disconnect_queue_size`, `rpc_pending_num`, `clients_num`. |
+| `peak_goroutines`, `peak_heap_mb` | Process-wide peaks. Clients run in the same process, so these include client memory. |
+
+---
+
 ## How to add a new scenario
 
 Each scenario is its own `main` package under `scenarios/<name>/`. Copy
@@ -115,7 +328,9 @@ The library contract is the public surface of `etc/benchi/lib/`:
 
 - `lib.BuildServer(lib.ServerConfig{...})` — embedded server. The
   `ServerConfig` struct is the **scenario-config contract**: today it
-  exposes `Logger`, `BrokerAdapter`, and `ExtraOptions`. Future scenarios
+  exposes `Logger`, `BrokerAdapter`, `ExtraOptions`, `RPCHost` (switch to
+  HTTP RPC mode) and `Configure` (tune `config.Config` before the runner
+  starts). Future scenarios
   flip those fields rather than reaching into `cli.NewConfig` directly.
 - `lib.BuildPool(lib.PoolConfig{...})` — N connected clients with bounded
   parallelism and per-client stream subsets.
