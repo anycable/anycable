@@ -15,6 +15,8 @@ import (
 type DisconnectQueueConfig struct {
 	// Limit the number of Disconnect RPC calls per second
 	Rate int
+	// The number of concurrent Disconnect RPC calls
+	WorkersNum int `toml:"workers_num"`
 	// The size of the channel's buffer for disconnect requests [DEPREACTED]
 	Backlog int
 	// The max number of waiting Disconnect calls in the queue; when it's hit, new items are discarded with warning
@@ -25,7 +27,7 @@ type DisconnectQueueConfig struct {
 
 // NewDisconnectQueueConfig builds a new config
 func NewDisconnectQueueConfig() DisconnectQueueConfig {
-	return DisconnectQueueConfig{Rate: 100, MaxBacklog: 8192}
+	return DisconnectQueueConfig{Rate: 100, WorkersNum: 4, MaxBacklog: 8192}
 }
 
 func (c DisconnectQueueConfig) ToToml() string {
@@ -33,6 +35,9 @@ func (c DisconnectQueueConfig) ToToml() string {
 
 	result.WriteString("# Limit the number of Disconnect RPC calls per second\n")
 	result.WriteString(fmt.Sprintf("rate = %d\n", c.Rate))
+
+	result.WriteString("# The number of concurrent Disconnect RPC calls\n")
+	result.WriteString(fmt.Sprintf("workers_num = %d\n", c.WorkersNum))
 
 	result.WriteString("# Max queue size for disconnect requests (new items are discarded when the limit is reached)\n")
 	result.WriteString(fmt.Sprintf("max_backlog = %d\n", c.MaxBacklog))
@@ -47,6 +52,8 @@ type DisconnectQueue struct {
 	node *Node
 	// Throttling rate
 	rate time.Duration
+	// The number of concurrent Disconnect calls
+	workers int
 	// Call RPC Disconnect for connections
 	disconnect *utils.Queue[*Session]
 	limit      int
@@ -64,7 +71,13 @@ func NewDisconnectQueue(node *Node, config *DisconnectQueueConfig, l *slog.Logge
 
 	ctx := l.With("context", "disconnector")
 
-	ctx.Debug("calls rate", "rate", rateDuration)
+	workers := config.WorkersNum
+
+	if workers < 1 {
+		workers = 1
+	}
+
+	ctx.Debug("calls rate", "rate", rateDuration, "workers", workers)
 
 	capacity := config.MaxBacklog / 8
 
@@ -77,30 +90,45 @@ func NewDisconnectQueue(node *Node, config *DisconnectQueueConfig, l *slog.Logge
 		disconnect: utils.NewQueue[*Session](capacity),
 		limit:      config.MaxBacklog,
 		rate:       rateDuration,
+		workers:    workers,
 		log:        ctx,
 	}
 }
 
-// Run starts queue
+// Run starts workers to process the queue.
+// Workers share the throttle ticker, so the total rate of calls stays within the limit.
 func (d *DisconnectQueue) Run() error {
 	throttle := time.NewTicker(d.rate)
 	defer throttle.Stop()
 
-	for {
-		if !d.disconnect.Wait() {
-			return nil
-		}
+	var wg sync.WaitGroup
 
-		item, ok := d.disconnect.Remove()
-		if !ok {
-			return nil
-		}
+	for range d.workers {
+		wg.Add(1)
 
-		session := item.Data
+		go func() {
+			defer wg.Done()
 
-		d.node.DisconnectNow(session) //nolint:errcheck
-		<-throttle.C
+			for {
+				if !d.disconnect.Wait() {
+					return
+				}
+
+				item, ok := d.disconnect.Remove()
+				// Another worker took the item, or the queue is closed (Wait reports it next)
+				if !ok {
+					continue
+				}
+
+				<-throttle.C
+				d.node.DisconnectNow(item.Data) //nolint:errcheck
+			}
+		}()
 	}
+
+	wg.Wait()
+
+	return nil
 }
 
 // Shutdown stops throttling and makes requests one by one
