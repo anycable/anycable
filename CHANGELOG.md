@@ -2,6 +2,10 @@
 
 ## master
 
+- Add `--disconnect_workers_num` to make concurrent Disconnect calls (default: 4). ([@palkan][])
+
+  Previously, the disconnect queue made one call at a time, so the call latency limited the rate (e.g., 10 calls per second with a 100ms latency). The total rate still stays within `--disconnect_rate`.
+
 - Make scheduling Disconnect requests non-blocking and add `--max_disconnect_backlog_size` to control the max queue size. ([@palkan][])
 
   Requests above the limit are discarded. You can track them using the new `disconnect_queue_discarded_total` metrics.

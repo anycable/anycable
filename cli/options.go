@@ -1093,6 +1093,13 @@ func disconnectorCLIFlags(c *config.Config) []cli.Flag {
 		},
 
 		&cli.IntFlag{
+			Name:        "disconnect_workers_num",
+			Usage:       "The number of concurrent Disconnect calls",
+			Value:       c.DisconnectQueue.WorkersNum,
+			Destination: &c.DisconnectQueue.WorkersNum,
+		},
+
+		&cli.IntFlag{
 			Name:        "max_disconnect_backlog_size",
 			Usage:       "The max size of the disconnect requests queue; over limit discards new items",
 			Value:       c.DisconnectQueue.MaxBacklog,

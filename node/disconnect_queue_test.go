@@ -7,12 +7,15 @@ import (
 	"runtime"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/BurntSushi/toml"
 	"github.com/anycable/anycable-go/metrics"
+	"github.com/anycable/anycable-go/mocks"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -35,6 +38,82 @@ func TestDisconnectQueue_Run(t *testing.T) {
 		for q.Size() > 0 {
 			runtime.Gosched()
 		}
+	})
+
+	t.Run("Runs calls concurrently up to the number of workers", func(t *testing.T) {
+		controller := &mocks.Controller{}
+		config := NewConfig()
+		node := NewNode(&config, WithInstrumenter(metrics.NewMetrics(nil, 10, slog.Default())), WithController(controller))
+
+		release := make(chan struct{})
+		var inflight, peak atomic.Int32
+		var calls atomic.Int32
+
+		controller.On("Disconnect", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Run(func(mock.Arguments) {
+				n := inflight.Add(1)
+				if n > peak.Load() {
+					peak.Store(n)
+				}
+				<-release
+				inflight.Add(-1)
+				calls.Add(1)
+			}).
+			Return(nil)
+
+		dconfig := NewDisconnectQueueConfig()
+		dconfig.Rate = 1000
+		dconfig.WorkersNum = 2
+		q := NewDisconnectQueue(node, &dconfig, slog.Default())
+
+		for i := range 3 {
+			require.NoError(t, q.Enqueue(NewMockSession(strconv.Itoa(i), node)))
+		}
+
+		go q.Run() //nolint:errcheck
+
+		require.Eventually(t, func() bool { return inflight.Load() == 2 }, time.Second, time.Millisecond)
+		// The third call waits for a free worker
+		time.Sleep(50 * time.Millisecond)
+		assert.EqualValues(t, 2, inflight.Load())
+
+		close(release)
+
+		require.Eventually(t, func() bool { return calls.Load() == 3 }, time.Second, time.Millisecond)
+		assert.EqualValues(t, 2, peak.Load())
+
+		require.NoError(t, q.Shutdown(context.Background()))
+	})
+
+	t.Run("Respects the rate with multiple workers", func(t *testing.T) {
+		controller := &mocks.Controller{}
+		config := NewConfig()
+		node := NewNode(&config, WithInstrumenter(metrics.NewMetrics(nil, 10, slog.Default())), WithController(controller))
+
+		var calls atomic.Int32
+
+		controller.On("Disconnect", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Run(func(mock.Arguments) { calls.Add(1) }).
+			Return(nil)
+
+		dconfig := NewDisconnectQueueConfig()
+		dconfig.Rate = 20
+		dconfig.WorkersNum = 4
+		q := NewDisconnectQueue(node, &dconfig, slog.Default())
+
+		for i := range 5 {
+			require.NoError(t, q.Enqueue(NewMockSession(strconv.Itoa(i), node)))
+		}
+
+		start := time.Now()
+		go q.Run() //nolint:errcheck
+
+		require.Eventually(t, func() bool { return calls.Load() == 5 }, 2*time.Second, time.Millisecond)
+
+		// 5 calls at 20 calls/s take at least 5 ticks of 50ms
+		assert.GreaterOrEqual(t, time.Since(start), 240*time.Millisecond)
+
+		require.NoError(t, q.Shutdown(context.Background()))
 	})
 }
 
@@ -181,11 +260,13 @@ func newQueue() *DisconnectQueue {
 func TestDisconnectQueueConfig_ToToml(t *testing.T) {
 	conf := NewDisconnectQueueConfig()
 	conf.Rate = 50
+	conf.WorkersNum = 8
 	conf.MaxBacklog = 2048
 
 	tomlStr := conf.ToToml()
 
 	assert.Contains(t, tomlStr, "rate = 50")
+	assert.Contains(t, tomlStr, "workers_num = 8")
 	assert.Contains(t, tomlStr, "max_backlog = 2048")
 
 	// Round-trip test
