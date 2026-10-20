@@ -6,6 +6,8 @@ import (
 	"errors"
 	"math/rand/v2"
 	"net"
+	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -93,6 +95,10 @@ type ClientStats struct {
 	attempts atomic.Int64
 	started  atomic.Int64
 	retries  atomic.Int64
+	sids     atomic.Int64
+	// closed holds the session IDs of the connections the clients closed
+	// (or lost).
+	closed sync.Map
 
 	// Welcome is the time from dial start to the welcome message.
 	Welcome Histogram
@@ -101,6 +107,9 @@ type ClientStats struct {
 	Confirm Histogram
 	// Healthy is the time from dial start to the last confirmation.
 	Healthy Histogram
+	// Probe is the time from a ping command to the server's pong. Only
+	// clients with a positive ProbeInterval record it.
+	Probe Histogram
 }
 
 // State returns the number of clients currently in state s.
@@ -119,6 +128,14 @@ func (cs *ClientStats) Reconnects() int64 { return cs.attempts.Load() - cs.start
 
 // SubscribeRetries returns the number of re-sent subscribe commands.
 func (cs *ClientStats) SubscribeRetries() int64 { return cs.retries.Load() }
+
+// SessionClosed reports whether the client has already closed the
+// connection with the given session ID. Each connection attempt passes its
+// session ID in the bench_sid query parameter of the WebSocket URL.
+func (cs *ClientStats) SessionClosed(sid string) bool {
+	_, ok := cs.closed.Load(sid)
+	return ok
+}
 
 // Backoff is a capped exponential backoff with ±50% jitter:
 // delay(n) = min(Max, Min × 2^n) × U(0.5, 1.5), where n is the number of
@@ -163,6 +180,12 @@ type ReconnectingClientConfig struct {
 	// PingTimeout closes the connection when no ping arrives for this long.
 	// The watchdog starts when the socket opens.
 	PingTimeout time.Duration
+	// ProbeInterval, when positive, makes the client send a ping command at
+	// this interval while healthy and record the time to the server's pong
+	// in Stats.Probe. Only one ping is in flight at a time. The server
+	// answers pings without RPC calls, so the probe measures how fast the
+	// server reads and handles client messages.
+	ProbeInterval time.Duration
 	// Backoff controls the delay between attempts.
 	Backoff Backoff
 	// Stats receives state transitions, close reasons, and timings.
@@ -182,6 +205,7 @@ type ReconnectingClient struct {
 
 	mu   sync.Mutex
 	conn *websocket.Conn
+	sid  string
 	drop bool
 }
 
@@ -217,6 +241,7 @@ func (c *ReconnectingClient) Drop() bool {
 		return false
 	}
 	c.drop = true
+	c.cfg.Stats.closed.Store(c.sid, struct{}{})
 	_ = c.conn.UnderlyingConn().Close()
 	return true
 }
@@ -265,14 +290,24 @@ func (c *ReconnectingClient) attempt(ctx context.Context) (healthy bool, reason 
 	c.setState(StateConnecting)
 	start := time.Now()
 
+	sid := strconv.FormatInt(stats.sids.Add(1), 10)
+	url := c.cfg.URL + "?bench_sid=" + sid
+	if strings.Contains(c.cfg.URL, "?") {
+		url = c.cfg.URL + "&bench_sid=" + sid
+	}
+
 	dialer := websocket.Dialer{HandshakeTimeout: c.cfg.PingTimeout}
-	conn, _, err := dialer.DialContext(ctx, c.cfg.URL, nil)
+	conn, _, err := dialer.DialContext(ctx, url, nil)
 	if err != nil {
+		// The handshake can time out while the server still runs the
+		// Connect call.
+		stats.closed.Store(sid, struct{}{})
 		return false, ReasonDialError
 	}
 
 	c.mu.Lock()
 	c.conn = conn
+	c.sid = sid
 	c.drop = false
 	c.mu.Unlock()
 
@@ -284,6 +319,7 @@ func (c *ReconnectingClient) attempt(ctx context.Context) (healthy bool, reason 
 		if dropped {
 			reason = ReasonDropped
 		}
+		stats.closed.Store(sid, struct{}{})
 		_ = conn.Close()
 	}()
 
@@ -310,6 +346,14 @@ func (c *ReconnectingClient) attempt(ctx context.Context) (healthy bool, reason 
 		sentAt  time.Time // the first send; confirmation latency counts from it
 		retryAt time.Time // when to re-send (or give up)
 		retries int
+	}
+
+	var probeC <-chan time.Time
+	var pingSentAt time.Time
+	if c.cfg.ProbeInterval > 0 {
+		probeTicker := time.NewTicker(c.cfg.ProbeInterval)
+		defer probeTicker.Stop()
+		probeC = probeTicker.C
 	}
 
 	var (
@@ -356,6 +400,14 @@ func (c *ReconnectingClient) attempt(ctx context.Context) (healthy bool, reason 
 		select {
 		case <-ctxDone:
 			return false, ReasonDropped
+		case <-probeC:
+			if !healthy || !pingSentAt.IsZero() {
+				continue
+			}
+			pingSentAt = time.Now()
+			if err := c.send(conn, "ping", ""); err != nil {
+				return healthy, ReasonServerClosed
+			}
 		case <-retryC:
 			now := time.Now()
 			for id, sub := range pending {
@@ -423,6 +475,12 @@ func (c *ReconnectingClient) attempt(ctx context.Context) (healthy bool, reason 
 					healthy = true
 				}
 				armRetry()
+			case "pong":
+				if pingSentAt.IsZero() {
+					continue
+				}
+				stats.Probe.Record(time.Since(pingSentAt))
+				pingSentAt = time.Time{}
 			case "reject":
 				c.closeGracefully(conn)
 				return healthy, ReasonRejected
@@ -464,6 +522,10 @@ func (c *ReconnectingClient) readLoop(conn *websocket.Conn, events chan<- client
 		switch msg.Type {
 		case "ping":
 			_ = conn.SetReadDeadline(time.Now().Add(c.cfg.PingTimeout))
+		case "pong":
+			if !emit(clientEvent{kind: "pong"}) {
+				return
+			}
 		case "welcome":
 			if !emit(clientEvent{kind: "welcome"}) {
 				return

@@ -138,6 +138,13 @@ Clients behave like browser clients:
   `--sequential-subscribe`, the client sends the next command only after
   the previous one is confirmed. Each retry interval then starts at its own
   command.
+
+`--probes` extra clients (default 10) measure how fast the server handles
+client messages. A probe has no subscriptions, and waves do not drop it.
+Every `--probe-interval` (default 1s), it sends a `ping` command and
+measures the time to the `pong` reply. The server answers pings without
+RPC calls. A slow pong therefore means that the server reads or handles
+client messages late. A busy RPC queue alone does not slow it down.
 - Reconnects use exponential backoff: `--backoff-min` doubles per failed
   attempt up to `--backoff-max`, with ±50% jitter.
 
@@ -152,7 +159,7 @@ go run ./scenarios/reconnect_floods -c 3000 --waves 1000,1000,3000 \
 
 In a terminal, the scenario shows a live dashboard on stderr: client
 states, RPC calls per second by method, the disconnect queue, goroutines
-and heap, handshake and confirmation timings, close reasons, and the
+and heap, handshake, confirmation and probe timings, close reasons, and the
 current command stall. Pass `--non-interactive` to get only the summary.
 
 To stop a run early, press Ctrl-C (or send SIGTERM). The run stops
@@ -290,7 +297,10 @@ To move the threshold, change `--backoff-max`, `--rpc-concurrency` or
 | `--sub-retries-max` | `2` | Re-sends per channel. The client reconnects when the last one is not confirmed in `--sub-retry-interval`. |
 | `--sequential-subscribe` | `false` | Send the next subscribe command only after the previous one is confirmed. |
 | `--backoff-min` / `--backoff-max` | `500ms` / `10s` | Client reconnect backoff. |
+| `--probes` | `10` | Probe clients that measure the ping → pong time. `0` turns probes off. |
+| `--probe-interval` | `1s` | Time between probe pings. A probe sends the next ping only after the pong. |
 | `--seed` | `1` | Seed for wave selection and backoff jitter. |
+| `--pprof` | — | Serve `net/http/pprof` on this address, e.g. `localhost:6060`. The server and the clients share the process, so profiles include both. |
 | `--timeline` | — | Write a per-second CSV (client states, RPC calls/s by method, server gauges, close reasons, timings) to this path. Use it to see *when* commands stall, not only *how long*. |
 
 ### `reconnect_floods` summary keys
@@ -309,10 +319,13 @@ To move the threshold, change `--backoff-max`, `--rpc-concurrency` or
 | `rpc_<method>_calls` | Calls the fake RPC completed, by method. Disconnects at shutdown are included. |
 | `rpc_canceled_calls` | Server counter `rpc_canceled_total`: calls that waited for an RPC slot and were dropped because the session had closed meanwhile. They never reach the RPC server. |
 | `rpc_wait_timeout_calls` | Server counter `rpc_wait_timeout_total`: calls that waited for an RPC slot longer than `--rpc-wait-timeout`. They never reach the RPC server. |
+| `rpc_connect_after_close_calls`, `rpc_command_after_close_calls` | Connect and Command calls that reached the fake RPC after the client had closed the connection. The server did this work for nothing. Each connection attempt passes its ID in the `bench_sid` URL parameter. The fake RPC uses it as the connection identifier. |
+| `disconnect_discarded` | Server counter `disconnect_queue_discarded_total`: closed sessions that the full disconnect queue dropped. These sessions get no Disconnect call. |
 | `max_command_stall_seconds` | Longest run of seconds in which clients waited for confirmations but no Command call completed. |
 | `welcome_*_ms` | Dial start → welcome message. |
 | `confirm_*_ms` | First subscribe command for a channel → its confirmation (retries included). |
 | `healthy_*_ms` | Dial start → last confirmation. |
+| `probe_*_ms` | Probe `ping` command → `pong` reply. |
 | `peak_disconnect_queue`, `peak_rpc_pending`, `peak_server_sessions` | Peaks of the server gauges `disconnect_queue_size`, `rpc_pending_num`, `clients_num`. |
 | `peak_goroutines`, `peak_heap_mb` | Process-wide peaks. Clients run in the same process, so these include client memory. |
 

@@ -48,6 +48,10 @@ func TestRun_SmallWavesRecover(t *testing.T) {
 	assert.Contains(t, out, "reconnects=30\n")
 	assert.NotContains(t, out, "wave_2_recovery_seconds=-1")
 	assert.NotContains(t, out, "wave_2_drained_seconds=-1")
+	assert.Contains(t, out, "disconnect_discarded=0\n")
+	assert.Contains(t, out, "rpc_command_after_close_calls=0\n")
+	// The default 10 probes ping once per second for several seconds.
+	assert.NotContains(t, out, "probe_count=0\n")
 }
 
 func TestRun_SetupFailsWhenSubscribeAlwaysTimesOut(t *testing.T) {

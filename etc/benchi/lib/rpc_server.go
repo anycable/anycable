@@ -5,6 +5,7 @@ import (
 	"math/rand/v2"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strconv"
 	"sync/atomic"
 	"time"
@@ -45,6 +46,11 @@ type RPCServerConfig struct {
 	CommandLatency    time.Duration
 	DisconnectLatency time.Duration
 	Jitter            float64
+	// SessionClosed, when set, reports whether the client has already
+	// closed the connection with the given session ID (see
+	// ClientStats.SessionClosed). The server then counts the Connect and
+	// Command calls that start after the close.
+	SessionClosed func(sid string) bool
 }
 
 func (c RPCServerConfig) latencyFor(m RPCMethod) time.Duration {
@@ -68,11 +74,16 @@ type RPCMethodStats struct {
 	Started   int64
 	Completed int64
 	InFlight  int64
+	// AfterClose is the number of calls that started after the client had
+	// closed the session. Only Connect and Command calls are counted, and
+	// only when RPCServerConfig.SessionClosed is set.
+	AfterClose int64
 }
 
 type rpcCounters struct {
-	started   atomic.Int64
-	completed atomic.Int64
+	started    atomic.Int64
+	completed  atomic.Int64
+	afterClose atomic.Int64
 }
 
 // RPCServer is an in-process fake of an AnyCable HTTP RPC application. It
@@ -112,7 +123,7 @@ func (s *RPCServer) Stats(m RPCMethod) RPCMethodStats {
 	c := &s.counters[m]
 	completed := c.completed.Load()
 	started := c.started.Load()
-	return RPCMethodStats{Started: started, Completed: completed, InFlight: started - completed}
+	return RPCMethodStats{Started: started, Completed: completed, InFlight: started - completed, AfterClose: c.afterClose.Load()}
 }
 
 func (s *RPCServer) handle(m RPCMethod, fn func(body []byte) (any, error)) http.HandlerFunc {
@@ -125,6 +136,12 @@ func (s *RPCServer) handle(m RPCMethod, fn func(body []byte) (any, error)) http.
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 			return
+		}
+
+		if s.cfg.SessionClosed != nil && m != RPCDisconnect {
+			if s.cfg.SessionClosed(sessionID(m, body)) {
+				c.afterClose.Add(1)
+			}
 		}
 
 		s.sleep(m, r)
@@ -155,13 +172,45 @@ func (s *RPCServer) sleep(m RPCMethod, r *http.Request) {
 	}
 }
 
-func (s *RPCServer) connect(_ []byte) (any, error) {
-	id := s.nextID.Add(1)
+// connect uses the client's session ID (the bench_sid URL parameter) as
+// the connection identifier. Without it, the server makes up an ID.
+func (s *RPCServer) connect(body []byte) (any, error) {
+	id := sessionID(RPCConnect, body)
+	if id == "" {
+		id = "rpc-" + strconv.FormatInt(s.nextID.Add(1), 10)
+	}
 	return &pb.ConnectionResponse{
 		Status:        pb.Status_SUCCESS,
-		Identifiers:   `{"id":` + jsonString(strconv.FormatInt(id, 10)) + `}`,
+		Identifiers:   `{"id":` + jsonString(id) + `}`,
 		Transmissions: []string{`{"type":"welcome"}`},
 	}, nil
+}
+
+// sessionID returns the client's session ID: the bench_sid URL parameter
+// for Connect calls, the "id" connection identifier for other calls.
+func sessionID(m RPCMethod, body []byte) string {
+	if m == RPCConnect {
+		var req pb.ConnectionRequest
+		if json.Unmarshal(body, &req) != nil || req.Env == nil {
+			return ""
+		}
+		u, err := url.Parse(req.Env.Url)
+		if err != nil {
+			return ""
+		}
+		return u.Query().Get("bench_sid")
+	}
+	var req struct {
+		Identifiers string `json:"connection_identifiers"`
+	}
+	if json.Unmarshal(body, &req) != nil {
+		return ""
+	}
+	var ids struct {
+		ID string `json:"id"`
+	}
+	_ = json.Unmarshal([]byte(req.Identifiers), &ids)
+	return ids.ID
 }
 
 func (s *RPCServer) command(body []byte) (any, error) {

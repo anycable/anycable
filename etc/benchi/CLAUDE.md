@@ -186,12 +186,15 @@ go run ./scenarios/reconnect_floods -c 3000 --waves 1000,1000,3000 \
 - The headline is `recovered`: all clients healthy. Then read
   `wave_N_recovery_seconds`, `wave_N_drained_seconds`,
   `max_command_stall_seconds`, `close_subscribe_timeout`, `subscribe_retries`,
-  `close_ping_timeout`, `peak_disconnect_queue` and `peak_goroutines`.
+  `close_ping_timeout`, `peak_disconnect_queue`, `disconnect_discarded`,
+  `rpc_command_after_close_calls`, `probe_max_ms` and `peak_goroutines`.
+- High `probe_*_ms` means the server reads or handles client messages late.
+  RPC load alone does not slow down probes.
 - `recovered=false` with exit code 1 is a *result* (the storm did not
   settle), not a harness failure. Report it; do not change flags to make
   it pass unless the user asks for a sweep.
-- `peak_goroutines` far above `-c` × 4 means closed sessions wait in a
-  full disconnect queue.
+- `disconnect_discarded > 0` means the disconnect queue was full: these
+  sessions got no Disconnect call.
 - To stop a run early, send SIGINT or SIGTERM. The run prints the summary
   with `interrupted=true` and exits with code 130.
 

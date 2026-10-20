@@ -192,6 +192,66 @@ func TestReconnectingClient_PingTimeoutBeforeWelcome(t *testing.T) {
 	assert.Equal(t, int64(0), stats.Welcome.Snapshot().Count)
 }
 
+func TestReconnectingClient_Probe(t *testing.T) {
+	srv, rpc := buildRPCServer(t, RPCServerConfig{Latency: 5 * time.Millisecond}, nil)
+
+	stats := &ClientStats{}
+	startClients(t, 1, ReconnectingClientConfig{
+		URL:                    srv.WebSocketURL(),
+		SubscribeRetryInterval: 5 * time.Second,
+		PingTimeout:            6 * time.Second,
+		ProbeInterval:          20 * time.Millisecond,
+		Backoff:                Backoff{Min: time.Hour},
+		Stats:                  stats,
+	})
+
+	require.Eventually(t, func() bool { return stats.Probe.Snapshot().Count >= 5 }, 5*time.Second, 10*time.Millisecond)
+	assert.Less(t, stats.Probe.Snapshot().Max, time.Second)
+	// The server answers pings without RPC calls.
+	assert.Equal(t, int64(0), rpc.Stats(RPCCommand).Started)
+}
+
+func TestReconnectingClient_SessionIDs(t *testing.T) {
+	stats := &ClientStats{}
+	var mu sync.Mutex
+	seen := map[string]int{}
+	srv, _ := buildRPCServer(t, RPCServerConfig{
+		Latency: 5 * time.Millisecond,
+		SessionClosed: func(sid string) bool {
+			mu.Lock()
+			seen[sid]++
+			mu.Unlock()
+			return stats.SessionClosed(sid)
+		},
+	}, nil)
+
+	clients := startClients(t, 1, ReconnectingClientConfig{
+		URL:                    srv.WebSocketURL(),
+		Channels:               benchChannels,
+		SubscribeRetryInterval: 5 * time.Second,
+		PingTimeout:            6 * time.Second,
+		Backoff:                Backoff{Min: 10 * time.Millisecond},
+		Stats:                  stats,
+	})
+	require.Eventually(t, func() bool { return stats.State(StateHealthy) == 1 }, 5*time.Second, 10*time.Millisecond)
+
+	// One Connect and two Command calls carry the first session's ID
+	mu.Lock()
+	assert.Equal(t, map[string]int{"1": 3}, seen)
+	mu.Unlock()
+	assert.False(t, stats.SessionClosed("1"))
+
+	require.True(t, clients[0].Drop())
+	assert.True(t, stats.SessionClosed("1"))
+
+	require.Eventually(t, func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+		return seen["2"] == 3
+	}, 5*time.Second, 10*time.Millisecond)
+	assert.False(t, stats.SessionClosed("2"))
+}
+
 func TestHistogramQuantile(t *testing.T) {
 	var h Histogram
 	for i := 1; i <= 100; i++ {
