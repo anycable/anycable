@@ -53,6 +53,15 @@ func (evt EpollEvent) String() (str string) {
 	return
 }
 
+// epollRegistration is a callback for a registered fd along with the registration token.
+// The token is passed to the kernel in epoll_data (next to the fd) and comes back with every event:
+// an event with a different token belongs to a previous registration of the same fd number
+// (the fd has been closed and reused after the event was received), so it's ignored.
+type epollRegistration struct {
+	token uint32
+	cb    func(EpollEvent)
+}
+
 // Epoll represents single epoll instance.
 type Epoll struct {
 	mu sync.RWMutex
@@ -62,7 +71,8 @@ type Epoll struct {
 	closed   bool
 	waitDone chan struct{}
 
-	callbacks map[int]func(EpollEvent)
+	callbacks map[int]epollRegistration
+	nextToken uint32
 }
 
 // EpollConfig contains options for Epoll instance configuration.
@@ -112,7 +122,7 @@ func EpollCreate(c *EpollConfig) (*Epoll, error) {
 	ep := &Epoll{
 		fd:        fd,
 		eventFd:   eventFd,
-		callbacks: make(map[int]func(EpollEvent)),
+		callbacks: make(map[int]epollRegistration),
 		waitDone:  make(chan struct{}),
 	}
 
@@ -158,9 +168,9 @@ func (ep *Epoll) Close() (err error) {
 	ep.callbacks = nil
 	ep.mu.Unlock()
 
-	for _, cb := range callbacks {
-		if cb != nil {
-			cb(_EPOLLCLOSED)
+	for _, reg := range callbacks {
+		if reg.cb != nil {
+			reg.cb(_EPOLLCLOSED)
 		}
 	}
 
@@ -171,11 +181,6 @@ func (ep *Epoll) Close() (err error) {
 // Callback will be called on each received event from epoll.
 // Note that _EPOLLCLOSED is triggered for every cb when epoll closed.
 func (ep *Epoll) Add(fd int, events EpollEvent, cb func(EpollEvent)) (err error) {
-	ev := &unix.EpollEvent{
-		Events: uint32(events),
-		Fd:     int32(fd),
-	}
-
 	ep.mu.Lock()
 	defer ep.mu.Unlock()
 
@@ -185,7 +190,16 @@ func (ep *Epoll) Add(fd int, events EpollEvent, cb func(EpollEvent)) (err error)
 	if _, has := ep.callbacks[fd]; has {
 		return ErrRegistered
 	}
-	ep.callbacks[fd] = cb
+
+	ep.nextToken++
+	token := ep.nextToken
+	ep.callbacks[fd] = epollRegistration{token: token, cb: cb}
+
+	ev := &unix.EpollEvent{
+		Events: uint32(events),
+		Fd:     int32(fd),
+		Pad:    int32(token),
+	}
 
 	return unix.EpollCtl(ep.fd, unix.EPOLL_CTL_ADD, fd, ev)
 }
@@ -209,19 +223,22 @@ func (ep *Epoll) Del(fd int) (err error) {
 
 // Mod sets to listen events on fd.
 func (ep *Epoll) Mod(fd int, events EpollEvent) (err error) {
-	ev := &unix.EpollEvent{
-		Events: uint32(events),
-		Fd:     int32(fd),
-	}
-
 	ep.mu.RLock()
 	defer ep.mu.RUnlock()
 
 	if ep.closed {
 		return ErrClosed
 	}
-	if _, ok := ep.callbacks[fd]; !ok {
+	reg, ok := ep.callbacks[fd]
+	if !ok {
 		return ErrNotRegistered
+	}
+
+	// EPOLL_CTL_MOD overwrites epoll_data, so we must pass the registration token again
+	ev := &unix.EpollEvent{
+		Events: uint32(events),
+		Fd:     int32(fd),
+		Pad:    int32(reg.token),
 	}
 
 	return unix.EpollCtl(ep.fd, unix.EPOLL_CTL_MOD, fd, ev)
@@ -262,7 +279,11 @@ func (ep *Epoll) wait(onError func(error)) {
 				ep.mu.RUnlock()
 				return
 			}
-			callbacks[i] = ep.callbacks[fd]
+			// The fd could have been closed and reused for a new registration
+			// after the event was received; skip events of previous registrations
+			if reg := ep.callbacks[fd]; reg.token == uint32(events[i].Pad) {
+				callbacks[i] = reg.cb
+			}
 		}
 		ep.mu.RUnlock()
 

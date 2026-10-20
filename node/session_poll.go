@@ -28,15 +28,16 @@ func (s *Session) ServeWithPoll(poller netpoll.Poller, callback func()) error {
 		return err
 	}
 
-	s.Log.Debug("adding descriptor to poller")
+	// Ensure the desc is removed from the registry (for reusability)
+	wsConn.OnClose(func() {
+		poller.Stop(desc) // nolint:errcheck
+	})
 
-	retried := false
-
-ADD:
-	err = poller.Start(desc, func(ev netpoll.Event) {
+	onEvent := func(ev netpoll.Event) {
 		if ev&(netpoll.EventReadHup|netpoll.EventHup) != 0 {
-			poller.Stop(desc) // nolint:errcheck
-			desc.Close()
+			wsConn.IfOpen(func() {
+				poller.Stop(desc) // nolint:errcheck
+			})
 
 			if ev&(netpoll.EventErr) != 0 {
 				s.Log.Debug("descriptor closed with error")
@@ -68,21 +69,27 @@ ADD:
 
 			if op == gobwas.OpClose {
 				s.Log.Debug("WebSocket closed", "error", rerr)
-				poller.Stop(desc) // nolint:errcheck
+				wsConn.IfOpen(func() {
+					poller.Stop(desc) // nolint:errcheck
+				})
 				s.disconnectNow("Read closed", ws.CloseNormalClosure)
 				return
 			}
 
 			if rerr != nil {
 				s.Log.Debug("WebSocket read failed", "error", rerr)
-				poller.Stop(desc) // nolint:errcheck
-				desc.Close()
+				wsConn.IfOpen(func() {
+					poller.Stop(desc) // nolint:errcheck
+				})
 				s.disconnectNow("Read error", ws.CloseAbnormalClosure)
 				callback()
 				return
 			}
 
-			defer poller.Resume(desc) // nolint:errcheck
+			// The connection can be closed while we handle the message
+			defer wsConn.IfOpen(func() {
+				poller.Resume(desc) // nolint:errcheck
+			})
 
 			if op == gobwas.OpPong {
 				s.HandleNativePong()
@@ -99,18 +106,29 @@ ADD:
 			// Discard frame
 			_, op, _ := ws.DiscardClientData(wsconn)
 			s.Log.Error("timed out to process WebSocket frame, discarded", "op", op)
-			poller.Resume(desc) // nolint:errcheck
+			wsConn.IfOpen(func() {
+				poller.Resume(desc) // nolint:errcheck
+			})
+		}
+	}
+
+	s.Log.Debug("adding descriptor to poller")
+
+	opened := wsConn.IfOpen(func() {
+		err = poller.Start(desc, onEvent)
+
+		// A closed connection must have been removed from the poller (see OnClose above),
+		// so this is not expected; still, we force-remove the descriptor and try again
+		if err == netpoll.ErrRegistered {
+			s.Log.Debug("fd is already registered, retrying")
+			poller.Stop(desc) // nolint:errcheck
+			err = poller.Start(desc, onEvent)
 		}
 	})
 
-	// There could be a race condition when we haven't removed the closed
-	// socket from the poller; in this case, we force-remove it and try adding
-	// the descriptor again
-	if err == netpoll.ErrRegistered && !retried {
-		retried = true
-		s.Log.Debug("retried to add fd")
-		poller.Stop(desc) // nolint:errcheck
-		goto ADD
+	if !opened {
+		s.Log.Debug("closed before polling started")
+		return nil
 	}
 
 	return err

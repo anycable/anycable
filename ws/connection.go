@@ -11,9 +11,10 @@ import (
 
 // Connection is a WebSocket implementation of Connection
 type Connection struct {
-	conn   *websocket.Conn
-	closed bool
-	mu     sync.Mutex
+	conn    *websocket.Conn
+	closed  bool
+	onClose func()
+	mu      sync.Mutex
 }
 
 func NewConnection(conn *websocket.Conn) *Connection {
@@ -70,15 +71,43 @@ func (ws *Connection) Read() ([]byte, error) {
 // Close sends close frame with a given code and a reason
 func (ws *Connection) Close(code int, reason string) {
 	ws.mu.Lock()
-	defer ws.mu.Unlock()
 
 	if ws.closed {
+		ws.mu.Unlock()
 		return
 	}
 
 	ws.closed = true
 
+	if ws.onClose != nil {
+		ws.onClose()
+	}
+
+	ws.mu.Unlock()
+
 	CloseWithReason(ws.conn, code, reason)
+}
+
+// OnClose sets a function to call on Close before the socket is closed.
+func (ws *Connection) OnClose(fn func()) {
+	ws.mu.Lock()
+	defer ws.mu.Unlock()
+
+	ws.onClose = fn
+}
+
+// IfOpen calls fn under the connection lock if the connection is not closed.
+func (ws *Connection) IfOpen(fn func()) bool {
+	ws.mu.Lock()
+	defer ws.mu.Unlock()
+
+	if ws.closed {
+		return false
+	}
+
+	fn()
+
+	return true
 }
 
 func (ws *Connection) Descriptor() net.Conn {

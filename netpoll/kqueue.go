@@ -3,6 +3,7 @@
 package netpoll
 
 import (
+	"math/bits"
 	"reflect"
 	"runtime"
 	"sync"
@@ -221,13 +222,36 @@ func (c *KqueueConfig) withDefaults() (config KqueueConfig) {
 	return config
 }
 
+// kqueueTokenBase sets the two highest bits of a registration token.
+// Tokens are stored in the pointer-typed udata field, so they must never look
+// like a Go heap address: addresses with these bits set belong to the kernel
+// (or are non-canonical) on all supported platforms.
+const kqueueTokenBase = uintptr(3) << (bits.UintSize - 2)
+
+// Tokens are written to udata via *uintptr, so the sizes must match
+// (udata is *byte on most platforms, and an integer on netbsd).
+var (
+	_ [unsafe.Sizeof(unix.Kevent_t{}.Udata) - unsafe.Sizeof(uintptr(0))]struct{}
+	_ [unsafe.Sizeof(uintptr(0)) - unsafe.Sizeof(unix.Kevent_t{}.Udata)]struct{}
+)
+
+// kqueueRegistration is a callback for a registered identifier along with the registration token.
+// The token is passed to the kernel as udata and comes back with every event:
+// an event with a different token belongs to a previous registration of the same fd number
+// (the fd has been closed and reused after the event was received), so it's ignored.
+type kqueueRegistration struct {
+	token uintptr
+	cb    KeventHandler
+}
+
 // Kqueue represents kqueue instance.
 type Kqueue struct {
-	mu     sync.RWMutex
-	fd     int
-	cb     map[int]KeventHandler
-	done   chan struct{}
-	closed bool
+	mu        sync.RWMutex
+	fd        int
+	cb        map[int]kqueueRegistration
+	nextToken uintptr
+	done      chan struct{}
+	closed    bool
 }
 
 // KqueueCreate creates new kqueue instance.
@@ -242,7 +266,7 @@ func KqueueCreate(c *KqueueConfig) (*Kqueue, error) {
 
 	kq := &Kqueue{
 		fd:   fd,
-		cb:   make(map[int]KeventHandler),
+		cb:   make(map[int]kqueueRegistration),
 		done: make(chan struct{}),
 	}
 
@@ -260,19 +284,6 @@ func (k *Kqueue) Close() error {
 
 // Add adds a event handler for identifier fd with given n events.
 func (k *Kqueue) Add(fd int, events Kevents, n int, cb KeventHandler) error {
-	var kevs [filterCount]unix.Kevent_t
-	for i := 0; i < n; i++ {
-		kevs[i] = evGet(fd, events[i].Filter, events[i].Flags)
-	}
-
-	arr := unsafe.Pointer(&kevs)
-	hdr := &reflect.SliceHeader{ // nolint
-		Data: uintptr(arr),
-		Len:  n,
-		Cap:  n,
-	}
-	changes := *(*[]unix.Kevent_t)(unsafe.Pointer(hdr))
-
 	k.mu.Lock()
 	defer k.mu.Unlock()
 
@@ -282,19 +293,14 @@ func (k *Kqueue) Add(fd int, events Kevents, n int, cb KeventHandler) error {
 	if _, has := k.cb[fd]; has {
 		return ErrRegistered
 	}
-	k.cb[fd] = cb
 
-	_, err := unix.Kevent(k.fd, changes, nil, nil)
+	k.nextToken++
+	token := kqueueTokenBase | (k.nextToken &^ kqueueTokenBase)
+	k.cb[fd] = kqueueRegistration{token: token, cb: cb}
 
-	runtime.KeepAlive(kevs)
-	return err
-}
-
-// Mod modifies events registered for fd.
-func (k *Kqueue) Mod(fd int, events Kevents, n int) error {
 	var kevs [filterCount]unix.Kevent_t
 	for i := 0; i < n; i++ {
-		kevs[i] = evGet(fd, events[i].Filter, events[i].Flags)
+		kevs[i] = evGet(fd, events[i].Filter, events[i].Flags, token)
 	}
 
 	arr := unsafe.Pointer(&kevs)
@@ -305,15 +311,38 @@ func (k *Kqueue) Mod(fd int, events Kevents, n int) error {
 	}
 	changes := *(*[]unix.Kevent_t)(unsafe.Pointer(hdr))
 
+	_, err := unix.Kevent(k.fd, changes, nil, nil)
+
+	runtime.KeepAlive(kevs)
+	return err
+}
+
+// Mod modifies events registered for fd.
+func (k *Kqueue) Mod(fd int, events Kevents, n int) error {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 
 	if k.closed {
 		return ErrClosed
 	}
-	if _, has := k.cb[fd]; !has {
+	reg, has := k.cb[fd]
+	if !has {
 		return ErrNotRegistered
 	}
+
+	// EV_ADD overwrites udata, so we must pass the registration token again
+	var kevs [filterCount]unix.Kevent_t
+	for i := 0; i < n; i++ {
+		kevs[i] = evGet(fd, events[i].Filter, events[i].Flags, reg.token)
+	}
+
+	arr := unsafe.Pointer(&kevs)
+	hdr := &reflect.SliceHeader{ // nolint
+		Data: uintptr(arr),
+		Len:  n,
+		Cap:  n,
+	}
+	changes := *(*[]unix.Kevent_t)(unsafe.Pointer(hdr))
 
 	_, err := unix.Kevent(k.fd, changes, nil, nil)
 
@@ -373,7 +402,11 @@ func (k *Kqueue) wait(onError func(error)) {
 				k.mu.RUnlock()
 				return
 			}
-			cbs[i] = k.cb[fd]
+			// The fd could have been closed and reused for a new registration
+			// after the event was received; skip events of previous registrations
+			if reg := k.cb[fd]; reg.cb != nil && reg.token == *(*uintptr)(unsafe.Pointer(&evs[i].Udata)) {
+				cbs[i] = reg.cb
+			}
 		}
 		k.mu.RUnlock()
 
@@ -397,10 +430,12 @@ func (k *Kqueue) wait(onError func(error)) {
 	}
 }
 
-func evGet(fd int, filter KeventFilter, flags KeventFlag) unix.Kevent_t {
-	return unix.Kevent_t{
+func evGet(fd int, filter KeventFilter, flags KeventFlag, token uintptr) unix.Kevent_t {
+	ev := unix.Kevent_t{
 		Ident:  uint64(fd),
 		Filter: int16(filter),
 		Flags:  uint16(flags),
 	}
+	*(*uintptr)(unsafe.Pointer(&ev.Udata)) = token
+	return ev
 }
