@@ -4,6 +4,8 @@ package netpoll
 
 import (
 	"os"
+
+	"golang.org/x/sys/unix"
 )
 
 // New creates new kqueue-based Poller instance with given config.
@@ -83,6 +85,17 @@ func (p poller) Stop(desc *Desc) error {
 func (p poller) Resume(desc *Desc) error {
 	n, events := toKevents(desc.event, true)
 	return p.Mod(desc.fd(), events, n)
+}
+
+// hangupLowat is a read low-water mark that a socket receive buffer never reaches.
+const hangupLowat = 1 << 30
+
+// WatchHangup implements Poller.WatchHangup() method.
+func (p poller) WatchHangup(desc *Desc) error {
+	// The read filter reports EOF regardless of the low-water mark,
+	// and the next Resume resets the low-water mark
+	events := Kevents{{Filter: EVFILT_READ, Flags: EV_ADD | EV_ONESHOT, Fflags: unix.NOTE_LOWAT, Data: hangupLowat}}
+	return p.Mod(desc.fd(), events, 1)
 }
 
 func toKevents(event Event, add bool) (n int, ks Kevents) {

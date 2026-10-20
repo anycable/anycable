@@ -59,7 +59,7 @@ func TestKqueue_Tokens(t *testing.T) {
 
 		// Re-register the fd in the kernel with a foreign token:
 		// this is what a stale event of a previous registration looks like
-		stale := evGet(fd, EVFILT_READ, EV_ADD|EV_ONESHOT, kqueueTokenBase|uintptr(1<<20))
+		stale := evGet(fd, Kevent{Filter: EVFILT_READ, Flags: EV_ADD | EV_ONESHOT}, kqueueTokenBase|uintptr(1<<20))
 		_, err := unix.Kevent(kq.fd, []unix.Kevent_t{stale}, nil, nil)
 		require.NoError(t, err)
 		require.Equal(t, kqueueTokenBase|uintptr(1<<20), *(*uintptr)(unsafe.Pointer(&stale.Udata)))

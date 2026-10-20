@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -53,6 +54,15 @@ func (p *recordingPoller) Resume(desc *netpoll.Desc) error {
 	return nil
 }
 
+func (p *recordingPoller) WatchHangup(desc *netpoll.Desc) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	p.calls = append(p.calls, "watch")
+
+	return nil
+}
+
 func (p *recordingPoller) Calls() []string {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -60,7 +70,7 @@ func (p *recordingPoller) Calls() []string {
 	return append([]string{}, p.calls...)
 }
 
-// blockingExecutor blocks HandleCommand until released
+// blockingExecutor blocks HandleCommand until released or the session is closed (as RPC calls do)
 type blockingExecutor struct {
 	started  chan struct{}
 	release  chan struct{}
@@ -69,7 +79,10 @@ type blockingExecutor struct {
 
 func (e *blockingExecutor) HandleCommand(s *Session, msg *common.Message) error {
 	close(e.started)
-	<-e.release
+	select {
+	case <-e.release:
+	case <-s.closeCtx.Done():
+	}
 	close(e.finished)
 	return nil
 }
@@ -124,8 +137,8 @@ func TestSessionServeWithPoll(t *testing.T) {
 		close(executor.release)
 		<-executor.finished
 
-		require.Eventually(t, func() bool { return len(poller.Calls()) == 2 }, time.Second, time.Millisecond)
-		assert.Equal(t, []string{"start", "resume"}, poller.Calls())
+		require.Eventually(t, func() bool { return len(poller.Calls()) == 3 }, time.Second, time.Millisecond)
+		assert.Equal(t, []string{"start", "watch", "resume"}, poller.Calls())
 	})
 
 	t.Run("Stops polling on close and doesn't resume after a message handled", func(t *testing.T) {
@@ -140,13 +153,41 @@ func TestSessionServeWithPoll(t *testing.T) {
 
 		// The fd closes while the command is in progress; the OS can now reuse it
 		session.conn.Close(ws.CloseNormalClosure, "")
-		assert.Equal(t, []string{"start", "stop"}, poller.Calls())
+		assert.Equal(t, []string{"start", "watch", "stop"}, poller.Calls())
 
 		close(executor.release)
 		<-executor.finished
 
-		assert.Never(t, func() bool { return len(poller.Calls()) > 2 }, 100*time.Millisecond, time.Millisecond)
-		assert.Equal(t, []string{"start", "stop"}, poller.Calls())
+		assert.Never(t, func() bool { return len(poller.Calls()) > 3 }, 100*time.Millisecond, time.Millisecond)
+		assert.Equal(t, []string{"start", "watch", "stop"}, poller.Calls())
+	})
+
+	t.Run("Closes the session on hang-up while handling a message", func(t *testing.T) {
+		session, client, executor := setup(t)
+		session.connected.Store(true)
+		poller := &recordingPoller{}
+
+		require.NoError(t, session.ServeWithPoll(poller, func() {}))
+		require.NoError(t, client.WriteMessage(websocket.TextMessage, []byte(`{"command":"subscribe","identifier":"test"}`)))
+
+		poller.callback(netpoll.EventRead)
+		<-executor.started
+
+		// The client leaves while the command waits
+		poller.callback(netpoll.EventReadHup)
+
+		assert.True(t, session.IsClosed())
+
+		// The command is canceled by the session close, not released
+		select {
+		case <-executor.finished:
+		case <-time.After(time.Second):
+			t.Fatal("command is not canceled")
+		}
+
+		assert.Never(t, func() bool { return slices.Contains(poller.Calls(), "resume") }, 100*time.Millisecond, time.Millisecond)
+		assert.Equal(t, []string{"start", "watch"}, poller.Calls()[:2])
+		assert.NotContains(t, poller.Calls(), "resume")
 	})
 
 	t.Run("Doesn't start polling for a closed connection", func(t *testing.T) {

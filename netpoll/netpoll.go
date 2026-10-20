@@ -156,6 +156,14 @@ type Poller interface {
 	// Note that if there no need to observe desc anymore, you should call
 	// Stop() to prevent memory leaks.
 	Resume(*Desc) error
+
+	// WatchHangup enables observation of desc for hang-ups only (the peer has closed
+	// or reset the connection, or an error occurred); incoming data triggers no events.
+	//
+	// It is useful to detect a closed connection while the data read from it is being processed.
+	// Call Resume(desc) to observe desc as usual again.
+	// It should be called only after Start() for descriptors configured with EventOneShot.
+	WatchHangup(*Desc) error
 }
 
 // CallbackFn is a function that will be called on kernel i/o event

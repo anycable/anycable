@@ -96,6 +96,11 @@ func (s *Session) ServeWithPoll(poller netpoll.Poller, callback func()) error {
 			}
 
 			if message != nil {
+				// Watch for close events to cancel in-flight / pending commands
+				wsConn.IfOpen(func() {
+					poller.WatchHangup(desc) // nolint:errcheck
+				})
+
 				s.ReadMessage(message) // nolint:errcheck
 			}
 		})

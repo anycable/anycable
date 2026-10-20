@@ -300,7 +300,7 @@ func (k *Kqueue) Add(fd int, events Kevents, n int, cb KeventHandler) error {
 
 	var kevs [filterCount]unix.Kevent_t
 	for i := 0; i < n; i++ {
-		kevs[i] = evGet(fd, events[i].Filter, events[i].Flags, token)
+		kevs[i] = evGet(fd, events[i], token)
 	}
 
 	arr := unsafe.Pointer(&kevs)
@@ -333,7 +333,7 @@ func (k *Kqueue) Mod(fd int, events Kevents, n int) error {
 	// EV_ADD overwrites udata, so we must pass the registration token again
 	var kevs [filterCount]unix.Kevent_t
 	for i := 0; i < n; i++ {
-		kevs[i] = evGet(fd, events[i].Filter, events[i].Flags, reg.token)
+		kevs[i] = evGet(fd, events[i], reg.token)
 	}
 
 	arr := unsafe.Pointer(&kevs)
@@ -430,11 +430,13 @@ func (k *Kqueue) wait(onError func(error)) {
 	}
 }
 
-func evGet(fd int, filter KeventFilter, flags KeventFlag, token uintptr) unix.Kevent_t {
+func evGet(fd int, event Kevent, token uintptr) unix.Kevent_t {
 	ev := unix.Kevent_t{
 		Ident:  uint64(fd),
-		Filter: int16(filter),
-		Flags:  uint16(flags),
+		Filter: int16(event.Filter),
+		Flags:  uint16(event.Flags),
+		Fflags: event.Fflags,
+		Data:   event.Data,
 	}
 	*(*uintptr)(unsafe.Pointer(&ev.Udata)) = token
 	return ev

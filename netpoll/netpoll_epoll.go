@@ -71,6 +71,12 @@ func (ep poller) Resume(desc *Desc) error {
 	return ep.Mod(desc.fd(), toEpollEvent(desc.event))
 }
 
+// WatchHangup implements Poller.WatchHangup() method.
+func (ep poller) WatchHangup(desc *Desc) error {
+	// EPOLLHUP and EPOLLERR are always reported
+	return ep.Mod(desc.fd(), EPOLLRDHUP|EPOLLONESHOT)
+}
+
 func toEpollEvent(event Event) (ep EpollEvent) {
 	if event&EventRead != 0 {
 		ep |= EPOLLIN | EPOLLRDHUP
