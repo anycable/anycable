@@ -16,6 +16,8 @@ import (
 	"io"
 	"log/slog"
 	"math/rand/v2"
+	"net/http"
+	_ "net/http/pprof" //nolint:gosec // served only when --pprof is set
 	"os"
 	"os/signal"
 	"runtime"
@@ -56,12 +58,15 @@ type runConfig struct {
 	sequentialSub     bool
 	subRetryInterval  time.Duration
 	subRetriesMax     int
+	probes            int
+	probeInterval     time.Duration
 	backoffMin        time.Duration
 	backoffMax        time.Duration
 	seed              uint64
 	nonInteractive    bool
 	timeline          string
 	serverLog         string
+	pprof             string
 }
 
 func run(args []string, stdout, stderr io.Writer) int {
@@ -114,10 +119,13 @@ func parseFlags(args []string, stderr io.Writer) (runConfig, error) {
 	fs.BoolVar(&cfg.sequentialSub, "sequential-subscribe", false, "client: send the next subscribe command only after the previous one is confirmed")
 	fs.DurationVar(&cfg.subRetryInterval, "sub-retry-interval", 5*time.Second, "client: re-send a subscribe command when it is not confirmed for this long")
 	fs.IntVar(&cfg.subRetriesMax, "sub-retries-max", 2, "client: re-sends per channel; reconnect when the last one is not confirmed in --sub-retry-interval")
+	fs.IntVar(&cfg.probes, "probes", 10, "extra clients that send a ping command every --probe-interval and measure the time to the pong; they have no subscriptions and waves do not drop them (0 = no probes)")
+	fs.DurationVar(&cfg.probeInterval, "probe-interval", time.Second, "time between probe pings")
 	fs.DurationVar(&cfg.backoffMin, "backoff-min", 500*time.Millisecond, "client: first reconnect delay; doubles per failed attempt, ±50% jitter")
 	fs.DurationVar(&cfg.backoffMax, "backoff-max", 10*time.Second, "client: max reconnect delay")
 	fs.Int64Var(&seed, "seed", 1, "RNG seed for wave selection and backoff jitter")
 	fs.StringVar(&cfg.serverLog, "server-log", "", "if set, write the server debug log to this path (large: ~1KB per connection attempt)")
+	fs.StringVar(&cfg.pprof, "pprof", "", "if set, serve net/http/pprof on this address, e.g. localhost:6060")
 	fs.StringVar(&cfg.timeline, "timeline", "", "if set, write a per-second CSV timeline (client states, RPC calls/s, server gauges, timings) to this path")
 	fs.BoolVar(&cfg.nonInteractive, "non-interactive", false, "suppress the live dashboard on stderr; emit only the key=value summary on stdout (auto-on when stderr is not a TTY)")
 
@@ -142,6 +150,9 @@ func parseFlags(args []string, stderr io.Writer) (runConfig, error) {
 	}
 	if cfg.s < 0 || cfg.rampRate <= 0 || cfg.rpcConcurrency <= 0 || cfg.disconnectRate <= 0 || cfg.disconnectBacklog <= 0 {
 		return cfg, errors.New("-s, --ramp-rate, --rpc-concurrency, --disconnect-rate, --disconnect-backlog must be positive")
+	}
+	if cfg.probes < 0 || cfg.probeInterval <= 0 {
+		return cfg, errors.New("--probes must not be negative and --probe-interval must be positive")
 	}
 	if cfg.subRetryInterval <= 0 || cfg.subRetriesMax < 0 {
 		return cfg, errors.New("--sub-retry-interval must be positive and --sub-retries-max must not be negative")
@@ -170,12 +181,25 @@ func runWithConfig(runCtx context.Context, cfg runConfig, stdout, stderr io.Writ
 	start := time.Now()
 	u := newUI(stderr, cfg.nonInteractive, start)
 
+	if cfg.pprof != "" {
+		go func() {
+			if err := http.ListenAndServe(cfg.pprof, nil); err != nil { //nolint:gosec // local debug server
+				u.logf("pprof: %v", err)
+			}
+		}()
+	}
+
+	stats := &lib.ClientStats{}
+	probeStats := &lib.ClientStats{}
 	rpc := lib.NewRPCServer(lib.RPCServerConfig{
 		Latency:           cfg.rpcLatency,
 		ConnectLatency:    cfg.connectLatency,
 		CommandLatency:    cfg.commandLatency,
 		DisconnectLatency: cfg.disconnectLatency,
 		Jitter:            cfg.rpcJitter,
+		SessionClosed: func(sid string) bool {
+			return stats.SessionClosed(sid) || probeStats.SessionClosed(sid)
+		},
 	})
 	defer rpc.Close()
 
@@ -210,7 +234,6 @@ func runWithConfig(runCtx context.Context, cfg runConfig, stdout, stderr io.Writ
 		return 1
 	}
 
-	stats := &lib.ClientStats{}
 	channels := make([]string, cfg.s)
 	for i := range channels {
 		channels[i] = fmt.Sprintf(`{"channel":"BenchChannel","id":"%d"}`, i+1)
@@ -239,7 +262,26 @@ func runWithConfig(runCtx context.Context, cfg runConfig, stdout, stderr io.Writ
 		}(clients[i])
 	}
 
-	smp := newSampler(start, rpc, server, stats)
+	// Probes use their own stats, so they do not count as clients. They
+	// connect first and are never dropped by waves.
+	for i := range cfg.probes {
+		probe := lib.NewReconnectingClient(lib.ReconnectingClientConfig{
+			URL:                    server.WebSocketURL(),
+			SubscribeRetryInterval: cfg.subRetryInterval,
+			PingTimeout:            cfg.pingTimeout,
+			ProbeInterval:          cfg.probeInterval,
+			Backoff:                lib.Backoff{Min: cfg.backoffMin, Max: cfg.backoffMax},
+			Stats:                  probeStats,
+			Seed:                   cfg.seed + uint64(cfg.c+i), //nolint:gosec // c, i >= 0
+		})
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			probe.Run(ctx, 0)
+		}()
+	}
+
+	smp := newSampler(start, rpc, server, stats, probeStats)
 	smp.start()
 
 	phase := newPhase("setup", fmt.Sprintf("connecting %d clients at %d/s", cfg.c, cfg.rampRate))
@@ -403,6 +445,8 @@ type sample struct {
 	rpcPending  uint64
 	rpcCanceled uint64
 	rpcWaitTO   uint64
+	afterClose  [2]int64
+	discarded   uint64
 	sessions    uint64
 	discQueue   uint64
 	goroutines  int
@@ -413,13 +457,15 @@ type sample struct {
 	subRetries  int64
 	welcome     lib.HistogramSnapshot
 	confirm     lib.HistogramSnapshot
+	probe       lib.HistogramSnapshot
 }
 
 type sampler struct {
-	begin  time.Time
-	rpc    *lib.RPCServer
-	server *lib.Server
-	stats  *lib.ClientStats
+	begin      time.Time
+	rpc        *lib.RPCServer
+	server     *lib.Server
+	stats      *lib.ClientStats
+	probeStats *lib.ClientStats
 
 	mu      sync.Mutex
 	samples []sample
@@ -427,8 +473,8 @@ type sampler struct {
 	exit    chan struct{}
 }
 
-func newSampler(begin time.Time, rpc *lib.RPCServer, server *lib.Server, stats *lib.ClientStats) *sampler {
-	return &sampler{begin: begin, rpc: rpc, server: server, stats: stats, done: make(chan struct{}), exit: make(chan struct{})}
+func newSampler(begin time.Time, rpc *lib.RPCServer, server *lib.Server, stats, probeStats *lib.ClientStats) *sampler {
+	return &sampler{begin: begin, rpc: rpc, server: server, stats: stats, probeStats: probeStats, done: make(chan struct{}), exit: make(chan struct{})}
 }
 
 func (s *sampler) start() {
@@ -465,7 +511,10 @@ func (s *sampler) record() {
 		rpcCanceled: s.server.Counter("rpc_canceled_total"),
 		// Calls that waited for an RPC slot longer than rpc_wait_timeout;
 		// they never reach the RPC server either.
-		rpcWaitTO:  s.server.Counter("rpc_wait_timeout_total"),
+		rpcWaitTO: s.server.Counter("rpc_wait_timeout_total"),
+		// Sessions dropped from the full disconnect queue; they never get
+		// a Disconnect call.
+		discarded:  s.server.Counter("disconnect_queue_discarded_total"),
 		sessions:   s.server.Gauge("clients_num"),
 		discQueue:  uint64(s.server.DisconnectQueueSize()), //nolint:gosec // size >= 0
 		goroutines: runtime.NumGoroutine(),
@@ -476,6 +525,7 @@ func (s *sampler) record() {
 		reconnects: s.stats.Reconnects(),
 		welcome:    s.stats.Welcome.Snapshot(),
 		confirm:    s.stats.Confirm.Snapshot(),
+		probe:      s.probeStats.Probe.Snapshot(),
 	}
 	for st := lib.StateConnecting; st <= lib.StateBackoff; st++ {
 		smp.states[st] = s.stats.State(st)
@@ -485,6 +535,9 @@ func (s *sampler) record() {
 		smp.rpcStarted[m] = ms.Started
 		smp.rpcDone[m] = ms.Completed
 		smp.rpcInFlight += ms.InFlight
+	}
+	for m := lib.RPCConnect; m <= lib.RPCCommand; m++ {
+		smp.afterClose[m] = s.rpc.Stats(m).AfterClose
 	}
 	for _, r := range lib.AllCloseReasons() {
 		smp.reasons[r] = s.stats.Reason(r)
@@ -553,9 +606,12 @@ type summary struct {
 	subRetries         int64
 	reasons            map[lib.CloseReason]int64
 	rpcCalls           [3]int64
+	rpcAfterClose      [2]int64
+	discarded          uint64
 	maxCommandStall    time.Duration
 	welcome, confirm   lib.HistogramSnapshot
 	healthy            lib.HistogramSnapshot
+	probe              lib.HistogramSnapshot
 	peakDiscQueue      uint64
 	peakRPCPending     uint64
 	rpcCanceled        uint64
@@ -586,10 +642,16 @@ func buildSummary(cfg runConfig, setupOK, recovered bool, elapsed time.Duration,
 	for m := lib.RPCConnect; m <= lib.RPCDisconnect; m++ {
 		s.rpcCalls[m] = rpc.Stats(m).Completed
 	}
+	for m := lib.RPCConnect; m <= lib.RPCCommand; m++ {
+		s.rpcAfterClose[m] = rpc.Stats(m).AfterClose
+	}
 	samples := smp.all()
 	if len(samples) > 0 {
-		s.rpcCanceled = samples[len(samples)-1].rpcCanceled
-		s.rpcWaitTO = samples[len(samples)-1].rpcWaitTO
+		last := samples[len(samples)-1]
+		s.rpcCanceled = last.rpcCanceled
+		s.rpcWaitTO = last.rpcWaitTO
+		s.discarded = last.discarded
+		s.probe = last.probe
 	}
 	_, s.maxCommandStall = commandStall(samples)
 	for _, x := range samples {
@@ -627,10 +689,14 @@ func printSummary(w io.Writer, s summary) {
 	fmt.Fprintf(w, "rpc_disconnect_calls=%d\n", s.rpcCalls[lib.RPCDisconnect])
 	fmt.Fprintf(w, "rpc_canceled_calls=%d\n", s.rpcCanceled)
 	fmt.Fprintf(w, "rpc_wait_timeout_calls=%d\n", s.rpcWaitTO)
+	fmt.Fprintf(w, "rpc_connect_after_close_calls=%d\n", s.rpcAfterClose[lib.RPCConnect])
+	fmt.Fprintf(w, "rpc_command_after_close_calls=%d\n", s.rpcAfterClose[lib.RPCCommand])
+	fmt.Fprintf(w, "disconnect_discarded=%d\n", s.discarded)
 	fmt.Fprintf(w, "max_command_stall_seconds=%.0f\n", s.maxCommandStall.Seconds())
 	printHistogram(w, "welcome", s.welcome)
 	printHistogram(w, "confirm", s.confirm)
 	printHistogram(w, "healthy", s.healthy)
+	printHistogram(w, "probe", s.probe)
 	fmt.Fprintf(w, "peak_disconnect_queue=%d\n", s.peakDiscQueue)
 	fmt.Fprintf(w, "peak_rpc_pending=%d\n", s.peakRPCPending)
 	fmt.Fprintf(w, "peak_server_sessions=%d\n", s.peakSessions)
@@ -667,12 +733,13 @@ func writeTimeline(path string, samples []sample) error {
 
 	w := csv.NewWriter(f)
 	header := []string{"t", "healthy", "subscribing", "connecting", "backoff",
-		"rpc_connect_ps", "rpc_command_ps", "rpc_disconnect_ps", "rpc_canceled_ps", "rpc_wait_timeout_ps", "rpc_in_flight", "rpc_pending",
-		"sessions", "disconnect_queue", "goroutines", "heap_mb", "attempts_ps", "sub_retries_ps"}
+		"rpc_connect_ps", "rpc_command_ps", "rpc_disconnect_ps", "rpc_canceled_ps", "rpc_wait_timeout_ps",
+		"rpc_connect_after_close_ps", "rpc_command_after_close_ps", "rpc_in_flight", "rpc_pending",
+		"sessions", "disconnect_queue", "disconnect_discarded_ps", "goroutines", "heap_mb", "attempts_ps", "sub_retries_ps"}
 	for _, r := range lib.AllCloseReasons() {
 		header = append(header, "close_"+r.String()+"_ps")
 	}
-	header = append(header, "welcome_p50_ms", "welcome_p99_ms", "confirm_p50_ms", "confirm_p99_ms")
+	header = append(header, "welcome_p50_ms", "welcome_p99_ms", "confirm_p50_ms", "confirm_p99_ms", "probe_p50_ms", "probe_max_ms")
 	_ = w.Write(header)
 
 	itoa := func(v int64) string { return strconv.FormatInt(v, 10) }
@@ -689,8 +756,11 @@ func writeTimeline(path string, samples []sample) error {
 			rate(cur.rpcDone[lib.RPCDisconnect], prev.rpcDone[lib.RPCDisconnect]),
 			rate(int64(cur.rpcCanceled), int64(prev.rpcCanceled)), //nolint:gosec // counters fit in int64
 			rate(int64(cur.rpcWaitTO), int64(prev.rpcWaitTO)),     //nolint:gosec // counters fit in int64
+			rate(cur.afterClose[lib.RPCConnect], prev.afterClose[lib.RPCConnect]),
+			rate(cur.afterClose[lib.RPCCommand], prev.afterClose[lib.RPCCommand]),
 			itoa(cur.rpcInFlight), strconv.FormatUint(cur.rpcPending, 10),
 			strconv.FormatUint(cur.sessions, 10), strconv.FormatUint(cur.discQueue, 10),
+			rate(int64(cur.discarded), int64(prev.discarded)), //nolint:gosec // counters fit in int64
 			strconv.Itoa(cur.goroutines), strconv.FormatFloat(float64(cur.heapBytes)/(1<<20), 'f', 1, 64),
 			rate(cur.attempts, prev.attempts),
 			rate(cur.subRetries, prev.subRetries),
@@ -698,10 +768,11 @@ func writeTimeline(path string, samples []sample) error {
 		for _, r := range lib.AllCloseReasons() {
 			row = append(row, rate(cur.reasons[r], prev.reasons[r]))
 		}
-		wl, cf := cur.welcome.Sub(prev.welcome), cur.confirm.Sub(prev.confirm)
+		wl, cf, pr := cur.welcome.Sub(prev.welcome), cur.confirm.Sub(prev.confirm), cur.probe.Sub(prev.probe)
 		row = append(row,
 			strconv.FormatFloat(ms(wl.Quantile(0.5)), 'f', 0, 64), strconv.FormatFloat(ms(wl.Quantile(0.99)), 'f', 0, 64),
-			strconv.FormatFloat(ms(cf.Quantile(0.5)), 'f', 0, 64), strconv.FormatFloat(ms(cf.Quantile(0.99)), 'f', 0, 64))
+			strconv.FormatFloat(ms(cf.Quantile(0.5)), 'f', 0, 64), strconv.FormatFloat(ms(cf.Quantile(0.99)), 'f', 0, 64),
+			strconv.FormatFloat(ms(pr.Quantile(0.5)), 'f', 0, 64), strconv.FormatFloat(ms(pr.Max), 'f', 0, 64))
 		_ = w.Write(row)
 	}
 	w.Flush()
