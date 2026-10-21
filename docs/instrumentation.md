@@ -52,6 +52,14 @@ The `broadcast_msg_total` describes the number of broadcasts (i.e., attempts to 
 
 This `failed_auths_total` indicates the total number of unauthenticated connection attempts and has a special purpose: it helps you identify misconfigured client credentials and malicious behaviour. Ideally, the change rate of this number should be low comparing to the `clients_num`.)
 
+### `rejected_clients_total`
+
+<p class="pro-badge-header"></p>
+
+The `rejected_clients_total` shows the total number of WebSocket connections that the server rejected because it was overloaded. The server closes these connections with the `1013` code ("Try again later") before it authenticates them.
+
+AnyCable Pro stops accepting new connections when all the workers that read client messages stay busy for some time (with IO polling enabled only). Non-zero values mean the server cannot process incoming commands quickly enough, usually because of a lack of RPC capacity. Consider scaling up your cluster or tuning the RPC concurrency settings.
+
 ### ⏱ `disconnect_queue_size`
 
 The `disconnect_queue_size` shows the current number of pending Disconnect calls. AnyCable-Go performs Disconnect calls in the background with some throttling (by default, 100 calls per second).
