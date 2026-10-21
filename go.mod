@@ -2,7 +2,7 @@ module github.com/anycable/anycable-go
 
 go 1.27.0
 
-toolchain go1.27.2
+toolchain go1.27.3
 
 // use vendored go-mruby
 replace github.com/mitchellh/go-mruby => ./vendorlib/go-mruby
