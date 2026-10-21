@@ -43,6 +43,7 @@ const (
 	metricsBroadcastMsg            = "broadcast_msg_total"
 	metricsRemoteCommands          = "remote_commands_total"
 	metricsUnknownBroadcast        = "failed_broadcast_msg_total"
+	metricsRejectedClients         = "rejected_clients_total"
 
 	metricsSentMsg      = "server_msg_total"
 	metricsFailedSent   = "failed_server_msg_total"
@@ -316,6 +317,11 @@ func (n *Node) IsShuttingDown() bool {
 	defer n.shutdownMu.Unlock()
 
 	return n.closed
+}
+
+// AdmitNewClient returns false if a new client connection must be rejected (e.g., the node is overloaded).
+func (n *Node) AdmitNewClient() bool {
+	return true
 }
 
 type AuthOptions struct {
@@ -1254,6 +1260,7 @@ func (n *Node) registerMetrics() {
 	n.metrics.RegisterGauge(metricsDisconnectQueue, "The size of delayed disconnect")
 
 	n.metrics.RegisterCounter(metricsFailedAuths, "The total number of failed authentication attempts")
+	n.metrics.RegisterCounter(metricsRejectedClients, "The total number of client connections rejected because the server was overloaded")
 	n.metrics.RegisterCounter(metricsReceivedMsg, "The total number of received messages from clients")
 	n.metrics.RegisterCounter(metricsDisconnectedSlowClients, "The total number of disconnected slow clients")
 	n.metrics.RegisterCounter(metricsDisconnectDiscarded, "The total number of Disconnect calls discarded because the disconnect queue was full")
