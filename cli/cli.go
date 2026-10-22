@@ -314,6 +314,7 @@ func (r *Runner) runNode() (*node.Node, error) {
 		node.WithLogger(r.log),
 		node.WithID(r.config.ID),
 	)
+	nodeShutdownables := []Shutdownable{appNode}
 
 	if r.telemetryEnabled {
 		tracker := telemetry.NewTracker(metrics, r.config, r.telemetryConfig)
@@ -400,19 +401,20 @@ func (r *Runner) runNode() (*node.Node, error) {
 				return nil, errorx.Decorate(err, "failed to start broadcaster")
 			}
 
-			r.shutdownables = append(r.shutdownables, broadcaster)
+			nodeShutdownables = append(nodeShutdownables, broadcaster)
 		}
 	}
 
-	// Ensure subscriber is closing after broadcasters, so no messages are lost in-between
-	r.shutdownables = append(r.shutdownables, subscriber)
+	// Drain broadcasters before closing the broker, and keep pub/sub available until both stop.
+	nodeShutdownables = append(nodeShutdownables, appBroker, subscriber)
 
 	err = controller.Start()
 	if err != nil {
 		return nil, errorx.Decorate(err, "failed to initialize RPC controller")
 	}
 
-	r.shutdownables = append([]Shutdownable{appNode, appBroker}, r.shutdownables...)
+	// Shared services, such as embedded NATS, must outlive the components using them.
+	r.shutdownables = append(nodeShutdownables, r.shutdownables...)
 
 	r.announceGoPools()
 	return appNode, nil

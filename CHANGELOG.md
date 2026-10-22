@@ -2,6 +2,8 @@
 
 ## master
 
+- Drain broadcasters before shutting down the broker to avoid losing in-flight publications.
+
 ## 1.6.20 (2026-10-21)
 
 - Upgrade to Go tool chain 1.27.3 (fix eMuhdra CVE).
