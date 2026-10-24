@@ -55,6 +55,14 @@ func (c *RouterController) Shutdown() error {
 	return c.controller.Shutdown()
 }
 
+func (c *RouterController) Saturated() bool {
+	if c, ok := c.controller.(node.SaturatableController); ok {
+		return c.Saturated()
+	}
+
+	return false
+}
+
 func (c *RouterController) Authenticate(ctx context.Context, sid string, env *common.SessionEnv) (*common.ConnectResult, error) {
 	return c.controller.Authenticate(ctx, sid, env)
 }

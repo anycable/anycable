@@ -21,6 +21,11 @@ type Controller interface {
 	Disconnect(ctx context.Context, sid string, env *common.SessionEnv, ids string, subscriptions []string) error
 }
 
+// SaturatableController is an optional interface for controllers that can report saturation (e.g., RPC)
+type SaturatableController interface {
+	Saturated() bool
+}
+
 type NullController struct {
 	log *slog.Logger
 }

@@ -339,6 +339,12 @@ func (n *Node) IsShuttingDown() bool {
 
 // AdmitNewClient returns false if a new client connection must be rejected (e.g., the node is overloaded).
 func (n *Node) AdmitNewClient() bool {
+	sc, ok := n.controller.(SaturatableController)
+	if ok && sc.Saturated() {
+		n.metrics.CounterIncrement(metricsRejectedClients)
+		return false
+	}
+
 	return true
 }
 

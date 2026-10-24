@@ -116,6 +116,8 @@ type SmartBarrier struct {
 	callsCount     atomic.Uint64
 	exhaustedCount atomic.Uint64
 	pendingNum     atomic.Int64
+	// The last time a call acquired a slot faster than saturationTarget (Unix nanoseconds)
+	lastFastAt atomic.Int64
 
 	tickTimer    *time.Timer
 	tickInterval time.Duration
@@ -166,16 +168,25 @@ func NewSmartBarrier(config SmartBarrierConfig, l *slog.Logger) *SmartBarrier {
 }
 
 func (b *SmartBarrier) Acquire(ctx context.Context) error {
+	start := time.Now()
+
 	b.callsCount.Add(1)
 	b.pendingNum.Add(1)
 	defer b.pendingNum.Add(-1)
 
 	select {
 	case <-b.sem:
+		if now := time.Now(); now.Sub(start) < saturationTarget {
+			b.lastFastAt.Store(now.UnixNano())
+		}
 		return nil
 	case <-ctx.Done():
 		return ctx.Err()
 	}
+}
+
+func (b *SmartBarrier) Saturated() bool {
+	return b.pendingNum.Load() > 0 && time.Since(time.Unix(0, b.lastFastAt.Load())) >= saturationInterval
 }
 
 func (b *SmartBarrier) Release() {

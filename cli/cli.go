@@ -785,6 +785,11 @@ func (r *Runner) apolloWebsocketHandler(n *node.Node, c *config.Config) http.Han
 	return ws.WebsocketHandler(graphql.GraphqlProtocols(), &extractor, &c.WS, r.log, func(wsc *websocket.Conn, info *server.RequestInfo, callback func()) error {
 		wrappedConn := ws.NewConnection(wsc)
 
+		if !n.AdmitNewClient() {
+			ws.CloseWithReason(wsc, websocket.CloseTryAgainLater, "Try again later")
+			return nil
+		}
+
 		opts := []node.SessionOption{
 			node.WithHandshakeMessageDeadline(time.Now().Add(time.Duration(c.GraphQL.IdleTimeout) * time.Second)),
 		}
@@ -819,6 +824,11 @@ func (r *Runner) ocppWebsocketHandler(n *node.Node, c *config.Config) http.Handl
 
 	return ws.WebsocketHandler(ocpp.Subprotocols(), &extractor, &c.WS, r.log, func(wsc *websocket.Conn, info *server.RequestInfo, callback func()) error {
 		wrappedConn := ws.NewConnection(wsc)
+
+		if !n.AdmitNewClient() {
+			ws.CloseWithReason(wsc, websocket.CloseTryAgainLater, "Try again later")
+			return nil
+		}
 
 		opts := []node.SessionOption{
 			node.WithEncoder(ocpp.Encoder{}),

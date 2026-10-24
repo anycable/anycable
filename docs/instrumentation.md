@@ -56,9 +56,9 @@ This `failed_auths_total` indicates the total number of unauthenticated connecti
 
 <p class="pro-badge-header"></p>
 
-The `rejected_clients_total` shows the total number of WebSocket connections that the server rejected because it was overloaded. The server closes these connections with the `1013` code ("Try again later") before it authenticates them.
+The `rejected_clients_total` shows the total number of WebSocket connections that the server rejected because it was overloaded\*. The server closes these connections with the `1013` code ("Try again later") before it authenticates them.
 
-AnyCable Pro stops accepting new connections when all the workers that read client messages stay busy for some time (with IO polling enabled only). Non-zero values mean the server cannot process incoming commands quickly enough, usually because of a lack of RPC capacity. Consider scaling up your cluster or tuning the RPC concurrency settings.
+\* AnyCable Pro stops accepting new connections when RPC component is saturated: RPC calls wait in line for too long (more than 500ms during at least one second). Non-zero values mean the RPC capacity cannot keep up with incoming commands. Consider scaling up your cluster or tuning the RPC concurrency settings (see the `rpc_pending_num` and `rpc_wait_timeout_total` metrics, too). If it happens during _connection storms_ consider the mitigation strategies from this guide: [Connection avalanche safety tips and prepping for real-time applications](https://evilmartians.com/chronicles/connection-avalanche-safety-tips-and-prepping-for-realtime-applications).
 
 ### ⏱ `disconnect_queue_size`
 

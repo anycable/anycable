@@ -579,6 +579,10 @@ func (c *Controller) acquire(ctx context.Context) (func(), error) {
 	return c.barrier.Release, nil
 }
 
+func (c *Controller) Saturated() bool {
+	return c.barrier.Saturated()
+}
+
 func (c *Controller) retry(ctx context.Context, sid string, callback func(context.Context) (interface{}, error)) (res interface{}, err error) {
 	attempt := 0
 	wasExhausted := false

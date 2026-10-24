@@ -59,6 +59,14 @@ func (c *IdentifiableController) Shutdown() error {
 	return c.controller.Shutdown()
 }
 
+func (c *IdentifiableController) Saturated() bool {
+	if c, ok := c.controller.(node.SaturatableController); ok {
+		return c.Saturated()
+	}
+
+	return false
+}
+
 func (c *IdentifiableController) Authenticate(ctx context.Context, sid string, env *common.SessionEnv) (*common.ConnectResult, error) {
 	res, err := c.identifier.Identify(sid, env)
 
