@@ -287,7 +287,7 @@ Since v1.5.4, you can also provide configuration via a TOML file. This is recomm
 AnyCable will look for a configuration file in the following locations:
 
 - `./anycable.toml`
-- `/ets/anycable/anycable.toml`
+- `/etc/anycable/anycable.toml`
 
 You can also specify the path to the configuration file using the `--config-path` option, e.g.:
 
