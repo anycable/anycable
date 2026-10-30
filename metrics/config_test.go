@@ -38,12 +38,14 @@ func TestConfig_ToToml(t *testing.T) {
 	conf.LogFilter = []string{"metric1", "metric2"}
 	conf.Host = "example.com"
 	conf.Port = 9090
+	conf.HTTP = "/metrics"
 	conf.Tags = map[string]string{"env": "prod", "region": "us-west"}
 
 	tomlStr := conf.ToToml()
 
 	assert.Contains(t, tomlStr, "host = \"example.com\"")
 	assert.Contains(t, tomlStr, "port = 9090")
+	assert.Contains(t, tomlStr, "http_path = \"/metrics\"")
 	assert.Contains(t, tomlStr, "log = true")
 	assert.Contains(t, tomlStr, "rotate_interval = 30")
 	assert.Contains(t, tomlStr, "log_filter = [ \"metric1\", \"metric2\" ]")

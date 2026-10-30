@@ -2,6 +2,8 @@
 
 ## master
 
+- Fix `--print-config` to output the `metrics.http_path` key (instead of the unsupported `http` key). ([@jjb][])
+
 ## 1.6.20 (2026-10-21)
 
 - Upgrade to Go tool chain 1.27.3 (fix eMuhdra CVE).
@@ -564,3 +566,4 @@ See [Changelog](https://github.com/anycable/anycable-go/blob/0-6-stable/CHANGELO
 [@ardecvz]: https://github.com/ardecvz
 [@paderinandrey]: https://github.com/paderinandrey
 [@budnik]: https://github.com/budnik
+[@jjb]: https://github.com/jjb
