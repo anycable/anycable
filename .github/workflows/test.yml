@@ -115,7 +115,7 @@ jobs:
           - test-conformance-broker-redis
           - test-conformance-broker-nats
           - test-conformance-embedded
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       GO111MODULE: on
       GOFLAGS: "-mod=vendor"
