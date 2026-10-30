@@ -2,6 +2,8 @@
 
 ## master
 
+- Warn on unknown keys in the TOML configuration file; add `--strict-config` to fail instead. ([@jjb][])
+
 - Fix `--print-config` to output the `metrics.http_path` key (instead of the unsupported `http` key). ([@jjb][])
 
 ## 1.6.20 (2026-10-21)
