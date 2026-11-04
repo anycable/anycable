@@ -2,6 +2,10 @@
 
 ## master
 
+- Fix HTTP RPC opening a new connection for almost every call. ([@gdubicki][])
+
+  The HTTP RPC client now keeps up to `--rpc_concurrency` idle connections to the RPC server, instead of Go's default of two per host.
+
 - Warn on unknown keys in the TOML configuration file; add `--strict-config` to fail instead. ([@jjb][])
 
 - Fix `--print-config` to output the `metrics.http_path` key (instead of the unsupported `http` key). ([@jjb][])
@@ -580,4 +584,5 @@ See [Changelog](https://github.com/anycable/anycable-go/blob/0-6-stable/CHANGELO
 [@ardecvz]: https://github.com/ardecvz
 [@paderinandrey]: https://github.com/paderinandrey
 [@budnik]: https://github.com/budnik
+[@gdubicki]: https://github.com/gdubicki
 [@jjb]: https://github.com/jjb

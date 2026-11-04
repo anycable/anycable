@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -340,4 +342,42 @@ func TestHTTPClientHelper_READY(t *testing.T) {
 
 	// Shouldn't be ready
 	assert.Error(t, h.Ready())
+}
+
+func TestHTTPServiceReusesConnections(t *testing.T) {
+	var opened atomic.Int64
+	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(10 * time.Millisecond)
+		w.WriteHeader(http.StatusOK)
+	}))
+	ts.Config.ConnState = func(_ net.Conn, state http.ConnState) {
+		if state == http.StateNew {
+			opened.Add(1)
+		}
+	}
+	ts.Start()
+	defer ts.Close()
+
+	conf := NewConfig()
+	conf.Host = ts.URL
+	conf.Concurrency = 8
+	service, err := NewHTTPService(&conf)
+	require.NoError(t, err)
+
+	for round := 0; round < 5; round++ {
+		var wg sync.WaitGroup
+		for i := 0; i < conf.Concurrency; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				res, err := service.client.Get(ts.URL)
+				require.NoError(t, err)
+				_, _ = io.Copy(io.Discard, res.Body)
+				res.Body.Close()
+			}()
+		}
+		wg.Wait()
+	}
+
+	assert.LessOrEqual(t, opened.Load(), int64(conf.Concurrency))
 }
