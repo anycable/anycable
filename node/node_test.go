@@ -3,12 +3,15 @@ package node
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/encoders"
 	"github.com/anycable/anycable-go/mocks"
+	"github.com/anycable/anycable-go/ws"
 	"github.com/joomcode/errorx"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -26,7 +29,7 @@ func TestAuthenticate(t *testing.T) {
 		defer node.hub.RemoveSession(session)
 
 		assert.Nil(t, err, "Error must be nil")
-		assert.Equal(t, true, session.Connected, "Session must be marked as connected")
+		assert.True(t, session.IsConnected(), "Session must be marked as connected")
 		assert.Equalf(t, "test_id", session.GetIdentifiers(), "Identifiers must be equal to %s", "test_id")
 
 		msg, err := session.conn.Read()
@@ -67,13 +70,98 @@ func TestAuthenticate(t *testing.T) {
 		_, err := node.Authenticate(session)
 
 		assert.Nil(t, err, "Error must be nil")
-		assert.Equal(t, true, session.Connected, "Session must be marked as connected")
+		assert.True(t, session.IsConnected(), "Session must be marked as connected")
 
 		assert.Len(t, *session.env.ConnectionState, 1)
 		assert.Equal(t, "my_session", (*session.env.ConnectionState)["_s_"])
 
 		assert.Equal(t, 1, node.hub.Size())
 	})
+}
+
+// Reproduces a hub leak: a session that closes while Authenticated runs
+// can stay registered in the hub forever.
+func TestAuthenticatedRacesWithDisconnect(t *testing.T) {
+	node := NewMockNode()
+	go node.hub.Run()
+	defer node.hub.Shutdown()
+
+	const n = 1000
+	sessions := make([]*Session, n)
+
+	var wg sync.WaitGroup
+	for i := range sessions {
+		s := NewMockSession(fmt.Sprintf("s%d", i), node)
+		sessions[i] = s
+
+		start := make(chan struct{})
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			<-start
+			node.Authenticated(s, s.GetID())
+		}()
+		go func() {
+			defer wg.Done()
+			<-start
+			// Like a failed ping write while the Connect call completes
+			s.Disconnect("Ping failed", ws.CloseAbnormalClosure)
+		}()
+		close(start)
+	}
+	wg.Wait()
+
+	assert.EventuallyWithT(t, func(c *assert.CollectT) {
+		leaked := 0
+		for _, s := range sessions {
+			if s.IsClosed() && node.hub.FindByIdentifier(s.GetID()) != nil {
+				leaked++
+			}
+		}
+
+		assert.Equal(c, 0, leaked, "closed sessions left in the hub")
+		assert.Equal(c, 0, node.hub.Size())
+	}, time.Second, 10*time.Millisecond)
+}
+
+type blockingDisconnector struct {
+	NoopDisconnectQueue
+	enqueued chan struct{}
+	release  chan struct{}
+}
+
+func (d *blockingDisconnector) Enqueue(*Session) error {
+	close(d.enqueued)
+	<-d.release
+	return nil
+}
+
+// A full disconnect queue blocks Enqueue; in-flight commands must see
+// the session as closed meanwhile (otherwise they could re-add it to the hub).
+func TestDisconnectNowClosesBeforeEnqueue(t *testing.T) {
+	node := NewMockNode()
+	go node.hub.Run()
+	defer node.hub.Shutdown()
+
+	disconnector := &blockingDisconnector{enqueued: make(chan struct{}), release: make(chan struct{})}
+	node.SetDisconnector(disconnector)
+
+	session := NewMockSession("1", node)
+	session.MarkDisconnectable(true)
+	node.Authenticated(session, "ids")
+
+	go session.DisconnectNow("Read failed", ws.CloseAbnormalClosure)
+
+	select {
+	case <-disconnector.enqueued:
+	case <-time.After(time.Second):
+		t.Fatal("session was not enqueued for disconnect")
+	}
+
+	assert.True(t, session.IsClosed())
+	assert.Error(t, session.closeCtx.Err())
+
+	close(disconnector.release)
 }
 
 func TestSubscribe(t *testing.T) {
@@ -368,7 +456,9 @@ func TestDisconnect(t *testing.T) {
 
 		assert.Equal(t, 1, node.disconnector.Size(), "Expected disconnect to have 1 task in a queue")
 
-		task := <-node.disconnector.(*DisconnectQueue).disconnect
+		item, ok := node.disconnector.(*DisconnectQueue).disconnect.Remove()
+		require.True(t, ok)
+		task := item.Data
 		assert.Equal(t, session, task, "Expected to disconnect session")
 	})
 
@@ -1104,4 +1194,29 @@ func readMessages(conn Connection, count int) ([]string, error) {
 	}
 
 	return messages, nil
+}
+
+func TestUnsubscribeReleasesBrokerStreams(t *testing.T) {
+	node := NewMockNode()
+	broker := &mocks.Broker{}
+	node.SetBroker(broker)
+	session := NewMockSession("14", node)
+
+	node.hub.AddSession(session)
+	defer node.hub.RemoveSession(session)
+
+	go node.hub.Run()
+	defer node.hub.Shutdown()
+
+	session.subscriptions.AddChannel("test_channel")
+	session.subscriptions.AddChannelStream("test_channel", "streamo")
+	node.hub.SubscribeSession(session, "streamo", "test_channel")
+
+	broker.On("Unsubscribe", "streamo").Return("streamo")
+
+	_, err := node.Unsubscribe(session, &common.Message{Identifier: "test_channel"})
+	require.NoError(t, err)
+
+	broker.AssertCalled(t, "Unsubscribe", "streamo")
+	assert.False(t, session.subscriptions.HasChannel("test_channel"))
 }

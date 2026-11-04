@@ -171,6 +171,10 @@ func (r *Runner) Run() error {
 
 	if r.config.ConfigFilePath != "" {
 		r.log.Info(fmt.Sprintf("Using configuration from file: %s", r.config.ConfigFilePath))
+
+		if len(r.config.UnknownConfigKeys) > 0 {
+			r.log.Warn(fmt.Sprintf("Unknown keys in configuration file (ignored): %s", strings.Join(r.config.UnknownConfigKeys, ", ")))
+		}
 	}
 
 	if r.config.PublicMode {
@@ -563,6 +567,11 @@ func (r *Runner) defaultWebSocketHandler(n *node.Node, c *config.Config, l *slog
 	return ws.WebsocketHandler(common.ActionCableProtocols(), &extractor, &c.WS, r.log, func(wsc *websocket.Conn, info *server.RequestInfo, callback func()) error {
 		wrappedConn := ws.NewConnection(wsc)
 
+		if !n.AdmitNewClient() {
+			ws.CloseWithReason(wsc, websocket.CloseTryAgainLater, "Try again later")
+			return nil
+		}
+
 		opts := []node.SessionOption{}
 		opts = append(opts, r.sessionOptionsFromWSConfig(&c.WS)...)
 		opts = append(opts, r.sessionOptionsFromProtocol(wsc.Subprotocol())...)
@@ -622,6 +631,12 @@ func (r *Runner) pusherWebsocketHandler(n *node.Node, c *config.Config) http.Han
 
 	return ws.WebsocketHandler(nil, &extractor, &c.WS, r.log, func(wsc *websocket.Conn, info *server.RequestInfo, callback func()) error {
 		wrappedConn := ws.NewConnection(wsc)
+
+		if !n.AdmitNewClient() {
+			ws.CloseWithReason(wsc, websocket.CloseTryAgainLater, "Try again later")
+			return nil
+		}
+
 		encoder := pusher.NewEncoder()
 		opts := []node.SessionOption{
 			node.WithEncoder(encoder),
