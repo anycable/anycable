@@ -171,7 +171,8 @@ type Session struct {
 
 	prevSid string
 
-	Connected bool
+	connected   atomic.Bool
+	connectedMu sync.Mutex
 	// Could be used to store arbitrary data within a session
 	InternalState map[string]interface{}
 	Log           *slog.Logger
@@ -282,7 +283,6 @@ func BuildSession(conn Connection, env *common.SessionEnv) *Session {
 		closeCtx:      ctx,
 		closeCancel:   cancel,
 		closed:        false,
-		Connected:     false,
 		timers:        &SessionTimers{},
 		// Use JSON by default
 		encoder: encoders.JSON{},
@@ -342,10 +342,7 @@ func (s *Session) AuthenticateOnConnect() bool {
 }
 
 func (s *Session) IsConnected() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	return s.Connected
+	return s.connected.Load()
 }
 
 func (s *Session) IsResumeable() bool {
@@ -358,15 +355,10 @@ func (s *Session) maybeDisconnectIdle() {
 	s.timers.handshakeDeadline = 0
 	s.timers.mu.Unlock()
 
-	s.mu.Lock()
-
-	if s.Connected {
-		s.mu.Unlock()
+	if s.connected.Load() {
 		s.timers.Schedule()
 		return
 	}
-
-	s.mu.Unlock()
 
 	s.Log.Warn("disconnecting idle session")
 
@@ -655,12 +647,13 @@ func (s *Session) PrevSid() string {
 }
 
 func (s *Session) disconnectFromNode() {
-	s.mu.Lock()
-	if s.Connected {
-		defer s.executor.Disconnect(s) // nolint:errcheck
+	s.connectedMu.Lock()
+	wasConnected := s.connected.Swap(false)
+	s.connectedMu.Unlock()
+
+	if wasConnected {
+		s.executor.Disconnect(s) // nolint:errcheck
 	}
-	s.Connected = false
-	s.mu.Unlock()
 }
 
 func (s *Session) DisconnectNow(reason string, code int) {
@@ -668,12 +661,14 @@ func (s *Session) DisconnectNow(reason string, code int) {
 }
 
 func (s *Session) disconnectNow(reason string, code int) {
-	s.mu.Lock()
-	if !s.Connected {
-		s.mu.Unlock()
+	if !s.connected.Load() {
 		return
 	}
-	s.mu.Unlock()
+
+	// Close first: disconnecting from the node may block for a long time
+	// (when the disconnect queue is full), and in-flight commands must see
+	// the session as closed meanwhile.
+	s.close()
 
 	s.disconnectFromNode()
 	s.writeFrame(&ws.SentFrame{ // nolint:errcheck
@@ -683,8 +678,6 @@ func (s *Session) disconnectNow(reason string, code int) {
 	})
 
 	s.writeQueue.Close()
-
-	s.close()
 }
 
 func (s *Session) close() {
@@ -901,14 +894,9 @@ func (s *Session) HandleNativePong() {
 }
 
 func (s *Session) handleNoPong() {
-	s.mu.Lock()
-
-	if !s.Connected {
-		s.mu.Unlock()
+	if !s.connected.Load() {
 		return
 	}
-
-	s.mu.Unlock()
 
 	s.Log.Warn("disconnecting session due to no pongs")
 

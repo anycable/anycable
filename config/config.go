@@ -66,6 +66,8 @@ type Config struct {
 	API                  api.Config                 `toml:"api"`
 
 	ConfigFilePath string
+	// UnknownConfigKeys contains the configuration file keys that do not match any setting
+	UnknownConfigKeys []string `toml:"-"`
 }
 
 // NewConfig returns a new empty config
@@ -112,7 +114,7 @@ func (c *Config) LoadFromFile() error {
 	}
 
 	prevID := c.ID
-	_, err = toml.Decode(string(bytes), &c)
+	md, err := toml.Decode(string(bytes), &c)
 
 	if err != nil {
 		return errorx.Decorate(err, "failed to parse TOML configuration")
@@ -122,7 +124,36 @@ func (c *Config) LoadFromFile() error {
 		c.UserProvidedID = true
 	}
 
+	c.UnknownConfigKeys = unknownKeys(md.Undecoded())
+
 	return nil
+}
+
+// unknownKeys returns dotted paths of the undecoded keys.
+// Keys nested under an unknown table are omitted, since the table itself is reported.
+func unknownKeys(undecoded []toml.Key) []string {
+	reported := make(map[string]bool, len(undecoded))
+	var keys []string
+
+	for _, key := range undecoded {
+		path := key.String()
+		nested := false
+
+		for i := 1; i < len(key); i++ {
+			if reported[key[:i].String()] {
+				nested = true
+				break
+			}
+		}
+
+		reported[path] = true
+
+		if !nested {
+			keys = append(keys, path)
+		}
+	}
+
+	return keys
 }
 
 func (c *Config) ToToml() string {

@@ -74,7 +74,7 @@ func TestSessionDisconnect(t *testing.T) {
 	node := NewMockNode()
 	session := NewMockSession("123", node)
 	session.closed = false
-	session.Connected = true
+	session.connected.Store(true)
 
 	go func() {
 		session.sendFrame(&ws.SentFrame{FrameType: ws.TextFrame, Payload: []byte("bye")})
