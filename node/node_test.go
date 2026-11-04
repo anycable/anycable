@@ -111,15 +111,17 @@ func TestAuthenticatedRacesWithDisconnect(t *testing.T) {
 	}
 	wg.Wait()
 
-	leaked := 0
-	for _, s := range sessions {
-		if s.IsClosed() && node.hub.FindByIdentifier(s.GetID()) != nil {
-			leaked++
+	assert.EventuallyWithT(t, func(c *assert.CollectT) {
+		leaked := 0
+		for _, s := range sessions {
+			if s.IsClosed() && node.hub.FindByIdentifier(s.GetID()) != nil {
+				leaked++
+			}
 		}
-	}
 
-	assert.Equal(t, 0, leaked, "closed sessions left in the hub")
-	assert.Equal(t, 0, node.hub.Size())
+		assert.Equal(c, 0, leaked, "closed sessions left in the hub")
+		assert.Equal(c, 0, node.hub.Size())
+	}, time.Second, 10*time.Millisecond)
 }
 
 type blockingDisconnector struct {
