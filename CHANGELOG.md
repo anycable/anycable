@@ -6,6 +6,18 @@
 
 - Fix `--print-config` to output the `metrics.http_path` key (instead of the unsupported `http` key). ([@jjb][])
 
+- Add `--disconnect_workers_num` to make concurrent Disconnect calls (default: 4). ([@palkan][])
+
+  Previously, the disconnect queue made one call at a time, so the call latency limited the rate (e.g., 10 calls per second with a 100ms latency). The total rate still stays within `--disconnect_rate`.
+
+- Make scheduling Disconnect requests non-blocking and add `--max_disconnect_backlog_size` to control the max queue size. ([@palkan][])
+
+  Requests above the limit are discarded. You can track them using the new `disconnect_queue_discarded_total` metrics.
+
+- Add `--rpc_wait_timeout` to limit the time a command waits in an RPC queue. ([@palkan][])
+
+  It defaults to the RPC command timeout (3s). Calls that wait longer fail without reaching the RPC server, and calls for closed sessions leave the queue at once. Disconnect calls are not affected. The new `rpc_wait_timeout_total` metric counts the timed out calls.
+
 ## 1.6.20 (2026-10-21)
 
 - Upgrade to Go tool chain 1.27.3 (fix eMuhdra CVE).

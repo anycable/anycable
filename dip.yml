@@ -54,8 +54,7 @@ interaction:
 
 provision:
   - '[[ "$RESET_DOCKER" == "true" ]] && echo "Re-creating the Docker env from scratch..." && dip compose down --volumes || echo "Re-provisioning the Docker env..."'
-  - dip compose build
   - test -f .dockerdev/.claude.json || cp .dockerdev/.claude.json.example .dockerdev/.claude.json
   - dip compose up -d redis
-  - dip bundle check || dip bundle install
+  - dip bundle install
   - dip go mod download

@@ -1038,6 +1038,13 @@ func rpcCLIFlags(c *config.Config, headers, cookieFilter *string, isNone *bool) 
 			Hidden:      true,
 		},
 
+		&cli.IntFlag{
+			Name:        "rpc_wait_timeout",
+			Usage:       "Max time to wait in an RPC queue (in ms); zero means no limit",
+			Value:       c.RPC.WaitTimeout,
+			Destination: &c.RPC.WaitTimeout,
+		},
+
 		&cli.StringFlag{
 			Name:        "headers",
 			Usage:       "List of headers to proxy to RPC",
@@ -1095,8 +1102,22 @@ func disconnectorCLIFlags(c *config.Config) []cli.Flag {
 		},
 
 		&cli.IntFlag{
+			Name:        "disconnect_workers_num",
+			Usage:       "The number of concurrent Disconnect calls",
+			Value:       c.DisconnectQueue.WorkersNum,
+			Destination: &c.DisconnectQueue.WorkersNum,
+		},
+
+		&cli.IntFlag{
+			Name:        "max_disconnect_backlog_size",
+			Usage:       "The max size of the disconnect requests queue; over limit discards new items",
+			Value:       c.DisconnectQueue.MaxBacklog,
+			Destination: &c.DisconnectQueue.MaxBacklog,
+		},
+
+		&cli.IntFlag{
 			Name:        "disconnect_backlog_size",
-			Usage:       "The size of the channel's buffer for disconnect requests",
+			Usage:       "DEPRECATED: The size of the channel's buffer for disconnect requests",
 			Value:       c.DisconnectQueue.Backlog,
 			Destination: &c.DisconnectQueue.Backlog,
 			Hidden:      true,

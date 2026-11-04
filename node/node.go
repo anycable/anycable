@@ -38,10 +38,12 @@ const (
 	metricsReceivedMsg             = "client_msg_total"
 	metricsFailedCommandReceived   = "failed_client_msg_total"
 	metricsDisconnectedSlowClients = "disconnected_slow_clients_total"
+	metricsDisconnectDiscarded     = "disconnect_queue_discarded_total"
 	metricsPublications            = "publications_total"
 	metricsBroadcastMsg            = "broadcast_msg_total"
 	metricsRemoteCommands          = "remote_commands_total"
 	metricsUnknownBroadcast        = "failed_broadcast_msg_total"
+	metricsRejectedClients         = "rejected_clients_total"
 
 	metricsSentMsg      = "server_msg_total"
 	metricsFailedSent   = "failed_server_msg_total"
@@ -317,6 +319,11 @@ func (n *Node) IsShuttingDown() bool {
 	return n.closed
 }
 
+// AdmitNewClient returns false if a new client connection must be rejected (e.g., the node is overloaded).
+func (n *Node) AdmitNewClient() bool {
+	return true
+}
+
 type AuthOptions struct {
 	DisconnectOnFailure bool
 }
@@ -403,15 +410,18 @@ func (n *Node) Authenticate(s *Session, options ...AuthOption) (*common.ConnectR
 // Mark session as authenticated and register it with a hub.
 // Useful when you perform authentication manually, not using a controller.
 func (n *Node) Authenticated(s *Session, ids string) {
+	s.connectedMu.Lock()
+	defer s.connectedMu.Unlock()
+
 	if s.IsClosed() {
 		return
 	}
 
 	s.SetIdentifiers(ids)
-	s.Connected = true
 	if !s.inactive {
 		n.hub.AddSession(s)
 	}
+	s.connected.Store(true)
 }
 
 func (n *Node) TryRestoreSession(s *Session) (restored bool) {
@@ -448,8 +458,14 @@ func (n *Node) TryRestoreSession(s *Session) (restored bool) {
 
 	s.Log.Debug("session restored", "old_sid", prev_sid)
 
-	s.Connected = true
+	s.connectedMu.Lock()
+	if s.IsClosed() {
+		s.connectedMu.Unlock()
+		return false
+	}
 	n.hub.AddSession(s)
+	s.connected.Store(true)
+	s.connectedMu.Unlock()
 
 	// Resubscribe to streams
 	for identifier, channel_streams := range s.subscriptions.ToMap() {
@@ -1244,8 +1260,10 @@ func (n *Node) registerMetrics() {
 	n.metrics.RegisterGauge(metricsDisconnectQueue, "The size of delayed disconnect")
 
 	n.metrics.RegisterCounter(metricsFailedAuths, "The total number of failed authentication attempts")
+	n.metrics.RegisterCounter(metricsRejectedClients, "The total number of client connections rejected because the server was overloaded")
 	n.metrics.RegisterCounter(metricsReceivedMsg, "The total number of received messages from clients")
 	n.metrics.RegisterCounter(metricsDisconnectedSlowClients, "The total number of disconnected slow clients")
+	n.metrics.RegisterCounter(metricsDisconnectDiscarded, "The total number of Disconnect calls discarded because the disconnect queue was full")
 	n.metrics.RegisterCounter(metricsFailedCommandReceived, "The total number of unrecognized messages received from clients")
 	n.metrics.RegisterCounter(metricsPublications, "The total number of publications received (from the application)")
 	n.metrics.RegisterCounter(metricsBroadcastMsg, "The total number of messages received through PubSub (for broadcast)")

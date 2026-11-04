@@ -282,6 +282,7 @@ func (h *Hub) SubscribeSession(session HubSession, stream string, identifier str
 	sid := session.GetID()
 
 	if _, ok := h.sessions[sid]; !ok {
+		// FIXME: why do we register the session here if missing?
 		h.sessions[sid] = NewHubSessionInfo(session)
 	}
 
