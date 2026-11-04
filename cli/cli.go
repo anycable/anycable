@@ -171,6 +171,10 @@ func (r *Runner) Run() error {
 
 	if r.config.ConfigFilePath != "" {
 		r.log.Info(fmt.Sprintf("Using configuration from file: %s", r.config.ConfigFilePath))
+
+		if len(r.config.UnknownConfigKeys) > 0 {
+			r.log.Warn(fmt.Sprintf("Unknown keys in configuration file (ignored): %s", strings.Join(r.config.UnknownConfigKeys, ", ")))
+		}
 	}
 
 	if r.config.PublicMode {

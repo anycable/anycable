@@ -95,6 +95,11 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 			Usage: "Path to the TOML configuration file",
 		},
 		&cli.BoolFlag{
+			Name:    "strict-config",
+			Usage:   "Fail if the configuration file contains unknown keys",
+			EnvVars: []string{envPrefix + "STRICT_CONFIG"},
+		},
+		&cli.BoolFlag{
 			Name:        "print-config",
 			Usage:       "Print configuration and exit",
 			Destination: &shouldPrintConfig,
@@ -152,6 +157,10 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 			// check if file exists and try to load config from it
 			if err := c.LoadFromFile(); err != nil {
 				return err
+			}
+
+			if ctx.Bool("strict-config") && len(c.UnknownConfigKeys) > 0 {
+				return fmt.Errorf("unknown keys in configuration file %s: %s", c.ConfigFilePath, strings.Join(c.UnknownConfigKeys, ", "))
 			}
 
 			return nil

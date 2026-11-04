@@ -2,6 +2,10 @@
 
 ## master
 
+- Warn on unknown keys in the TOML configuration file; add `--strict-config` to fail instead. ([@jjb][])
+
+- Fix `--print-config` to output the `metrics.http_path` key (instead of the unsupported `http` key). ([@jjb][])
+
 - Add `--disconnect_workers_num` to make concurrent Disconnect calls (default: 4). ([@palkan][])
 
   Previously, the disconnect queue made one call at a time, so the call latency limited the rate (e.g., 10 calls per second with a 100ms latency). The total rate still stays within `--disconnect_rate`.
@@ -576,3 +580,4 @@ See [Changelog](https://github.com/anycable/anycable-go/blob/0-6-stable/CHANGELO
 [@ardecvz]: https://github.com/ardecvz
 [@paderinandrey]: https://github.com/paderinandrey
 [@budnik]: https://github.com/budnik
+[@jjb]: https://github.com/jjb

@@ -314,6 +314,14 @@ You can generate a sample configuration file (including the currently provided c
 anycable-go --print-config > anycable.toml
 ```
 
+Keys that don't match any setting (e.g., misspelled ones) are ignored, and AnyCable logs a warning listing them on start:
+
+```sh
+2026-10-30 14:33:19.023 WRN Unknown keys in configuration file (ignored): hots, redis.urll nodeid=BzeSHV
+```
+
+To fail instead, use the `--strict-config` option (or set `ANYCABLE_STRICT_CONFIG=true`). Only the configuration file is checked; unknown `ANYCABLE_*` environment variables are not reported.
+
 Finally, if there is a configuration file but you don't want to use it, you can disable it using the `--ignore-config-path` option.
 
 [automaxprocs]: https://github.com/uber-go/automaxprocs
