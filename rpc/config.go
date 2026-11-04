@@ -62,6 +62,8 @@ type Config struct {
 	RequestTimeout int `toml:"request_timeout"`
 	// Command execution timeout (in ms) (may consist of multiple request retries)
 	CommandTimeout int `toml:"command_timeout"`
+	// Max time (in ms) to wait in an RPC queue
+	WaitTimeout int `toml:"wait_timeout"`
 	// Timeout for HTTP RPC requests (in ms)
 	HTTPRequestTimeout int `toml:"http_request_timeout"`
 	// SecretBase is a secret used to generate authentication token
@@ -81,6 +83,7 @@ func NewConfig() Config {
 		RequestTimeout:     0,
 		HTTPRequestTimeout: 0,
 		CommandTimeout:     3000,
+		WaitTimeout:        -1, // defaults to CommandTimeout
 	}
 }
 
@@ -237,6 +240,13 @@ func (c Config) ToToml() string {
 		result.WriteString(fmt.Sprintf("command_timeout = %d\n", c.CommandTimeout))
 	} else {
 		result.WriteString("# command_timeout = 3000\n")
+	}
+
+	result.WriteString("# Max time to wait for a free RPC slot (in ms); defaults to command_timeout, zero means no limit\n")
+	if c.WaitTimeout >= 0 {
+		result.WriteString(fmt.Sprintf("wait_timeout = %d\n", c.WaitTimeout))
+	} else {
+		result.WriteString("# wait_timeout = 3000\n")
 	}
 
 	result.WriteString("# GRPC fine-tuning\n")

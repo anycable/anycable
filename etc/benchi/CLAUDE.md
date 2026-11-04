@@ -167,6 +167,37 @@ single-run delta.
   colocation noise. Run the variance workflow above to size it before
   drawing conclusions.
 
+## `reconnect_floods`
+
+Reproduces reconnect storms against an RPC-backed server. Required flags:
+`-c` (clients) and `--waves` (comma-separated wave sizes). See the README
+section "Running `reconnect_floods`" for all flags and summary keys.
+
+```sh
+go run ./scenarios/reconnect_floods -c 3000 --waves 1000,1000,3000 \
+  --wave-interval 40s --rpc-latency 100ms \
+  --disconnect-rate 10 --disconnect-backlog 256 --non-interactive
+```
+
+- A run takes minutes (setup + settle + waves × interval + recovery +
+  disconnect queue drain). Run it in the background. The drain has no
+  timeout; with slow Disconnect calls, interrupt the run (SIGINT) after
+  `recovered` is known.
+- The headline is `recovered`: all clients healthy. Then read
+  `wave_N_recovery_seconds`, `wave_N_drained_seconds`,
+  `max_command_stall_seconds`, `close_subscribe_timeout`, `subscribe_retries`,
+  `close_ping_timeout`, `peak_disconnect_queue`, `disconnect_discarded`,
+  `rpc_command_after_close_calls`, `probe_max_ms` and `peak_goroutines`.
+- High `probe_*_ms` means the server reads or handles client messages late.
+  RPC load alone does not slow down probes.
+- `recovered=false` with exit code 1 is a *result* (the storm did not
+  settle), not a harness failure. Report it; do not change flags to make
+  it pass unless the user asks for a sweep.
+- `disconnect_discarded > 0` means the disconnect queue was full: these
+  sessions got no Disconnect call.
+- To stop a run early, send SIGINT or SIGTERM. The run prints the summary
+  with `interrupted=true` and exits with code 130.
+
 ## What not to do
 
 - Do **not** edit Benchi source to make a benchmark pass. The numbers are

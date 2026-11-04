@@ -6,6 +6,26 @@
 
   The channel was removed from the session before its streams were stopped, so they were never unsubscribed from the broker and pub/sub.
 
+- Fix HTTP RPC opening a new connection for almost every call. ([@gdubicki][])
+
+  The HTTP RPC client now keeps up to `--rpc_concurrency` idle connections to the RPC server, instead of Go's default of two per host.
+
+- Warn on unknown keys in the TOML configuration file; add `--strict-config` to fail instead. ([@jjb][])
+
+- Fix `--print-config` to output the `metrics.http_path` key (instead of the unsupported `http` key). ([@jjb][])
+
+- Add `--disconnect_workers_num` to make concurrent Disconnect calls (default: 4). ([@palkan][])
+
+  Previously, the disconnect queue made one call at a time, so the call latency limited the rate (e.g., 10 calls per second with a 100ms latency). The total rate still stays within `--disconnect_rate`.
+
+- Make scheduling Disconnect requests non-blocking and add `--max_disconnect_backlog_size` to control the max queue size. ([@palkan][])
+
+  Requests above the limit are discarded. You can track them using the new `disconnect_queue_discarded_total` metrics.
+
+- Add `--rpc_wait_timeout` to limit the time a command waits in an RPC queue. ([@palkan][])
+
+  It defaults to the RPC command timeout (3s). Calls that wait longer fail without reaching the RPC server, and calls for closed sessions leave the queue at once. Disconnect calls are not affected. The new `rpc_wait_timeout_total` metric counts the timed out calls.
+
 ## 1.6.20 (2026-10-21)
 
 - Upgrade to Go tool chain 1.27.3 (fix eMuhdra CVE).
@@ -569,3 +589,4 @@ See [Changelog](https://github.com/anycable/anycable-go/blob/0-6-stable/CHANGELO
 [@paderinandrey]: https://github.com/paderinandrey
 [@budnik]: https://github.com/budnik
 [@gdubicki]: https://github.com/gdubicki
+[@jjb]: https://github.com/jjb

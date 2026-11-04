@@ -36,6 +36,8 @@ The `rpc_timeouts_total` shows the number of timed out RPC requests. Use this me
 
 The `rpc_canceled_total` shows the number of RPC calls that were discarded due to the initiator (the connection) being terminated. Higher values could indicate either misbehaving clients (connecting, subscribing and disconnecting too quickly) or lack of RPC capacity to process all incoming commands (in this case, it should correlate with timeouts).
 
+The `rpc_wait_timeout_total` shows the number of RPC calls that failed because they waited in an RPC calls queue for longer than `--rpc_wait_timeout`. Non-zero values mean the RPC capacity cannot keep up with incoming calls.
+
 The `rpc_pending_num` is the **key latency metrics** of AnyCable-Go. We limit the number of concurrent RPC requests (to prevent the RPC server exhaustion and retries). If the number of pending requests grows (which means we can not keep up with the rate of incoming messages), you should consider either tuning concurrency settings or scale up your cluster.
 
 ### `publications_total` / `broadcast_msg_total` / `remote_commands_total`
@@ -50,11 +52,25 @@ The `broadcast_msg_total` describes the number of broadcasts (i.e., attempts to 
 
 This `failed_auths_total` indicates the total number of unauthenticated connection attempts and has a special purpose: it helps you identify misconfigured client credentials and malicious behaviour. Ideally, the change rate of this number should be low comparing to the `clients_num`.)
 
+### `rejected_clients_total`
+
+<p class="pro-badge-header"></p>
+
+The `rejected_clients_total` shows the total number of WebSocket connections that the server rejected because it was overloaded. The server closes these connections with the `1013` code ("Try again later") before it authenticates them.
+
+AnyCable Pro stops accepting new connections when all the workers that read client messages stay busy for some time (with IO polling enabled only). Non-zero values mean the server cannot process incoming commands quickly enough, usually because of a lack of RPC capacity. Consider scaling up your cluster or tuning the RPC concurrency settings.
+
 ### ⏱ `disconnect_queue_size`
 
 The `disconnect_queue_size` shows the current number of pending Disconnect calls. AnyCable-Go performs Disconnect calls in the background with some throttling (by default, 100 calls per second).
 
 During the normal operation, the value should be close to zero most of the a time. Larger values or growth could indicate inefficient client-side connection management (high re-connection rate). Spikes could indicate mass disconnect events.
+
+The queue size is limited by the `--max_disconnect_backlog_size` option (default: 8192).
+
+### `disconnect_queue_discarded_total`
+
+The `disconnect_queue_discarded_total` shows the total number of Disconnect calls discarded because the disconnect queue was full. The RPC server does not receive these disconnection events (`disconnect` and `unsubscribed` callbacks).
 
 ### ⏱ `goroutines_num`
 

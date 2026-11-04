@@ -82,8 +82,18 @@ func NewHTTPService(c *Config) (*HTTPService, error) {
 		return nil, error
 	}
 
+	// A zero Transport keeps at most two idle connections per host, so with more calls in flight almost
+	// every call opened a new connection and closed it afterwards. Keep one per concurrent call, and drop
+	// idle ones before typical server keep-alive timeouts (e.g., Puma's persistent_timeout) close them.
+	transport := &http.Transport{
+		TLSClientConfig:     tlsConfig,
+		MaxIdleConns:        c.Concurrency,
+		MaxIdleConnsPerHost: c.Concurrency,
+		IdleConnTimeout:     10 * time.Second,
+	}
+
 	client := &http.Client{
-		Transport: &http.Transport{TLSClientConfig: tlsConfig},
+		Transport: transport,
 		Timeout:   time.Duration(c.RequestTimeout * int(time.Millisecond)),
 	}
 

@@ -95,6 +95,11 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 			Usage: "Path to the TOML configuration file",
 		},
 		&cli.BoolFlag{
+			Name:    "strict-config",
+			Usage:   "Fail if the configuration file contains unknown keys",
+			EnvVars: []string{envPrefix + "STRICT_CONFIG"},
+		},
+		&cli.BoolFlag{
 			Name:        "print-config",
 			Usage:       "Print configuration and exit",
 			Destination: &shouldPrintConfig,
@@ -152,6 +157,10 @@ func NewConfigFromCLI(args []string, opts ...cliOption) (*config.Config, error, 
 			// check if file exists and try to load config from it
 			if err := c.LoadFromFile(); err != nil {
 				return err
+			}
+
+			if ctx.Bool("strict-config") && len(c.UnknownConfigKeys) > 0 {
+				return fmt.Errorf("unknown keys in configuration file %s: %s", c.ConfigFilePath, strings.Join(c.UnknownConfigKeys, ", "))
 			}
 
 			return nil
@@ -1029,6 +1038,13 @@ func rpcCLIFlags(c *config.Config, headers, cookieFilter *string, isNone *bool) 
 			Hidden:      true,
 		},
 
+		&cli.IntFlag{
+			Name:        "rpc_wait_timeout",
+			Usage:       "Max time to wait in an RPC queue (in ms); zero means no limit",
+			Value:       c.RPC.WaitTimeout,
+			Destination: &c.RPC.WaitTimeout,
+		},
+
 		&cli.StringFlag{
 			Name:        "headers",
 			Usage:       "List of headers to proxy to RPC",
@@ -1086,8 +1102,22 @@ func disconnectorCLIFlags(c *config.Config) []cli.Flag {
 		},
 
 		&cli.IntFlag{
+			Name:        "disconnect_workers_num",
+			Usage:       "The number of concurrent Disconnect calls",
+			Value:       c.DisconnectQueue.WorkersNum,
+			Destination: &c.DisconnectQueue.WorkersNum,
+		},
+
+		&cli.IntFlag{
+			Name:        "max_disconnect_backlog_size",
+			Usage:       "The max size of the disconnect requests queue; over limit discards new items",
+			Value:       c.DisconnectQueue.MaxBacklog,
+			Destination: &c.DisconnectQueue.MaxBacklog,
+		},
+
+		&cli.IntFlag{
 			Name:        "disconnect_backlog_size",
-			Usage:       "The size of the channel's buffer for disconnect requests",
+			Usage:       "DEPRECATED: The size of the channel's buffer for disconnect requests",
 			Value:       c.DisconnectQueue.Backlog,
 			Destination: &c.DisconnectQueue.Backlog,
 			Hidden:      true,

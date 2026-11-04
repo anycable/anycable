@@ -49,9 +49,9 @@ func (c Config) ToToml() string {
 
 	result.WriteString("# HTTP endpoint (Prometheus)\n")
 	if c.HTTP != "" {
-		result.WriteString(fmt.Sprintf("http = \"%s\"\n", c.HTTP))
+		result.WriteString(fmt.Sprintf("http_path = \"%s\"\n", c.HTTP))
 	} else {
-		result.WriteString("# http = \"/metrics\"\n")
+		result.WriteString("# http_path = \"/metrics\"\n")
 	}
 
 	result.WriteString("# Standalone metrics HTTP server host to bind to\n")
