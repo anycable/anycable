@@ -1195,3 +1195,28 @@ func readMessages(conn Connection, count int) ([]string, error) {
 
 	return messages, nil
 }
+
+func TestUnsubscribeReleasesBrokerStreams(t *testing.T) {
+	node := NewMockNode()
+	broker := &mocks.Broker{}
+	node.SetBroker(broker)
+	session := NewMockSession("14", node)
+
+	node.hub.AddSession(session)
+	defer node.hub.RemoveSession(session)
+
+	go node.hub.Run()
+	defer node.hub.Shutdown()
+
+	session.subscriptions.AddChannel("test_channel")
+	session.subscriptions.AddChannelStream("test_channel", "streamo")
+	node.hub.SubscribeSession(session, "streamo", "test_channel")
+
+	broker.On("Unsubscribe", "streamo").Return("streamo")
+
+	_, err := node.Unsubscribe(session, &common.Message{Identifier: "test_channel"})
+	require.NoError(t, err)
+
+	broker.AssertCalled(t, "Unsubscribe", "streamo")
+	assert.False(t, session.subscriptions.HasChannel("test_channel"))
+}

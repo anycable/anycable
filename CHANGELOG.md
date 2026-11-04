@@ -2,6 +2,10 @@
 
 ## master
 
+- Fix leaking pub/sub subscriptions when a client unsubscribes from a channel. ([@gdubicki][])
+
+  The channel was removed from the session before its streams were stopped, so they were never unsubscribed from the broker and pub/sub.
+
 - Fix HTTP RPC opening a new connection for almost every call. ([@gdubicki][])
 
   The HTTP RPC client now keeps up to `--rpc_concurrency` idle connections to the RPC server, instead of Go's default of two per host.
