@@ -163,14 +163,16 @@ func TestDisconnectQueue_Shutdown(t *testing.T) {
 				go func() {
 					defer wg.Done()
 
-					for k := 0; ; k++ {
+					s := NewMockSession(fmt.Sprintf("c-%d", j), q.node)
+
+					for {
 						select {
 						case <-stop:
 							return
 						default:
 						}
 
-						q.Enqueue(NewMockSession(fmt.Sprintf("c-%d-%d", j, k), q.node)) // nolint:errcheck
+						q.Enqueue(s) // nolint:errcheck
 					}
 				}()
 			}
