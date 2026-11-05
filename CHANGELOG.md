@@ -2,6 +2,8 @@
 
 ## master
 
+- Drain broadcasters before shutting down the broker to avoid losing in-flight publications.
+
 - Fix leaking pub/sub subscriptions when a client unsubscribes from a channel. ([@gdubicki][])
 
   The channel was removed from the session before its streams were stopped, so they were never unsubscribed from the broker and pub/sub.
