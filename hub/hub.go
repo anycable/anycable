@@ -203,21 +203,20 @@ func (h *Hub) AddSession(session HubSession) {
 	)
 }
 
+// RemoveSession unsubscribes and forgets a session in one critical section, so a concurrent SubscribeSession
+// either completes before it (and is undone here) or finds the session gone.
 func (h *Hub) RemoveSession(session HubSession) {
-	h.mu.RLock()
+	h.mu.Lock()
 	uid := session.GetID()
 
 	if _, ok := h.sessions[uid]; !ok {
-		h.mu.RUnlock()
+		h.mu.Unlock()
 		h.log.With("sid", uid).Warn("session hasn't been registered")
 		return
 	}
-	h.mu.RUnlock()
 
 	identifiers := session.GetIdentifiers()
-	h.unsubscribeSessionFromAllChannels(session)
-
-	h.mu.Lock()
+	h.unsubscribeSessionFromAllChannelsLocked(session)
 
 	delete(h.sessions, uid)
 	delete(h.identifiers[identifiers], uid)
@@ -235,6 +234,10 @@ func (h *Hub) unsubscribeSessionFromAllChannels(session HubSession) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
+	h.unsubscribeSessionFromAllChannelsLocked(session)
+}
+
+func (h *Hub) unsubscribeSessionFromAllChannelsLocked(session HubSession) {
 	sid := session.GetID()
 
 	if sessionInfo, ok := h.sessions[sid]; ok {
@@ -273,22 +276,27 @@ func (h *Hub) UnsubscribeSessionFromChannel(session HubSession, targetIdentifier
 	h.log.With("sid", sid).Debug("unsubscribed", "identifier", common.FilteredIdentifier(targetIdentifier))
 }
 
-func (h *Hub) SubscribeSession(session HubSession, stream string, identifier string) {
-	h.gates[index(stream, h.gatesNum)].Subscribe(session, stream, identifier)
-
+// SubscribeSession subscribes a registered session to a stream, and reports false, changing nothing, for a session
+// the hub no longer holds. A subscribe command can complete after its session disconnected, and registering the
+// session again then would leave it counted and receiving broadcasts, with nothing to ever remove it.
+func (h *Hub) SubscribeSession(session HubSession, stream string, identifier string) bool {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
 	sid := session.GetID()
 
-	if _, ok := h.sessions[sid]; !ok {
-		// FIXME: why do we register the session here if missing?
-		h.sessions[sid] = NewHubSessionInfo(session)
+	info, ok := h.sessions[sid]
+	if !ok {
+		h.log.With("sid", sid).Debug("skip subscribe: session is not registered", "identifier", common.FilteredIdentifier(identifier), "stream", stream)
+		return false
 	}
 
-	h.sessions[sid].AddStream(stream, identifier)
+	h.gates[index(stream, h.gatesNum)].Subscribe(session, stream, identifier)
+	info.AddStream(stream, identifier)
 
 	h.log.With("sid", sid).Debug("subscribed", "identifier", common.FilteredIdentifier(identifier), "stream", stream)
+
+	return true
 }
 
 func (h *Hub) UnsubscribeSession(session HubSession, stream string, identifier string) {

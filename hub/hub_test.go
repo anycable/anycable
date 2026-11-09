@@ -578,3 +578,24 @@ func toJSON(msg encoders.EncodedMessage) []byte {
 
 	return b
 }
+
+func TestSubscribeSessionSkipsSessionsTheHubNoLongerHolds(t *testing.T) {
+	hub := NewHub(2, slog.Default())
+
+	go hub.Run()
+	defer hub.Shutdown()
+
+	session := NewMockSession("17")
+	hub.AddSession(session)
+	hub.RemoveSession(session)
+
+	assert.False(t, hub.SubscribeSession(session, "test", "test_channel"))
+	assert.Equal(t, 0, hub.Size())
+	assert.Equal(t, 0, hub.UniqSize())
+	assert.Equal(t, 0, hub.StreamsSize())
+
+	other := NewMockSession("18")
+	hub.AddSession(other)
+	assert.True(t, hub.SubscribeSession(other, "test", "test_channel"))
+	assert.Equal(t, 1, hub.StreamsSize())
+}

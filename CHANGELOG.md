@@ -2,6 +2,10 @@
 
 ## master
 
+- Fix sessions leaking in the hub when a subscribe command completes after its client disconnected. ([@gdubicki][])
+
+  The hub registered the disconnected session again, so it stayed counted as a client and kept receiving broadcasts until the node restarted.
+
 - Drain broadcasters before shutting down the broker to avoid losing in-flight publications.
 
 - Fix leaking pub/sub subscriptions when a client unsubscribes from a channel. ([@gdubicki][])

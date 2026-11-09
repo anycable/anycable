@@ -520,6 +520,8 @@ func TestHistory(t *testing.T) {
 	defer node.hub.Shutdown()
 
 	session := NewMockSession("14", node)
+	// Registered like an authenticated connection: the hub subscribes only sessions it holds.
+	node.hub.AddSession(session)
 
 	session.subscriptions.AddChannel("test_channel")
 	session.subscriptions.AddChannelStream("test_channel", "streamo")
@@ -1219,4 +1221,60 @@ func TestUnsubscribeReleasesBrokerStreams(t *testing.T) {
 
 	broker.AssertCalled(t, "Unsubscribe", "streamo")
 	assert.False(t, session.subscriptions.HasChannel("test_channel"))
+}
+
+// The disconnect lands between the controller's reply and the hub subscription.
+func TestSubscribeCompletingAfterDisconnectLeavesNoSession(t *testing.T) {
+	node := NewMockNode()
+	broker := &mocks.Broker{}
+	node.SetBroker(broker)
+
+	go node.hub.Run()
+	defer node.hub.Shutdown()
+
+	session := NewMockSession("15", node)
+	node.Authenticated(session, "15")
+
+	broker.On("TouchPresence", mock.Anything).Return(nil)
+	broker.On("Unsubscribe", "stream").Return("stream")
+	broker.On("Subscribe", "stream").Run(func(mock.Arguments) {
+		session.Disconnect("Client gone", ws.CloseNormalClosure)
+	}).Return("stream")
+
+	_, err := node.Subscribe(session, &common.Message{Identifier: "with_stream"})
+	require.NoError(t, err)
+
+	assert.Equal(t, 0, node.hub.Size(), "the disconnected session must not be re-registered")
+	assert.Equal(t, 0, node.hub.UniqSize())
+	assert.Equal(t, 0, node.hub.StreamsSize(), "the hub must not route broadcasts to it")
+	assert.Empty(t, session.subscriptions.StreamsFor("with_stream"))
+	broker.AssertNumberOfCalls(t, "Subscribe", 1)
+	broker.AssertNumberOfCalls(t, "Unsubscribe", 1)
+}
+
+func TestDisconnectAfterSubscribeReleasesItsStream(t *testing.T) {
+	node := NewMockNode()
+	broker := &mocks.Broker{}
+	node.SetBroker(broker)
+
+	go node.hub.Run()
+	defer node.hub.Shutdown()
+
+	session := NewMockSession("16", node)
+	node.Authenticated(session, "16")
+
+	broker.On("TouchPresence", mock.Anything).Return(nil)
+	broker.On("Subscribe", "stream").Return("stream")
+	broker.On("Unsubscribe", "stream").Return("stream")
+
+	_, err := node.Subscribe(session, &common.Message{Identifier: "with_stream"})
+	require.NoError(t, err)
+	assert.Equal(t, 1, node.hub.Size())
+	assert.Equal(t, 1, node.hub.StreamsSize())
+
+	session.Disconnect("Client gone", ws.CloseNormalClosure)
+
+	assert.Equal(t, 0, node.hub.Size())
+	assert.Equal(t, 0, node.hub.StreamsSize())
+	broker.AssertNumberOfCalls(t, "Unsubscribe", 1)
 }

@@ -909,6 +909,10 @@ func (n *Node) Disconnect(s *Session) error {
 		return nil
 	}
 
+	// Remove the session from the hub, so it gets no more broadcasts, before releasing its broker streams
+	// (see subscribeSessionStream).
+	n.hub.RemoveSession(s)
+
 	// unsubscribe from all streams to clean up broker subscriptions
 	n.unsubscribeSessionStreams(s)
 
@@ -917,10 +921,6 @@ func (n *Node) Disconnect(s *Session) error {
 	}
 
 	n.broker.TouchPresence(s.GetID()) // nolint:errcheck
-
-	// Make sure session is removed from hub, so we don't try to send
-	// broadcast messages to them
-	n.hub.RemoveSession(s)
 
 	if n.IsShuttingDown() {
 		if s.IsDisconnectable() {
@@ -933,6 +933,22 @@ func (n *Node) Disconnect(s *Session) error {
 	}
 
 	return nil
+}
+
+// subscribeSessionStream subscribes the session to a broker stream in the hub and records it, reporting false when
+// the hub no longer holds the session. Disconnect removes the session from the hub before copying its streams under
+// smu, so holding smu here releases each stream exactly once: there, or by the caller when the hub refuses it.
+func (n *Node) subscribeSessionStream(s *Session, streamId string, identifier string) bool {
+	s.smu.Lock()
+	defer s.smu.Unlock()
+
+	if !n.hub.SubscribeSession(s, streamId, identifier) {
+		return false
+	}
+
+	s.subscriptions.AddChannelStream(identifier, streamId)
+
+	return true
 }
 
 // unsubscribeSessionStreams unsubscribes session from all streams in the broker
@@ -1063,8 +1079,10 @@ func (n *Node) handleCommandReply(s *Session, msg *common.Message, reply *common
 
 		for _, stream := range reply.Streams {
 			streamId := n.broker.Subscribe(stream)
-			n.hub.SubscribeSession(s, streamId, msg.Identifier)
-			s.subscriptions.AddChannelStream(msg.Identifier, streamId)
+
+			if !n.subscribeSessionStream(s, streamId, msg.Identifier) {
+				n.broker.Unsubscribe(stream)
+			}
 		}
 	}
 
