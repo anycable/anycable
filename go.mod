@@ -22,7 +22,7 @@ require (
 	github.com/mattn/go-isatty v0.0.24
 	github.com/mitchellh/go-mruby v0.0.0-20200315023956-207cedc21542
 	github.com/nats-io/nats-server/v2 v2.15.1
-	github.com/nats-io/nats.go v1.54.0
+	github.com/nats-io/nats.go v1.55.0
 	github.com/posthog/posthog-go v1.35.0
 	github.com/pusher/pusher-http-go/v5 v5.1.1
 	github.com/redis/rueidis v1.0.79
