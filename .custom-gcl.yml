@@ -4,4 +4,4 @@ destination: ./tmp/bin
 plugins:
   - module: 'github.com/palkan/mulint'
     import: 'github.com/palkan/mulint/gclplugin'
-    version: v1.1.0
+    version: v1.1.1
