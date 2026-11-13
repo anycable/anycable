@@ -55,6 +55,21 @@ func TestHttpHandler(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, rr.Code)
 	})
 
+	t.Run("Rejects too large bodies", func(t *testing.T) {
+		limitedConfig := NewHTTPConfig()
+		limitedConfig.MaxBodySize = 8
+		limited := NewHTTPBroadcaster(handler, &limitedConfig, slog.Default())
+		require.NoError(t, limited.Prepare())
+
+		req, err := http.NewRequest("POST", "/", strings.NewReader(string(payload)))
+		require.NoError(t, err)
+
+		rr := httptest.NewRecorder()
+		http.HandlerFunc(limited.Handler).ServeHTTP(rr, req)
+
+		assert.Equal(t, http.StatusRequestEntityTooLarge, rr.Code)
+	})
+
 	t.Run("Rejects non-POST requests", func(t *testing.T) {
 		req, err := http.NewRequest("GET", "/", strings.NewReader(string(payload)))
 		require.NoError(t, err)

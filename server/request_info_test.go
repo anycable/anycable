@@ -3,6 +3,7 @@ package server
 import (
 	"crypto/tls"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -24,6 +25,19 @@ func TestFetchUID(t *testing.T) {
 		uid, _ := FetchUID(req)
 
 		assert.Equal(t, "external-request-id", uid)
+	})
+
+	t.Run("With invalid request id", func(t *testing.T) {
+		for _, val := range []string{strings.Repeat("a", 129), "with space", "new\tline", "юникод"} {
+			req := httptest.NewRequest("GET", "/", nil)
+			req.Header.Set("x-request-id", val)
+
+			uid, err := FetchUID(req)
+
+			require.NoError(t, err)
+			assert.NotEqual(t, "", uid)
+			assert.NotEqual(t, val, uid)
+		}
 	})
 }
 

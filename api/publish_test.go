@@ -39,6 +39,26 @@ func TestPublishHandler(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, rr.Code)
 	})
 
+	t.Run("Rejects too large bodies", func(t *testing.T) {
+		handler := mocks.NewHandler(t)
+		brk := mocks.NewBroker(t)
+		config := NewConfig()
+		config.MaxBodySize = 8
+
+		api, err := NewServer(&config, brk, handler, slog.Default())
+		require.NoError(t, err)
+		require.NoError(t, api.Start())
+		defer api.Shutdown(context.Background()) // nolint:errcheck
+
+		req, err := http.NewRequest("POST", "/api/publish", strings.NewReader(string(payload)))
+		require.NoError(t, err)
+
+		rr := httptest.NewRecorder()
+		api.server.ServeHTTP(rr, req)
+
+		assert.Equal(t, http.StatusRequestEntityTooLarge, rr.Code)
+	})
+
 	t.Run("Rejects non-POST requests", func(t *testing.T) {
 		handler := mocks.NewHandler(t)
 		brk := mocks.NewBroker(t)

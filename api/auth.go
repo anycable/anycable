@@ -1,6 +1,7 @@
 package api
 
 import (
+	"crypto/subtle"
 	"net/http"
 	"strings"
 )
@@ -43,5 +44,5 @@ func (a *Authenticator) Authenticate(r *http.Request) bool {
 	}
 
 	token := strings.TrimPrefix(authHeader, "Bearer ")
-	return token == a.secret
+	return subtle.ConstantTimeCompare([]byte(token), []byte(a.secret)) == 1
 }

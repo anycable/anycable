@@ -181,6 +181,10 @@ func (r *Runner) Run() error {
 		r.log.Warn("Server is running in the public mode")
 	}
 
+	if r.config.Redis.TLSVerificationSkipped() {
+		r.log.Warn("Redis server TLS certificate is not verified; set --redis_tls_verify=true to enable verification")
+	}
+
 	appNode, err := r.runNode()
 
 	if err != nil {

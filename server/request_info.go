@@ -83,14 +83,32 @@ func (i *RequestInfo) AnyCableHeader(key string) string {
 	return i.anycableHeaders[strings.ToLower(key)]
 }
 
-// FetchUID safely extracts uid from `X-Request-ID` header or generates a new one
+const maxRequestIDLength = 128
+
+// FetchUID extracts uid from `X-Request-ID` header or generates a new one
+// (if the header is missing or its value is not a reasonable identifier)
 func FetchUID(r *http.Request) (string, error) {
 	requestID := r.Header.Get("X-Request-ID")
-	if requestID == "" {
+	if !validRequestID(requestID) {
 		return nanoid.Nanoid()
 	}
 
 	return requestID, nil
+}
+
+func validRequestID(val string) bool {
+	if val == "" || len(val) > maxRequestIDLength {
+		return false
+	}
+
+	for i := 0; i < len(val); i++ {
+		// Only printable non-space ASCII characters
+		if val[i] <= ' ' || val[i] > '~' {
+			return false
+		}
+	}
+
+	return true
 }
 
 func parseCookies(value string, cookieFilter []string) string {

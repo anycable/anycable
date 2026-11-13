@@ -35,7 +35,12 @@ type Controller struct {
 var _ node.Controller = (*Controller)(nil)
 
 func NewController(key string, resolver StreamResolver, l *slog.Logger) *Controller {
-	verifier := utils.NewMessageVerifier(key)
+	// No key means signed streams are not supported: the verifier must never run with an empty key
+	var verifier *utils.MessageVerifier
+
+	if key != "" {
+		verifier = utils.NewMessageVerifier(key)
+	}
 
 	return &Controller{verifier, resolver, l.With("context", "streams")}
 }
@@ -129,6 +134,10 @@ func (c *Controller) VerifiedStream(identifier string) (*SubscribeRequest, strin
 
 		c.log.With("identifier", common.FilteredIdentifier(identifier)).Debug("unsigned", "stream", stream)
 	} else {
+		if c.verifier == nil {
+			return nil, "", errors.New("verification failed: no secret configured")
+		}
+
 		verified, err := c.verifier.Verified(request.SignedStreamName)
 
 		if err != nil {

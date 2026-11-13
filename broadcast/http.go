@@ -2,6 +2,8 @@ package broadcast
 
 import (
 	"context"
+	"crypto/subtle"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -17,6 +19,7 @@ import (
 const (
 	defaultHTTPPath    = "/_broadcast"
 	broadcastKeyPhrase = "broadcast-cable"
+	defaultMaxBodySize = 1048576 // 1 MB
 )
 
 // HTTPConfig contains HTTP pubsub adapter configuration
@@ -34,12 +37,15 @@ type HTTPConfig struct {
 	AddCORSHeaders bool `toml:"cors_headers"`
 	// CORSHosts contains a list of hostnames for CORS (comma-separated)
 	CORSHosts string `toml:"cors_hosts"`
+	// MaxBodySize is the maximum allowed size of the request body (in bytes)
+	MaxBodySize int64 `toml:"max_body_size"`
 }
 
 // NewHTTPConfig builds a new config for HTTP pub/sub
 func NewHTTPConfig() HTTPConfig {
 	return HTTPConfig{
-		Path: defaultHTTPPath,
+		Path:        defaultHTTPPath,
+		MaxBodySize: defaultMaxBodySize,
 	}
 }
 
@@ -69,6 +75,9 @@ func (c HTTPConfig) ToToml() string {
 	} else {
 		result.WriteString("# cors_headers = false\n")
 	}
+
+	result.WriteString("# Maximum allowed size of the request body (in bytes)\n")
+	result.WriteString(fmt.Sprintf("max_body_size = %d\n", c.MaxBodySize))
 
 	result.WriteString("\n")
 
@@ -210,15 +219,26 @@ func (s *HTTPBroadcaster) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if s.authHeader != "" {
-		if r.Header.Get("Authorization") != s.authHeader {
+		if subtle.ConstantTimeCompare([]byte(r.Header.Get("Authorization")), []byte(s.authHeader)) != 1 {
 			w.WriteHeader(401)
 			return
 		}
 	}
 
+	if s.conf.MaxBodySize > 0 {
+		r.Body = http.MaxBytesReader(w, r.Body, s.conf.MaxBodySize)
+	}
+
 	body, err := io.ReadAll(r.Body)
 
 	if err != nil {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			s.log.Debug("request body is too large", "limit", maxBytesErr.Limit)
+			w.WriteHeader(http.StatusRequestEntityTooLarge)
+			return
+		}
+
 		s.log.Error("failed to read request body")
 		w.WriteHeader(422)
 		return

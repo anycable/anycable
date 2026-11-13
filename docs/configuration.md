@@ -125,6 +125,10 @@ Redis channel for broadcasting (default: `"__anycable__"`). When using the `redi
 
 Disable [`CLIENT TRACKING`](https://redis.io/commands/client-tracking/) (it could be blocked by some managed Redis providers).
 
+**--redis_tls_verify** (`ANYCABLE_REDIS_TLS_VERIFY`)
+
+Verify the Redis server TLS certificate when connecting via `rediss://` (default: `false`). **We recommend enabling it in production**: without verification, the connection is encrypted but the server identity is not checked.
+
 **--redis_tls_ca_cert_path** (`ANYCABLE_REDIS_TLS_CA_CERT_PATH`)
 
 Path to the CA certificate file to verify the Redis server. This is useful when your Redis server uses a certificate signed by a private CA.

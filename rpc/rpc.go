@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/anycable/anycable-go/common"
+	"github.com/anycable/anycable-go/logger"
 	"github.com/anycable/anycable-go/metrics"
 	"github.com/anycable/anycable-go/protocol"
 	"github.com/anycable/anycable-go/utils"
@@ -279,7 +280,13 @@ func (c *Controller) Start() error {
 		if proxiedCookies == "" {
 			proxiedCookies = "<all>"
 		}
-		c.log.Info(fmt.Sprintf("RPC controller initialized: %s (concurrency: %s, impl: %s, enable_tls: %t, proto_versions: %s, proxy_headers: %s, proxy_cookies: %s)", host, c.barrier.CapacityInfo(), impl, enableTLS, ProtoVersions, proxiedHeaders, proxiedCookies))
+		// Bare host:port pairs are not valid URLs and carry no credentials
+		loggedHost := host
+		if strings.Contains(host, "://") {
+			loggedHost = logger.FilteredURL(host).String()
+		}
+
+		c.log.Info(fmt.Sprintf("RPC controller initialized: %s (concurrency: %s, impl: %s, enable_tls: %t, proto_versions: %s, proxy_headers: %s, proxy_cookies: %s)", loggedHost, c.barrier.CapacityInfo(), impl, enableTLS, ProtoVersions, proxiedHeaders, proxiedCookies))
 	} else {
 		return err
 	}

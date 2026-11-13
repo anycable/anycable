@@ -8,8 +8,9 @@ import (
 )
 
 const (
-	defaultAPIPath = "/api"
-	apiKeyPhrase   = "api-cable"
+	defaultAPIPath     = "/api"
+	apiKeyPhrase       = "api-cable"
+	defaultMaxBodySize = 1048576 // 1 MB
 )
 
 // Config contains API server configuration
@@ -28,12 +29,15 @@ type Config struct {
 	AddCORSHeaders bool `toml:"cors_headers"`
 	// CORSHosts contains a list of hostnames for CORS (comma-separated)
 	CORSHosts string `toml:"cors_hosts"`
+	// MaxBodySize is the maximum allowed size of the request body (in bytes)
+	MaxBodySize int64 `toml:"max_body_size"`
 }
 
 // NewConfig returns a new Config with default values
 func NewConfig() Config {
 	return Config{
-		Path: defaultAPIPath,
+		Path:        defaultAPIPath,
+		MaxBodySize: defaultMaxBodySize,
 	}
 }
 
@@ -90,6 +94,9 @@ func (c Config) ToToml() string {
 	} else {
 		result.WriteString("# cors_headers = false\n")
 	}
+
+	result.WriteString("# Maximum allowed size of the request body (in bytes)\n")
+	result.WriteString(fmt.Sprintf("max_body_size = %d\n", c.MaxBodySize))
 
 	result.WriteString("\n")
 

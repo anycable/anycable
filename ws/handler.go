@@ -3,7 +3,6 @@ package ws
 import (
 	"log/slog"
 	"net/http"
-	"net/url"
 	"strings"
 
 	"github.com/anycable/anycable-go/server"
@@ -73,23 +72,9 @@ func CheckOrigin(origins string) func(r *http.Request) bool {
 		return func(r *http.Request) bool { return true }
 	}
 
-	hosts := strings.Split(strings.ToLower(origins), ",")
+	hosts := strings.Split(origins, ",")
 
 	return func(r *http.Request) bool {
-		origin := strings.ToLower(r.Header.Get("Origin"))
-		u, err := url.Parse(origin)
-		if err != nil {
-			return false
-		}
-
-		for _, host := range hosts {
-			if host[0] == '*' && strings.HasSuffix(u.Host, host[1:]) {
-				return true
-			}
-			if u.Host == host {
-				return true
-			}
-		}
-		return false
+		return server.OriginAllowed(r.Header.Get("Origin"), hosts)
 	}
 }

@@ -50,4 +50,12 @@ func TestMessageVerifierEmptyKey(t *testing.T) {
 	_, err := verifier.Verified(example)
 
 	assert.Error(t, err)
+
+	// Signed with an empty key
+	forged := "Im5vdGlmaWNhdGlvbnNfMiI=--e3f666cd48e2a59bb441b94c424ab6a52294db6e4d620c4f8459e659dcab29f8"
+
+	_, err = verifier.Verified(forged)
+
+	assert.Error(t, err)
+	assert.Error(t, verifier.Validate(forged))
 }

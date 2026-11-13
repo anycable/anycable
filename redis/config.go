@@ -73,6 +73,15 @@ func (config *RedisConfig) IsSentinel() bool {
 	return config.Sentinels != "" || config.sentinelMaster != ""
 }
 
+// TLSVerificationSkipped returns true if TLS is used but the server certificate is not verified
+func (config *RedisConfig) TLSVerificationSkipped() bool {
+	if config.TLSVerify {
+		return false
+	}
+
+	return strings.Contains(config.URL, "rediss://") || strings.Contains(config.Sentinels, "rediss://")
+}
+
 func (config *RedisConfig) Hostnames() []string {
 	config.mu.RLock()
 	defer config.mu.RUnlock()

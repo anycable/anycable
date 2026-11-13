@@ -755,7 +755,6 @@ func redisCLIFlags(c *config.Config) []cli.Flag {
 			Usage:       "Verify Redis server TLS certificate (only if URL protocol is rediss://)",
 			Value:       c.Redis.TLSVerify,
 			Destination: &c.Redis.TLSVerify,
-			Hidden:      true,
 		},
 
 		&cli.StringFlag{

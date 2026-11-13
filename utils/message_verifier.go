@@ -65,6 +65,10 @@ func (m *MessageVerifier) Verified(msg string) (interface{}, error) {
 
 // https://github.com/rails/rails/blob/061bf3156fb90ac6b8ec255dfa39492cf22d7b13/activesupport/lib/active_support/message_verifier.rb#L122
 func (m *MessageVerifier) Validate(msg string) error {
+	if len(m.key) == 0 {
+		return errors.New("verification key is empty")
+	}
+
 	if msg == "" {
 		return errors.New("message is empty")
 	}

@@ -109,6 +109,38 @@ func TestStreamsController(t *testing.T) {
 		assert.Equal(t, []string{common.RejectionMessage(identifier)}, res.Transmissions)
 	})
 
+	t.Run("Subscribe - signed with empty key - no key", func(t *testing.T) {
+		conf := NewConfig()
+		conf.Secret = ""
+		subject := NewStreamsController(&conf, slog.Default())
+
+		forged := "Im5vdGlmaWNhdGlvbnNfMiI=--e3f666cd48e2a59bb441b94c424ab6a52294db6e4d620c4f8459e659dcab29f8"
+		identifier := `{"channel":"$pubsub","signed_stream_name":"` + forged + `"}`
+
+		res, err := subject.Subscribe(context.Background(), "42", nil, "name=jack", identifier)
+
+		require.Error(t, err)
+		require.NotNil(t, res)
+		require.Equal(t, common.FAILURE, res.Status)
+		assert.Equal(t, []string{common.RejectionMessage(identifier)}, res.Transmissions)
+		assert.Empty(t, res.Streams)
+	})
+
+	t.Run("Subscribe - public - no key", func(t *testing.T) {
+		conf := NewConfig()
+		conf.Secret = ""
+		conf.Public = true
+		subject := NewStreamsController(&conf, slog.Default())
+
+		identifier := `{"channel":"$pubsub","stream_name":"chat:2024"}`
+
+		res, err := subject.Subscribe(context.Background(), "42", nil, "name=jack", identifier)
+
+		require.NoError(t, err)
+		require.Equal(t, common.SUCCESS, res.Status)
+		assert.Equal(t, []string{"chat:2024"}, res.Streams)
+	})
+
 	t.Run("Subscribe - signed - whisper", func(t *testing.T) {
 		conf := NewConfig()
 		conf.Secret = key

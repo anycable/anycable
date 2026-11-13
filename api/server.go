@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -174,8 +175,19 @@ func (s *Server) PublishHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if s.conf.MaxBodySize > 0 {
+		r.Body = http.MaxBytesReader(w, r.Body, s.conf.MaxBodySize)
+	}
+
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			s.log.Debug("request body is too large", "limit", maxBytesErr.Limit)
+			w.WriteHeader(http.StatusRequestEntityTooLarge)
+			return
+		}
+
 		s.log.Error("failed to read request body", "error", err)
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		return

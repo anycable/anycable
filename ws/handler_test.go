@@ -45,3 +45,28 @@ func TestCheckOrigin(t *testing.T) {
 	req.Header.Set("Origin", "http://MY.localhost:8080")
 	assert.Equal(t, CheckOrigin(allowedOrigins)(req), true)
 }
+
+func TestCheckOriginWildcards(t *testing.T) {
+	req := httptest.NewRequest("GET", "/", nil)
+
+	req.Header.Set("Origin", "https://evilexample.com")
+	assert.False(t, CheckOrigin("*example.com")(req))
+	assert.False(t, CheckOrigin("*.example.com")(req))
+	assert.True(t, CheckOrigin("*")(req))
+
+	req.Header.Set("Origin", "https://example.com")
+	assert.True(t, CheckOrigin("*example.com")(req))
+	assert.False(t, CheckOrigin("*.example.com")(req))
+
+	req.Header.Set("Origin", "https://app.example.com")
+	assert.True(t, CheckOrigin("*example.com")(req))
+	assert.True(t, CheckOrigin("*.example.com")(req))
+}
+
+func TestCheckOriginEmptyEntries(t *testing.T) {
+	req := httptest.NewRequest("GET", "/", nil)
+	req.Header.Set("Origin", "https://example.com")
+
+	assert.True(t, CheckOrigin("example.com,")(req))
+	assert.False(t, CheckOrigin("other.com, ,")(req))
+}
