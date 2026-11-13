@@ -327,21 +327,17 @@ func (b *Memory) HandleCommand(msg *common.RemoteCommandMessage) (err error) {
 // Registring streams (for granular pub/sub)
 
 func (b *Memory) Subscribe(stream string) string {
-	isNew := b.tracker.Add(stream)
-
-	if isNew {
+	b.tracker.Add(stream, func() {
 		b.broadcaster.Subscribe(stream)
-	}
+	})
 
 	return stream
 }
 
 func (b *Memory) Unsubscribe(stream string) string {
-	isLast := b.tracker.Remove(stream)
-
-	if isLast {
+	b.tracker.Remove(stream, func() {
 		b.broadcaster.Unsubscribe(stream)
-	}
+	})
 
 	return stream
 }

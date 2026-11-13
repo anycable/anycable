@@ -31,7 +31,7 @@ Actions (and their pc labels, which are the same) are named `<Scope><Step>` afte
 | `DisconnectLock`, `DisconnectUnlock` | `Node.Disconnect` (`s.rmu` region) |
 | `UnsubSnapStreams`, `UnsubBrokerUnsubLoop` (closers) | `Node.unsubscribeSessionStreams` |
 | `Undo*` | rollback steps (proposals) |
-| `BrokerSubAdd`, `BrokerUnsubRemove` | broker `Subscribe`/`Unsubscribe` (`StreamsTracker`) |
+| `BrokerSubAdd`, `BrokerSubUnlock`, `BrokerUnsubRemove`, `BrokerUnsubUnlock` | broker `Subscribe`/`Unsubscribe` (`StreamsTracker.Add`/`Remove` under `tracker.mu`) |
 | `Redis*`, `Nats*` | `RedisSubscriber` / `NATSSubscriber` `Subscribe`/`Unsubscribe` |
 | `Reconn*`, `Resub*` | `RedisSubscriber.runPubSub` / `maybeReconnect` / `resubscribe` |
 
@@ -47,8 +47,8 @@ Variables are prefixed by their owner:
 - `subs*`: `Session.subscriptions` (`subsChan`, `subsStreams`, `subsSnapshot`, `subsFrozen`).
 - `rmu`: `Session.rmu` holder (mutexes held across steps are modeled as a holder variable named after the Go field).
 - `hub*`: Hub and Gate (`hubSessions`, `hubStreams`, `hubGate`).
-- `tracker`, `pubsub`: broker `StreamsTracker`, pub/sub subscriber.
+- `tracker`, `trackerMu`, `pubsub`: broker `StreamsTracker` (count, `mu` holder), pub/sub subscriber.
 - `ps*`, `redis*`, `nats*`: `Subscriber` state (`psMap`, `psClient`), Redis/NATS server-side state (`redisConn`, `redisSubs`, `natsSubs`).
-- `todo*`, `cur*`, `rpc*`, `cli*`, `resub*`: process locals (`todoSubStreams`, `todoUnsubStreams`, `curStream`, `rpcResult`, `cliConn`, `resubSnap`).
+- `todo*`, `cur*`, `rpc*`, `cli*`: process locals (`todoSubStreams`, `todoUnsubStreams`, `curStream`, `rpcResult`, `cliConn`).
 - Ghost variables (not in the code) are documented as `ghost:` (e.g. `refs`).
 - Variable groups for `UNCHANGED` are `<owner>Vars` (`sessVars`, `hubVars`, `brokerVars`, `readerVars`).

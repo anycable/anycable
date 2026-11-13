@@ -328,8 +328,9 @@ const batchSubscribeSize = 256
 
 func (s *RedisSubscriber) resubscribe(client rueidis.DedicatedClient) {
 	s.subMu.RLock()
+	defer s.subMu.RUnlock()
+
 	channels := maps.Keys(s.subscriptions)
-	s.subMu.RUnlock()
 
 	batch := make([]string, 0, batchSubscribeSize)
 

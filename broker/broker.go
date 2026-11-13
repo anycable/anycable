@@ -99,16 +99,19 @@ func NewStreamsTracker() *StreamsTracker {
 	return &StreamsTracker{store: make(map[string]uint64)}
 }
 
-func (s *StreamsTracker) Add(name string) (isNew bool) {
+func (s *StreamsTracker) Add(name string, onNew func()) (isNew bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if _, ok := s.store[name]; !ok {
-		s.store[name] = 1
-		return true
+
+	if _, ok := s.store[name]; ok {
+		s.store[name]++
+		return false
 	}
 
-	s.store[name]++
-	return false
+	s.store[name] = 1
+	onNew()
+
+	return true
 }
 
 func (s *StreamsTracker) Has(name string) bool {
@@ -120,20 +123,24 @@ func (s *StreamsTracker) Has(name string) bool {
 	return ok
 }
 
-func (s *StreamsTracker) Remove(name string) (isLast bool) {
+func (s *StreamsTracker) Remove(name string, onLast func()) (isLast bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if _, ok := s.store[name]; !ok {
+
+	count, ok := s.store[name]
+	if !ok {
 		return false
 	}
 
-	if s.store[name] == 1 {
-		delete(s.store, name)
-		return true
+	if count > 1 {
+		s.store[name]--
+		return false
 	}
 
-	s.store[name]--
-	return false
+	delete(s.store, name)
+	onLast()
+
+	return true
 }
 
 // LegacyBroker preserves the v1 behaviour while implementing the Broker APIs.
@@ -177,21 +184,17 @@ func (b *LegacyBroker) HandleCommand(msg *common.RemoteCommandMessage) error {
 
 // Registring streams (for granular pub/sub)
 func (b *LegacyBroker) Subscribe(stream string) string {
-	isNew := b.tracker.Add(stream)
-
-	if isNew {
+	b.tracker.Add(stream, func() {
 		b.broadcaster.Subscribe(stream)
-	}
+	})
 
 	return stream
 }
 
 func (b *LegacyBroker) Unsubscribe(stream string) string {
-	isLast := b.tracker.Remove(stream)
-
-	if isLast {
+	b.tracker.Remove(stream, func() {
 		b.broadcaster.Unsubscribe(stream)
-	}
+	})
 
 	return stream
 }

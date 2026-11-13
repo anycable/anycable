@@ -344,22 +344,21 @@ func (n *NATS) HandleCommand(msg *common.RemoteCommandMessage) error {
 }
 
 func (n *NATS) Subscribe(stream string) string {
-	isNew := n.tracker.Add(stream)
+	isNew := n.tracker.Add(stream, func() {
+		n.broadcaster.Subscribe(stream)
+	})
 
 	if isNew {
 		n.addStreamConsumer(stream)
-		n.broadcaster.Subscribe(stream)
 	}
 
 	return stream
 }
 
 func (n *NATS) Unsubscribe(stream string) string {
-	isLast := n.tracker.Remove(stream)
-
-	if isLast {
+	n.tracker.Remove(stream, func() {
 		n.broadcaster.Unsubscribe(stream)
-	}
+	})
 
 	return stream
 }
