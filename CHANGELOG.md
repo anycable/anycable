@@ -2,6 +2,8 @@
 
 ## master
 
+## 1.6.21 (2026-11-13)
+
 - Drain broadcasters before shutting down the broker to avoid losing in-flight publications.
 
 - Fix leaking pub/sub subscriptions when a client unsubscribes from a channel. ([@gdubicki][])
