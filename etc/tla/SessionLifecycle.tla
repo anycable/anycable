@@ -168,23 +168,18 @@ ReplyStreamsLoop ==
 BrokerSub ==
   /\ pc["reader"] = "BrokerSub"
   /\ BrokerSubscribe(curStream)
-  /\ Goto("reader", "HubGateSub")
+  /\ Goto("reader", "HubSub")
   /\ UNCHANGED <<sessVars, hubVars, readerVars, subsSnapshot, rmu>>
 
-\* hub.go: SubscribeSession — gate.Subscribe (g.mu)
-HubGateSub ==
-  /\ pc["reader"] = "HubGateSub"
-  /\ hubGate' = hubGate \cup {curStream}
-  /\ Goto("reader", "HubSub")
-  /\ UNCHANGED <<sessVars, hubSessions, hubStreams, brokerVars, readerVars, subsSnapshot, rmu>>
-
-\* hub.go: SubscribeSession — h.mu section (re-registers the session if missing)
+\* hub.go: SubscribeSession (h.mu) — return if the session is missing; gate.Subscribe, AddStream
 HubSub ==
   /\ pc["reader"] = "HubSub"
-  /\ hubSessions' = hubSessions \cup {SID}
-  /\ hubStreams' = hubStreams \cup {curStream}
+  /\ IF SID \in hubSessions
+       THEN /\ hubGate' = hubGate \cup {curStream}
+            /\ hubStreams' = hubStreams \cup {curStream}
+       ELSE UNCHANGED <<hubGate, hubStreams>>
   /\ Goto("reader", "StateAddStream")
-  /\ UNCHANGED <<sessVars, hubGate, brokerVars, readerVars, subsSnapshot, rmu>>
+  /\ UNCHANGED <<sessVars, hubSessions, brokerVars, readerVars, subsSnapshot, rmu>>
 
 \* subscription_state.go: AddChannelStream (no-op if the channel is missing)
 StateAddStream ==
@@ -224,23 +219,29 @@ UnsubRPCChk ==
   /\ Goto("reader", IF closed \/ rpcResult /= "success" THEN "Done" ELSE "StopReplyLock")
   /\ UNCHANGED <<sessVars, hubVars, brokerVars, readerVars, subsSnapshot, rmu>>
 
-\* node.go: Unsubscribe — s.rmu.Lock(); if s.IsClosed() { s.rmu.Unlock(); return } (skips RemoveChannel)
+\* handleCommandReply — s.rmu.Lock(); if s.IsClosed() { s.rmu.Unlock(); return }
 StopReplyLock ==
   /\ pc["reader"] = "StopReplyLock"
   /\ rmu = "none"
   /\ IF closed
-       THEN /\ Goto("reader", "Done")
+       THEN /\ Goto("reader", "StateRemoveChanChk")
             /\ UNCHANGED rmu
        ELSE /\ rmu' = "reader"
             /\ Goto("reader", "StopHubUnsub")
   /\ UNCHANGED <<sessVars, hubVars, brokerVars, readerVars, subsSnapshot>>
 
-\* node.go: Unsubscribe — s.rmu.Unlock() after handleCommandReply
+\* handleCommandReply — s.rmu.Unlock()
 StopReplyUnlock ==
   /\ pc["reader"] = "StopReplyUnlock"
   /\ rmu' = "none"
-  /\ Goto("reader", "StateRemoveChan")
+  /\ Goto("reader", "StateRemoveChanChk")
   /\ UNCHANGED <<sessVars, hubVars, brokerVars, readerVars, subsSnapshot>>
+
+\* node.go: Unsubscribe — if err == nil && !s.IsClosed() (before RemoveChannel)
+StateRemoveChanChk ==
+  /\ pc["reader"] = "StateRemoveChanChk"
+  /\ Goto("reader", IF closed THEN "Done" ELSE "StateRemoveChan")
+  /\ UNCHANGED <<sessVars, hubVars, brokerVars, readerVars, subsSnapshot, rmu>>
 
 \* handleCommandReply, StopAllStreams: hub.UnsubscribeSessionFromChannel (h.mu + gate.Unsubscribe)
 StopHubUnsub ==
@@ -282,10 +283,10 @@ StateRemoveChan ==
 
 Reader ==
   \/ AuthRPC \/ AuthRPCChk \/ Authenticated
-  \/ SubCmd \/ SubRPC \/ SubRPCChk \/ SubReplyLock \/ ReplyStreamsLoop \/ BrokerSub \/ HubGateSub \/ HubSub
+  \/ SubCmd \/ SubRPC \/ SubRPCChk \/ SubReplyLock \/ ReplyStreamsLoop \/ BrokerSub \/ HubSub
   \/ StateAddStream \/ SubReplyUnlock
   \/ ServeLoop \/ UnsubHasChan \/ UnsubRPC \/ UnsubRPCChk \/ StopReplyLock \/ StopHubUnsub \/ StopStateRemoveStreams
-  \/ StopBrokerUnsubLoop \/ StopReplyUnlock \/ StateRemoveChan
+  \/ StopBrokerUnsubLoop \/ StopReplyUnlock \/ StateRemoveChanChk \/ StateRemoveChan
 
 -----------------------------------------------------------------------------
 (* closers *)

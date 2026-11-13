@@ -154,6 +154,8 @@ type Session struct {
 	smu sync.Mutex
 	// Mutex for writes
 	wmu sync.Mutex
+	// Mutex for registration/streams
+	rmu sync.Mutex
 
 	writeQueue     *utils.Queue[*ws.SentFrame]
 	writeTimeout   time.Duration
@@ -171,8 +173,8 @@ type Session struct {
 
 	prevSid string
 
-	connected   atomic.Bool
-	connectedMu sync.Mutex
+	connected atomic.Bool
+
 	// Could be used to store arbitrary data within a session
 	InternalState map[string]interface{}
 	Log           *slog.Logger
@@ -647,9 +649,9 @@ func (s *Session) PrevSid() string {
 }
 
 func (s *Session) disconnectFromNode() {
-	s.connectedMu.Lock()
+	s.rmu.Lock()
 	wasConnected := s.connected.Swap(false)
-	s.connectedMu.Unlock()
+	s.rmu.Unlock()
 
 	if wasConnected {
 		s.executor.Disconnect(s) // nolint:errcheck

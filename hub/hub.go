@@ -274,18 +274,17 @@ func (h *Hub) UnsubscribeSessionFromChannel(session HubSession, targetIdentifier
 }
 
 func (h *Hub) SubscribeSession(session HubSession, stream string, identifier string) {
-	h.gates[index(stream, h.gatesNum)].Subscribe(session, stream, identifier)
-
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
 	sid := session.GetID()
 
 	if _, ok := h.sessions[sid]; !ok {
-		// FIXME: why do we register the session here if missing?
-		h.sessions[sid] = NewHubSessionInfo(session)
+		h.log.With("sid", sid).Error("attempted to subscribe a session without registration")
+		return
 	}
 
+	h.gates[index(stream, h.gatesNum)].Subscribe(session, stream, identifier)
 	h.sessions[sid].AddStream(stream, identifier)
 
 	h.log.With("sid", sid).Debug("subscribed", "identifier", common.FilteredIdentifier(identifier), "stream", stream)

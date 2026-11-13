@@ -410,8 +410,8 @@ func (n *Node) Authenticate(s *Session, options ...AuthOption) (*common.ConnectR
 // Mark session as authenticated and register it with a hub.
 // Useful when you perform authentication manually, not using a controller.
 func (n *Node) Authenticated(s *Session, ids string) {
-	s.connectedMu.Lock()
-	defer s.connectedMu.Unlock()
+	s.rmu.Lock()
+	defer s.rmu.Unlock()
 
 	if s.IsClosed() {
 		return
@@ -458,14 +458,13 @@ func (n *Node) TryRestoreSession(s *Session) (restored bool) {
 
 	s.Log.Debug("session restored", "old_sid", prev_sid)
 
-	s.connectedMu.Lock()
+	s.rmu.Lock()
 	if s.IsClosed() {
-		s.connectedMu.Unlock()
+		s.rmu.Unlock()
 		return false
 	}
 	n.hub.AddSession(s)
 	s.connected.Store(true)
-	s.connectedMu.Unlock()
 
 	// Resubscribe to streams
 	for identifier, channel_streams := range s.subscriptions.ToMap() {
@@ -474,6 +473,8 @@ func (n *Node) TryRestoreSession(s *Session) (restored bool) {
 			n.hub.SubscribeSession(s, streamId, identifier)
 		}
 	}
+
+	s.rmu.Unlock()
 
 	// Send welcome message
 	s.Send(&common.Reply{
@@ -607,8 +608,8 @@ func (n *Node) Unsubscribe(s *Session, msg *common.Message) (*common.CommandResu
 		n.handleCommandReply(s, msg, res)
 	}
 
-	// Only now: StopAllStreams (in handleCommandReply) releases the streams it finds in the channel's subscriptions.
-	if err == nil {
+	// The closed session needs its channels to correctly unsubscribe pub/sub on disconnect
+	if err == nil && !s.IsClosed() {
 		s.subscriptions.RemoveChannel(msg.Identifier)
 	}
 
@@ -909,18 +910,20 @@ func (n *Node) Disconnect(s *Session) error {
 		return nil
 	}
 
+	s.rmu.Lock()
 	// unsubscribe from all streams to clean up broker subscriptions
 	n.unsubscribeSessionStreams(s)
+
+	// Make sure session is removed from hub, so we don't try to send
+	// broadcast messages to them
+	n.hub.RemoveSession(s)
+	s.rmu.Unlock()
 
 	if s.IsResumeable() {
 		n.broker.TouchSession(s.GetID()) // nolint:errcheck
 	}
 
 	n.broker.TouchPresence(s.GetID()) // nolint:errcheck
-
-	// Make sure session is removed from hub, so we don't try to send
-	// broadcast messages to them
-	n.hub.RemoveSession(s)
 
 	if n.IsShuttingDown() {
 		if s.IsDisconnectable() {
@@ -1039,6 +1042,12 @@ func (n *Node) handleCommandReply(s *Session, msg *common.Message, reply *common
 		defer s.Disconnect("Command Failed", ws.CloseAbnormalClosure)
 	}
 
+	s.rmu.Lock()
+	if s.IsClosed() {
+		s.rmu.Unlock()
+		return false
+	}
+
 	if reply.StopAllStreams {
 		n.hub.UnsubscribeSessionFromChannel(s, msg.Identifier)
 		removedStreams := s.subscriptions.RemoveChannelStreams(msg.Identifier)
@@ -1067,6 +1076,8 @@ func (n *Node) handleCommandReply(s *Session, msg *common.Message, reply *common
 			s.subscriptions.AddChannelStream(msg.Identifier, streamId)
 		}
 	}
+
+	s.rmu.Unlock()
 
 	if reply.IState != nil {
 		isDirty = true
