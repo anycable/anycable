@@ -115,3 +115,32 @@ func TestUnknownConfigKeys(t *testing.T) {
 		assert.Empty(t, c.UnknownConfigKeys)
 	})
 }
+
+func TestMaxBodySizeOptions(t *testing.T) {
+	t.Run("defaults", func(t *testing.T) {
+		c, err, _ := NewConfigFromCLI([]string{"", "--ignore-config-path"})
+		require.NoError(t, err)
+
+		assert.Equal(t, int64(1048576), c.HTTPBroadcast.MaxBodySize)
+		assert.Equal(t, int64(1048576), c.API.MaxBodySize)
+	})
+
+	t.Run("flags", func(t *testing.T) {
+		c, err, _ := NewConfigFromCLI([]string{"", "--ignore-config-path", "--http_broadcast_max_body_size=5242880", "--api_max_body_size=0"})
+		require.NoError(t, err)
+
+		assert.Equal(t, int64(5242880), c.HTTPBroadcast.MaxBodySize)
+		assert.Equal(t, int64(0), c.API.MaxBodySize)
+	})
+
+	t.Run("env vars", func(t *testing.T) {
+		t.Setenv("ANYCABLE_HTTP_BROADCAST_MAX_BODY_SIZE", "10485760")
+		t.Setenv("ANYCABLE_API_MAX_BODY_SIZE", "2097152")
+
+		c, err, _ := NewConfigFromCLI([]string{"", "--ignore-config-path"})
+		require.NoError(t, err)
+
+		assert.Equal(t, int64(10485760), c.HTTPBroadcast.MaxBodySize)
+		assert.Equal(t, int64(2097152), c.API.MaxBodySize)
+	})
+}

@@ -830,6 +830,13 @@ func httpBroadcastCLIFlags(c *config.Config) []cli.Flag {
 			Destination: &c.HTTPBroadcast.Path,
 		},
 
+		&cli.Int64Flag{
+			Name:        "http_broadcast_max_body_size",
+			Usage:       "Maximum size (in bytes) of an HTTP broadcast request body (0 = unlimited)",
+			Value:       c.HTTPBroadcast.MaxBodySize,
+			Destination: &c.HTTPBroadcast.MaxBodySize,
+		},
+
 		&cli.StringFlag{
 			Name:        "http_broadcast_secret",
 			Usage:       "[Deprecated] HTTP pub/sub authorization secret",
@@ -1584,6 +1591,12 @@ func apiCLIFlags(c *config.Config) []cli.Flag {
 			Name:        "api_secret",
 			Usage:       "Secret token to authenticate API requests",
 			Destination: &c.API.Secret,
+		},
+		&cli.Int64Flag{
+			Name:        "api_max_body_size",
+			Usage:       "Maximum size (in bytes) of an API request body (0 = unlimited)",
+			Value:       c.API.MaxBodySize,
+			Destination: &c.API.MaxBodySize,
 		},
 	})
 }
