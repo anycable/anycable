@@ -2,6 +2,8 @@
 
 ## master
 
+- Add `--http_broadcast_max_body_size` and `--api_max_body_size` to configure the request body limits introduced in 1.6.21 (default: 1MB) via CLI or env vars. ([@yenshirak][])
+
 ## 1.6.21 (2026-11-13)
 
 - Drain broadcasters before shutting down the broker to avoid losing in-flight publications.
@@ -594,3 +596,4 @@ See [Changelog](https://github.com/anycable/anycable-go/blob/0-6-stable/CHANGELO
 [@budnik]: https://github.com/budnik
 [@gdubicki]: https://github.com/gdubicki
 [@jjb]: https://github.com/jjb
+[@yenshirak]: https://github.com/yenshirak
