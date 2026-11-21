@@ -107,6 +107,10 @@ This is a shortcut to specify both `--noauth`, `--public_streams` and `--broadca
 
 You can specify on which port to receive broadcasting requests (NOTE: it could be the same port as the main HTTP server listens to).
 
+**--http_broadcast_max_body_size** (`ANYCABLE_HTTP_BROADCAST_MAX_BODY_SIZE`, default: `1048576`)
+
+Maximum size (in bytes) of a broadcast request body. Larger requests are rejected with `413 Request Entity Too Large`. Set to `0` to disable the limit.
+
 ## Redis configuration
 
 **--redis_url** (`ANYCABLE_REDIS_URL` or `REDIS_URL`)
