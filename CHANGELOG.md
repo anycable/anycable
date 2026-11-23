@@ -2,6 +2,8 @@
 
 ## master
 
+- Fix remote `disconnect` command to close all sessions with the given identifiers, not just one of them. ([@melnik0v][])
+
 ## 1.6.21 (2026-11-13)
 
 - Drain broadcasters before shutting down the broker to avoid losing in-flight publications.
@@ -594,3 +596,4 @@ See [Changelog](https://github.com/anycable/anycable-go/blob/0-6-stable/CHANGELO
 [@budnik]: https://github.com/budnik
 [@gdubicki]: https://github.com/gdubicki
 [@jjb]: https://github.com/jjb
+[@melnik0v]: https://github.com/melnik0v

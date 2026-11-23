@@ -324,16 +324,19 @@ func (h *Hub) disconnectSessions(identifier string, reconnect bool) {
 	h.pool.Schedule(func() {
 		h.mu.RLock()
 
+		sessions := make([]HubSession, 0, len(ids))
+
 		for id := range ids {
 			if sinfo, ok := h.sessions[id]; ok {
-				h.mu.RUnlock()
-
-				sinfo.session.DisconnectWithMessage(msg, common.REMOTE_DISCONNECT_REASON)
-				return
+				sessions = append(sessions, sinfo.session)
 			}
 		}
 
 		h.mu.RUnlock()
+
+		for _, session := range sessions {
+			session.DisconnectWithMessage(msg, common.REMOTE_DISCONNECT_REASON)
+		}
 	})
 }
 
