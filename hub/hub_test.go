@@ -18,11 +18,12 @@ import (
 )
 
 type MockSession struct {
-	sid        string
-	closed     bool
-	closeMu    sync.Mutex
-	encoder    encoders.JSON
-	writeQueue *utils.Queue[[]byte]
+	sid         string
+	identifiers string
+	closed      bool
+	closeMu     sync.Mutex
+	encoder     encoders.JSON
+	writeQueue  *utils.Queue[[]byte]
 }
 
 func (s *MockSession) GetID() string {
@@ -30,6 +31,10 @@ func (s *MockSession) GetID() string {
 }
 
 func (s *MockSession) GetIdentifiers() string {
+	if s.identifiers != "" {
+		return s.identifiers
+	}
+
 	return s.sid
 }
 
@@ -134,6 +139,13 @@ func NewMockSession(sid string) *MockSession {
 		sid:        sid,
 		writeQueue: utils.NewQueue[[]byte](16),
 	}
+}
+
+func NewMockSessionWithIdentifiers(sid string, identifiers string) *MockSession {
+	session := NewMockSession(sid)
+	session.identifiers = identifiers
+
+	return session
 }
 
 func TestUnsubscribeRaceConditions(t *testing.T) {
@@ -339,6 +351,33 @@ func TestRemoteDisconnect(t *testing.T) {
 		assert.Equal(t, "{\"type\":\"disconnect\",\"reason\":\"remote\",\"reconnect\":false}", string(msg))
 
 		assert.True(t, session.Closed())
+	})
+
+	t.Run("Disconnect all sessions with the same identifiers", func(t *testing.T) {
+		sessions := []*MockSession{
+			NewMockSessionWithIdentifiers("s1", "user:42"),
+			NewMockSessionWithIdentifiers("s2", "user:42"),
+			NewMockSessionWithIdentifiers("s3", "user:42"),
+		}
+
+		for _, s := range sessions {
+			hub.AddSession(s)
+		}
+
+		other := NewMockSessionWithIdentifiers("s4", "user:43")
+		hub.AddSession(other)
+
+		hub.RemoteDisconnect(&common.RemoteDisconnectMessage{Identifier: "user:42", Reconnect: false})
+
+		for _, s := range sessions {
+			msg, err := s.Read()
+			require.NoError(t, err, "session %s hasn't been disconnected", s.GetID())
+			assert.Equal(t, "{\"type\":\"disconnect\",\"reason\":\"remote\",\"reconnect\":false}", string(msg))
+
+			assert.True(t, s.Closed())
+		}
+
+		assert.False(t, other.Closed())
 	})
 }
 
