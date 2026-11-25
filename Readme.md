@@ -16,7 +16,7 @@ AnyCable is a realtime server for two-way reliable communication over WebSockets
 
 <br/>
 
-<img src="https://cdn.evilmartians.com/badges/logo-no-label.svg" alt="Evil Martians logo" width="22" height="16" /> <b>AnyCable</b> is built by <b><a href="https://evilmartians.com/">Evil Martians</a></b>, an American design and engineering consultancy for <b>developer tools, AI, and cybersecurity startups</b>.
+<img src="https://cdn.evilmartians.com/badges/logo-no-label.svg" alt="Evil Martians logo" width="22" height="16" /> <b>AnyCable</b> is built by <b><a href="https://evilmartians.com/">Evil Martians</a></b>, an American design and engineering consultancy for <b>developer tools, AI, and cybersecurity startups</b>. Need real-time features or LLM streaming in your app? <a href="https://evilmartians.com/services/real-time?utm_source=anycable">The AnyCable team builds them</a>.
 
 ## Contributing
 
