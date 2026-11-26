@@ -435,12 +435,14 @@ Use broadcast_key instead.`)
 		c.JWT.Secret = ""
 	}
 
-	if c.RPC.Secret == "none" {
+	if c.RPC.Secret == "none" || c.RPC.SecretBase == "none" {
 		c.RPC.Secret = ""
+		c.RPC.SecretBase = ""
 	}
 
-	if c.HTTPBroadcast.Secret == "none" {
+	if c.HTTPBroadcast.Secret == "none" || c.HTTPBroadcast.SecretBase == "none" {
 		c.HTTPBroadcast.Secret = ""
+		c.HTTPBroadcast.SecretBase = ""
 	}
 
 	if c.Pusher.Secret == "none" {
