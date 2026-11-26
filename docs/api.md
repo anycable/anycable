@@ -203,6 +203,7 @@ The API server can be configured using the following options:
 | `--api_port` | `ANYCABLE_API_PORT` | `0` | API server port. When set to `0`, the API runs on the main server port |
 | `--api_path` | `ANYCABLE_API_PATH` | `/api` | Base path for API endpoints |
 | `--api_secret` | `ANYCABLE_API_SECRET` | - | Secret token for API authentication (derived from the main secret if not passed) |
+| `--api_max_body_size` | `ANYCABLE_API_MAX_BODY_SIZE` | `1048576` | Maximum request body size in bytes; larger requests get a 413 (`0` = unlimited) |
 
 **IMPORTANT:** The API is not available if all of the below holds:
 
