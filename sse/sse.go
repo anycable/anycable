@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/node"
@@ -41,7 +40,7 @@ func NewSSESession(n *node.Node, c *Config, w http.ResponseWriter, r *http.Reque
 	opts := []node.SessionOption{node.WithEncoder(enc)}
 
 	if commentPings && c.PingInterval > 0 {
-		opts = append(opts, node.WithPingInterval(time.Duration(c.PingInterval)*time.Second))
+		opts = append(opts, node.WithPingIntervalSeconds(c.PingInterval))
 	}
 
 	session := node.NewSession(n, conn, info.URL, info.Headers, info.UID, opts...)
