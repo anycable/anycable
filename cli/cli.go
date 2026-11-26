@@ -560,6 +560,11 @@ func (r *Runner) defaultDisconnector(n *node.Node, c *config.Config, l *slog.Log
 	if c.DisconnectorDisabled {
 		return node.NewNoopDisconnector(), nil
 	}
+
+	if err := c.DisconnectQueue.Validate(); err != nil {
+		return nil, err
+	}
+
 	return node.NewDisconnectQueue(n, &c.DisconnectQueue, l), nil
 }
 

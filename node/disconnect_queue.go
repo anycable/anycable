@@ -30,6 +30,16 @@ func NewDisconnectQueueConfig() DisconnectQueueConfig {
 	return DisconnectQueueConfig{Rate: 100, WorkersNum: 4, MaxBacklog: 8192}
 }
 
+const MaxDisconnectRate = int(time.Second)
+
+func (c DisconnectQueueConfig) Validate() error {
+	if c.Rate < 1 || c.Rate > MaxDisconnectRate {
+		return fmt.Errorf("disconnect rate must be between 1 and %d, got %d", MaxDisconnectRate, c.Rate)
+	}
+
+	return nil
+}
+
 func (c DisconnectQueueConfig) ToToml() string {
 	var result strings.Builder
 
@@ -67,7 +77,7 @@ type DisconnectQueue struct {
 
 // NewDisconnectQueue builds new queue with a specified rate (max calls per second)
 func NewDisconnectQueue(node *Node, config *DisconnectQueueConfig, l *slog.Logger) *DisconnectQueue {
-	rateDuration := time.Millisecond * time.Duration(1000/config.Rate)
+	rateDuration := time.Second / time.Duration(config.Rate)
 
 	ctx := l.With("context", "disconnector")
 

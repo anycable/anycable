@@ -279,3 +279,32 @@ func TestDisconnectQueueConfig_ToToml(t *testing.T) {
 
 	assert.Equal(t, conf, conf2)
 }
+
+func TestDisconnectQueueConfig_Validate(t *testing.T) {
+	conf := NewDisconnectQueueConfig()
+
+	for _, rate := range []int{1, 100, 1000, 2000, MaxDisconnectRate} {
+		conf.Rate = rate
+		assert.NoError(t, conf.Validate(), rate)
+	}
+
+	for _, rate := range []int{0, -1, MaxDisconnectRate + 1} {
+		conf.Rate = rate
+		assert.Error(t, conf.Validate(), rate)
+	}
+}
+
+func TestNewDisconnectQueue_Rate(t *testing.T) {
+	conf := NewDisconnectQueueConfig()
+
+	for rate, expected := range map[int]time.Duration{
+		1:                 time.Second,
+		100:               10 * time.Millisecond,
+		2000:              500 * time.Microsecond,
+		MaxDisconnectRate: time.Nanosecond,
+	} {
+		conf.Rate = rate
+		q := NewDisconnectQueue(nil, &conf, slog.Default())
+		assert.Equal(t, expected, q.rate, rate)
+	}
+}
