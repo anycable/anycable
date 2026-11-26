@@ -339,6 +339,9 @@ func TestNewSessionPingIntervalOverflow(t *testing.T) {
 }
 
 func TestPingIntervalFromSeconds(t *testing.T) {
+	assert.Equal(t, time.Duration(0), pingIntervalFromSeconds(0))
+	assert.Equal(t, time.Duration(0), pingIntervalFromSeconds(-1))
+	assert.Equal(t, time.Duration(0), pingIntervalFromSeconds(-9223372037))
 	assert.Equal(t, time.Second, pingIntervalFromSeconds(1))
 	assert.Equal(t, MaxPingInterval, pingIntervalFromSeconds(86400))
 	assert.Equal(t, MaxPingInterval, pingIntervalFromSeconds(86401))

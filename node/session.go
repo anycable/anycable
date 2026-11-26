@@ -187,6 +187,10 @@ type SessionOption = func(*Session)
 const MaxPingInterval = 24 * time.Hour
 
 func pingIntervalFromSeconds(sec int) time.Duration {
+	if sec <= 0 {
+		return 0
+	}
+
 	if sec > int(MaxPingInterval/time.Second) {
 		return MaxPingInterval
 	}
