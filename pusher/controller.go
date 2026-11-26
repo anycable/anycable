@@ -3,6 +3,7 @@ package pusher
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"strings"
 
@@ -96,13 +97,19 @@ func (c *Controller) Subscribe(ctx context.Context, sid string, env *common.Sess
 
 		// Extract join event from the state
 		if presenceData := env.GetChannelStateField(identifier, "channel_data"); presenceData != "" {
-			var userPresence *UserPresence
+			var userPresence UserPresence
 
 			err := json.Unmarshal([]byte(presenceData), &userPresence)
 			if err != nil {
 				return &common.CommandResult{
 					Status: common.ERROR,
 				}, errorx.Decorate(err, "failed to unmarshal presence data")
+			}
+
+			if userPresence.UserID == "" {
+				return &common.CommandResult{
+					Status: common.ERROR,
+				}, errors.New("presence data must contain user_id")
 			}
 
 			presenceEvent = &common.PresenceEvent{Type: common.PresenceJoinType, ID: userPresence.UserID, Info: userPresence.UserInfo}

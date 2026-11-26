@@ -1,6 +1,7 @@
 package pusher
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -168,6 +169,35 @@ func TestPusherEncode(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, expected, string(actual.Payload))
+	})
+
+	t.Run("Malformed presence events", func(t *testing.T) {
+		messages := map[string]interface{}{
+			"empty":        map[string]interface{}{},
+			"missing id":   map[string]interface{}{"type": common.PresenceJoinType},
+			"numeric id":   map[string]interface{}{"type": common.PresenceJoinType, "id": json.Number("42")},
+			"missing type": map[string]interface{}{"id": "42"},
+			"unknown type": map[string]interface{}{"type": "update", "id": "42"},
+			"numeric type": map[string]interface{}{"type": 1, "id": "42"},
+			"non-map":      "join",
+		}
+
+		for name, message := range messages {
+			t.Run(name, func(t *testing.T) {
+				msg := &common.Reply{
+					Type:       common.PresenceType,
+					Identifier: presenceIdentifier,
+					Message:    message,
+				}
+
+				var err error
+
+				require.NotPanics(t, func() {
+					_, err = coder.Encode(msg)
+				})
+				assert.Error(t, err)
+			})
+		}
 	})
 }
 

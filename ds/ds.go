@@ -4,6 +4,7 @@ package ds
 import (
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -195,7 +196,8 @@ func (s *Stream) NextCursor() string {
 	// If client provided a cursor, ensure we return a strictly greater value
 	if s.Params.Cursor != "" {
 		clientInterval, err := strconv.ParseInt(s.Params.Cursor, 10, 64)
-		if err == nil && clientInterval >= currentInterval {
+		// Ignore cursors too large to advance without overflowing
+		if err == nil && clientInterval >= currentInterval && clientInterval <= math.MaxInt64-61 {
 			// Add jitter (1-60 intervals forward) to ensure progression
 			currentInterval = clientInterval + 1 + (now.UnixNano() % 60)
 		}

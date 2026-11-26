@@ -465,6 +465,10 @@ Use broadcast_key instead.`)
 		c.HTTPBroadcast.SecretBase = ""
 	}
 
+	if err := c.Broker.Validate(); err != nil {
+		return &config.Config{}, err, false
+	}
+
 	if shouldPrintConfig {
 		fmt.Print(c.ToToml())
 		return &c, nil, true

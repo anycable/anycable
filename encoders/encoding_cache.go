@@ -2,6 +2,7 @@ package encoders
 
 import (
 	"encoding/json"
+	"log/slog"
 
 	"github.com/anycable/anycable-go/ws"
 	"github.com/joomcode/errorx"
@@ -61,4 +62,8 @@ func (msg *CachedEncodedMessage) Fetch(id string, callback EncodingFunction) (*w
 
 func (msg *CachedEncodedMessage) MarshalJSON() ([]byte, error) {
 	return json.Marshal(msg.target)
+}
+
+func (msg *CachedEncodedMessage) LogValue() slog.Value {
+	return slog.AnyValue(msg.target)
 }

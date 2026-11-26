@@ -144,3 +144,23 @@ func TestMaxBodySizeOptions(t *testing.T) {
 		assert.Equal(t, int64(2097152), c.API.MaxBodySize)
 	})
 }
+
+func TestBrokerTTLValidation(t *testing.T) {
+	for _, args := range [][]string{
+		{"--sessions_ttl=0", "--presence_ttl=0", "--history_ttl=0"},
+		{"--sessions_ttl=31536000", "--presence_ttl=31536000", "--history_ttl=31536000"},
+	} {
+		_, err, _ := NewConfigFromCLI(append([]string{"", "--ignore-config-path"}, args...))
+		assert.NoError(t, err, args)
+	}
+
+	for _, arg := range []string{
+		"--sessions_ttl=-1",
+		"--presence_ttl=31536001",
+		"--history_ttl=9223372036854775807",
+		"--sessions_ttl=18446744073709552",
+	} {
+		_, err, _ := NewConfigFromCLI([]string{"", "--ignore-config-path", arg})
+		assert.Error(t, err, arg)
+	}
+}

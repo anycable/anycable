@@ -31,6 +31,28 @@ func NewConfig() Config {
 	}
 }
 
+// MaxTTL is the upper bound for TTL settings (seconds); larger values overflow duration arithmetic
+const MaxTTL int64 = 365 * 24 * 60 * 60
+
+func (c Config) Validate() error {
+	ttls := []struct {
+		name string
+		val  int64
+	}{
+		{"history_ttl", c.HistoryTTL},
+		{"sessions_ttl", c.SessionsTTL},
+		{"presence_ttl", c.PresenceTTL},
+	}
+
+	for _, ttl := range ttls {
+		if ttl.val < 0 || ttl.val > MaxTTL {
+			return fmt.Errorf("%s must be between 0 and %d seconds, got %d", ttl.name, MaxTTL, ttl.val)
+		}
+	}
+
+	return nil
+}
+
 func (c Config) ToToml() string {
 	var result strings.Builder
 

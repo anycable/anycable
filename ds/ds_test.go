@@ -1,6 +1,8 @@
 package ds
 
 import (
+	"math"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -47,5 +49,26 @@ func TestStream_GenerateCursor(t *testing.T) {
 
 		cursor := stream.NextCursor()
 		assert.NotEmpty(t, cursor)
+	})
+
+	t.Run("ignores cursors that would overflow", func(t *testing.T) {
+		for _, val := range []int64{math.MaxInt64, math.MaxInt64 - 60} {
+			stream := &Stream{Params: &StreamParams{Cursor: strconv.FormatInt(val, 10)}}
+
+			cursor, err := strconv.ParseInt(stream.NextCursor(), 10, 64)
+
+			assert.NoError(t, err)
+			assert.Positive(t, cursor)
+		}
+	})
+
+	t.Run("advances large valid cursors", func(t *testing.T) {
+		val := int64(math.MaxInt64 - 61)
+		stream := &Stream{Params: &StreamParams{Cursor: strconv.FormatInt(val, 10)}}
+
+		cursor, err := strconv.ParseInt(stream.NextCursor(), 10, 64)
+
+		assert.NoError(t, err)
+		assert.Greater(t, cursor, val)
 	})
 }

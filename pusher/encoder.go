@@ -196,19 +196,23 @@ func (pusher *Encoder) Encode(msg encoders.EncodedMessage) (*ws.SentFrame, error
 			return nil, fmt.Errorf("failed to encode presence event: %v", r.Message)
 		}
 
-		presenceData := PusherPresenceData{
-			UserId: presenceEvent["id"].(string),
+		userID, ok := presenceEvent["id"].(string)
+		if !ok {
+			return nil, fmt.Errorf("invalid presence event id: %v (%T)", presenceEvent["id"], presenceEvent["id"])
 		}
+
+		presenceData := PusherPresenceData{UserId: userID}
 
 		var pusherEvent string
 
-		presenceType := presenceEvent["type"].(string)
-
-		if presenceType == common.PresenceJoinType {
+		switch presenceEvent["type"] {
+		case common.PresenceJoinType:
 			pusherEvent = MemberAddedType
 			presenceData.UserInfo = presenceEvent["info"]
-		} else if presenceType == common.PresenceLeaveType {
+		case common.PresenceLeaveType:
 			pusherEvent = MemberRemovedType
+		default:
+			return nil, fmt.Errorf("invalid presence event type: %v (%T)", presenceEvent["type"], presenceEvent["type"])
 		}
 
 		channel, err := identifierToChannel(r.Identifier)
