@@ -1,11 +1,13 @@
 package node
 
 import (
+	"math"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/anycable/anycable-go/common"
+	"github.com/anycable/anycable-go/mocks"
 	"github.com/anycable/anycable-go/ws"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -287,4 +289,58 @@ func TestSend__maxPendingSize(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, `{"type":"message","message":"test C"}`, string(msg))
 	})
+}
+
+func TestNewSessionPingIntervalOverflow(t *testing.T) {
+	node := NewMockNode()
+
+	intervals := []time.Duration{
+		math.MaxInt64,
+		time.Duration(3074457346) * time.Second,
+		MaxPingInterval + time.Second,
+	}
+
+	for _, interval := range intervals {
+		t.Run(interval.String(), func(t *testing.T) {
+			var session *Session
+
+			require.NotPanics(t, func() {
+				session = NewSession(node, mocks.NewMockConnection(), "/cable", nil, "123", WithPingInterval(interval))
+			})
+			defer session.Disconnect("test", ws.CloseNormalClosure)
+
+			assert.Equal(t, MaxPingInterval, session.pingInterval)
+
+			deadline := time.Unix(0, session.timers.pingDeadline)
+			assert.WithinRange(t, deadline, time.Now().Add(MaxPingInterval/2-time.Minute), time.Now().Add(MaxPingInterval*3/2))
+		})
+	}
+
+	t.Run("server-wide ping interval", func(t *testing.T) {
+		anode := NewMockNode()
+		anode.config.PingInterval = 9223372036
+
+		var session *Session
+
+		require.NotPanics(t, func() {
+			session = NewSession(anode, mocks.NewMockConnection(), "/cable", nil, "123")
+		})
+		defer session.Disconnect("test", ws.CloseNormalClosure)
+
+		assert.Equal(t, MaxPingInterval, session.pingInterval)
+	})
+
+	t.Run("zero disables pings", func(t *testing.T) {
+		session := NewSession(node, mocks.NewMockConnection(), "/cable", nil, "123", WithPingInterval(0))
+		defer session.Disconnect("test", ws.CloseNormalClosure)
+
+		assert.Equal(t, int64(0), session.timers.pingDeadline)
+	})
+}
+
+func TestPingIntervalFromSeconds(t *testing.T) {
+	assert.Equal(t, time.Second, pingIntervalFromSeconds(1))
+	assert.Equal(t, MaxPingInterval, pingIntervalFromSeconds(86400))
+	assert.Equal(t, MaxPingInterval, pingIntervalFromSeconds(86401))
+	assert.Equal(t, MaxPingInterval, pingIntervalFromSeconds(6148914691236517206))
 }

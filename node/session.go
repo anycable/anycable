@@ -184,12 +184,27 @@ type Session struct {
 
 type SessionOption = func(*Session)
 
+const MaxPingInterval = 24 * time.Hour
+
+func pingIntervalFromSeconds(sec int) time.Duration {
+	if sec > int(MaxPingInterval/time.Second) {
+		return MaxPingInterval
+	}
+
+	return time.Duration(sec) * time.Second
+}
+
 // WithPingInterval allows to set a custom ping interval for a session
 // or disable pings at all (by passing 0)
 func WithPingInterval(interval time.Duration) SessionOption {
 	return func(s *Session) {
-		s.pingInterval = interval
+		s.pingInterval = min(interval, MaxPingInterval)
 	}
+}
+
+// WithPingIntervalSeconds is like WithPingInterval but accepts seconds and caps them at MaxPingInterval
+func WithPingIntervalSeconds(sec int) SessionOption {
+	return WithPingInterval(pingIntervalFromSeconds(sec))
 }
 
 // WithPingPrecision allows to configure precision for timestamps attached to pings
@@ -297,7 +312,7 @@ func NewSession(node *Node, conn Connection, url string, headers *map[string]str
 	session.metrics = node.metrics
 	session.executor = node
 	session.broker = node.broker
-	session.pingInterval = time.Duration(node.config.PingInterval) * time.Second
+	session.pingInterval = pingIntervalFromSeconds(node.config.PingInterval)
 	session.pingTimestampPrecision = node.config.PingTimestampPrecision
 	session.sendNativePing = node.config.EnableNativePing
 	session.uid = uid
@@ -803,11 +818,7 @@ func (s *Session) scheduleInitialPing() {
 	s.timers.mu.Lock()
 	defer s.timers.mu.Unlock()
 
-	// Calculate the minimum and maximum durations
-	minDuration := s.pingInterval / 2
-	maxDuration := s.pingInterval * 3 / 2
-
-	initialInterval := time.Duration(rand.Int63n(int64(maxDuration-minDuration))) + minDuration // nolint:gosec
+	initialInterval := s.pingInterval/2 + time.Duration(rand.Int63n(int64(s.pingInterval))) // nolint:gosec
 
 	s.timers.pingDeadline = time.Now().Add(initialInterval).UnixNano()
 

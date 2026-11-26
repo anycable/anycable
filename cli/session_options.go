@@ -48,10 +48,10 @@ func (r *Runner) sessionOptionsFromParams(info *server.RequestInfo) []node.Sessi
 
 	if rawVal := info.Param(pingIntervalParameter); rawVal != "" {
 		val, err := strconv.Atoi(rawVal)
-		if err != nil {
-			r.log.Warn("invalid ping interval value, must be integer", "val", rawVal)
+		if err != nil || val <= 0 {
+			r.log.Warn("invalid ping interval value, must be a positive integer", "val", rawVal)
 		} else {
-			opts = append(opts, node.WithPingInterval(time.Duration(val)*time.Second))
+			opts = append(opts, node.WithPingIntervalSeconds(val))
 		}
 	}
 
