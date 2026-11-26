@@ -273,9 +273,7 @@ func parseRedisURL(url string) (options *rueidis.ClientOption, err error) {
 	urls := strings.Split(url, ",")
 
 	for _, addr := range urls {
-		addr = chompTrailingSlashHostname(addr)
-
-		currentOptions, err := rueidis.ParseURL(ensureRedisScheme(addr))
+		currentOptions, err := rueidis.ParseURL(chompTrailingSlashHostname(ensureRedisScheme(addr)))
 
 		if err != nil {
 			return nil, err
@@ -293,7 +291,7 @@ func parseRedisURL(url string) (options *rueidis.ClientOption, err error) {
 
 func redisURLHasDB(rawURL string) bool {
 	urls := strings.Split(rawURL, ",")
-	parsedURL, err := url.Parse(ensureRedisScheme(chompTrailingSlashHostname(urls[0])))
+	parsedURL, err := url.Parse(chompTrailingSlashHostname(ensureRedisScheme(urls[0])))
 
 	if err != nil {
 		return false
