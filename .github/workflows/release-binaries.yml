@@ -18,7 +18,7 @@ on:
 jobs:
   upload_binaries:
     if: ${{ inputs.platform != 'npm' }}
-    runs-on: ubuntu-22.04
+    runs-on: ubicloud-standard-2-ubuntu-2204
     env:
       GO111MODULE: on
       CGO_ENABLED: "0"
