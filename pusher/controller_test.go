@@ -33,6 +33,8 @@ func TestPusherController(t *testing.T) {
 	t.Run("Subscribe private (success)", func(t *testing.T) {
 		channel := `{"channel":"$pusher","stream":"private-party"}`
 
+		env.MergeChannelState(channel, &map[string]string{verifiedStateField: "1"})
+
 		res, err := ctrl.Subscribe(context.Background(), "1234.1234", env, "name=jack", channel)
 
 		require.NoError(t, err)
@@ -49,7 +51,8 @@ func TestPusherController(t *testing.T) {
 		channel := `{"channel":"$pusher","stream":"presence-room"}`
 
 		env.MergeChannelState(channel, &map[string]string{
-			"channel_data": `{"user_id":"b4","user_info":{"name":"bob"}}`,
+			"channel_data":     `{"user_id":"b4","user_info":{"name":"bob"}}`,
+			verifiedStateField: "1",
 		})
 
 		res, err := ctrl.Subscribe(context.Background(), "1234.1234", env, "name=jack", channel)
@@ -72,6 +75,22 @@ func TestPusherController(t *testing.T) {
 		assert.Equal(t, "b4", res.Presence.ID)
 		assert.Equal(t, common.PresenceJoinType, res.Presence.Type)
 		assert.Equal(t, map[string]interface{}{"name": "bob"}, res.Presence.Info)
+	})
+
+	t.Run("Subscribe private/presence (unverified)", func(t *testing.T) {
+		for _, channel := range []string{
+			`{"channel":"$pusher","stream":"private-secret"}`,
+			`{"channel":"$pusher","stream":"presence-secret"}`,
+		} {
+			res, err := ctrl.Subscribe(context.Background(), "1234.1234", env, "name=jack", channel)
+
+			require.NoError(t, err)
+			require.NotNil(t, res)
+			require.Equal(t, common.FAILURE, res.Status)
+			assert.Equal(t, []string{common.RejectionMessage(channel)}, res.Transmissions)
+			assert.Nil(t, res.Streams)
+			assert.Nil(t, res.IState)
+		}
 	})
 
 	t.Run("Subscribe private (failure)", func(t *testing.T) {

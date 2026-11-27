@@ -74,6 +74,8 @@ func (ex *Executor) verifyPrivateChannel(s *node.Session, msg *common.Message) e
 		if !verified {
 			return errors.New("invalid signature")
 		}
+
+		s.GetEnv().MergeChannelState(msg.Identifier, &map[string]string{verifiedStateField: "1"})
 	}
 
 	return nil

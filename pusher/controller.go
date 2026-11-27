@@ -38,6 +38,9 @@ type Controller struct {
 
 var _ node.Controller = (*Controller)(nil)
 
+// Set by the Executor when a private/presence subscription signature is verified
+const verifiedStateField = "pusher_verified"
+
 // This controller is responsible for terminating Pusher commands and properly handling private-, presence- and public channels.
 // IMPORTANT: Authorization happens in the Executor (because we have to support different identifiers for subscribe and other commands)
 func NewController(b broker.Broker, c *Config, l *slog.Logger) *Controller {
@@ -74,6 +77,15 @@ func (c *Controller) Subscribe(ctx context.Context, sid string, env *common.Sess
 			Status:        common.FAILURE,
 			Transmissions: []string{common.RejectionMessage(identifier)},
 		}, nil
+	}
+
+	if strings.HasPrefix(request.Stream, "private-") || strings.HasPrefix(request.Stream, "presence-") {
+		if env.GetChannelStateField(identifier, verifiedStateField) != "1" {
+			return &common.CommandResult{
+				Status:        common.FAILURE,
+				Transmissions: []string{common.RejectionMessage(identifier)},
+			}, nil
+		}
 	}
 
 	var state map[string]string
