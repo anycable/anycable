@@ -2,6 +2,8 @@
 
 ## master
 
+## 1.6.22 (2026-11-27)
+
 - Add `--http_broadcast_max_body_size` and `--api_max_body_size` to configure the request body limits introduced in 1.6.21 (default: 1MB) via CLI or env vars. ([@yenshirak][])
 
 - Fix remote `disconnect` command to close all sessions with the given identifiers, not just one of them. ([@melnik0v][])
