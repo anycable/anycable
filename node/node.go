@@ -383,8 +383,11 @@ func (n *Node) Authenticate(s *Session, options ...AuthOption) (*common.ConnectR
 		return nil, errorx.Decorate(err, "failed to authenticate")
 	}
 
+	authenticated := false
+
 	if res.Status == common.SUCCESS {
 		n.Authenticated(s, res.Identifier)
+		authenticated = true
 	} else {
 		if res.Status == common.FAILURE {
 			n.metrics.CounterIncrement(metricsFailedAuths)
@@ -396,9 +399,14 @@ func (n *Node) Authenticate(s *Session, options ...AuthOption) (*common.ConnectR
 	}
 
 	n.handleCallReply(s, res.ToCallResult())
-	n.markDisconnectable(s, res.DisconnectInterest)
 
-	if s.IsResumeable() {
+	if authenticated {
+		n.markDisconnectable(s, res.DisconnectInterest)
+	} else {
+		n.markDisconnectable(s, -1)
+	}
+
+	if authenticated && s.IsResumeable() {
 		if berr := n.broker.CommitSession(s.GetID(), s); berr != nil {
 			s.Log.Error("failed to persist session in cache", "error", berr)
 		}
