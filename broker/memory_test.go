@@ -195,6 +195,27 @@ func TestMemory_RestoreSession(t *testing.T) {
 	})
 }
 
+func TestMemory_DeleteSession(t *testing.T) {
+	config := NewConfig()
+	broker := NewMemoryBroker(nil, nil, &config)
+
+	require.NoError(t, broker.CommitSession("123", &TestCacheable{"cache-me"}))
+	require.NoError(t, broker.CommitSession("456", &TestCacheable{"keep-me"}))
+
+	require.NoError(t, broker.DeleteSession("123"))
+	require.NoError(t, broker.DeleteSession("unknown"))
+
+	data, err := broker.RestoreSession("123")
+	require.NoError(t, err)
+	assert.Nil(t, data)
+
+	data, err = broker.RestoreSession("456")
+	require.NoError(t, err)
+	assert.Equal(t, []byte("keep-me"), data)
+
+	assert.Equal(t, 1, broker.expireSessions.Len())
+}
+
 func TestMemory_Presence(t *testing.T) {
 	config := NewConfig()
 

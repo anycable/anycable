@@ -57,6 +57,8 @@ type Broker interface {
 	RestoreSession(from string) ([]byte, error)
 	// Prevent session cache from expiration
 	TouchSession(sid string) error
+	// Removes session's state from cache
+	DeleteSession(sid string) error
 
 	SupportsPresence() bool
 
@@ -220,6 +222,10 @@ func (LegacyBroker) RestoreSession(from string) ([]byte, error) {
 }
 
 func (LegacyBroker) TouchSession(sid string) error {
+	return nil
+}
+
+func (LegacyBroker) DeleteSession(sid string) error {
 	return nil
 }
 

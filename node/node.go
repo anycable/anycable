@@ -919,7 +919,9 @@ func (n *Node) Disconnect(s *Session) error {
 	n.hub.RemoveSession(s)
 	s.rmu.Unlock()
 
-	if s.IsResumeable() {
+	if s.NonRecoverable() {
+		n.broker.DeleteSession(s.GetID()) // nolint:errcheck
+	} else if s.IsResumeable() {
 		n.broker.TouchSession(s.GetID()) // nolint:errcheck
 	}
 

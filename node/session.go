@@ -147,6 +147,7 @@ type Session struct {
 
 	// Defines if we should perform Disconnect RPC for this session
 	disconnectInterest bool
+	unrecoverable      atomic.Bool
 
 	// Main mutex (for important session updates)
 	mu sync.Mutex
@@ -461,6 +462,14 @@ func (s *Session) MarkDisconnectable(val bool) {
 	s.disconnectInterest = s.disconnectInterest || val
 }
 
+func (s *Session) MarkUnrecoverable() {
+	s.unrecoverable.Store(true)
+}
+
+func (s *Session) NonRecoverable() bool {
+	return s.unrecoverable.Load()
+}
+
 // Serve enters a loop to read incoming data
 func (s *Session) Serve(callback func()) error {
 	go func() {
@@ -598,6 +607,13 @@ func (s *Session) DisconnectWithMessage(msg encoders.EncodedMessage, code string
 		wsCode = ws.CloseGoingAway
 	case common.REMOTE_DISCONNECT_REASON:
 		reason = "Closed remotely"
+		s.MarkUnrecoverable()
+
+		if s.IsResumeable() {
+			if err := s.broker.CommitSession(s.GetID(), s); err != nil {
+				s.Log.Error("failed to persist session in cache", "error", err)
+			}
+		}
 	}
 
 	s.Disconnect(reason, wsCode)
@@ -613,7 +629,8 @@ type cacheEntry struct {
 	Subscriptions   map[string][]string          `json:"subs"`
 	ConnectionState map[string]string            `json:"cstate"`
 	ChannelsState   map[string]map[string]string `json:"istate"`
-	Disconnectable  bool
+	Disconnectable  bool                         `json:"disc,omitempty"`
+	Unrecoverable   bool                         `json:"unrec,omitempty"`
 }
 
 func (s *Session) ToCacheEntry() ([]byte, error) {
@@ -626,6 +643,7 @@ func (s *Session) ToCacheEntry() ([]byte, error) {
 		ConnectionState: *s.env.ConnectionState,
 		ChannelsState:   *s.env.ChannelStates,
 		Disconnectable:  s.disconnectInterest,
+		Unrecoverable:   s.unrecoverable.Load(),
 	}
 
 	return json.Marshal(&entry)
@@ -642,6 +660,10 @@ func (s *Session) RestoreFromCache(cached []byte) error {
 
 	s.smu.Lock()
 	defer s.smu.Unlock()
+
+	if entry.Unrecoverable {
+		return errors.New("session is not recoverable")
+	}
 
 	s.MarkDisconnectable(entry.Disconnectable)
 	s.SetIdentifiers(entry.Identifiers)

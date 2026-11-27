@@ -480,6 +480,17 @@ func (b *Memory) TouchSession(sid string) error {
 	return nil
 }
 
+func (b *Memory) DeleteSession(sid string) error {
+	b.sessionsMu.Lock()
+	if entry, ok := b.sessions[sid]; ok {
+		b.expireSessions.Remove(entry.expiration)
+		delete(b.sessions, sid)
+	}
+	b.sessionsMu.Unlock()
+
+	return nil
+}
+
 func (b *Memory) TouchPresence(sid string) error {
 	b.presence.mu.Lock()
 

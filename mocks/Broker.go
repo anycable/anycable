@@ -395,6 +395,24 @@ func (_m *Broker) TouchPresence(sid string) error {
 	return r0
 }
 
+// DeleteSession provides a mock function with given fields: sid
+func (_m *Broker) DeleteSession(sid string) error {
+	ret := _m.Called(sid)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteSession")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string) error); ok {
+		r0 = rf(sid)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // TouchSession provides a mock function with given fields: sid
 func (_m *Broker) TouchSession(sid string) error {
 	ret := _m.Called(sid)

@@ -279,6 +279,17 @@ func TestNATSBroker_Sessions(t *testing.T) {
 	finishedStale, err := anotherBroker.RestoreSession("test345")
 	require.NoError(t, err)
 	assert.Nil(t, finishedStale)
+
+	// Deletion
+	err = broker.CommitSession("test567", &TestCacheable{"delete-me"})
+	require.NoError(t, err)
+
+	require.NoError(t, broker.DeleteSession("test567"))
+	require.NoError(t, broker.DeleteSession("unknown"))
+
+	deleted, err := anotherBroker.RestoreSession("test567")
+	require.NoError(t, err)
+	assert.Nil(t, deleted)
 }
 
 func TestNATSBroker_SessionsTTLChange(t *testing.T) {

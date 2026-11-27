@@ -1,6 +1,7 @@
 package node
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -8,9 +9,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/anycable/anycable-go/broker"
 	"github.com/anycable/anycable-go/common"
 	"github.com/anycable/anycable-go/encoders"
 	"github.com/anycable/anycable-go/mocks"
+	"github.com/anycable/anycable-go/pubsub"
 	"github.com/anycable/anycable-go/ws"
 	"github.com/joomcode/errorx"
 	"github.com/stretchr/testify/assert"
@@ -1037,6 +1040,50 @@ func TestRestoreSession(t *testing.T) {
 			"Sent message is invalid: %s", welcome,
 		)
 	})
+}
+
+func TestRestoreSessionAfterRemoteDisconnect(t *testing.T) {
+	node := NewMockNode()
+
+	bconf := broker.NewConfig()
+	br := broker.NewMemoryBroker(pubsub.NewLegacySubscriber(node), node, &bconf)
+	node.SetBroker(br)
+	require.NoError(t, br.Start(nil))
+	defer br.Shutdown(context.Background()) // nolint:errcheck
+
+	go node.hub.Run()
+	defer node.hub.Shutdown()
+
+	prev := NewMockSessionWithEnv("114", node, "/cable", &map[string]string{"id": "user-114"}, WithKeepaliveIntervals(time.Minute, time.Minute))
+	prev.broker = br
+
+	res, err := node.Authenticate(prev)
+	require.NoError(t, err)
+	require.Equal(t, common.SUCCESS, res.Status)
+
+	cached, err := br.RestoreSession("114")
+	require.NoError(t, err)
+	require.NotNil(t, cached)
+
+	node.RemoteDisconnect(&common.RemoteDisconnectMessage{Identifier: "user-114", Reconnect: true})
+
+	require.Eventually(t, prev.IsClosed, 2*time.Second, 10*time.Millisecond)
+
+	cached, err = br.RestoreSession("114")
+	require.NoError(t, err)
+	assert.Nil(t, cached)
+
+	session := NewMockSessionWithEnv("214", node, "/cable", &map[string]string{"id": "user-114"}, WithKeepaliveIntervals(time.Minute, time.Minute), WithPrevSID("114"))
+	session.broker = br
+
+	res, err = node.Authenticate(session)
+	require.NoError(t, err)
+	assert.Equal(t, common.SUCCESS, res.Status)
+
+	welcome, err := session.conn.Read()
+	require.NoError(t, err)
+
+	assert.Equalf(t, "welcome", string(welcome), "Session must not be restored after remote disconnect: %s", welcome)
 }
 
 func TestBroadcasting(t *testing.T) {

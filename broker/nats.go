@@ -452,6 +452,21 @@ func (n *NATS) TouchSession(sid string) error {
 	return nil
 }
 
+func (n *NATS) DeleteSession(sid string) error {
+	err := n.Ready(jetstreamReadyTimeout)
+	if err != nil {
+		return err
+	}
+
+	err = n.kv.Delete(context.Background(), sessionsPrefix+sid)
+
+	if err != nil && err != jetstream.ErrKeyNotFound {
+		return errorx.Decorate(err, "failed to delete session from NATS")
+	}
+
+	return nil
+}
+
 func (n *NATS) Reset() error {
 	err := n.Ready(jetstreamReadyTimeout)
 	if err != nil {

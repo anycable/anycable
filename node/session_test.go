@@ -207,6 +207,23 @@ func TestCacheEntryEmptySession(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestCacheEntryUnrecoverable(t *testing.T) {
+	session := Session{}
+	session.subscriptions = NewSubscriptionState()
+	session.env = common.NewSessionEnv("/cable", nil)
+	session.MarkUnrecoverable()
+
+	cached, err := session.ToCacheEntry()
+	require.NoError(t, err)
+
+	new_session := Session{}
+	new_session.subscriptions = NewSubscriptionState()
+	new_session.env = common.NewSessionEnv("/cable", nil)
+
+	err = new_session.RestoreFromCache(cached)
+	require.Error(t, err)
+}
+
 func TestMarkDisconnectable(t *testing.T) {
 	session := Session{}
 
