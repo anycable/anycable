@@ -1077,7 +1077,9 @@ func (n *Node) handleCommandReply(s *Session, msg *common.Message, reply *common
 		}
 	}
 
-	if reply.Streams != nil {
+	// An upstream may return the list of streams even if the operation wasn't successful
+	// (subscription rejected); we should ignore them
+	if reply.Streams != nil && reply.Status == common.SUCCESS {
 		isDirty = true
 
 		for _, stream := range reply.Streams {

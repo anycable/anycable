@@ -56,6 +56,8 @@ func (c *MockController) Subscribe(ctx context.Context, sid string, env *common.
 
 	if channel == "failure" {
 		res.Status = common.FAILURE
+		res.StopAllStreams = true
+		res.Streams = []string{"bad_stream"}
 		return res, nil
 	}
 
